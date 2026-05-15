@@ -1,0 +1,52 @@
+---
+/**
+ * LoadoutCard — landing-page-only card that highlights a single
+ * recommended slot loadout from CONTENT_BRIEF.md. Each card lists the
+ * slot:model lines that make up the loadout and a one-line headline.
+ *
+ * Landing-only — if /hardware or /docs want loadouts too, promote this
+ * to src/components/.
+ *
+ * Props:
+ *   title    – headline (e.g. "Coding · mid")
+ *   sizeGb   – approximate total footprint (e.g. "~19 GB")
+ *   tone?    – "accent" highlights this card with the amber rail
+ *   note?    – one-line footnote rendered in dim text below the slots
+ *
+ * Slot:
+ *   default  → <ul> of slot lines, each as `slot:model` strings
+ */
+interface Props {
+  title: string;
+  sizeGb: string;
+  tone?: 'accent' | 'default';
+  note?: string;
+}
+const { title, sizeGb, tone = 'default', note } = Astro.props;
+---
+
+<article
+  class:list={[
+    'flex h-full flex-col rounded-lg border bg-hal0-bg-elevated p-6 transition',
+    tone === 'accent'
+      ? 'border-hal0-accent/50 shadow-[inset_3px_0_0_var(--hal0-accent)]'
+      : 'border-hal0-border hover:border-hal0-border-strong',
+  ]}
+>
+  <header class="mb-4 flex items-baseline justify-between gap-3">
+    <h3 class="font-mono text-base font-semibold tracking-tight text-hal0-fg">
+      {title}
+    </h3>
+    <span class="shrink-0 rounded bg-hal0-bg px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">
+      {sizeGb}
+    </span>
+  </header>
+  <div class="flex-1 font-mono text-xs leading-relaxed text-hal0-fg-muted">
+    <slot />
+  </div>
+  {note && (
+    <p class="mt-4 border-t border-hal0-border pt-3 text-xs leading-relaxed text-hal0-fg-dim">
+      {note}
+    </p>
+  )}
+</article>

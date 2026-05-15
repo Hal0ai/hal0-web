@@ -13,6 +13,50 @@ import HeroSection from '../components/HeroSection.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import FeatureGrid from '../components/FeatureGrid.astro';
 import FeatureCard from '../components/FeatureCard.astro';
+import HardwareMatrix from '../components/HardwareMatrix.astro';
+import LoadoutCard from '../components/landing/LoadoutCard.astro';
+
+const hardwareRows = [
+  {
+    name: 'AMD Ryzen AI Max+ 395',
+    vendor: 'AMD · "Strix Halo"',
+    vram: 'Unified 128 GB',
+    status: 'first-class' as const,
+    highlight: true,
+    notes:
+      'Reference deployment. iGPU + XDNA NPU + UMA-aware probe. Vulkan default; FLM for NPU.',
+  },
+  {
+    name: 'AMD Ryzen AI Max 385 / 390',
+    vendor: 'AMD · "Strix Halo"',
+    vram: 'Unified 64 GB',
+    status: 'first-class' as const,
+    notes:
+      'Same path as the 128 GB SKU; small + mid tiers fit comfortably, 70B Q4 with shorter context.',
+  },
+  {
+    name: 'NVIDIA RTX 30/40/50',
+    vendor: 'NVIDIA',
+    vram: '10–32 GB',
+    status: 'supported' as const,
+    notes: 'CUDA-backed llama.cpp. Same slot lifecycle, dedicated VRAM instead of UMA.',
+  },
+  {
+    name: 'AMD Radeon RX 7000 / discrete',
+    vendor: 'AMD',
+    vram: '16–24 GB',
+    status: 'supported' as const,
+    notes: 'Vulkan path today; ROCm toolbox image on the build list for opt-in.',
+  },
+  {
+    name: 'CPU-only x86_64',
+    vendor: 'Intel / AMD',
+    vram: 'System RAM',
+    status: 'experimental' as const,
+    notes:
+      'Vulkan-CPU fallback. Small models only — CI runs Qwen 0.5B here. Not the headline experience.',
+  },
+];
 
 const description =
   'hal0 is an open-source home AI inference platform built for the 128 GB Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, self-hosted, no telemetry.';
@@ -139,4 +183,124 @@ const description =
       no manual yaml.
     </FeatureCard>
   </FeatureGrid>
+
+  <!-- Hardware matrix — Strix Halo highlighted, everything else honest. -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Hardware
+      </p>
+      <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Built for Strix Halo. Honest about everything else.
+      </h2>
+      <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
+        Linux + systemd is the only hard requirement
+        (<code class="font-mono">installer/install.sh:86</code>). The
+        probe picks the right provider; you don't pin a backend by hand.
+      </p>
+      <HardwareMatrix
+        rows={hardwareRows}
+        caption="Provider matrix — picked automatically by the hardware probe"
+      />
+      <p class="mt-6 max-w-3xl text-sm text-hal0-fg-dim">
+        macOS and Windows are not in scope for v1. NPU benchmarks land
+        once the FLM toolbox image is published to
+        <code class="font-mono">ghcr.io/hal0ai/</code>.
+      </p>
+    </div>
+  </section>
+
+  <!-- Recommended loadouts — three highlights from CONTENT_BRIEF (Strix Halo). -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Recommended loadouts
+      </p>
+      <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Three starting points. Mix, match, swap.
+      </h2>
+      <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
+        Curated picks for the 128 GB Strix Halo — refreshed to the
+        latest open-weight releases as of May 2026. The slot system
+        takes a different model per slot whenever you change your mind.
+        See the
+        <a class="text-hal0-accent underline-offset-2 hover:underline" href="/hardware">
+          full hardware page
+        </a>
+        for discrete-GPU and CPU loadouts.
+      </p>
+      <div class="grid gap-4 md:grid-cols-3">
+        <LoadoutCard title="Coding · mid" sizeGb="~19 GB" tone="accent">
+          <ul class="space-y-1.5">
+            <li>
+              <span class="text-hal0-accent">primary</span> ·
+              Qwen3-Coder-30B-A3B-Instruct-Q4_K_M
+            </li>
+            <li>
+              <span class="text-hal0-accent">embed</span> ·
+              nomic-embed-text-v2-moe-Q4_K_M
+            </li>
+          </ul>
+          <p class="mt-3 font-sans text-sm leading-relaxed text-hal0-fg-muted">
+            MoE with 3B active params — runs near 3B speeds, reasons like
+            a 30B. Pairs with a 140 MB embed for repo-aware search.
+          </p>
+          <Fragment slot="note">
+            Fallback: Qwen2.5-Coder-32B-Instruct-Q4_K_M (~20 GB).
+          </Fragment>
+        </LoadoutCard>
+
+        <LoadoutCard title="Voice mode" sizeGb="~3 GB">
+          <ul class="space-y-1.5">
+            <li>
+              <span class="text-hal0-accent">primary</span> ·
+              Qwen3-4B-Instruct-2507-Q4_K_M
+            </li>
+            <li>
+              <span class="text-hal0-accent">stt</span> · Moonshine base
+            </li>
+            <li>
+              <span class="text-hal0-accent">tts</span> · Kokoro-82M v1.0
+            </li>
+          </ul>
+          <p class="mt-3 font-sans text-sm leading-relaxed text-hal0-fg-muted">
+            Low-latency reply, edge-built STT, 54-voice TTS. 128 GB
+            leaves the entire rest of the budget free for a second
+            chat model warm in another slot.
+          </p>
+          <Fragment slot="note">
+            STT alt: whisper-large-v3-turbo (~1.6 GB). TTS alt: F5-TTS.
+          </Fragment>
+        </LoadoutCard>
+
+        <LoadoutCard title="Maxed-out · long context" sizeGb="~50 GB">
+          <ul class="space-y-1.5">
+            <li>
+              <span class="text-hal0-accent">primary</span> ·
+              Llama-4-Scout-17B-16E-Instruct-Q4_K_M
+            </li>
+            <li>
+              <span class="text-hal0-accent">embed</span> · bge-m3
+              (8192-token context)
+            </li>
+          </ul>
+          <p class="mt-3 font-sans text-sm leading-relaxed text-hal0-fg-muted">
+            10M-token context, MoE with 17B active. The biggest realistic
+            single-model loadout that still leaves room for STT/TTS
+            slots warm on 128 GB unified.
+          </p>
+          <Fragment slot="note">
+            Alt: Hermes-4-70B-Q8_0 (~75 GB) trades size for quant
+            headroom.
+          </Fragment>
+        </LoadoutCard>
+      </div>
+
+      <p class="mt-8 text-sm text-hal0-fg-dim">
+        Loadouts are starting points. Every real install ends up
+        tweaked. Sizes are published GGUF file sizes (Hugging Face, May
+        2026); no tok/s numbers on this page.
+      </p>
+    </div>
+  </section>
 </MarketingLayout>
