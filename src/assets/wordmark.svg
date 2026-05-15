@@ -1,21 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -10 96 38" role="img" aria-label="hal0">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 28" role="img" aria-label="hal0">
   <style>
     .w { font: 700 22px 'JetBrains Mono', ui-monospace, Menlo, monospace; letter-spacing: -0.02em; fill: var(--hal0-fg, var(--sl-color-text, #f5f5f5)); font-feature-settings: 'zero' 1; }
     .z { fill: #ffb000; }
-    .halo { fill: none; stroke: #ffb000; stroke-width: 1.6; }
   </style>
-  <!-- companion mark: flattened ellipse halo, ~8:1 aspect, tilted -4°,
-       centered over the wordmark. Sized narrower than the wordmark
-       so it reads as a halo *over* the type, not a frame around it.
-       cx kept at the viewBox centre (48) so the halo stays centred over
-       the type regardless of the font that actually paints the glyphs. -->
-  <ellipse class="halo" cx="48" cy="-3" rx="28" ry="2.5"
-           transform="rotate(-4 48 -3)"
-           vector-effect="non-scaling-stroke" />
-  <!-- Single <text> + two <tspan>s so the browser handles inter-glyph
-       advance with whatever font actually paints (Starlight loads this
-       as <img>, isolating it from the page's JBM — letting the renderer
-       lay out 'hal' and '0' in one flow avoids the gap that a hard-coded
-       x=56 second <text> produced under a wider system fallback). -->
   <text x="48" y="21" class="w" text-anchor="middle"><tspan>hal</tspan><tspan class="z">0</tspan></text>
 </svg>

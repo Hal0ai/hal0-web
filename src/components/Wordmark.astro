@@ -1,19 +1,13 @@
 ---
 /**
  * Wordmark — "hal0" rendered in JetBrains Mono with the slashed-zero
- * accent on the "0" and the halo companion mark floating above. Use
- * anywhere we say the product name in display context (hero, footer,
- * OG cards, etc.).
- *
- * The Starlight header logo is a separate SVG asset
- * (src/assets/wordmark.svg) that carries the same halo geometry;
- * keep the two in visual lockstep when you tweak proportions.
+ * accent on the "0". Use anywhere we say the product name in display
+ * context (hero, footer, OG cards, etc.).
  *
  * Props:
  *   size  – tailwind text size class (default "text-xl")
  *   class – extra classes (forwarded)
  *   tone  – "default" keeps fg + accent zero; "mono" forces single color
- *   halo  – "on" (default) | "off" to suppress the companion mark
  */
 export interface Props {
   size?: string;
@@ -21,7 +15,6 @@ export interface Props {
   tone?: 'default' | 'mono';
   as?: 'span' | 'div' | 'h1' | 'a';
   href?: string;
-  halo?: 'on' | 'off';
 }
 
 const {
@@ -30,44 +23,15 @@ const {
   tone = 'default',
   as = 'span',
   href,
-  halo = 'on',
 } = Astro.props as Props;
 
 const Tag = as;
 ---
 
 <Tag
-  class:list={['wordmark relative inline-flex items-baseline tracking-tight', size, extra]}
+  class:list={['wordmark inline-flex items-baseline tracking-tight', size, extra]}
   href={href}
 >
-  {halo === 'on' && (
-    <svg
-      aria-hidden="true"
-      class="hal0-halo-mark pointer-events-none absolute left-1/2 -translate-x-1/2"
-      viewBox="0 0 100 12"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <ellipse
-        cx="50" cy="6" rx="46" ry="3.6"
-        fill="none" stroke="currentColor" stroke-width="1.6"
-        vector-effect="non-scaling-stroke"
-        transform="rotate(-4 50 6)"
-        style="color: var(--hal0-accent, #ffb000);"
-      />
-    </svg>
-  )}
   <span class="text-hal0-fg">hal</span>
   <span class={tone === 'mono' ? 'text-hal0-fg' : 'text-hal0-accent'}>0</span>
 </Tag>
-
-<style>
-  /* The halo scales with the wordmark's font-size: width ~1.85em sits
-   * inside the wordmark's visual width (4 mono glyphs ≈ 2.4em wide).
-   * Negative top offset places it a hair above the cap-line. */
-  .hal0-halo-mark {
-    width: 1.85em;
-    height: 0.35em;
-    top: -0.05em;
-    transform: translate(-50%, -100%);
-  }
-</style>
