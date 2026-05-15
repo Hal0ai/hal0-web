@@ -122,7 +122,7 @@ extrapolated. Anything not on this list is not on this page.
 |---|---|---|---|
 | Phi-3 Mini | Q4 | **71 tok/s**, **280 ms** round-trip first message after warm | 2.39 GB HF download, ~10 s pull. Strix Halo iGPU via Vulkan llama.cpp. |
 | Qwen2.5-0.5B | Q4_K_M | **217–413 tok/s** | The CI smoke model. The range reflects context length and prompt size. |
-| `primary` + `embed` (concurrent) | — | **~258 tok/s** chat, **<200 ms** dispatch | Both slots warm. iGPU at ~9 GB GTT. Same single-flight dispatcher path as a single-slot test. |
+| `primary` + `embed` (concurrent) | — | **~258 tok/s** chat, **&lt;200 ms** dispatch | Both slots warm. iGPU at ~9 GB GTT. Same single-flight dispatcher path as a single-slot test. |
 
 All measurements were taken on **Ryzen AI Max+ 395 + Vulkan llama.cpp**.
 
@@ -189,7 +189,7 @@ slot.
   reasoning + creative strength). Lighter alt: `Hermes-4-14B-Q4_K_M`
   (~9 GB, Qwen-3-14B base).
 
-### Privacy-first / minimal footprint (<1 GB)
+### Privacy-first / minimal footprint (under 1 GB)
 
 - `primary`: `gemma-3-1b-it-Q4_K_M` (~0.7 GB). Text-only, March 2025.
 - `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB, multilingual
