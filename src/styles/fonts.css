@@ -1,0 +1,7 @@
+/* Self-hosted fonts — these @import statements pull .woff2 files
+ * bundled by the @fontsource* packages. No runtime CDN request. */
+
+@import '@fontsource-variable/geist/index.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/700.css';

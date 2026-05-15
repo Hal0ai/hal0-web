@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 28" role="img" aria-label="hal0">
+  <style>
+    .w { font: 700 22px 'JetBrains Mono', ui-monospace, Menlo, monospace; letter-spacing: -0.02em; fill: currentColor; font-feature-settings: 'zero' 1; }
+    .z { fill: #ffb000; }
+  </style>
+  <text x="0" y="21" class="w">hal</text>
+  <text x="56" y="21" class="w z">0</text>
+</svg>
