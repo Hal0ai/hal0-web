@@ -1,0 +1,374 @@
+---
+/**
+ * /hardware — the overview page. Frames the philosophy (Vulkan is the
+ * baseline; hal0 detects and picks the best provider), shows the tier
+ * system, and links prominently to the deep Strix Halo doc.
+ *
+ * NOTE: the deep Strix Halo doc lives at /docs/hardware/strix-halo and
+ * is owned by writer-docs-a. This page is intentionally lighter — call
+ * it a directory + an honest answer, not a benchmark page.
+ *
+ * All numbers / SKUs cited come from CONTENT_BRIEF.md. No invented
+ * tok/s, no fake green ticks.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import HardwareMatrix from '../components/HardwareMatrix.astro';
+import TierCard from '../components/hardware/TierCard.astro';
+import CTA from '../components/CTA.astro';
+
+const title = 'Hardware support — hal0 (Strix Halo, ROCm, CUDA, CPU)';
+const description =
+  'hal0 hardware compatibility for self-hosted LLMs. First-class on Strix Halo / Ryzen AI Max+ 395 with unified memory; supported on AMD ROCm, NVIDIA CUDA, and CPU. Vulkan llama.cpp is the universal baseline.';
+
+// Hardware matrix rows. Keep these honest — fallback gets a planned
+// pill for STT/TTS because Moonshine/Kokoro toolbox images aren't
+// published yet per CONTENT_BRIEF §Install status caveat.
+const matrixRows = [
+  {
+    name: 'Ryzen AI Max+ 395 (Strix Halo, 128 GB)',
+    vendor: 'AMD',
+    vram: '~96–110 GB UMA',
+    status: 'first-class' as const,
+    highlight: true,
+    notes: 'iGPU + XDNA NPU + unified memory. Reference deployment.',
+  },
+  {
+    name: 'Ryzen AI Max 385 / 390 (Strix Halo, 64 GB)',
+    vendor: 'AMD',
+    vram: '~48 GB UMA',
+    status: 'first-class' as const,
+    notes: 'Same providers as 128 GB; tighter ceiling on large models.',
+  },
+  {
+    name: 'AMD discrete (RX 7900 XTX / XT)',
+    vendor: 'AMD',
+    vram: '16–24 GB',
+    status: 'supported' as const,
+    notes: 'Vulkan works today; ROCm toolbox image pending publish.',
+  },
+  {
+    name: 'NVIDIA RTX 50 / 40 / 30 series',
+    vendor: 'NVIDIA',
+    vram: '10–32 GB',
+    status: 'supported' as const,
+    notes: 'CUDA-backed llama.cpp build. In v1 target list.',
+  },
+  {
+    name: 'CPU-only (x86_64, ≥32 GB RAM)',
+    vendor: 'any',
+    vram: 'system RAM',
+    status: 'supported' as const,
+    notes: 'Vulkan-CPU path; CI smoke tier. Small models only.',
+  },
+  {
+    name: 'Apple Silicon (M-series)',
+    vendor: 'Apple',
+    vram: 'UMA',
+    status: 'planned' as const,
+    notes: 'Linux + systemd required for v1. Not in scope.',
+  },
+  {
+    name: 'Intel Arc / Xe',
+    vendor: 'Intel',
+    vram: '8–16 GB',
+    status: 'experimental' as const,
+    notes: 'Vulkan path may work; not on the CI matrix.',
+  },
+  {
+    name: 'Raspberry Pi / ARM SBC',
+    vendor: 'various',
+    vram: 'system RAM',
+    status: 'planned' as const,
+    notes: 'aarch64 builds not part of v1.',
+  },
+];
+---
+
+<MarketingLayout title={title} description={description} navTone="solid">
+  <!-- ============================================================ -->
+  <!-- Hero                                                          -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-5xl px-6 py-16 md:py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        hardware
+      </p>
+      <h1 class="mb-6 text-balance text-4xl font-semibold leading-tight tracking-tight text-hal0-fg md:text-5xl">
+        Hardware compatibility.
+      </h1>
+      <p class="max-w-3xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
+        hal0 runs a hardware probe at install time, writes the result to
+        <code class="font-mono text-hal0-fg">/etc/hal0/hardware.json</code>,
+        and picks the right provider per slot automatically. Vulkan-backed
+        <code class="font-mono text-hal0-fg">llama.cpp</code> is the
+        universal baseline — it&rsquo;s what every install gets out of
+        the box. ROCm, CUDA, and the AMD XDNA NPU (FLM) layer on top
+        where the hardware supports them.
+      </p>
+
+      <ul class="mt-8 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+        <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
+          <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">baseline</p>
+          <p class="mt-1 font-mono text-sm text-hal0-fg">llama.cpp · Vulkan</p>
+        </li>
+        <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
+          <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">opt-in</p>
+          <p class="mt-1 font-mono text-sm text-hal0-fg">llama.cpp · ROCm / CUDA</p>
+        </li>
+        <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
+          <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">npu</p>
+          <p class="mt-1 font-mono text-sm text-hal0-fg">FLM · AMD XDNA</p>
+        </li>
+        <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
+          <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">stt</p>
+          <p class="mt-1 font-mono text-sm text-hal0-fg">Moonshine · CPU / Vulkan</p>
+        </li>
+        <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
+          <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">tts</p>
+          <p class="mt-1 font-mono text-sm text-hal0-fg">Kokoro · CPU / Vulkan</p>
+        </li>
+        <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
+          <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">os</p>
+          <p class="mt-1 font-mono text-sm text-hal0-fg">Linux + systemd</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Tier cards                                                    -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-5xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        tiers
+      </p>
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Three tiers, one platform.
+      </h2>
+      <p class="mb-10 max-w-3xl text-hal0-fg-muted">
+        First-class is the box we design against. Supported is the path
+        every other modern AMD/NVIDIA host takes. Fallback is the CI
+        smoke target — useful for sanity checks, not the headline
+        experience.
+      </p>
+
+      <div class="grid gap-5 md:grid-cols-3">
+        <TierCard
+          tier="first-class"
+          title="Strix Halo / Ryzen AI Max+"
+          provider="llama.cpp · Vulkan + FLM (NPU)"
+          chips={['Ryzen AI Max+ 395 (128 GB)', 'Ryzen AI Max 385 / 390 (64 GB)']}
+          docHref="/docs/hardware/strix-halo/"
+          docLabel="Strix Halo deep dive"
+        >
+          <p>
+            The reference deployment. APU + XDNA NPU + a single unified
+            memory pool — the iGPU carveout is BIOS-tunable up to
+            ~96&nbsp;GB on 128&nbsp;GB SKUs, and the slot lifecycle and
+            FLM provider were written against this hardware first.
+          </p>
+          <p class="mt-2 font-mono text-xs text-hal0-fg-dim">
+            Verified on Ryzen AI Max iGPU + Vulkan: Qwen 0.5B
+            217&ndash;413&nbsp;tok/s; Phi-3 Mini Q4 ~71&nbsp;tok/s,
+            ~280&nbsp;ms round-trip; concurrent primary + embed
+            ~258&nbsp;tok/s, &lt;200&nbsp;ms dispatch.
+          </p>
+        </TierCard>
+
+        <TierCard
+          tier="supported"
+          title="AMD discrete · NVIDIA"
+          provider="llama.cpp · ROCm / CUDA"
+          chips={['RTX 5090', 'RTX 4090 / 4080', 'RX 7900 XTX / XT']}
+          docHref="/docs/hardware/overview/"
+          docLabel="Provider details"
+        >
+          <p>
+            Same slot lifecycle, same dispatcher, same API surface — what
+            changes is dedicated VRAM in place of the unified pool. AMD
+            discrete uses the <code>hal0-toolbox-rocm</code> image
+            (pending publish); NVIDIA uses the CUDA-backed
+            <code>llama.cpp</code> build. Trade vs. Strix Halo: tighter
+            context budgets at the same model size, no headroom for
+            STT/TTS alongside a 30B primary.
+          </p>
+        </TierCard>
+
+        <TierCard
+          tier="fallback"
+          title="CPU-only x86_64"
+          provider="llama.cpp · Vulkan-CPU"
+          chips={['≥32 GB RAM', 'no GPU required']}
+          docHref="/docs/hardware/overview/"
+          docLabel="Provider details"
+        >
+          <p>
+            What CI runs on with Qwen 0.5B
+            (<code>tests/slots/test_integration.py</code>). Usable for
+            tiny models and dev smoke; expect a few tok/s on chat —
+            fine for occasional Q&amp;A, not a streaming experience.
+            <code>stt</code> and <code>tts</code> work in theory but
+            need at least an iGPU for usable latency.
+          </p>
+        </TierCard>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Compatibility matrix                                          -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        matrix
+      </p>
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Compatibility matrix.
+      </h2>
+      <p class="mb-8 max-w-3xl text-hal0-fg-muted">
+        Status is the honest answer, not aspirational. Anything not on
+        the v1 CI matrix is marked accordingly.
+      </p>
+
+      <HardwareMatrix rows={matrixRows} caption="hal0 v1 hardware support" />
+
+      <dl class="mt-6 grid gap-3 text-xs text-hal0-fg-muted sm:grid-cols-2 md:grid-cols-4">
+        <div>
+          <dt class="font-mono uppercase tracking-wider text-hal0-accent">first-class</dt>
+          <dd>Reference target. Daily-driven and benchmarked.</dd>
+        </div>
+        <div>
+          <dt class="font-mono uppercase tracking-wider text-hal0-fg">supported</dt>
+          <dd>In v1 scope, on the CI matrix or close to it.</dd>
+        </div>
+        <div>
+          <dt class="font-mono uppercase tracking-wider text-hal0-fg-muted">experimental</dt>
+          <dd>May work via the universal Vulkan path; not vetted.</dd>
+        </div>
+        <div>
+          <dt class="font-mono uppercase tracking-wider text-hal0-fg-dim">planned</dt>
+          <dd>Out of scope for v1; on the roadmap.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Honest-answer section                                         -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-4xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        the honest answer
+      </p>
+      <h2 class="mb-8 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        What about Apple Silicon, Intel Arc, Raspberry Pi?
+      </h2>
+
+      <div class="space-y-5">
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Apple Silicon (M1 / M2 / M3 / M4)
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Not in v1 scope. hal0 hard-requires Linux + systemd
+            (<code>installer/install.sh:86</code>) — slot lifecycle is
+            built on systemd template units, atomic env file writes,
+            <code>journalctl</code> tailing. macOS doesn&rsquo;t have
+            systemd, and porting the lifecycle to <code>launchd</code>
+            isn&rsquo;t on the v1 punch list. If you want hal0 on Apple
+            Silicon today, run it inside an Asahi Linux install or a
+            Linux VM.
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Intel Arc / Xe
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Experimental via the universal Vulkan path. Mesa&rsquo;s ANV
+            driver gives <code>llama.cpp</code>-Vulkan something to talk
+            to on Linux, so the <code>primary</code> and <code>embed</code>
+            slots <em>should</em> light up. But Intel isn&rsquo;t on the
+            v1 CI matrix and we don&rsquo;t have a daily-driven Arc box
+            — treat it as "patches welcome, no promises." If you run it,
+            tell us how it goes.
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Raspberry Pi / aarch64 / ARM SBCs
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Not in v1. The installer is x86_64-only today — aarch64
+            builds aren&rsquo;t on the release matrix. <code>llama.cpp</code>
+            itself runs on a Pi 5; bringing hal0 along would mean
+            cross-building the toolbox images for arm64 and validating
+            the lifecycle there. It&rsquo;s on the wish list, not the
+            roadmap.
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            WSL2 / Docker Desktop / cloud VMs
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            WSL2 doesn&rsquo;t expose systemd by default, and rootless
+            Docker can&rsquo;t hold the slot units. A real Linux VM
+            (KVM/QEMU, Proxmox, Hyper-V Gen2) works fine; a privileged
+            LXC works fine too — see the <code>hal0-test</code> Strix
+            Halo LXC recipe in the docs.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Strix Halo prominent link                                     -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-5xl px-6 py-16">
+      <a
+        href="/docs/hardware/strix-halo/"
+        class="group block rounded-lg border border-hal0-accent/40 bg-[var(--hal0-accent-glow)] p-8 transition hover:border-hal0-accent"
+      >
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+              crown jewel
+            </p>
+            <h2 class="mb-2 text-balance text-2xl font-semibold tracking-tight text-hal0-fg md:text-3xl">
+              The deep Strix Halo guide.
+            </h2>
+            <p class="max-w-2xl text-sm leading-relaxed text-hal0-fg-muted">
+              UMA pool sizing, BIOS iGPU carveout, what the XDNA NPU
+              does for you, recommended loadouts at 64&nbsp;GB and
+              128&nbsp;GB. The reference deployment, documented end to
+              end.
+            </p>
+          </div>
+          <span class="inline-flex shrink-0 items-center gap-2 rounded-md bg-hal0-accent px-5 py-3 font-mono text-sm font-medium text-black transition group-hover:bg-hal0-accent-hover">
+            Read the guide &rarr;
+          </span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- CTA band                                                      -->
+  <!-- ============================================================ -->
+  <CTA
+    eyebrow="ready to try it?"
+    title="One line. Most modern Linux boxes."
+    subtitle="The installer probes hardware on first run and picks providers automatically — Vulkan baseline, ROCm/CUDA where applicable, FLM where the NPU is there."
+    ctaPrimary={{ href: '/install', label: 'Install hal0' }}
+    ctaSecondary={{ href: '/docs/hardware/overview/', label: 'Hardware docs' }}
+  />
+</MarketingLayout>

@@ -1,0 +1,86 @@
+---
+/**
+ * TierCard — hardware tier summary card. Used on /hardware to lay out
+ * first-class, supported, and fallback tiers with a representative chip
+ * list, the provider hal0 uses, and a deep link to the relevant doc.
+ *
+ * Props:
+ *   tier      – "first-class" | "supported" | "fallback"
+ *   title     – e.g. "Strix Halo / Ryzen AI Max+"
+ *   provider  – which hal0 provider lights up here
+ *   chips     – string[] — representative SKUs
+ *   docHref?  – optional CTA link
+ *   docLabel? – CTA text (defaults to "Read more")
+ *
+ * Slot: default — short paragraph + qualifier list.
+ */
+type Tier = 'first-class' | 'supported' | 'fallback';
+interface Props {
+  tier: Tier;
+  title: string;
+  provider: string;
+  chips: string[];
+  docHref?: string;
+  docLabel?: string;
+}
+const { tier, title, provider, chips, docHref, docLabel } = Astro.props;
+
+const tierTone: Record<Tier, string> = {
+  'first-class': 'border-hal0-accent/60 bg-[var(--hal0-accent-glow)]',
+  supported: 'border-hal0-border bg-hal0-bg-elevated',
+  fallback: 'border-hal0-border bg-hal0-bg-elevated',
+};
+
+const tierLabel: Record<Tier, string> = {
+  'first-class': 'first-class',
+  supported: 'supported',
+  fallback: 'fallback',
+};
+
+const tierBadge: Record<Tier, string> = {
+  'first-class': 'bg-hal0-accent text-black',
+  supported: 'border border-hal0-border text-hal0-fg',
+  fallback: 'border border-hal0-border text-hal0-fg-muted',
+};
+---
+
+<article class:list={['rounded-lg border p-6', tierTone[tier]]}>
+  <div class="mb-4 flex items-center gap-3">
+    <span
+      class:list={[
+        'inline-block rounded-full px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-wider',
+        tierBadge[tier],
+      ]}
+    >
+      {tierLabel[tier]}
+    </span>
+    <span class="font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+      {provider}
+    </span>
+  </div>
+
+  <h3 class="mb-3 text-balance text-xl font-semibold tracking-tight text-hal0-fg">
+    {title}
+  </h3>
+
+  <div class="text-sm leading-relaxed text-hal0-fg-muted">
+    <slot />
+  </div>
+
+  <ul class="mt-4 flex flex-wrap gap-2">
+    {chips.map((c) => (
+      <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">
+        {c}
+      </li>
+    ))}
+  </ul>
+
+  {docHref && (
+    <a
+      href={docHref}
+      class="mt-5 inline-flex items-center gap-1 font-mono text-sm text-hal0-accent transition hover:underline"
+    >
+      {docLabel ?? 'Read more'} &rarr;
+    </a>
+  )}
+</article>
