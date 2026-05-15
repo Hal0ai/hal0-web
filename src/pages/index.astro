@@ -14,7 +14,83 @@ import CodeBlock from '../components/CodeBlock.astro';
 import FeatureGrid from '../components/FeatureGrid.astro';
 import FeatureCard from '../components/FeatureCard.astro';
 import HardwareMatrix from '../components/HardwareMatrix.astro';
+import ComparisonTable from '../components/ComparisonTable.astro';
 import LoadoutCard from '../components/landing/LoadoutCard.astro';
+
+const comparisonColumns = [
+  { key: 'hal0', label: 'hal0', highlight: true },
+  { key: 'ollama', label: 'ollama' },
+  { key: 'lmstudio', label: 'LM Studio' },
+  { key: 'llamacpp', label: 'raw llama.cpp' },
+  { key: 'cloud', label: 'Cloud API' },
+];
+
+const comparisonRows = [
+  {
+    feature: 'OpenAI /v1/* surface',
+    hal0: 'chat, embed, rerank, STT, TTS',
+    ollama: 'chat-only subset',
+    lmstudio: 'chat-only',
+    llamacpp: 'raw HTTP',
+    cloud: 'full',
+  },
+  {
+    feature: 'systemd-managed lifecycle',
+    hal0: true,
+    ollama: 'partial',
+    lmstudio: 'desktop app',
+    llamacpp: 'DIY',
+    cloud: 'n/a',
+  },
+  {
+    feature: 'Hardware probe + fit warnings',
+    hal0: true,
+    ollama: false,
+    lmstudio: false,
+    llamacpp: false,
+    cloud: 'n/a',
+  },
+  {
+    feature: 'Headless one-line install',
+    hal0: true,
+    ollama: true,
+    lmstudio: 'GUI installer',
+    llamacpp: 'manual',
+    cloud: 'n/a',
+  },
+  {
+    feature: 'Multi-model concurrent slots',
+    hal0: true,
+    ollama: 'partial',
+    lmstudio: false,
+    llamacpp: 'DIY',
+    cloud: true,
+  },
+  {
+    feature: 'Bundled chat UI',
+    hal0: 'OpenWebUI prewired',
+    ollama: false,
+    lmstudio: 'built-in',
+    llamacpp: false,
+    cloud: 'varies',
+  },
+  {
+    feature: 'Signed self-update + rollback',
+    hal0: 'cosign',
+    ollama: 'manual',
+    lmstudio: 'desktop updater',
+    llamacpp: 'manual',
+    cloud: 'n/a',
+  },
+  {
+    feature: 'Data stays on your box',
+    hal0: true,
+    ollama: true,
+    lmstudio: true,
+    llamacpp: true,
+    cloud: false,
+  },
+];
 
 const hardwareRows = [
   {
@@ -301,6 +377,107 @@ const description =
         tweaked. Sizes are published GGUF file sizes (Hugging Face, May
         2026); no tok/s numbers on this page.
       </p>
+    </div>
+  </section>
+
+  <!-- Quickstart — the install one-liner + a real /v1/chat call against :8080. -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Quickstart
+      </p>
+      <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        From zero to a live <code class="font-mono">/v1/chat</code> in two commands.
+      </h2>
+      <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
+        The installer is idempotent and non-interactive. It probes the
+        hardware, writes <code class="font-mono">/etc/hal0/hardware.json</code>,
+        drops working slot defaults, and brings the API up on
+        <code class="font-mono">:8080</code>.
+      </p>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+            1 · install
+          </p>
+          <CodeBlock lang="sh" title="install.sh">
+{`# install on any modern Linux box with systemd
+curl -fsSL https://hal0.dev/install | bash
+
+# optional overrides
+# HAL0_PORT=9090 HAL0_PREFIX=/opt/hal0 curl … | bash`}
+          </CodeBlock>
+        </div>
+        <div>
+          <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+            2 · chat
+          </p>
+          <CodeBlock lang="sh" title="/v1/chat/completions">
+{`curl http://localhost:8080/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "qwen2.5-0.5b-instruct-q4_k_m",
+    "messages": [{"role":"user","content":"Hello!"}]
+  }'`}
+          </CodeBlock>
+        </div>
+      </div>
+
+      <p class="mt-8 max-w-3xl text-sm text-hal0-fg-dim">
+        Prefer a chat UI? OpenWebUI ships prewired on
+        <code class="font-mono">:3001</code>, pointed at the local
+        hal0 API out of the box.
+      </p>
+    </div>
+  </section>
+
+  <!-- "Why not just X?" — honest comparison vs. ollama, LM Studio, raw llama.cpp, cloud. -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Comparison
+      </p>
+      <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Why not just ollama, LM Studio, or raw llama.cpp?
+      </h2>
+      <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
+        hal0 isn't an inference engine — it's the orchestration,
+        lifecycle, and multi-modal surface around llama.cpp, FLM,
+        Moonshine, and Kokoro. Honest take, in one table.
+      </p>
+
+      <ComparisonTable columns={comparisonColumns} rows={comparisonRows} />
+
+      <div class="mt-10 grid gap-6 text-sm leading-relaxed text-hal0-fg-muted md:grid-cols-2">
+        <p>
+          <span class="font-mono text-hal0-fg">vs. ollama</span> —
+          systemd-managed slots survive
+          <code class="font-mono">hal0-api</code> restarts; the OpenAI
+          surface includes embeddings, rerank,
+          <em>and</em> STT/TTS, not just chat. Hardware probe + slot
+          fit warnings are first-class.
+        </p>
+        <p>
+          <span class="font-mono text-hal0-fg">vs. LM Studio</span> —
+          Linux-first, headless-first, one-line install, no GUI
+          required. Prewired OpenWebUI handles chat; the dashboard is
+          for operating the box.
+        </p>
+        <p>
+          <span class="font-mono text-hal0-fg">vs. raw llama.cpp</span>
+          — hal0 owns the lifecycle: health probes, atomic env writes,
+          cold-boot grace, single-flight prefetch, structured errors,
+          signed self-update with rollback.
+        </p>
+        <p>
+          <span class="font-mono text-hal0-fg">vs. cloud APIs</span> —
+          your hardware, your data, your models. External upstreams
+          (OpenRouter, Anthropic, OpenAI, custom) can be configured as
+          fallbacks behind the same <code class="font-mono">/v1/*</code>
+          surface — mix local + remote per-model in one config.
+        </p>
+      </div>
     </div>
   </section>
 </MarketingLayout>
