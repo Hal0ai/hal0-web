@@ -714,5 +714,5 @@ curl -fsSL https://hal0.dev/install | bash
 
   <!-- Schema.org SoftwareApplication. JSON-LD is valid anywhere in the doc,
        so we keep it in the body to avoid touching MarketingLayout. -->
-  <script type="application/ld+json" set:html={JSON.stringify(softwareApplicationLd)} />
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(softwareApplicationLd)} />
 </MarketingLayout>

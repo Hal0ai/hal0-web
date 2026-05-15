@@ -9,7 +9,7 @@
  *   class – extra classes (forwarded)
  *   tone  – "default" keeps fg + accent zero; "mono" forces single color
  */
-interface Props {
+export interface Props {
   size?: string;
   class?: string;
   tone?: 'default' | 'mono';
@@ -23,7 +23,7 @@ const {
   tone = 'default',
   as = 'span',
   href,
-} = Astro.props;
+} = Astro.props as Props;
 
 const Tag = as;
 ---
