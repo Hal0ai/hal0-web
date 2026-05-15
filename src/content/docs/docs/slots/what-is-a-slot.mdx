@@ -1,0 +1,89 @@
+---
+title: What is a slot?
+description: A slot is one inference workload — primary, embed, stt, or tts — with a real lifecycle state machine and a dedicated systemd unit.
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+A **slot** is one inference workload running under hal0. Each slot owns
+exactly one model, one backend process, one port on `127.0.0.1`, and
+one entry in the lifecycle state machine. Routing to the right slot
+happens at the API edge — clients send OpenAI-shaped requests, the
+dispatcher picks the slot that owns the model, and the slot answers.
+
+## Why slots exist
+
+Running an LLM at home isn't an inference problem — `llama.cpp` and
+friends already solve that. The hard part is everything around it:
+
+- Knowing when a model is **actually ready** (not just when systemd
+  says the unit is up).
+- Handling **cold-boot grace** so the first request doesn't time out
+  while VRAM/GTT fills.
+- Surviving an **`hal0-api` restart** without dropping the model.
+- Coalescing a **thundering herd** of identical prefetches into one
+  HTTP call.
+- Reporting **structured errors** when a model can't load, with
+  enough detail that the dashboard can show *why*.
+
+Slots are the abstraction that owns all of that. The API process is
+stateless; the slot owns the model.
+
+## Anatomy of a slot
+
+Each slot has:
+
+- A **name** (`primary`, `embed`, `stt`, `tts`, or a user-defined name).
+- A **model assignment** (a registry ref like
+  `qwen2.5-0.5b-instruct-q4_k_m`).
+- A **provider** (`llama.cpp`, `flm`, `moonshine`, or `kokoro`) that
+  knows how to build the env, start the process, and run a health
+  probe.
+- A **systemd unit** — an instance of the `hal0-slot@.service`
+  template (e.g. `hal0-slot@primary.service`).
+- A **port** in the range `8081`–`8099`, bound to `127.0.0.1` only.
+- A **state file** at `/var/lib/hal0/slots/<name>/state.json`,
+  updated atomically on every transition and streamed to clients
+  over SSE.
+
+## How dispatch works
+
+Clients hit `http://127.0.0.1:8080/v1/*`. The dispatcher reads the
+`model` field, looks up which slot owns it, then proxies the request
+to that slot's local port.
+
+- **Single-flight prefetch** — if N concurrent requests trigger the
+  same cold load, the slot fires one upstream call and fans the
+  response out to all N waiters.
+- **Adaptive cold-boot** — health probes back off intelligently while
+  the model is `warming`, so the API doesn't 503 a request that's
+  about to succeed.
+- **Decision logging** — every routing choice is recorded with the
+  registry refs considered, the slot picked, and the reason. The
+  dashboard's Logs view tails this stream over SSE.
+
+## What a slot is *not*
+
+- **Not a container manager** — slots use plain systemd template
+  units, not Docker Compose or Kubernetes. Containerised backends
+  (toolbox images) are an implementation detail of each provider.
+- **Not a model cache** — models live in the **model registry**
+  under `/var/lib/hal0/models/`; slots only reference registry
+  entries.
+- **Not multi-tenant** — slot names are global. There's no
+  per-user partitioning in v1. (See the roadmap for v0.2 plans.)
+
+<Aside type="tip">
+  If you're coming from raw `llama-server`: a slot is everything you'd
+  normally script around the binary — the env file, the unit file, the
+  health probe, the prefetch coalescer, the restart loop. hal0 owns it,
+  you configure it.
+</Aside>
+
+## Next
+
+- [Built-in slots](/docs/slots/built-in-slots/) — the four always-present slots.
+- [Slot lifecycle](/docs/reference/slot-lifecycle/) — the state machine.
+- [Recommended loadouts](/docs/slots/loadouts/) — pick models for each slot.

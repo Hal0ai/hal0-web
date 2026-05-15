@@ -1,0 +1,76 @@
+---
+title: Built-in slots
+description: primary, embed, stt, tts — the four slots hal0 ships with, what each serves, and the default backend.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+hal0 always ships four slots out of the box. They live in
+`BUILTIN_SLOTS` (`src/hal0/slots/manager.py`) and cannot be deleted
+from the dashboard — you can swap their model, unload them, or leave
+them offline, but the slot itself is always present.
+
+## The four slots
+
+| Slot      | What it serves                                                 | Default backend     |
+|-----------|----------------------------------------------------------------|---------------------|
+| `primary` | Chat and general LLM — `/v1/chat/completions`, `/v1/completions` | llama.cpp (Vulkan) |
+| `embed`   | Embeddings — `/v1/embeddings` — and rerank — `/v1/rerankings`  | llama.cpp (Vulkan)  |
+| `stt`     | Speech-to-text — `/v1/audio/transcriptions`                    | Moonshine           |
+| `tts`     | Text-to-speech — `/v1/audio/speech`                            | Kokoro              |
+
+## Why four
+
+These map directly to the modalities OpenAI exposes through `/v1/*`.
+Any client written against the OpenAI SDK can hit hal0 unmodified and
+reach chat, embeddings, transcription, and speech. Rerank piggybacks
+on the embed slot because it uses the same backend process.
+
+## Addressing
+
+All four bind to `127.0.0.1` on a port in the slot range
+(`8081`–`8099`). Only the API (`:8080`) and OpenWebUI (`:3001`) bind
+public interfaces. Clients should always talk to the API, never to a
+slot directly — the API does authentication, single-flight, and
+structured-error wrapping.
+
+You address a slot by its name in the OpenAI `model` field:
+
+```sh
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "primary",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+The dispatcher resolves `"primary"` to whichever model is currently
+loaded in the `primary` slot. See
+[Slot as model](/docs/api/slot-as-model/) for the full convention.
+
+## Swapping the default model
+
+Every slot has a default model picked at install time by the hardware
+probe. You can swap it at any time:
+
+```sh
+hal0 slot swap primary --model qwen3-30b-a3b-instruct-2507-q4_k_m
+```
+
+The slot transitions through `unloading → starting → warming → ready`
+without dropping the API socket — in-flight requests on other slots
+keep flowing.
+
+<Aside type="note">
+  See [Recommended loadouts](/docs/slots/loadouts/) for curated
+  primary / embed / stt / tts picks at every memory tier.
+</Aside>
+
+## User-defined slots
+
+Beyond the four built-ins, you can add custom slots — e.g. a `vision`
+slot for a multimodal model, or an `npu` slot for the FLM provider on
+AMD XDNA hardware. See [Custom slots](/docs/slots/custom-slots/).

@@ -1,0 +1,83 @@
+---
+title: Hugging Face pulls
+description: How hal0 downloads model weights from Hugging Face and streams progress to clients.
+sidebar:
+  order: 4
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+When you assign a model to a slot that isn't already in the registry,
+hal0 pulls it from Hugging Face. The pull surfaces progress as a
+slot-level state transition (`offline → pulling`) and a byte-level
+SSE stream so the dashboard and CLI can render a live progress bar.
+
+## Pulling a model
+
+Three ways:
+
+- **Dashboard.** The Models view has a **Pull** button; paste a
+  Hugging Face repo ref (e.g.
+  `bartowski/Qwen2.5-Coder-7B-Instruct-GGUF`) and pick the quant
+  file.
+- **CLI.**
+  ```sh
+  hal0 model pull bartowski/Qwen2.5-Coder-7B-Instruct-GGUF \
+    --file Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf
+  ```
+- **Slot swap.**
+  ```sh
+  hal0 slot swap primary --model qwen2.5-coder-7b-instruct-q4_k_m
+  ```
+  If the registry doesn't have it, the slot transitions through
+  `pulling` before `starting`.
+
+## Where the bytes land
+
+Models are written to `/var/lib/hal0/models/<safe-ref>/<file>` with a
+checksum sidecar. On a successful pull the registry entry is created
+atomically; a failed pull leaves no partial entry.
+
+`/var/lib/hal0/` survives `hal0 update` (only `/usr/lib/hal0/current/`
+gets swapped), so pulled models persist across version upgrades.
+
+## Progress streaming
+
+The dashboard and CLI subscribe to an SSE stream that emits one event
+per progress tick:
+
+- Total bytes
+- Bytes received
+- Throughput (bytes / second)
+- Elapsed time
+- ETA
+
+The slot itself stays in `pulling` until the file is fully verified;
+only then does it transition to `starting`.
+
+<Aside type="note">
+  Verified Phi-3 Mini Q4 download on Strix Halo: **2.39 GB in ~10s**.
+  Real numbers vary by network — the size is fixed.
+</Aside>
+
+## Status today
+
+`POST /api/models/{id}/pull` is **not yet implemented** in v1 — it
+currently returns a `NOT_IMPLEMENTED` (501) envelope. The CLI
+subcommand (`hal0 model pull`) is staged but disabled. The
+FirstRun wizard performs an initial pull via the same backend path,
+which works end-to-end on the development box but isn't wired through
+the public API surface yet.
+
+This is one of the remaining v1.0-cut gaps tracked in the
+[roadmap](/roadmap/). When it lands, this page will be updated with
+the live API shape, retry semantics, and disk-space pre-flight
+behaviour.
+
+## Coming soon — outline
+
+- Repo authentication for gated models (`HF_TOKEN` plumbing).
+- Multi-file pulls (sharded GGUFs).
+- Resume on interrupt.
+- Disk-space pre-flight warning.
+- Mirror configuration for self-hosted HF caches.
