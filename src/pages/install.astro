@@ -1,0 +1,487 @@
+---
+/**
+ * /install — the one-line installer, what it does, manual steps, verify,
+ * uninstall, troubleshooting. Every command and claim on this page is
+ * grounded in CONTENT_BRIEF.md (installer/, PLAN.md, the cited handoff
+ * doc). No invented numbers, no lorem.
+ *
+ * Layout: marketing chrome (top nav + footer) because /install is part of
+ * the conversion path, not the docs sidebar. Deep recipe lives in
+ * /docs/getting-started/quickstart/.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import Callout from '../components/install/Callout.astro';
+import Expandable from '../components/install/Expandable.astro';
+import StepList from '../components/install/StepList.astro';
+import StepItem from '../components/install/StepItem.astro';
+
+const title = 'Install hal0 — one-line installer';
+const description =
+  'Install hal0, the open-source self-hosted LLM platform, with one line. Strix Halo / Ryzen AI Max+, AMD ROCm, NVIDIA CUDA, and CPU all supported on Linux + systemd.';
+
+const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
+---
+
+<MarketingLayout title={title} description={description} navTone="solid">
+  <!-- ============================================================ -->
+  <!-- Hero / intro                                                  -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        install
+      </p>
+      <h1 class="mb-6 text-balance text-4xl font-semibold leading-tight tracking-tight text-hal0-fg md:text-5xl">
+        One line installs the platform.
+      </h1>
+      <p class="max-w-2xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
+        The installer drops a systemd-managed <code class="font-mono text-hal0-fg">hal0-api</code>
+        on port <code class="font-mono text-hal0-fg">:8080</code>, probes your
+        hardware, writes a config file at <code class="font-mono text-hal0-fg">/etc/hal0/</code>,
+        and starts the four built-in slots (<code class="font-mono text-hal0-fg">primary</code>,
+        <code class="font-mono text-hal0-fg">embed</code>,
+        <code class="font-mono text-hal0-fg">stt</code>,
+        <code class="font-mono text-hal0-fg">tts</code>). Linux + systemd
+        only — non-interactive and idempotent.
+      </p>
+
+      <div class="mt-10 space-y-4">
+        <CodeBlock lang="sh" title="one-line install">{installCmd}</CodeBlock>
+        <p class="font-mono text-xs text-hal0-fg-dim">
+          Runs as root via <code>sudo</code> — read the script first if you
+          haven't yet: <a class="text-hal0-accent hover:underline" href="https://github.com/hal0ai/hal0/blob/main/installer/install.sh" rel="noopener">installer/install.sh</a>.
+        </p>
+      </div>
+
+      <div class="mt-8">
+        <Callout tone="warning" title="Active development — install on a sandbox host first.">
+          hal0 is v1 pre-alpha. The installer is real and tested
+          (Phase&nbsp;2 done), but several pieces are still in flight:
+          the <code>FLM</code>, <code>Moonshine</code>, <code>Kokoro</code>,
+          and <code>ROCm</code> toolbox images haven't been published to
+          <code>ghcr.io/hal0ai/</code> yet (only the Vulkan
+          <code>:dev</code> tag exists today), <code>hal0 model pull</code>
+          returns <code>501</code> as a stub, and <code>hal0 uninstall</code>
+          isn't implemented. Run it on a spare Linux box or a fresh LXC
+          before pointing it at anything you care about.
+        </Callout>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- What this does                                                -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-4xl px-6 py-16">
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        What the installer does.
+      </h2>
+      <p class="mb-8 max-w-2xl text-hal0-fg-muted">
+        The script is non-interactive. Every step is overridable by an
+        environment variable so the same command works in CI, in a VM,
+        and on your daily driver.
+      </p>
+
+      <Expandable summary="Step by step — click to expand" open={false}>
+        <ol class="list-decimal space-y-2 pl-5">
+          <li>
+            <strong class="font-mono text-hal0-fg">Preflight.</strong>
+            Refuses to run on anything that isn&rsquo;t Linux with systemd
+            (<code>installer/install.sh:86</code>). Checks for
+            <code>python3</code>, <code>curl</code>, <code>systemctl</code>,
+            and a writable prefix.
+          </li>
+          <li>
+            <strong class="font-mono text-hal0-fg">User &amp; directories.</strong>
+            Creates a system <code>hal0</code> user and the FHS layout:
+            <code>/usr/lib/hal0/current/</code> (atomic symlink to a
+            versioned dir), <code>/etc/hal0/</code> (config — preserved
+            across updates), <code>/var/lib/hal0/</code> (models,
+            registry, OpenWebUI state).
+          </li>
+          <li>
+            <strong class="font-mono text-hal0-fg">Python venv.</strong>
+            Builds the hal0 venv at the versioned dir and pins
+            dependencies. Override the interpreter with
+            <code>HAL0_PYTHON=/path/to/python3.12</code>.
+          </li>
+          <li>
+            <strong class="font-mono text-hal0-fg">Hardware probe.</strong>
+            Runs <code>hal0 probe</code> and writes
+            <code>/etc/hal0/hardware.json</code>. Detects GPU / NPU /
+            unified memory (UMA pool on Strix Halo). Skip with
+            <code>HAL0_NO_PROBE=1</code>.
+          </li>
+          <li>
+            <strong class="font-mono text-hal0-fg">systemd units.</strong>
+            Installs <code>hal0-api.service</code> plus the
+            <code>hal0-slot@.service</code> template — one template, N
+            slot instances (no hand-written per-slot units).
+          </li>
+          <li>
+            <strong class="font-mono text-hal0-fg">OpenWebUI wiring.</strong>
+            Writes <code>openwebui.env</code> with
+            <code>OPENAI_API_BASE_URLS=http://127.0.0.1:8080/v1</code> so
+            the bundled chat UI lights up at <code>:3001</code> with zero
+            extra config.
+          </li>
+          <li>
+            <strong class="font-mono text-hal0-fg">Enable &amp; start.</strong>
+            <code>systemctl enable --now hal0-api</code>. Slot units stay
+            offline until you assign a model in the dashboard or via
+            <code>hal0 slot load</code>.
+          </li>
+        </ol>
+        <p class="mt-4 text-hal0-fg-dim">
+          Overrides accepted on the command line:
+          <code>HAL0_PREFIX</code>, <code>HAL0_PORT</code> (default
+          <code>8080</code>), <code>HAL0_USER</code>,
+          <code>HAL0_PYTHON</code>, <code>HAL0_NO_PROBE</code>, and
+          per-backend <code>HAL0_TOOLBOX_IMAGE_*</code> overrides for
+          pinning a specific Vulkan/ROCm/FLM/Moonshine/Kokoro image.
+        </p>
+      </Expandable>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Manual install                                                -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-4xl px-6 py-16">
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Manual install.
+      </h2>
+      <p class="mb-8 max-w-2xl text-hal0-fg-muted">
+        Prefer reading the script before running it? Clone the repo and
+        run the installer directly — same code path, no
+        <code>curl | bash</code>.
+      </p>
+
+      <StepList>
+        <StepItem n={1} title="Clone the repo">
+          <CodeBlock lang="sh">{`git clone https://github.com/hal0ai/hal0.git
+cd hal0`}</CodeBlock>
+        </StepItem>
+
+        <StepItem n={2} title="Run the installer">
+          <CodeBlock lang="sh">{`sudo bash installer/install.sh`}</CodeBlock>
+          <p>
+            The same script the one-liner downloads. All
+            <code>HAL0_*</code> environment overrides apply here too:
+          </p>
+          <CodeBlock lang="sh">{`sudo HAL0_PORT=18080 HAL0_NO_PROBE=1 bash installer/install.sh`}</CodeBlock>
+        </StepItem>
+
+        <StepItem n={3} title="Pick a model">
+          <p>
+            <code>hal0 model pull</code> is a stub today (<code>501</code>).
+            For the moment, drop a GGUF file into
+            <code>/var/lib/hal0/models/</code> and point a slot at it:
+          </p>
+          <CodeBlock lang="sh">{`sudo cp ~/Downloads/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf \\
+  /var/lib/hal0/models/
+hal0 slot load primary --model qwen2.5-0.5b-instruct-q4_k_m`}</CodeBlock>
+          <p>
+            Qwen 0.5B is the CI smoke model — it fits anywhere and
+            verifies the slot lifecycle end-to-end (217&ndash;413&nbsp;tok/s
+            on Strix Halo iGPU, plenty fast on CPU for a sanity check).
+          </p>
+        </StepItem>
+      </StepList>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Verify                                                        -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-4xl px-6 py-16">
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Verify the install.
+      </h2>
+      <p class="mb-8 max-w-2xl text-hal0-fg-muted">
+        Three checks: CLI is on PATH, the daemon is running, the API is
+        responding.
+      </p>
+
+      <StepList>
+        <StepItem n={1} title="hal0 --version">
+          <CodeBlock lang="sh" title="cli">{`hal0 --version`}</CodeBlock>
+          <p>Expected:</p>
+          <CodeBlock lang="txt" title="expected output">{`hal0 0.1.x`}</CodeBlock>
+          <p>
+            If the binary isn&rsquo;t found, <code>/usr/lib/hal0/current/bin</code>
+            probably isn&rsquo;t on your <code>PATH</code> — log out and
+            back in, or source <code>/etc/profile.d/hal0.sh</code>.
+          </p>
+        </StepItem>
+
+        <StepItem n={2} title="systemctl status hal0-api">
+          <CodeBlock lang="sh" title="daemon">{`systemctl status hal0-api`}</CodeBlock>
+          <p>Expected (the key bits):</p>
+          <CodeBlock lang="txt" title="expected output">{`● hal0-api.service - hal0 OpenAI-compatible API
+     Loaded: loaded (/etc/systemd/system/hal0-api.service; enabled; preset: enabled)
+     Active: active (running) since ...
+   Main PID: 12345 (python)
+      Tasks: ...
+     Memory: ...
+        CPU: ...`}</CodeBlock>
+          <p>
+            <code>Active: active (running)</code> is the line that
+            matters. Logs are in
+            <code>journalctl -u hal0-api</code>.
+          </p>
+        </StepItem>
+
+        <StepItem n={3} title="curl /v1/models">
+          <CodeBlock lang="sh" title="api">{`curl http://localhost:8080/v1/models`}</CodeBlock>
+          <p>Expected (empty registry on a fresh install):</p>
+          <CodeBlock lang="json" title="expected output">{`{
+  "object": "list",
+  "data": []
+}`}</CodeBlock>
+          <p>
+            After you load a model into a slot you&rsquo;ll see it in
+            <code>data[]</code>. The dispatcher exposes the OpenAI surface
+            at <code>/v1/*</code>: chat, completions, embeddings, rerank,
+            audio transcription, audio speech. Slot ports (<code>:8081</code>&ndash;<code>:8099</code>)
+            are bound to <code>127.0.0.1</code> only — the API is the
+            single public surface.
+          </p>
+        </StepItem>
+
+        <StepItem n={4} title="Optional — open the dashboard">
+          <p>
+            The Vue dashboard ships on the same <code>:8080</code> at
+            <code>/</code>; OpenWebUI is on <code>:3001</code> prewired
+            against the local API.
+          </p>
+          <CodeBlock lang="sh" title="local urls">{`# dashboard
+xdg-open http://localhost:8080/
+
+# prewired chat
+xdg-open http://localhost:3001/`}</CodeBlock>
+        </StepItem>
+      </StepList>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Uninstall                                                     -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-4xl px-6 py-16">
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Uninstall.
+      </h2>
+      <p class="mb-6 max-w-2xl text-hal0-fg-muted">
+        The <code>hal0 uninstall</code> CLI is on the v1 punch list but
+        not implemented yet — it currently returns a
+        <code>NOT_IMPLEMENTED</code> stub. Until that lands, do it by
+        hand:
+      </p>
+
+      <CodeBlock lang="sh" title="manual uninstall">{`# stop + disable units
+sudo systemctl disable --now hal0-api
+sudo systemctl disable --now 'hal0-slot@*' 2>/dev/null || true
+
+# remove unit files + reload systemd
+sudo rm -f /etc/systemd/system/hal0-api.service \\
+           /etc/systemd/system/hal0-slot@.service
+sudo systemctl daemon-reload
+
+# remove install tree + state
+sudo rm -rf /usr/lib/hal0 /usr/lib/hal0-*
+
+# remove config (skip this line if you want to keep your slot configs)
+sudo rm -rf /etc/hal0
+
+# remove data — models, registry, OpenWebUI state (skip to keep models)
+sudo rm -rf /var/lib/hal0
+
+# remove the system user
+sudo userdel hal0 2>/dev/null || true`}</CodeBlock>
+
+      <p class="mt-6 text-sm text-hal0-fg-muted">
+        <code>/etc/hal0/</code> and <code>/var/lib/hal0/</code> are split
+        on purpose: config is preserved across updates, data is the heavy
+        thing. Decide per-directory what you keep.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Troubleshooting                                               -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-4xl px-6 py-16">
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Troubleshooting.
+      </h2>
+      <p class="mb-8 max-w-2xl text-hal0-fg-muted">
+        The handful of issues we hit most while bringing v1 up.
+      </p>
+
+      <div class="space-y-4">
+        <Expandable summary="Installer refuses with “systemd required”">
+          <p>
+            The installer hard-fails on non-systemd / non-Linux hosts
+            (<code>installer/install.sh:86</code>). macOS and Windows
+            aren&rsquo;t supported in v1. WSL2 isn&rsquo;t either — WSL
+            doesn&rsquo;t expose systemd by default and the slot units
+            won&rsquo;t boot. Run it inside a real Linux VM, LXC, or on
+            bare metal.
+          </p>
+        </Expandable>
+
+        <Expandable summary="Port 8080 is already in use">
+          <p>
+            <code>hal0-api</code> binds <code>:8080</code> by default.
+            Override at install time and the systemd unit picks up the
+            new port automatically:
+          </p>
+          <CodeBlock lang="sh">{`sudo HAL0_PORT=18080 bash installer/install.sh
+# then point clients at http://localhost:18080/v1`}</CodeBlock>
+          <p>
+            Slot ports <code>:8081</code>&ndash;<code>:8099</code> stay
+            on <code>127.0.0.1</code> and don&rsquo;t need to change.
+          </p>
+        </Expandable>
+
+        <Expandable summary="A slot stays stuck in error / pulling">
+          <p>
+            Slot lifecycle state lives in
+            <code>/var/lib/hal0/slots/&lt;name&gt;/state.json</code> and
+            is mirrored to the dashboard over SSE. When a slot errors,
+            the journal has the real reason:
+          </p>
+          <CodeBlock lang="sh">{`# tail the slot's journal
+journalctl -u hal0-slot@primary -f
+
+# or via the CLI (same data)
+hal0 slot logs primary --follow`}</CodeBlock>
+          <p>
+            Common causes: toolbox image not pulled, model file missing
+            from <code>/var/lib/hal0/models/</code>, GGUF too big for the
+            VRAM / GTT carveout. The slot form in the dashboard surfaces
+            a fit warning before you load — check there first.
+          </p>
+        </Expandable>
+
+        <Expandable summary="“No such image” — FLM / Moonshine / Kokoro / ROCm">
+          <p>
+            Only the Vulkan toolbox is published today
+            (<code>ghcr.io/hal0ai/hal0-toolbox-vulkan:dev</code>).
+            <code>hal0-toolbox-flm</code>,
+            <code>hal0-toolbox-moonshine</code>,
+            <code>hal0-toolbox-kokoro</code>, and
+            <code>hal0-toolbox-rocm</code> are pending Phase&nbsp;2 publish.
+            Until they ship, the <code>primary</code> and
+            <code>embed</code> slots work out of the box on Vulkan; the
+            <code>stt</code> and <code>tts</code> slots will sit
+            <code>offline</code>.
+          </p>
+        </Expandable>
+
+        <Expandable summary="hal0 model pull returns 501">
+          <p>
+            <code>POST /api/models/&#123;id&#125;/pull</code> (HF streaming
+            download) is still <code>501&nbsp;NOT_IMPLEMENTED</code> — it&rsquo;s
+            on the remaining-gaps list for v1.0. Workaround: download the
+            GGUF manually with <code>huggingface-cli</code> and drop the
+            file into <code>/var/lib/hal0/models/</code>:
+          </p>
+          <CodeBlock lang="sh">{`pip install --user 'huggingface_hub[cli]'
+huggingface-cli download \\
+  Qwen/Qwen2.5-0.5B-Instruct-GGUF \\
+  qwen2.5-0.5b-instruct-q4_k_m.gguf \\
+  --local-dir /var/lib/hal0/models/`}</CodeBlock>
+          <p>
+            Then <code>hal0 slot load primary --model qwen2.5-0.5b-instruct-q4_k_m</code>.
+          </p>
+        </Expandable>
+
+        <Expandable summary="hal0 isn’t on PATH after install">
+          <p>
+            The installer drops a profile snippet at
+            <code>/etc/profile.d/hal0.sh</code> that adds
+            <code>/usr/lib/hal0/current/bin</code> to <code>PATH</code>.
+            Login shells pick it up automatically — fresh terminals
+            won&rsquo;t see it until you log out and back in, or source
+            it manually:
+          </p>
+          <CodeBlock lang="sh">{`source /etc/profile.d/hal0.sh
+hal0 --version`}</CodeBlock>
+        </Expandable>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Next steps                                                    -->
+  <!-- ============================================================ -->
+  <section class="bg-hal0-bg">
+    <div class="mx-auto max-w-4xl px-6 py-16">
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        After it&rsquo;s installed.
+      </h2>
+      <p class="mb-8 max-w-2xl text-hal0-fg-muted">
+        Next stops if the verify checks all passed.
+      </p>
+      <ul class="grid gap-3 md:grid-cols-2">
+        <li>
+          <a
+            href="/docs/getting-started/first-chat/"
+            class="block rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5 transition hover:border-hal0-accent"
+          >
+            <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">docs</p>
+            <p class="mt-1 font-mono text-base font-semibold text-hal0-fg">First chat →</p>
+            <p class="mt-1 text-sm text-hal0-fg-muted">
+              Load a model, talk to it, plug OpenWebUI in.
+            </p>
+          </a>
+        </li>
+        <li>
+          <a
+            href="/hardware"
+            class="block rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5 transition hover:border-hal0-accent"
+          >
+            <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">hardware</p>
+            <p class="mt-1 font-mono text-base font-semibold text-hal0-fg">What runs where →</p>
+            <p class="mt-1 text-sm text-hal0-fg-muted">
+              Strix Halo, ROCm, CUDA, CPU — the support matrix.
+            </p>
+          </a>
+        </li>
+        <li>
+          <a
+            href="/docs/slots/what-is-a-slot/"
+            class="block rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5 transition hover:border-hal0-accent"
+          >
+            <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">slots</p>
+            <p class="mt-1 font-mono text-base font-semibold text-hal0-fg">What is a slot? →</p>
+            <p class="mt-1 text-sm text-hal0-fg-muted">
+              Lifecycle states, dispatch, atomic config.
+            </p>
+          </a>
+        </li>
+        <li>
+          <a
+            href="https://github.com/hal0ai/hal0/blob/main/installer/install.sh"
+            rel="noopener"
+            class="block rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5 transition hover:border-hal0-accent"
+          >
+            <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">github</p>
+            <p class="mt-1 font-mono text-base font-semibold text-hal0-fg">Read the installer →</p>
+            <p class="mt-1 text-sm text-hal0-fg-muted">
+              <code>installer/install.sh</code> on GitHub. Idempotent, non-interactive.
+            </p>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+</MarketingLayout>

@@ -1,0 +1,11 @@
+---
+/**
+ * StepList — ordered list of installer / verification steps. Renders
+ * each step as a numbered card with a heading slot and a body slot.
+ * Wrap individual <li> elements as <StepItem>.
+ */
+---
+
+<ol class="space-y-3 counter-reset:step">
+  <slot />
+</ol>
