@@ -15,7 +15,37 @@ import FeatureGrid from '../components/FeatureGrid.astro';
 import FeatureCard from '../components/FeatureCard.astro';
 import HardwareMatrix from '../components/HardwareMatrix.astro';
 import ComparisonTable from '../components/ComparisonTable.astro';
+import RoadmapColumn from '../components/RoadmapColumn.astro';
+import RoadmapCard from '../components/RoadmapCard.astro';
+import CTA from '../components/CTA.astro';
 import LoadoutCard from '../components/landing/LoadoutCard.astro';
+
+const canonicalUrl = 'https://hal0.dev/';
+
+const softwareApplicationLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'hal0',
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Linux',
+  description:
+    'Open-source home AI inference platform for Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, prewired OpenWebUI, self-hosted, no telemetry.',
+  url: canonicalUrl,
+  downloadUrl: 'https://hal0.dev/install',
+  license: 'https://www.apache.org/licenses/LICENSE-2.0',
+  softwareVersion: 'v1 pre-alpha',
+  codeRepository: 'https://github.com/hal0ai/hal0',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  author: {
+    '@type': 'Organization',
+    name: 'hal0ai',
+    url: 'https://github.com/hal0ai',
+  },
+};
 
 const comparisonColumns = [
   { key: 'hal0', label: 'hal0', highlight: true },
@@ -480,4 +510,209 @@ curl -fsSL https://hal0.dev/install | bash
       </div>
     </div>
   </section>
+
+  <!-- Roadmap teaser — three highest-signal v0.2 items + a link to /roadmap. -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
+        <div class="max-w-3xl">
+          <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            Roadmap
+          </p>
+          <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+            v1 shipped. v0.2 is where it gets interesting.
+          </h2>
+          <p class="text-pretty text-hal0-fg-muted">
+            Phase 1 landed on 2026-05-15 — 353 unit tests passing,
+            integration tier on Vulkan-CPU + Qwen 0.5B. Here's what's
+            next.
+          </p>
+        </div>
+        <a
+          href="/roadmap"
+          class="inline-flex items-center gap-2 rounded-md border border-hal0-border bg-hal0-bg-elevated px-4 py-2 font-mono text-sm text-hal0-fg transition hover:border-hal0-border-strong"
+        >
+          Full roadmap →
+        </a>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <RoadmapColumn title="Now" eyebrow="v1" tone="primary">
+          <RoadmapCard title="Slot lifecycle + dispatcher" status="shipped" eta="v1">
+            State machine, single-flight, adaptive cold-boot, atomic
+            TOML config, structured error envelopes.
+          </RoadmapCard>
+          <RoadmapCard title="Four providers wired" status="shipped" eta="v1">
+            llama.cpp (Vulkan), FLM (XDNA NPU), Moonshine (STT),
+            Kokoro (TTS).
+          </RoadmapCard>
+        </RoadmapColumn>
+
+        <RoadmapColumn title="Next" eyebrow="v0.2">
+          <RoadmapCard title="Memory subsystem" status="next">
+            Conversation memory store wired into the dispatcher —
+            opt-in per slot.
+          </RoadmapCard>
+          <RoadmapCard title="MCP support" status="next">
+            Model Context Protocol surface so hal0 can host MCP servers
+            alongside slots.
+          </RoadmapCard>
+        </RoadmapColumn>
+
+        <RoadmapColumn title="Next" eyebrow="v0.2">
+          <RoadmapCard title="Kyuzo · image generation" status="next">
+            ComfyUI-backed provider as a fourth slot class.
+          </RoadmapCard>
+          <RoadmapCard title="Caddy + auth + hal0.local" status="next">
+            Reverse proxy with optional auth and mDNS so the box is
+            reachable as <code>hal0.local</code> on your LAN.
+          </RoadmapCard>
+        </RoadmapColumn>
+
+        <RoadmapColumn title="Packaging" eyebrow="v0.2">
+          <RoadmapCard title="AUR + Ubuntu PPA" status="next">
+            Distro-native packages alongside the curl installer.
+          </RoadmapCard>
+          <RoadmapCard title="Benchmarks + Presets UI" status="next">
+            In-dashboard benchmark runner and one-click loadout
+            presets.
+          </RoadmapCard>
+        </RoadmapColumn>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust / social proof — license, telemetry-off, cosign, GitHub. -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Trust
+      </p>
+      <h2 class="mb-10 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Boring guarantees, in writing.
+      </h2>
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-1 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+            License
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Apache-2.0
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            Patent grant included. Bundle, fork, ship.
+          </p>
+        </div>
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-1 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+            Telemetry
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Off by default
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            Opt-in surfaces hw class, version, slot count. No model
+            names. No IPs. No config.
+          </p>
+        </div>
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-1 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+            Releases
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            cosign-signed
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            <code class="font-mono">hal0 update</code> verifies
+            GitHub-OIDC signer identity before unpacking.
+          </p>
+        </div>
+        <a
+          href="https://github.com/hal0ai/hal0"
+          rel="noopener"
+          class="group rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5 transition hover:border-hal0-accent"
+        >
+          <p class="mb-1 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+            Source
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg group-hover:text-hal0-accent">
+            github.com/hal0ai/hal0 →
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            Issues, discussions, release manifests. Pre-alpha — see
+            CONTRIBUTING for contribution status.
+          </p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Community — GitHub Issues, Discussions, contact. -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Community
+      </p>
+      <h2 class="mb-10 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Built in the open. Talk to us in the open.
+      </h2>
+      <div class="grid gap-4 md:grid-cols-3">
+        <a
+          href="https://github.com/hal0ai/hal0/issues"
+          rel="noopener"
+          class="group rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6 transition hover:border-hal0-accent"
+        >
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg group-hover:text-hal0-accent">
+            GitHub Issues →
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Bug reports and feature requests. Reference the slot or
+            endpoint in the title; attach
+            <code class="font-mono">journalctl -u hal0-api</code> output
+            for crashes.
+          </p>
+        </a>
+        <a
+          href="https://github.com/hal0ai/hal0/discussions"
+          rel="noopener"
+          class="group rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6 transition hover:border-hal0-accent"
+        >
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg group-hover:text-hal0-accent">
+            GitHub Discussions →
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Loadout questions, hardware tuning, model recommendations.
+            Lower friction than an issue.
+          </p>
+        </a>
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Email
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            <code class="font-mono">hello@hal0.dev</code>
+            <span class="ml-2 rounded bg-hal0-bg px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-hal0-fg-dim">
+              TODO
+            </span>
+            <br />
+            <span class="text-hal0-fg-dim">
+              Mailbox pending; treat as a placeholder until launch.
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <CTA
+    eyebrow="One Linux box. Your AI."
+    title="Install hal0 in under a minute."
+    subtitle="Linux + systemd is the only hard requirement. The probe picks the right provider — Vulkan on Strix Halo, CUDA on NVIDIA, ROCm on AMD discrete, CPU as a fallback."
+    ctaPrimary={{ href: '/install', label: 'curl … | bash' }}
+    ctaSecondary={{ href: '/docs/getting-started/', label: 'Read the docs' }}
+  />
+
+  <!-- Schema.org SoftwareApplication. JSON-LD is valid anywhere in the doc,
+       so we keep it in the body to avoid touching MarketingLayout. -->
+  <script type="application/ld+json" set:html={JSON.stringify(softwareApplicationLd)} />
 </MarketingLayout>
