@@ -21,7 +21,9 @@ http://localhost:3001
 If you set `HAL0_OPENWEBUI_PORT`, swap the port. OpenWebUI runs as a
 Docker container under `hal0-openwebui.service`. The installer wrote
 `/etc/hal0/openwebui.env` with `OPENAI_API_BASE_URLS=http://127.0.0.1:8080/v1`
-— that's the deep-link that makes "drop-in chat" work.
+— that's the deep-link that makes "drop-in chat" work. See
+[operate / OpenWebUI](/docs/operate/openwebui/) for day-2 details
+(swapping the bundled UI, rebinding ports, persistence).
 
 On first launch, OpenWebUI asks you to create a local admin account.
 That account lives in OpenWebUI's own SQLite database under
@@ -80,7 +82,7 @@ repo ID, and pick the slot you want it assigned to. The same pull job
 the wizard ran handles it — streamed progress, same lifecycle.
 
 For multi-slot loadouts (chat + embed + voice all hot at once),
-[`primary` + `embed`](/docs/slots/overview/) co-resident is the
+[`primary` + `embed`](/docs/slots/what-is-a-slot/) co-resident is the
 baseline. The [Strix Halo loadouts](/docs/hardware/strix-halo/#recommended-loadouts)
 section maps loadouts to hardware envelopes.
 
@@ -109,7 +111,7 @@ If the model picker is blank, walk back through the chain:
 <CardGrid>
   <LinkCard
     title="Slot architecture"
-    href="/docs/slots/overview/"
+    href="/docs/slots/what-is-a-slot/"
     description="What `ready` and `serving` actually mean, and how the dispatcher routes." />
   <LinkCard
     title="API reference"

@@ -140,7 +140,9 @@ context windows or drop to a Q4 30B-A3B instead of a Q4 70B.
 
 All sizes are published GGUF file sizes verified on Hugging Face,
 May 2026. Mix, match, and tweak — the slot system takes a different
-model per slot whenever you change your mind.
+model per slot whenever you change your mind. The companion
+[loadouts reference](/docs/slots/loadouts/) carries the same picks
+broken out per hardware tier.
 
 ### Coding
 
@@ -356,8 +358,12 @@ specifics.
     description="The one-line installer detects Strix Halo and picks Vulkan automatically." />
   <LinkCard
     title="Slot lifecycle"
-    href="/docs/slots/what-is-a-slot/"
+    href="/docs/reference/slot-lifecycle/"
     description="The state machine that ties model + provider + systemd unit together." />
+  <LinkCard
+    title="Recommended loadouts"
+    href="/docs/slots/loadouts/"
+    description="Curated model picks per hardware tier." />
   <LinkCard
     title="API reference"
     href="/docs/api/openai-compat/"
