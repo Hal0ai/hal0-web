@@ -22,8 +22,8 @@
 	--hal0-bg-elevated: #141414;
 	--hal0-bg-sunken:   #050505;
 	--hal0-fg:          #f5f5f4;
-	--hal0-fg-muted:    #a8a29e;
-	--hal0-fg-dim:      #6b6864;
+	--hal0-fg-muted:    #c8c2bd; /* ≥7:1 on bg-elevated */
+	--hal0-fg-dim:      #a3a09c; /* ≥4.5:1 on bg-elevated */
 	--hal0-border:      #262626;
 	--hal0-border-strong: #3a3a3a;
 
@@ -119,6 +119,17 @@ code, pre, kbd, .tabular, .wordmark {
 ::selection {
 	background: var(--hal0-accent-glow);
 	color: var(--hal0-fg);
+}
+
+/* Links inside Starlight prose: underline so they're distinguishable
+ * by something other than color (WCAG 1.4.1). */
+.sl-markdown-content a[href]:not(.not-content *) {
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--hal0-accent) 55%, transparent);
+	text-underline-offset: 2px;
+}
+.sl-markdown-content a[href]:not(.not-content *):hover {
+	text-decoration-color: var(--hal0-accent);
 }
 
 /* ---------- Tailwind v4 theme bridge ----------

@@ -59,8 +59,9 @@ const navClass =
   <body class="min-h-screen bg-hal0-bg text-hal0-fg antialiased">
     <header class:list={['sticky top-0 z-40 border-b border-transparent', navClass]}>
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="/" class="flex items-center gap-2" aria-label="hal0 home">
+        <a href="/" class="flex items-center gap-2">
           <Wordmark size="text-xl" />
+          <span class="sr-only">— home</span>
         </a>
         <ul class="hidden items-center gap-7 font-mono text-sm text-hal0-fg-muted md:flex">
           <li><a class="transition hover:text-hal0-fg" href="/install">install</a></li>
