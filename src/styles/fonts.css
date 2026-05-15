@@ -5,3 +5,29 @@
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 @import '@fontsource/jetbrains-mono/700.css';
+
+/* Size-adjusted fallback for JetBrains Mono. The default `font-display:
+ * swap` from @fontsource gives FOUT — when JBM finally loads, line
+ * heights for headings + the wordmark change, producing a Cumulative
+ * Layout Shift of ~0.21 on the /hardware page. Defining a fallback
+ * @font-face whose metrics are size-adjusted to match JBM means the
+ * swap is metric-neutral and CLS stays near zero. */
+@font-face {
+	font-family: 'JBM Fallback';
+	src: local('Menlo'), local('Consolas'), local('Liberation Mono'), local('Courier New');
+	size-adjust: 102%;
+	ascent-override: 90%;
+	descent-override: 22%;
+	line-gap-override: 0%;
+}
+
+/* Size-adjusted fallback for Geist Variable (body). Same FOUT story
+ * for the long-form paragraphs. */
+@font-face {
+	font-family: 'Geist Fallback';
+	src: local('Inter'), local('Segoe UI'), local('Helvetica Neue'), local('Arial');
+	size-adjust: 100%;
+	ascent-override: 93%;
+	descent-override: 22%;
+	line-gap-override: 0%;
+}
