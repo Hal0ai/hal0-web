@@ -268,6 +268,59 @@ dashboard reflects reality (not just `systemctl is-active` snapshots).
 Linux + systemd is required (`installer/install.sh:86`). macOS/Windows
 are not in scope for v1.
 
+## Recommended loadouts
+
+Curated starting points, not gospel — mix, match, and tweak. The slot
+system happily takes a different model per slot whenever you change your
+mind. Sizes are published GGUF Q4_K_M / Q8_0 file sizes summed; no tok/s
+numbers here (see the perf table for the only verified ones).
+
+### Coding — small / mid / large
+
+- **Small** (~3 GB) — `primary`: `Qwen2.5-Coder-3B-Instruct-Q8_0`. Fits anywhere with a few GB to spare; great for inline completion.
+- **Mid** (~10 GB) — `primary`: `Qwen2.5-Coder-14B-Instruct-Q4_K_M` (~9 GB); `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB) for repo-aware search.
+- **Large** (~35 GB) — `primary`: `Qwen2.5-Coder-32B-Instruct-Q8_0`; `embed`: `bge-large-en-v1.5-Q8_0` (~670 MB). Strix Halo unified pool eats this happily; over the line for single 24 GB discrete cards.
+
+### General chat — small / mid / large
+
+- **Small** (~2 GB) — `primary`: `Llama-3.2-3B-Instruct-Q4_K_M`. Snappy on any modern box.
+- **Mid** (~5 GB) — `primary`: `Meta-Llama-3.1-8B-Instruct-Q4_K_M` or `Qwen3-4B-Instruct-Q8_0`. The everyday default.
+- **Large** (~42 GB) — `primary`: `Llama-3.3-70B-Instruct-Q4_K_M`. Strix Halo or a multi-GPU rig; not feasible on a single 24 GB card.
+
+### Voice mode (~3 GB total)
+
+- `primary`: `Llama-3.2-3B-Instruct-Q4_K_M` (~2 GB) — low-latency reply
+- `stt`: Moonshine base (~190 MB) via the `moonshine` toolbox
+- `tts`: Kokoro-82M (~330 MB) via the `kokoro` toolbox
+- Leaves headroom on the iGPU for the streaming pipelines; v1 reference target.
+
+### Creative / fun writing (~14 GB)
+
+- `primary`: `Mistral-Small-24B-Instruct-2501-Q4_K_M`. Long-form prose strength without going to a 70B. Lighter alternative: `Hermes-3-Llama-3.1-8B-Q4_K_M` (~5 GB).
+
+### Privacy-first / minimal footprint (<2 GB)
+
+- `primary`: `Qwen2.5-0.5B-Instruct-Q4_K_M` (~400 MB) — the CI smoke model
+- `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB)
+- Runs on CPU-only fallback boxes; the smallest viable hal0 install.
+
+### RAG / knowledge-base (~10 GB)
+
+- `primary`: `Qwen2.5-14B-Instruct-Q4_K_M` (~9 GB) for synthesis
+- `embed`: pick one — `bge-large-en-v1.5-Q8_0` (~670 MB, English-leaning) or `mxbai-embed-large-v1-Q4_K_M` (~340 MB, broader). The embed slot also serves rerank via `/v1/rerankings`.
+
+### Agentic tool-use (~21 GB)
+
+- `primary`: `Qwen2.5-32B-Instruct-Q4_K_M` (~20 GB) — strong tool-call reasoning, fits a single Strix Halo box without paging.
+- `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB) for retrieval-augmented routing.
+- Lines up with the v0.2 agents / MCP roadmap (PLAN §1 "v0.2 deferred").
+
+### Hardware fit summary
+
+- **Strix Halo / Ryzen AI Max** — every loadout above, including 70B and 32B Q4 in the unified pool.
+- **AMD discrete (ROCm) / NVIDIA (CUDA)** — small + mid loadouts fit a 16–24 GB card; large needs multi-GPU.
+- **CPU fallback** — privacy-first only.
+
 ## License status
 
 **Apache 2.0.** Settled 2026-05-15 (PLAN §16). LICENSE file is at the
