@@ -6,10 +6,16 @@
   </style>
   <!-- companion mark: flattened ellipse halo, ~8:1 aspect, tilted -4°,
        centered over the wordmark. Sized narrower than the wordmark
-       so it reads as a halo *over* the type, not a frame around it. -->
-  <ellipse class="halo" cx="35" cy="-3" rx="28" ry="2.5"
-           transform="rotate(-4 35 -3)"
+       so it reads as a halo *over* the type, not a frame around it.
+       cx kept at the viewBox centre (48) so the halo stays centred over
+       the type regardless of the font that actually paints the glyphs. -->
+  <ellipse class="halo" cx="48" cy="-3" rx="28" ry="2.5"
+           transform="rotate(-4 48 -3)"
            vector-effect="non-scaling-stroke" />
-  <text x="0" y="21" class="w">hal</text>
-  <text x="56" y="21" class="w z">0</text>
+  <!-- Single <text> + two <tspan>s so the browser handles inter-glyph
+       advance with whatever font actually paints (Starlight loads this
+       as <img>, isolating it from the page's JBM — letting the renderer
+       lay out 'hal' and '0' in one flow avoids the gap that a hard-coded
+       x=56 second <text> produced under a wider system fallback). -->
+  <text x="48" y="21" class="w" text-anchor="middle"><tspan>hal</tspan><tspan class="z">0</tspan></text>
 </svg>
