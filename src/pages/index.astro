@@ -11,6 +11,8 @@
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import HeroSection from '../components/HeroSection.astro';
 import CodeBlock from '../components/CodeBlock.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
+import FeatureCard from '../components/FeatureCard.astro';
 
 const description =
   'hal0 is an open-source home AI inference platform built for the 128 GB Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, self-hosted, no telemetry.';
@@ -31,4 +33,110 @@ const description =
 {`curl -fsSL https://hal0.dev/install | bash`}
     </CodeBlock>
   </HeroSection>
+
+  <!-- Why hal0 — the 4 things that separate it from "another llama-server wrapper". -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Why hal0
+      </p>
+      <h2 class="mb-12 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        A polished home AI box, not another llama-server wrapper.
+      </h2>
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <article class="rounded-lg border border-hal0-accent/40 bg-hal0-bg-elevated p-6 shadow-[inset_3px_0_0_var(--hal0-accent)]">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Strix Halo first-class
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            UMA-aware hardware probe, FLM provider for the XDNA NPU,
+            unified-memory slot fit warnings. The 128 GB Ryzen AI Max+
+            395 is the reference deployment — not an afterthought port.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            OpenAI-compatible
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            <code class="font-mono text-hal0-fg">/v1/chat</code>,
+            <code class="font-mono text-hal0-fg">embeddings</code>,
+            <code class="font-mono text-hal0-fg">rerankings</code>,
+            <code class="font-mono text-hal0-fg">audio/transcriptions</code>,
+            <code class="font-mono text-hal0-fg">audio/speech</code>.
+            Drop in any OpenAI SDK — point it at
+            <code class="font-mono text-hal0-fg">:8080</code>.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Lifecycle, not just launch
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Each slot is a typed state machine (offline → pulling →
+            starting → warming → ready → serving ↔ idle), persisted to
+            disk and streamed over SSE. systemd owns the units; the API
+            never holds a model in its own memory.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Open + no phone-home
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Apache-2.0. Telemetry is off by default; the only optional
+            ping carries hardware class + version + slot count. Your
+            weights, your data, your box.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features grid — 8 tiles, grounded in PLAN.md (see CONTENT_BRIEF features list). -->
+  <FeatureGrid
+    eyebrow="What ships in v1"
+    title="A complete home inference platform."
+    columns={4}
+  >
+    <FeatureCard title="Slot state machine" icon="layers">
+      Every workload has typed states (offline → pulling → warming →
+      ready → serving ↔ idle → unloading) with atomic transitions,
+      persisted to <code>state.json</code> and streamed over SSE.
+    </FeatureCard>
+    <FeatureCard title="OpenAI /v1/* surface" icon="plug">
+      Chat, completions, embeddings, rerank, audio transcriptions,
+      audio speech, models. Same shapes any OpenAI SDK already speaks.
+    </FeatureCard>
+    <FeatureCard title="Dispatcher + single-flight" icon="route">
+      Registry-aware routing, cold-cache prefetch, request coalescing,
+      decision logging. A thundering herd of identical prefetches
+      becomes one HTTP call.
+    </FeatureCard>
+    <FeatureCard title="Hardware-aware probe" icon="cpu">
+      Detects GPU / NPU / unified memory, writes
+      <code>/etc/hal0/hardware.json</code>, surfaces VRAM/RAM fit
+      warnings inline in the slot form before you try to load.
+    </FeatureCard>
+    <FeatureCard title="Prewired OpenWebUI" icon="message-circle">
+      Chat UI on <code>:3001</code>, zero config — the installer points
+      it at the local hal0 API. Dashboard is for operating the box,
+      not chatting.
+    </FeatureCard>
+    <FeatureCard title="Dashboard (Vue 3)" icon="gauge">
+      Nine views — Slots, Models, Hardware, Logs, Settings, Providers,
+      First-run, plus error shell. Dark by default. SSE-backed live
+      status and log tail.
+    </FeatureCard>
+    <FeatureCard title="Atomic self-update" icon="refresh-cw">
+      <code>hal0 update --channel stable|nightly</code>. Cosign-verified
+      tarballs swap a <code>current</code> symlink; <code>--rollback</code>
+      reverts. Slot units survive API restarts.
+    </FeatureCard>
+    <FeatureCard title="One-line install" icon="terminal">
+      Linux + systemd, idempotent, non-interactive. Pre-flight checks,
+      systemd template units, working slot defaults dropped on disk —
+      no manual yaml.
+    </FeatureCard>
+  </FeatureGrid>
 </MarketingLayout>

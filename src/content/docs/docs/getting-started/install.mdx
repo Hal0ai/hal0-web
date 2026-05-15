@@ -1,0 +1,185 @@
+---
+title: Install
+description: Install hal0 in one line on any modern Linux box with systemd. Strix Halo, AMD discrete, NVIDIA, or CPU-only.
+sidebar:
+  order: 1
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Install hal0",
+        "description": "Linux + systemd one-line installer for the hal0 home AI inference platform.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Linux",
+        "url": "https://hal0.dev/docs/getting-started/install/"
+      }
+---
+
+import { Aside, Steps, Tabs, TabItem, Code, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+hal0 installs in one line on any modern Linux box. The installer detects
+your hardware, picks the right backend (Vulkan, ROCm, CUDA, or CPU),
+writes a systemd unit, and brings up the API plus a prewired chat UI.
+
+## The one-liner
+
+```sh frame="terminal"
+curl -fsSL https://hal0.dev/install | bash
+```
+
+After the installer finishes you'll have:
+
+- **API** at `http://localhost:8080` — OpenAI-compatible `/v1/*`
+- **Dashboard** at `http://localhost:8080` (same port, served by the API)
+- **OpenWebUI** at `http://localhost:3001` — prewired to the local API
+
+The installer is idempotent. Re-running it never clobbers your existing
+config in `/etc/hal0/`.
+
+<Aside type="note" title="What runs as root">
+The installer needs `sudo` to drop systemd unit files into
+`/etc/systemd/system/` and create the `/usr/lib/hal0/` tree. The
+`hal0-api` service itself runs as the unprivileged `hal0` user.
+</Aside>
+
+## Prerequisites
+
+<Steps>
+1. **Linux with systemd.** Tested on Arch, CachyOS, Fedora, Ubuntu
+   22.04+. macOS and Windows are not in scope for v1.
+
+2. **x86_64.** ARM is not currently supported.
+
+3. **Docker accessible.** The slot toolboxes run as containers. The
+   installer checks `docker ps` before doing anything destructive.
+
+4. **At least 20 GB free in `/var/lib`.** Models and OpenWebUI state
+   land there.
+
+5. **Ports `8080` and `3001` free.** Override with `HAL0_PORT` and
+   `HAL0_OPENWEBUI_PORT` if you need different ones.
+</Steps>
+
+## What the installer does
+
+<Steps>
+1. **Pre-flight checks.** Verifies systemd, x86\_64, Docker, free
+   space, and free ports. Bails before touching anything if a check
+   fails.
+
+2. **Hardware probe.** Detects GPU, NPU, and unified memory pools.
+   Writes `/etc/hal0/hardware.json`. The result picks default backends
+   for the four built-in slots and feeds the slot-fit warnings in the
+   dashboard.
+
+3. **Layout.** Creates the FHS-aligned tree:
+   - `/usr/lib/hal0/current/` — versioned code, atomic symlink
+   - `/etc/hal0/` — config (`hal0.toml`, `api.env`, `openwebui.env`,
+     slot skeletons), preserved across updates
+   - `/var/lib/hal0/` — models, registry, OpenWebUI state
+
+4. **Config defaults.** Writes `hal0.toml` plus the four built-in slot
+   skeletons (`primary`, `embed`, `stt`, `tts`). Existing files are
+   never overwritten on re-run.
+
+5. **systemd units.** Drops `hal0-api.service`,
+   `hal0-openwebui.service`, and the `hal0-slot@.service` template into
+   `/etc/systemd/system/`. Reloads the daemon, enables and starts the
+   API plus OpenWebUI.
+
+6. **Ready.** Prints the URLs and points you at the first-run wizard.
+</Steps>
+
+## Overrides
+
+Every knob is an environment variable. Pass them on the same line as the
+installer:
+
+```sh frame="terminal"
+HAL0_PORT=9090 HAL0_OPENWEBUI_PORT=9091 \
+  curl -fsSL https://hal0.dev/install | bash
+```
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `HAL0_PREFIX` | `/usr/lib/hal0` | Install prefix |
+| `HAL0_PORT` | `8080` | API + dashboard port |
+| `HAL0_OPENWEBUI_PORT` | `3001` | OpenWebUI port |
+| `HAL0_USER` | `hal0` | Service user |
+| `HAL0_PYTHON` | `python3` | Python interpreter |
+| `HAL0_NO_PROBE` | unset | Skip the hardware probe |
+| `HAL0_AUTO_PULL` | `0` | Pre-pull toolbox images on install |
+| `HAL0_TOOLBOX_IMAGE_VULKAN` | repo default | Override Vulkan toolbox tag |
+| `HAL0_TOOLBOX_IMAGE_ROCM` | repo default | Override ROCm toolbox tag |
+
+For dev installs, set `HAL0_HOME=$PWD/.hal0` to relocate the whole tree
+under your working directory and skip the systemd path entirely.
+
+## From a clone
+
+If you already have the repo and want to test changes locally:
+
+```sh frame="terminal"
+git clone https://github.com/hal0ai/hal0
+cd hal0
+sudo bash installer/install.sh
+```
+
+The script in the repo is the same one the URL serves.
+
+## Verifying the install
+
+```sh frame="terminal"
+hal0 status
+```
+
+Prints a system summary plus the state of every slot. If `hal0-api` is
+healthy you'll see the four built-in slots in the `offline` state — the
+[first-run wizard](/docs/getting-started/first-model/) lights up
+`primary` for you.
+
+```sh frame="terminal"
+curl http://localhost:8080/v1/models
+```
+
+Returns an empty `data: []` until you've assigned a model to a slot.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard
+    title="Load your first model"
+    href="/docs/getting-started/first-model/"
+    description="The three-step FirstRun wizard: pick model, accept license, download." />
+  <LinkCard
+    title="Send your first chat"
+    href="/docs/getting-started/first-chat/"
+    description="OpenWebUI is prewired. Open it and start talking." />
+  <LinkCard
+    title="Strix Halo notes"
+    href="/docs/hardware/strix-halo/"
+    description="The reference platform — unified memory iGPU, NPU, the tuning details." />
+  <LinkCard
+    title="Hardware overview"
+    href="/docs/hardware/overview/"
+    description="Where hal0 runs best and the supported tiers." />
+</CardGrid>
+
+## Uninstalling
+
+```sh frame="terminal"
+sudo bash /usr/lib/hal0/current/installer/uninstall.sh
+```
+
+Stops the services, removes the unit files, and (with `--keep-data`)
+leaves your config and models in place. Without `--keep-data` it also
+clears `/etc/hal0` and `/var/lib/hal0`.
+
+<Aside type="caution" title="hal0 uninstall (CLI) not yet implemented">
+`hal0 uninstall` is staged but returns `NOT_IMPLEMENTED` in the current
+build. Use the bundled `uninstall.sh` directly.
+</Aside>

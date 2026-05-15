@@ -1,0 +1,122 @@
+---
+title: Load your first model
+description: Walk through the FirstRun wizard — pick a model, accept its license, and watch the primary slot come up.
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+A fresh hal0 install boots into the **FirstRun wizard**. Three steps,
+plus a "done" coda. Open the dashboard at `http://localhost:8080` and
+the wizard takes over the screen until the `primary` slot has a model.
+
+## What the wizard does
+
+The wizard is a guarded route at `/firstrun`. Until the API reports
+`first_run: false`, every other dashboard navigation redirects back to
+it — there's no point operating an empty box.
+
+It owns three jobs: pick a starting model from the curated list,
+confirm any license requirements, and stream a model pull straight into
+the `primary` slot. When the slot transitions to `ready`, the wizard
+moves to the done step and unlocks the rest of the dashboard.
+
+## The three steps
+
+<Steps>
+1. **Pick model.** A curated list of starting picks, sized to your
+   detected hardware. The probe already wrote
+   `/etc/hal0/hardware.json` during install, so the list shows fit
+   warnings inline — "this model is larger than your detected GPU"
+   appears next to anything that would offload heavily.
+
+   The default highlight is `Phi-3-mini-4k-instruct-q4` — a 2.4 GB Q4
+   GGUF that downloads in roughly 10 seconds on a modern connection
+   and is small enough to fit anywhere hal0 runs. Strix Halo users
+   should jump straight to a Q4 7B-class model or a Q4 MoE 30B — see
+   [recommended loadouts on the Strix Halo page](/docs/hardware/strix-halo/#recommended-loadouts).
+
+2. **License.** Some weights have a click-through license (Llama,
+   Gemma, others). When the picked model requires it, step 2 shows
+   the license URL and asks for explicit confirmation. If the model
+   is freely redistributable, this step is skipped.
+
+3. **Install.** The dashboard kicks off a streaming pull through
+   `POST /api/models/{id}/pull`. Progress streams live over SSE —
+   bytes, percent, and the slot state transitioning through
+   `pulling → starting → warming → ready`. The slot starts
+   automatically when the download completes.
+</Steps>
+
+When `primary` reaches `ready`, the wizard moves to the done step. From
+there you can head straight to OpenWebUI for a [first chat](/docs/getting-started/first-chat/),
+or to the dashboard to load more models.
+
+<Aside type="note" title="What if you want to skip the wizard?">
+The CLI gets you to the same place without a browser:
+
+```sh
+hal0 slot load primary --model phi-3-mini-4k-instruct-q4
+```
+
+The slot manager handles the pull, the systemd unit, and the health
+probe. `hal0 status` shows the same state machine the wizard streams.
+</Aside>
+
+## When the pull fails
+
+The wizard surfaces errors inline. Common ones:
+
+- **No disk space.** `/var/lib/hal0/models/` ran out mid-pull. Free
+  up space and retry — partial downloads resume.
+- **Hugging Face rate-limit.** Anonymous pulls hit a rate cap on
+  popular weights. Export `HF_TOKEN` (or set it in `/etc/hal0/api.env`)
+  and retry.
+- **License not accepted on Hugging Face.** Some gated models require
+  acceptance on the HF side before the API will serve the files. The
+  error message links out to the model page.
+
+The slot stays in the `error` state with details in
+`/var/lib/hal0/slots/primary/state.json` until you retry — nothing
+hidden.
+
+## Picking something other than the default
+
+The wizard's curated list is a starting point, not an exhaustive
+catalog. After it's done you can:
+
+- Add models from the **Models** page in the dashboard
+- Assign them to slots from the **Slots** page
+- Or do it from the CLI:
+
+  ```sh frame="terminal"
+  hal0 model list
+  hal0 slot swap primary --model qwen2.5-coder-7b-instruct-q4_k_m
+  ```
+
+See [recommended loadouts](/docs/hardware/strix-halo/#recommended-loadouts)
+for a hardware-by-hardware breakdown of what fits where.
+
+<Aside type="caution" title="Status — `model pull` (CLI) is staged">
+`hal0 model pull` returns `NOT_IMPLEMENTED` in the current build; the
+streaming pull goes through the API + dashboard for now. The wizard
+covers the same path end-to-end and is the supported flow.
+</Aside>
+
+## Next steps
+
+<CardGrid>
+  <LinkCard
+    title="Send your first chat"
+    href="/docs/getting-started/first-chat/"
+    description="OpenWebUI is already pointed at your primary slot." />
+  <LinkCard
+    title="Slot lifecycle"
+    href="/docs/slots/overview/"
+    description="The state machine you just watched the wizard drive." />
+  <LinkCard
+    title="API reference"
+    href="/docs/api/overview/"
+    description="Hit `/v1/chat/completions` directly from any OpenAI SDK." />
+</CardGrid>
