@@ -1,0 +1,90 @@
+---
+title: OpenWebUI
+description: The bundled chat UI on :3001, prewired to the local hal0 API.
+sidebar:
+  order: 4
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+hal0 ships **OpenWebUI** as the chat surface. The installer wires it
+to the local hal0 API automatically — zero config, just open
+`http://localhost:3001` after install.
+
+## Why bundled
+
+The dashboard is for *operating* the box — slots, models, hardware,
+logs. It's not a chat UI. OpenWebUI is a real chat client with
+conversation history, model switching, RAG, prompt presets, and
+voice mode, all under a permissive license.
+
+Bundling means:
+
+- **One install command, two UIs ready.** No "now go install
+  OpenWebUI separately and figure out the API URL."
+- **Same lifecycle.** OpenWebUI is a systemd unit, updates with
+  `hal0 update`, logs into journald.
+- **The env is right by default.** `OPENAI_API_BASE_URLS` points at
+  `http://127.0.0.1:8080/v1`; `OPENAI_API_KEYS` is set to a local
+  token.
+
+## Where it lives
+
+| Component                | Location                                       |
+|--------------------------|------------------------------------------------|
+| Service unit             | `hal0-openwebui.service`                       |
+| Listen port              | `:3001` (binds public interfaces)              |
+| State directory          | `/var/lib/hal0/openwebui/`                     |
+| Env file                 | `/etc/hal0/openwebui.env`                      |
+
+State (chats, prompts, RAG documents) lives under `/var/lib/hal0/`,
+so `hal0 update` preserves your conversation history.
+
+## Open it
+
+```sh
+xdg-open http://localhost:3001
+```
+
+On first launch OpenWebUI walks through its own account-creation
+flow. After that, models from `/v1/models` populate the model
+dropdown — both [slot aliases](/docs/api/slot-as-model/) and
+registry refs.
+
+## Customising
+
+Standard OpenWebUI environment variables work; set them in
+`/etc/hal0/openwebui.env` and restart the service:
+
+```sh
+sudo systemctl restart hal0-openwebui.service
+```
+
+The installer writes this file once at install time; it's not
+overwritten on `hal0 update`.
+
+<Aside type="note">
+  `:3001` binds public interfaces by default. For LAN-only access,
+  bind to `127.0.0.1` and put it behind your reverse proxy of
+  choice. v0.2 adds Caddy + auth on the hal0 side; until then,
+  treat `:3001` like any other web app — keep it off the open
+  internet.
+</Aside>
+
+## Turning it off
+
+If you don't want OpenWebUI:
+
+```sh
+sudo systemctl disable --now hal0-openwebui.service
+```
+
+The hal0 API keeps running. The dashboard at `:8080` keeps running.
+You can reach the `/v1/*` endpoints from any other client.
+
+## Coming soon — outline
+
+- Single sign-on between dashboard and OpenWebUI.
+- Shared theme tokens so OpenWebUI inherits the hal0 amber.
+- One-click voice-mode wiring (OpenWebUI → `stt` slot → `primary`
+  slot → `tts` slot).
