@@ -1,0 +1,28 @@
+---
+title: hal0 docs
+description: Local AI for your home. Strix Halo native.
+template: doc
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Welcome to the hal0 documentation. hal0 is a polished, reliable
+inference platform for running LLMs at home — it manages model slots,
+exposes an OpenAI-compatible API, and ships with a built-in dashboard
+and prewired chat UI.
+
+> **Status:** v1 pre-alpha. The docs below describe v1 as planned. Stub
+> pages are placeholders — content writers will replace them.
+
+## Start here
+
+<CardGrid>
+  <LinkCard title="Quick start" href="/docs/getting-started/quickstart/"
+    description="From zero to a running primary slot in five minutes." />
+  <LinkCard title="Strix Halo" href="/docs/hardware/strix-halo/"
+    description="The crown-jewel platform. Unified memory + iGPU performance notes." />
+  <LinkCard title="Slot architecture" href="/docs/slots/overview/"
+    description="The lifecycle state machine and how single-flight dispatch works." />
+  <LinkCard title="API reference" href="/docs/api/overview/"
+    description="OpenAI-compatible endpoints, model registry, dispatcher." />
+</CardGrid>
