@@ -82,5 +82,8 @@ export default defineConfig({
 
 	vite: {
 		plugins: [tailwindcss()],
+		server: {
+			allowedHosts: ['hal0-web.thinmint.dev', 'localhost', '.thinmint.dev'],
+		},
 	},
 });
