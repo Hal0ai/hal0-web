@@ -9,7 +9,11 @@
  *   title         – <title> + og:title
  *   description?  – meta description + og:description
  *   ogImage?      – social card path (defaults to /og-default.png)
- *   navTone?      – "transparent" | "solid" — landing uses transparent
+ *   navTone?      – "solid" (default) | "transparent" — only the
+ *                   landing page wants transparent-on-top, because
+ *                   only it has a full-bleed hero. Transparent navs
+ *                   automatically promote to solid past the fold
+ *                   (see the inline scroll watcher in <body>).
  */
 import '../styles/global.css';
 import Wordmark from '../components/Wordmark.astro';
@@ -32,14 +36,10 @@ const {
   title,
   description = 'Local AI for your home. Strix Halo native.',
   ogImage = '/og-default.png',
-  navTone = 'transparent',
+  navTone = 'solid',
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
-const navClass =
-  navTone === 'transparent'
-    ? 'bg-transparent'
-    : 'bg-hal0-bg/80 backdrop-blur';
 ---
 
 <!doctype html>
@@ -70,7 +70,11 @@ const navClass =
   </head>
 
   <body class="min-h-screen bg-hal0-bg text-hal0-fg antialiased">
-    <header class:list={['sticky top-0 z-40 border-b border-transparent', navClass]}>
+    <header
+      class="hal0-nav sticky top-0 z-40"
+      data-tone={navTone}
+      data-scrolled="false"
+    >
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <a href="/" class="flex items-center gap-2">
           <Wordmark size="text-xl" />
@@ -122,5 +126,98 @@ const navClass =
         </ul>
       </div>
     </footer>
+
+    <!-- Scroll-aware navbar:
+         data-tone='solid'                    → frosted bg + amber accent
+         data-tone='transparent'              → bare (used at top of landing)
+         data-tone='transparent' + scrolled   → promotes to solid
+
+         The script is intentionally tiny (no client framework) and uses
+         a passive scroll listener, throttled via requestAnimationFrame
+         so it stays cheap on long scrolls. -->
+    <script is:inline>
+      (() => {
+        const nav = document.querySelector('header.hal0-nav[data-tone="transparent"]');
+        if (!nav) return;
+        const threshold = () => window.innerHeight * 0.8;
+        let ticking = false;
+        const sync = () => {
+          ticking = false;
+          nav.dataset.scrolled = window.scrollY > threshold() ? 'true' : 'false';
+        };
+        const onScroll = () => {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(sync);
+        };
+        sync();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', sync, { passive: true });
+      })();
+    </script>
   </body>
 </html>
+
+<style>
+  /* Two visual states, three triggers.
+   *   - tone='solid'                     → solid (always lit)
+   *   - tone='transparent'               → bare (only valid at top of landing)
+   *   - tone='transparent' + scrolled    → promoted to solid
+   *
+   * Solid = frosted #0a0a0a, plus the "vacuum-tube" accent:
+   *   1) a 1px filament along the bottom edge (gradient → centred amber)
+   *   2) a soft amber halo glow under the filament (faint, large radius)
+   * Both kept subtle — the goal is "the rack is on", not Vegas. */
+
+  .hal0-nav {
+    --hal0-nav-bg: transparent;
+    --hal0-nav-shadow: 0 0 0 0 transparent;
+    --hal0-nav-filament: 0;
+
+    background-color: var(--hal0-nav-bg);
+    box-shadow: var(--hal0-nav-shadow);
+    transition:
+      background-color 200ms var(--hal0-ease, ease),
+      backdrop-filter 200ms var(--hal0-ease, ease),
+      box-shadow 200ms var(--hal0-ease, ease);
+    position: sticky;
+    top: 0;
+  }
+
+  .hal0-nav[data-tone='solid'],
+  .hal0-nav[data-tone='transparent'][data-scrolled='true'] {
+    --hal0-nav-bg: rgba(10, 10, 10, 0.85);
+    --hal0-nav-shadow: 0 1px 24px -10px rgba(255, 176, 0, 0.28);
+    --hal0-nav-filament: 1;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* The filament — a 1px gradient line on the bottom edge that
+   * brightens to sodium amber at centre. Faded by --hal0-nav-filament
+   * so it inherits the same transition as the bg. */
+  .hal0-nav::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      color-mix(in srgb, var(--hal0-accent) 60%, transparent) 50%,
+      transparent 100%
+    );
+    opacity: var(--hal0-nav-filament, 0);
+    transition: opacity 200ms var(--hal0-ease, ease);
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hal0-nav,
+    .hal0-nav::after {
+      transition: none;
+    }
+  }
+</style>
