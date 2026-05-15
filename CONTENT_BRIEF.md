@@ -271,79 +271,82 @@ are not in scope for v1.
 ## Recommended loadouts
 
 Curated starting points, not gospel. Mix, match, tweak — the slot system
-takes a different model per slot whenever you change your mind. Sizes are
-published GGUF Q4_K_M / Q8_0 file sizes summed; no tok/s numbers here
-(see the perf table for the only verified ones).
+takes a different model per slot whenever you change your mind. Sizes
+are published GGUF Q4_K_M / Q8_0 file sizes (verified on Hugging Face,
+May 2026); no tok/s numbers here. Picks are refreshed to the **latest
+open-weight releases as of 2026-05-15** — each entry keeps a previous
+fallback in parens for users on existing setups.
 
 **Headline target: the 128 GB Strix Halo SKU** — Ryzen AI Max+ 395 with
 128 GB LPDDR5X-8000 unified memory. The iGPU carveout is BIOS-tunable
 up to ~96 GB, and some configs report ~110 GB usable for the GPU when
-paged through GTT. Q4 70B fits with massive headroom; Q4/Q5 100B+
-becomes feasible; mid-class loadouts leave 100+ GB free for context,
-KV cache, embed + audio slots, and multi-tab usage.
+paged through GTT. Q4 70B fits with massive headroom; Q4 MoE 100B+ on a
+17B–22B active path becomes feasible; mid-class loadouts leave 100+ GB
+free for context, KV cache, embed + audio slots, and multi-tab usage.
 
 **64 GB Strix Halo SKUs** (Ryzen AI Max 385/390) are still well-served
-by every small + mid tier below, plus Q4 32B with normal contexts and a
-tight Q4 70B with shorter windows.
+by every small + mid tier below, plus a tight Q4 70B / Llama-4 Scout
+with shorter context windows.
 
 ### Strix Halo loadouts
 
 #### Coding — small / mid / large
 
-- **Small** (~5 GB) — `primary`: `Qwen2.5-Coder-7B-Instruct-Q4_K_M`. Solid inline completion + small refactors; fits anywhere.
-- **Mid** (~20 GB) — `primary`: `Qwen2.5-Coder-32B-Instruct-Q4_K_M`; `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB) for repo-aware search. 32B is today's purpose-built coder ceiling.
-- **Large** (~42 GB) — no dedicated 70B+ coder exists in GGUF, so the convention is to fall back on a Q4 70B general-chat model for the genuinely hard problems: `Llama-3.3-70B-Instruct-Q4_K_M` or `Qwen2.5-72B-Instruct-Q4_K_M` (~47 GB). 128 GB headroom lets you keep both the 32B coder and a 70B "hard-mode" model warm in separate slots and swap per request.
+- **Small** (~5 GB) — `primary`: `Qwen2.5-Coder-7B-Instruct-Q4_K_M`. No Qwen3-Coder small variant has shipped yet; the 7B Qwen2.5 stays the best small dedicated coder until that lands.
+- **Mid** (~19 GB) — `primary`: `Qwen3-Coder-30B-A3B-Instruct-Q4_K_M` (~18.6 GB, MoE with only 3B active params — runs near 3B speeds, reasons like a 30B); `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB) for repo-aware search. *(fallback: `Qwen2.5-Coder-32B-Instruct-Q4_K_M` ~20 GB)*
+- **Large** (~42 GB) — `primary`: `Hermes-4-70B-Q4_K_M` (~42.5 GB) for hybrid reasoning + tool-friendly coding. Alt: `Llama-4-Scout-17B-16E-Instruct-Q4_K_M` (~50 GB, MoE with 17B active and a 10M-token context). No dedicated 70B+ coder exists in GGUF, so the convention is to fall back on a top-tier general/reasoning model for hard problems. 128 GB headroom keeps both the 30B-A3B coder and a 70B reasoning model hot in separate slots. *(fallback: `Llama-3.3-70B-Instruct-Q4_K_M`)*
 
 #### General chat — small / mid / large
 
-- **Small** (~2 GB) — `primary`: `Llama-3.2-3B-Instruct-Q4_K_M`. Snappy on any modern box.
-- **Mid** (~5 GB) — `primary`: `Meta-Llama-3.1-8B-Instruct-Q4_K_M` or `Qwen3-4B-Instruct-Q8_0`. The everyday default.
-- **Large** (~42 GB) — `primary`: `Llama-3.3-70B-Instruct-Q4_K_M` (~42 GB) or `Qwen2.5-72B-Instruct-Q4_K_M` (~47 GB). On 128 GB you also get a 32k+ context, the embed slot hot at the same time, and headroom for STT/TTS — none of which 64 GB SKUs comfortably do simultaneously.
+- **Small** (~2.5 GB) — `primary`: `Qwen3-4B-Instruct-2507-Q4_K_M` (Aug 2025 release, 1M-token context). Snappy on any modern box. *(fallback: `Llama-3.2-3B-Instruct-Q4_K_M`)*
+- **Mid** (~19 GB) — `primary`: `Qwen3-30B-A3B-Instruct-2507-Q4_K_M` (~18.6 GB, MoE 3B active). Smaller-RAM alt: `gemma-3-12b-it-Q4_K_M` (~6.6 GB) for a 6 GB footprint. *(fallback: `Meta-Llama-3.1-8B-Instruct-Q4_K_M`)*
+- **Large** (~50 GB) — `primary`: `Llama-4-Scout-17B-16E-Instruct-Q4_K_M` (~50 GB, MoE 17B active, 10M context). On 128 GB you also get the embed slot hot at the same time and headroom for STT/TTS — none of which 64 GB SKUs comfortably do simultaneously. *(fallback: `Llama-3.3-70B-Instruct-Q4_K_M` ~42 GB or `Qwen2.5-72B-Instruct-Q4_K_M` ~47 GB)*
 
 #### Voice mode (~3 GB total)
 
-- `primary`: `Llama-3.2-3B-Instruct-Q4_K_M` (~2 GB) — low-latency reply
-- `stt`: Moonshine base (~190 MB) via the `moonshine` toolbox
-- `tts`: Kokoro-82M (~330 MB) via the `kokoro` toolbox
+- `primary`: `Qwen3-4B-Instruct-2507-Q4_K_M` (~2.5 GB) — low-latency reply. *(fallback: `Llama-3.2-3B-Instruct-Q4_K_M`)*
+- `stt`: Moonshine base (~190 MB) via the `moonshine` toolbox — built for edge real-time. Higher-accuracy alt: `whisper-large-v3-turbo` (~1.6 GB). 2025 SOTA: `Canary-Qwen-2.5B` (Open ASR Leaderboard leader, 5.63% WER).
+- `tts`: `Kokoro-82M v1.0` (~330 MB, 8 languages / 54 voices, Jan 2025) via the `kokoro` toolbox. Voice-cloning alt: `F5-TTS`.
 - 128 GB leaves the entire rest of the budget free for a large embed or a second chat model warm in another slot.
 
-#### Creative / fun writing (~14 GB)
+#### Creative / fun writing (~42 GB)
 
-- `primary`: `Mistral-Small-24B-Instruct-2501-Q4_K_M`. Long-form prose strength without going to a 70B. Lighter alternative: `Hermes-3-Llama-3.1-8B-Q4_K_M` (~5 GB).
+- `primary`: `Hermes-4-70B-Q4_K_M` (~42.5 GB, Aug 2025 — hybrid-mode reasoning + creative strength). Lighter alt: `Hermes-4-14B-Q4_K_M` (~9 GB, Qwen-3-14B base). *(fallback: `Mistral-Small-24B-Instruct-2501-Q4_K_M` ~14 GB)*
 
-#### Privacy-first / minimal footprint (<2 GB)
+#### Privacy-first / minimal footprint (<1 GB)
 
-- `primary`: `Qwen2.5-0.5B-Instruct-Q4_K_M` (~400 MB) — the CI smoke model
-- `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB)
-- Runs on CPU-only fallback boxes; the smallest viable hal0 install.
+- `primary`: `gemma-3-1b-it-Q4_K_M` (~0.7 GB) — text-only, March 2025. *(fallback: `Phi-3-mini-4k-instruct-q4.gguf` ~2.4 GB, the curated default; or `Qwen2.5-0.5B-Instruct-Q4_K_M` ~400 MB, the CI smoke model)*
+- `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB, multilingual MoE — 137M params).
+- Runs comfortably on CPU-only fallback boxes; smallest viable hal0 install.
 
-#### RAG / knowledge-base (~10 GB)
+#### RAG / knowledge-base (~19 GB)
 
-- `primary`: `Qwen2.5-14B-Instruct-Q4_K_M` (~9 GB) for synthesis
-- `embed`: pick one — `bge-large-en-v1.5-Q8_0` (~670 MB, English-leaning) or `mxbai-embed-large-v1-Q4_K_M` (~340 MB, broader). The embed slot also serves rerank via `/v1/rerankings`.
-- 128 GB extra: huge room for KV cache → long-context retrieval (64k+) without paging.
+- `primary`: `Qwen3-30B-A3B-Instruct-2507-Q4_K_M` (~18.6 GB) for synthesis. *(fallback: `Qwen2.5-14B-Instruct-Q4_K_M` ~9 GB)*
+- `embed`: `bge-m3` (~600 MB Q8, multilingual, multi-vector, 8192-token context, top retrieval R@1 in 2026 benchmarks). Lower-footprint alt: `nomic-embed-text-v2-moe` (~140 MB). *(fallback: `bge-large-en-v1.5-Q8_0` ~670 MB)*
+- The embed slot also serves rerank via `/v1/rerankings`. 128 GB extra: huge room for KV cache → long-context retrieval (64k+) without paging.
 
-#### Agentic tool-use (~21 GB)
+#### Agentic tool-use (~42 GB)
 
-- `primary`: `Qwen2.5-32B-Instruct-Q4_K_M` (~20 GB) — strong tool-call reasoning, fits a single Strix Halo box without paging.
-- `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB) for retrieval-augmented routing.
+- `primary`: `Hermes-4-70B-Q4_K_M` (~42.5 GB) — Nous's hybrid-reasoning model is explicitly tuned for tool-call faithfulness and format adherence. Lighter alt: `Hermes-4-14B-Q4_K_M` (~9 GB). *(fallback: `Qwen2.5-32B-Instruct-Q4_K_M` ~20 GB)*
+- `embed`: `bge-m3` (~600 MB) or `nomic-embed-text-v2-moe` (~140 MB) for retrieval-augmented routing.
 - Lines up with the v0.2 agents / MCP roadmap (PLAN §1 "v0.2 deferred").
 
-#### Maxed-out single model (~65–75 GB)
+#### Maxed-out single model (~50–75 GB)
 
-The biggest realistic single-model loadout that still fits a 128 GB Strix
-Halo with room to breathe. Pick one:
+The biggest realistic single-model loadout that still fits a 128 GB
+Strix Halo with room to breathe. Pick one:
 
-- `primary`: `Mistral-Large-Instruct-2411-Q4_K_M` (123B, ~73 GB) — strongest single-model reasoning that still leaves a usable context window.
-- `primary`: `c4ai-command-r-plus-08-2024-Q4_K_M` (104B, ~62 GB) — 128k-context, RAG-tuned alternative.
-- `primary`: `Llama-3.3-70B-Instruct-Q8_0` (~75 GB) — 70B at Q8 instead of Q4, trading size for quant headroom.
+- `primary`: `Llama-4-Scout-17B-16E-Instruct-Q4_K_M` (~50 GB) — 10M context, MoE 17B active. The current best balance of size and capability.
+- `primary`: `Hermes-4-70B-Q8_0` (~75 GB) — 70B at Q8 instead of Q4, trading size for quant headroom.
+- `primary`: `Mistral-Large-Instruct-2411-Q4_K_M` (123B, ~73 GB) — older but still excellent for raw single-model quality.
 
-Llama-3.1-405B at Q4 (~230 GB) does **not** fit even on the 128 GB SKU
-— that's the line. Context headroom: with the Q4 70B picks you have
-room for a 32k–64k window plus a hot embed slot; with the 100B+ Q4 picks
-above, plan for ~8–16k context to stay comfortable.
+Hard ceiling: `Qwen3-235B-A22B-Instruct-2507-Q4_K_M` (~142 GB)
+does **not** fit even on the 128 GB SKU; `Llama-4-Maverick-Q4_K_M`
+(~230 GB) and `Mistral-Large-3-Q4` (675B / 41B active, ~340 GB) are
+both well over the line. That's where you start needing dual GPUs or a
+bigger box.
 
-### Discrete GPU / CPU loadouts
+### Discrete GPU & CPU loadouts
 
 For NVIDIA the path is CUDA-backed llama.cpp; for AMD discrete it's the
 ROCm toolbox image. Both go through the same slot lifecycle as Strix
@@ -351,38 +354,43 @@ Halo — what changes is dedicated VRAM vs the unified pool.
 
 #### NVIDIA RTX 5090 (32 GB VRAM)
 
-- `primary`: `Qwen2.5-Coder-32B-Instruct-Q4_K_M` (~20 GB) or any Q4 32B chat — comfortable with a 16–32k context.
-- `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB) co-resident.
-- Q4 70B is feasible but tight, with partial CPU offload; expect lower tok/s than fully-resident inference.
-- Trade vs Strix Halo: no headroom for a hot STT/TTS slot alongside a 32B primary.
+- `primary`: `Qwen3-Coder-30B-A3B-Instruct-Q4_K_M` (~18.6 GB) or any Q4 ~30B chat — comfortable with a 16–32k context.
+- `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB) co-resident.
+- Q4 70B (`Hermes-4-70B` / `Llama-3.3-70B`) is feasible but tight with partial CPU offload; expect lower tok/s than VRAM-resident inference.
+- Trade vs Strix Halo: no headroom for a hot STT/TTS slot alongside a 30B primary.
 
 #### NVIDIA RTX 4090 / 3090 (24 GB VRAM)
 
-- `primary`: `Qwen2.5-Coder-32B-Instruct-Q4_K_M` fits with shorter context, or `Qwen2.5-14B-Instruct-Q4_K_M` (~9 GB) for a longer window.
-- `embed`: small Q4 embed only.
+- `primary`: `Qwen3-30B-A3B-Instruct-2507-Q4_K_M` (~18.6 GB) fits with shorter context, or `gemma-3-12b-it-Q4_K_M` (~6.6 GB) for a longer window.
+- `embed`: small Q4 embed only (`nomic-embed-text-v2-moe` ~140 MB).
 - Q4 70B requires partial CPU offload — works, but drops well below VRAM-resident speeds.
 - Trade vs 5090: tighter context budgets at the same model size.
 
 #### NVIDIA RTX 4080 / 4080 Super (16 GB VRAM)
 
-- `primary`: `Qwen2.5-Coder-14B-Instruct-Q4_K_M` (~9 GB) or `Meta-Llama-3.1-8B-Instruct-Q4_K_M` (~5 GB).
-- `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB) leaves several GB for context.
-- Q4 32B is offload-only here — workable occasionally, not as a daily driver.
+- `primary`: `gemma-3-12b-it-Q4_K_M` (~6.6 GB) or `Hermes-4-14B-Q4_K_M` (~9 GB).
+- `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB) leaves several GB for a ~16k context.
+- Q4 32B class (Qwen3-30B-A3B) is offload-only here — workable occasionally, not as a daily driver.
 - Trade vs 24 GB cards: keep the primary at ~13B class for a smooth experience.
 
-#### NVIDIA RTX 3080 / AMD RX 7900 XT/XTX (10–24 GB VRAM)
+#### NVIDIA RTX 3080 / AMD RX 7900 XT / XTX (10–24 GB VRAM)
 
-- `primary`: a 7–13B Q4 — `Meta-Llama-3.1-8B-Instruct-Q4_K_M`, `Qwen2.5-14B-Instruct-Q4_K_M`, or `Mistral-Nemo-Instruct-2407-Q4_K_M` (~7.5 GB).
+- `primary`: a 4–14B Q4 — `Hermes-4-14B-Q4_K_M`, `gemma-3-12b-it-Q4_K_M`, or `Qwen3-4B-Instruct-2507-Q4_K_M` (~2.5 GB) for low-latency.
 - `embed`: small Q4 embed if the card has 16 GB+; skip on 10–12 GB cards.
 - AMD route is `hal0-toolbox-rocm`; NVIDIA stays on the CUDA llama.cpp build.
 - Trade: one slot at a time is the norm — no simultaneous primary + embed + audio.
 
 #### CPU-only (32–64 GB system RAM, no GPU)
 
-- `primary`: `Phi-3-mini-4k-instruct-q4.gguf` (~2.4 GB, the curated default) or `Qwen2.5-1.5B-Instruct-Q4_K_M` (~1 GB) for a snappier feel.
-- `embed`: `nomic-embed-text-v1.5-Q4_K_M` (~140 MB) is fine on CPU.
-- No `stt` / `tts` slots — Moonshine and Kokoro are technically CPU-capable, but streaming audio at usable latency wants at least an iGPU.
+- `primary`: `gemma-3-1b-it-Q4_K_M` (~0.7 GB) or `Qwen3-4B-Instruct-2507-Q4_K_M` (~2.5 GB) for a snappier feel. *(fallback: `Phi-3-mini-4k-instruct-q4.gguf` ~2.4 GB, the curated default)*
+- `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB) — runs fine on CPU.
+- No `stt` / `tts` slots — Moonshine and Kokoro are technically CPU-capable but streaming audio at usable latency wants at least an iGPU.
 - Expect: a few tok/s on chat, fine for occasional Q&A and dev smoke; not the streaming experience.
+
+Strix Halo's unified pool is what unlocks the 70B Q4 and large/agentic
+tiers; on discrete cards you trade ceiling for raw tok/s on smaller
+models. hal0 picks the right provider automatically based on probe
+(`hal0/hardware/probe.py` → `/etc/hal0/hardware.json` → slot defaults).
 
 Loadouts are starting points. Every real install ends up tweaked.
 
