@@ -1,0 +1,117 @@
+---
+title: CLI reference
+description: The hal0 command-line interface — every subcommand grouped by area.
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+hal0 ships a single `hal0` binary built with Typer
+(`src/hal0/cli/main.py`). Every non-`serve` subcommand talks to the
+local daemon on `127.0.0.1:8080` — meaning the CLI and the dashboard
+end up calling the same code paths.
+
+Implementation status is verified against the
+`docs/handoff-2026-05-15-autonomous.md` "What landed" section.
+**Real** commands hit live endpoints; **stub** commands return a
+`NOT_IMPLEMENTED` (501) envelope today.
+
+## System
+
+```sh
+hal0 status                                  # system + slot summary (real)
+hal0 probe                                   # re-run hardware detection (real)
+hal0 serve [--host] [--port] [--reload]      # daemon mode (real)
+```
+
+`hal0 status` is what you run first when something looks off.
+`hal0 probe` rewrites `/etc/hal0/hardware.json` — re-run after BIOS
+UMA changes, GPU swaps, or RAM upgrades.
+
+## Slots
+
+```sh
+hal0 slot list                               # real
+hal0 slot load <name> [--model M]            # real
+hal0 slot unload <name>                      # real
+hal0 slot restart <name>                     # real
+hal0 slot swap <name> --model M              # real
+hal0 slot logs <name> [--follow]             # real — SSE tail of journald
+```
+
+`hal0 slot swap` is the most-used command in normal operation —
+change a slot's model in one call, watch it transition through
+`unloading → starting → warming → ready`.
+
+`hal0 slot logs <name> --follow` is the journald tail wrapped over
+SSE; it shows the same stream the dashboard's Logs view tails.
+
+## Models
+
+```sh
+hal0 model list                              # real
+hal0 model pull <ref>                        # stub — 501 today
+hal0 model rm <ref>                          # real
+hal0 model assign <ref> --slot S             # real
+```
+
+<Aside type="caution">
+  `hal0 model pull` is **not yet implemented** — it returns the
+  structured `NOT_IMPLEMENTED` error today. The FirstRun wizard
+  performs an initial pull through the same code paths, which works,
+  but the CLI subcommand is staged behind that work landing in the
+  public API surface. Tracked on the [roadmap](/roadmap/).
+</Aside>
+
+## Configuration
+
+```sh
+hal0 config show                             # real
+hal0 config edit                             # real — opens $EDITOR
+hal0 config validate                         # real — schema check
+hal0 config migrate                          # real — apply schema migrations
+```
+
+`hal0 config validate` is safe to run at any time and doesn't write
+anything. Use it before `hal0 config edit` to confirm your starting
+point is clean.
+
+## Updates
+
+```sh
+hal0 update                                  # real — apply latest stable
+hal0 update --channel stable                 # real
+hal0 update --channel nightly                # real
+hal0 update --check                          # real — print version, don't apply
+hal0 update --rollback                       # real — revert to previous version
+```
+
+See [Updates & rollback](/docs/operate/updates/) for the atomic
+symlink-swap mechanics.
+
+## Uninstall
+
+```sh
+hal0 uninstall [--keep-data]                 # stub — not implemented yet
+```
+
+<Aside type="caution">
+  `hal0 uninstall` is **not yet implemented** — it returns the
+  structured `NOT_IMPLEMENTED` error today. Until it lands, the
+  uninstall path is "stop the units, then `rm -rf` the FHS paths"
+  — see the installer source for the inverse of what to remove.
+</Aside>
+
+## Talking to the daemon
+
+Almost every subcommand is a thin client on the API. You can hit the
+same endpoints directly:
+
+```sh
+curl http://localhost:8080/api/slots
+curl http://localhost:8080/api/models
+curl -X POST http://localhost:8080/api/slots/primary/restart
+```
+
+The CLI is for ergonomics; the API is the truth.

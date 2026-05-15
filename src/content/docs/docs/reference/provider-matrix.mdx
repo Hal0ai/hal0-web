@@ -1,0 +1,100 @@
+---
+title: Provider matrix
+description: llama.cpp, FLM, Moonshine, Kokoro — what each handles, on what hardware.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Four providers ship first-class in v1. Each is a class with a small
+contract — `build_env() / start_cmd() / health() / infer()` — that
+makes them stateless and swappable. The slot lifecycle is provider-
+agnostic; what changes between providers is the workload they serve
+and the hardware they target.
+
+## The matrix
+
+| Provider     | Hardware                              | What it serves                                |
+|--------------|---------------------------------------|-----------------------------------------------|
+| **llama.cpp**| Vulkan (default) / ROCm (opt-in)      | chat, embed, rerank, vision                   |
+| **FLM**      | AMD XDNA NPU (opt-in)                 | chat / embed / ASR multiplex                  |
+| **Moonshine**| CPU / Vulkan                          | STT — `/v1/audio/transcriptions`              |
+| **Kokoro**   | CPU / Vulkan                          | TTS — `/v1/audio/speech`                      |
+
+All four are first-class in v1. ROCm is opt-in because the toolbox
+image is on the build list (not yet published to `ghcr.io/hal0ai/`);
+FLM is opt-in because XDNA NPU support depends on AMD's driver stack
+being present. Both stand up the same way once enabled.
+
+## llama.cpp
+
+The default for `primary` and `embed`. Handles:
+
+- **Chat completions** (`/v1/chat/completions`).
+- **Plain completions** (`/v1/completions`).
+- **Embeddings** (`/v1/embeddings`).
+- **Rerank** (`/v1/rerankings`, same backend process).
+- **Vision** (multimodal models, where the GGUF supports them).
+
+Backend modes:
+
+- **Vulkan** — the default. Runs on iGPUs (Strix Halo, RDNA3),
+  discrete AMD, and discrete NVIDIA cards via Vulkan. Toolbox image:
+  `hal0-toolbox-vulkan`.
+- **ROCm** — opt-in via `hal0-toolbox-rocm` (build list, not yet
+  published). Faster on RDNA3 discrete cards where Vulkan leaves
+  performance on the table.
+
+The CUDA path on NVIDIA uses CUDA-backed llama.cpp through the same
+provider.
+
+## FLM
+
+For AMD XDNA NPUs (the second AI engine on Strix Halo and newer Ryzen
+AI parts). Multiplexes chat, embed, and ASR workloads on the NPU,
+keeping the iGPU free for other slots.
+
+Toolbox image: `hal0-toolbox-flm`. Status today: the toolbox image
+hasn't been published; FLM slots can be defined but won't start until
+the image lands. The provider code is in `src/hal0/providers/flm/`.
+
+## Moonshine
+
+The STT provider. Targets edge-real-time speech-to-text — small
+model, low latency, designed for streaming.
+
+Toolbox image: `hal0-toolbox-moonshine`. Status today: the toolbox
+image hasn't been published; the `stt` slot is defined but won't
+start until the image lands. See [Audio](/docs/api/audio/) for the
+endpoint shape.
+
+## Kokoro
+
+The TTS provider. Defaults to **Kokoro-82M v1.0** (8 languages,
+54 voices), with support for swapping to `F5-TTS` for voice cloning.
+
+Toolbox image: `hal0-toolbox-kokoro`. Status today: same as
+Moonshine — defined but waiting on the toolbox image to publish.
+
+## How a provider plugs in
+
+Every provider implements:
+
+| Method        | What it does                                                |
+|---------------|-------------------------------------------------------------|
+| `build_env()` | Compute the env file the systemd unit will consume.         |
+| `start_cmd()` | The argv to run inside the toolbox image.                   |
+| `health()`    | Cheap probe to decide `warming → ready`.                    |
+| `infer()`     | The request path the dispatcher proxies to.                 |
+
+The slot lifecycle (`offline → pulling → starting → warming → ready
+→ serving ↔ idle → unloading`) is identical across providers. Adding
+a new provider is implementing this contract — no slot-manager
+changes required.
+
+<Aside type="note">
+  The architecture allows third-party providers — ComfyUI for image
+  generation (Kyuzo, v0.2), MCP shims, custom shims for proprietary
+  endpoints. v1 ships the four above; v0.2 expands.
+</Aside>
