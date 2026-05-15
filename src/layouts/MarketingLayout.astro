@@ -1,0 +1,107 @@
+---
+/**
+ * MarketingLayout — shared chrome for non-docs pages (/, /install,
+ * /hardware, /roadmap). Reuses the global stylesheet (which carries
+ * both Starlight tokens and the hal0 design system) and provides a
+ * thin top nav + footer.
+ *
+ * Props:
+ *   title         – <title> + og:title
+ *   description?  – meta description + og:description
+ *   ogImage?      – social card path (defaults to /og-default.png)
+ *   navTone?      – "transparent" | "solid" — landing uses transparent
+ */
+import '../styles/global.css';
+import Wordmark from '../components/Wordmark.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  navTone?: 'transparent' | 'solid';
+}
+
+const {
+  title,
+  description = 'Local AI for your home. Strix Halo native.',
+  ogImage = '/og-default.png',
+  navTone = 'transparent',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
+const navClass =
+  navTone === 'transparent'
+    ? 'bg-transparent'
+    : 'bg-hal0-bg/80 backdrop-blur';
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0a0a" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImage} />
+  </head>
+
+  <body class="min-h-screen bg-hal0-bg text-hal0-fg antialiased">
+    <header class:list={['sticky top-0 z-40 border-b border-transparent', navClass]}>
+      <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="/" class="flex items-center gap-2" aria-label="hal0 home">
+          <Wordmark size="text-xl" />
+        </a>
+        <ul class="hidden items-center gap-7 font-mono text-sm text-hal0-fg-muted md:flex">
+          <li><a class="transition hover:text-hal0-fg" href="/install">install</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/hardware">hardware</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/roadmap">roadmap</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/docs/getting-started/">docs</a></li>
+          <li>
+            <a
+              class="transition hover:text-hal0-fg"
+              href="https://github.com/hal0ai/hal0"
+              rel="noopener"
+            >github</a>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="border-t border-hal0-border bg-hal0-bg-sunken">
+      <div class="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-hal0-fg-muted md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-3">
+          <Wordmark size="text-base" />
+          <span class="font-mono text-xs text-hal0-fg-dim">
+            Apache-2.0 · v1 pre-alpha
+          </span>
+        </div>
+        <ul class="flex flex-wrap items-center gap-6 font-mono text-xs">
+          <li><a class="hover:text-hal0-fg" href="/docs/getting-started/">docs</a></li>
+          <li><a class="hover:text-hal0-fg" href="/install">install</a></li>
+          <li><a class="hover:text-hal0-fg" href="/hardware">hardware</a></li>
+          <li><a class="hover:text-hal0-fg" href="/roadmap">roadmap</a></li>
+          <li>
+            <a class="hover:text-hal0-fg" href="https://github.com/hal0ai/hal0" rel="noopener">
+              github
+            </a>
+          </li>
+        </ul>
+      </div>
+    </footer>
+  </body>
+</html>

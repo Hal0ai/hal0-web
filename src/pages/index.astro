@@ -1,0 +1,68 @@
+---
+/**
+ * Landing page — placeholder. Task #3 owns the real content.
+ * Kept here so the design system gets exercised by `astro build`.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import HeroSection from '../components/HeroSection.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+import CTA from '../components/CTA.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+---
+
+<MarketingLayout
+  title="hal0 — Local AI for your home"
+  description="Local AI for your home. Strix Halo native."
+>
+  <HeroSection
+    eyebrow="v1 pre-alpha"
+    title="Local AI for your home."
+    subtitle="hal0 is a polished, reliable inference platform you can install on one Linux box. OpenAI-compatible API, slot-managed lifecycle, prewired chat — all open source."
+    ctaPrimary={{ href: '/install', label: 'Install hal0' }}
+    ctaSecondary={{ href: '/docs/getting-started/quickstart/', label: 'Read the docs' }}
+  >
+    <CodeBlock slot="visual" lang="sh" title="one-line install">
+{`curl -fsSL hal0.dev/install | bash`}
+    </CodeBlock>
+  </HeroSection>
+
+  <FeatureGrid
+    eyebrow="What ships in v1"
+    title="A complete home inference platform."
+    columns={3}
+  >
+    <FeatureCard title="Slots" icon="layers">
+      Each workload (chat, embed, STT, TTS) runs in its own systemd
+      unit with a known port, lifecycle, and health.
+    </FeatureCard>
+    <FeatureCard title="Dispatcher" icon="route">
+      Registry-aware routing with cold-cache prefetch and upstream
+      fallback to OpenRouter, Anthropic, or any OpenAI-compatible host.
+    </FeatureCard>
+    <FeatureCard title="Dashboard" icon="gauge">
+      Vue 3 UI for slot/model management, hardware-aware config, live
+      logs, and system health. Dark mode by default.
+    </FeatureCard>
+    <FeatureCard title="OpenWebUI bundled" icon="message-circle">
+      Prewired chat at <code>:3001</code>. No setup — points at the
+      local dispatcher out of the box.
+    </FeatureCard>
+    <FeatureCard title="One-line install" icon="terminal">
+      Sensible defaults, non-interactive, pre-flight checks. Hardware
+      probe drops working slot configs into <code>/etc/hal0/slots/</code>.
+    </FeatureCard>
+    <FeatureCard title="Self-update" icon="refresh-cw">
+      Atomic version swap with rollback. Stable and nightly channels.
+      Slot units stay running across API restart.
+    </FeatureCard>
+  </FeatureGrid>
+
+  <CTA
+    eyebrow="Open source"
+    title="Designed for Strix Halo. Runs anywhere."
+    subtitle="Apache-2.0. No telemetry. No phone-home. Your hardware, your weights, your data."
+    ctaPrimary={{ href: '/install', label: 'Install' }}
+    ctaSecondary={{ href: 'https://github.com/hal0ai/hal0', label: 'GitHub' }}
+  />
+</MarketingLayout>
