@@ -4,9 +4,12 @@ Source for [hal0.dev](https://hal0.dev) — the marketing site + docs
 for the [hal0](https://github.com/hal0ai/hal0) home AI inference
 platform.
 
-Built with **Astro 6 + Starlight 0.39 + Tailwind v4**, all fonts
-self-hosted. No GitHub remote yet, no production deploy. Local-only
-during initial buildout.
+Built with **Astro 6 + Starlight 0.39 + Tailwind v4**, **Geist Variable**
+for body, **JetBrains Mono** for code/display, all fonts self-hosted.
+No GitHub remote yet, no production deploy. Local-only during initial
+buildout.
+
+Licensed **Apache-2.0** (matches the upstream hal0 product repo).
 
 ## Layout
 
@@ -33,12 +36,14 @@ src/
 │   │   └── reference/
 │   └── (other prefixes never used — keep root clear for the 404 route)
 ├── layouts/MarketingLayout.astro
-├── pages/index.astro       ← landing page (placeholder until task #3)
+├── pages/index.astro       ← landing page (hero + why + features + …)
 └── styles/
     ├── fonts.css           ← @fontsource self-hosted bundles
     └── global.css          ← design tokens + Starlight overrides
 public/
-└── favicon.svg
+├── favicon.svg
+├── og-default.png          ← 1200×630 social card (sodium amber)
+└── robots.txt              ← allow-all + sitemap pointer
 NOTES.md                    ← design rationale (accent color, type stack)
 CONTENT_BRIEF.md            ← copy + perf numbers source of truth (researcher)
 ```
@@ -80,19 +85,34 @@ See [`NOTES.md`](./NOTES.md) for the full rationale.
 ```sh
 npm install            # install deps
 npm run dev            # dev server at http://localhost:4321
+npm run astro check    # type check (must be 0 errors / 0 warnings)
 npm run build          # static site → ./dist/
 npm run preview        # serve ./dist/ for smoke-testing
 ```
 
+## Deploy
+
+Vercel — **manual, not configured yet.** When ready:
+
+```sh
+vercel link            # first time only
+vercel --prod          # ship to hal0.dev
+```
+
+DNS for `hal0.dev` must be cut over to Vercel separately. Until the
+user does both steps, the site is local-only.
+
 ## Build state
 
-`npm run build` produces 10 static pages, a sitemap (`/sitemap-index.xml`),
-and a pagefind search index for docs. The one noisy log line —
-`Entry docs → 404 was not found.` — is Starlight 0.39 probing for a
-user-supplied custom 404 entry; the build succeeds and falls back to
-Starlight's built-in 404 page. Suppressing the line would require a
-Starlight component override (`src/components/Starlight404.astro` via
-the integration's `components` slot) — left to the verify pass.
+`npm run build` produces **32 static pages** (4 marketing + 27 docs +
+the 404), a sitemap (`/sitemap-index.xml`), a pagefind search index for
+docs, `robots.txt`, and a default OG image. Lighthouse scores ≥95
+across performance / accessibility / best-practices / SEO on the five
+key pages (verified 2026-05).
+
+The harmless `Entry docs → 404 was not found.` log line is Starlight
+0.39 probing for a user-supplied custom 404 entry; the build succeeds
+and falls back to Starlight's built-in 404 page.
 
 ## Conventions
 
