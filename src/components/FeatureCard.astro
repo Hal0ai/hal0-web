@@ -3,11 +3,14 @@
  * FeatureCard — single tile in a FeatureGrid.
  *
  * Props:
- *   icon  – lucide icon name (rendered as <span> for now; content
- *           writers can swap in astro-icon if needed)
+ *   icon  – lucide icon name (kebab-case, e.g. "layers", "refresh-cw").
+ *           Renders via astro-icon against the @iconify-json/lucide
+ *           pack. Any lucide-static name works.
  *   title – heading
  *   href  – optional link wrapper
  */
+import { Icon } from 'astro-icon/components';
+
 interface Props {
   icon?: string;
   title: string;
@@ -27,9 +30,9 @@ const Wrapper = href ? 'a' : 'div';
   {icon && (
     <span
       aria-hidden="true"
-      class="mb-4 inline-flex size-9 items-center justify-center rounded border border-hal0-border bg-hal0-bg font-mono text-sm text-hal0-accent"
+      class="mb-4 inline-flex size-9 items-center justify-center rounded border border-hal0-border bg-hal0-bg text-hal0-accent"
     >
-      <span data-icon={icon}>{icon[0]?.toUpperCase()}</span>
+      <Icon name={`lucide:${icon}`} class="size-5" />
     </span>
   )}
   <h3 class="mb-2 font-mono text-base font-semibold tracking-tight text-hal0-fg">

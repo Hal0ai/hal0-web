@@ -2,12 +2,16 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import sitemap from '@astrojs/sitemap';
+import icon from 'astro-icon';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
 	site: 'https://hal0.dev',
 
 	integrations: [
+		// Lucide via the pre-bundled @iconify-json/lucide set. SVG sprites
+		// are tree-shaken at build time, so unused icons don't ship.
+		icon({ include: { lucide: ['*'] } }),
 		starlight({
 			title: 'hal0',
 			description: 'Local AI for your home. Strix Halo native.',
