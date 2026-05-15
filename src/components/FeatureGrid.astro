@@ -1,0 +1,40 @@
+---
+/**
+ * FeatureGrid — responsive grid wrapper for FeatureCard children.
+ *
+ * Props:
+ *   columns – md breakpoint column count (2 | 3 | 4). Default 3.
+ *   title   – optional section title
+ *   eyebrow – optional uppercase tag
+ */
+interface Props {
+  columns?: 2 | 3 | 4;
+  title?: string;
+  eyebrow?: string;
+}
+const { columns = 3, title, eyebrow } = Astro.props;
+
+const colClass = {
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-2 lg:grid-cols-3',
+  4: 'md:grid-cols-2 lg:grid-cols-4',
+}[columns];
+---
+
+<section class="border-b border-hal0-border bg-hal0-bg">
+  <div class="mx-auto max-w-6xl px-6 py-20">
+    {eyebrow && (
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        {eyebrow}
+      </p>
+    )}
+    {title && (
+      <h2 class="mb-12 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        {title}
+      </h2>
+    )}
+    <div class:list={['grid gap-4', colClass]}>
+      <slot />
+    </div>
+  </div>
+</section>

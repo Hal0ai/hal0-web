@@ -1,0 +1,46 @@
+---
+/**
+ * RoadmapCard — single item inside a RoadmapColumn.
+ *
+ * Props:
+ *   title       – heading
+ *   status?     – "shipped" | "in-progress" | "next" | "later"
+ *   eta?        – free-text ETA ("v1", "v1.1", "2026 Q3")
+ */
+type Status = 'shipped' | 'in-progress' | 'next' | 'later';
+interface Props {
+  title: string;
+  status?: Status;
+  eta?: string;
+}
+const { title, status, eta } = Astro.props;
+
+const statusClass: Record<Status, string> = {
+  'shipped':     'bg-emerald-500/15 text-emerald-300 border-emerald-700/40',
+  'in-progress': 'bg-hal0-accent/15 text-hal0-accent border-hal0-accent/40',
+  'next':        'bg-hal0-bg text-hal0-fg-muted border-hal0-border',
+  'later':       'bg-transparent text-hal0-fg-dim border-hal0-border',
+};
+---
+
+<div class="rounded-md border border-hal0-border bg-hal0-bg-elevated p-4 transition hover:border-hal0-border-strong">
+  <div class="mb-2 flex items-center justify-between gap-2">
+    <h3 class="font-mono text-sm font-medium text-hal0-fg">{title}</h3>
+    {status && (
+      <span
+        class:list={[
+          'shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider',
+          statusClass[status],
+        ]}
+      >
+        {status}
+      </span>
+    )}
+  </div>
+  {eta && (
+    <p class="mb-2 font-mono text-xs text-hal0-fg-dim">{eta}</p>
+  )}
+  <div class="text-sm leading-relaxed text-hal0-fg-muted">
+    <slot />
+  </div>
+</div>

@@ -1,0 +1,38 @@
+---
+/**
+ * RoadmapColumn — vertical column wrapping a set of RoadmapCard items.
+ * Use three columns side by side ("Now / Next / Later").
+ *
+ * Props:
+ *   title    – column heading ("Now", "Next", "Later", "Done")
+ *   eyebrow? – short tag ("v1", "v1.1", "v0.2")
+ *   tone?    – "primary" highlights this column with the accent rail
+ */
+interface Props {
+  title: string;
+  eyebrow?: string;
+  tone?: 'primary' | 'default';
+}
+const { title, eyebrow, tone = 'default' } = Astro.props;
+---
+
+<section
+  class:list={[
+    'flex flex-col gap-3 rounded-lg border bg-hal0-bg p-4',
+    tone === 'primary'
+      ? 'border-hal0-accent/60 shadow-[inset_4px_0_0_var(--hal0-accent)]'
+      : 'border-hal0-border',
+  ]}
+>
+  <header class="mb-2 flex items-baseline justify-between">
+    <h2 class="font-mono text-base font-semibold tracking-tight text-hal0-fg">
+      {title}
+    </h2>
+    {eyebrow && (
+      <span class="font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+        {eyebrow}
+      </span>
+    )}
+  </header>
+  <slot />
+</section>

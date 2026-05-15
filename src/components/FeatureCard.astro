@@ -1,0 +1,41 @@
+---
+/**
+ * FeatureCard — single tile in a FeatureGrid.
+ *
+ * Props:
+ *   icon  – lucide icon name (rendered as <span> for now; content
+ *           writers can swap in astro-icon if needed)
+ *   title – heading
+ *   href  – optional link wrapper
+ */
+interface Props {
+  icon?: string;
+  title: string;
+  href?: string;
+}
+const { icon, title, href } = Astro.props;
+const Wrapper = href ? 'a' : 'div';
+---
+
+<Wrapper
+  href={href}
+  class:list={[
+    'group block rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6 transition',
+    href && 'hover:border-hal0-accent hover:bg-hal0-bg-elevated/80 focus-visible:border-hal0-accent',
+  ]}
+>
+  {icon && (
+    <span
+      aria-hidden="true"
+      class="mb-4 inline-flex size-9 items-center justify-center rounded border border-hal0-border bg-hal0-bg font-mono text-sm text-hal0-accent"
+    >
+      <span data-icon={icon}>{icon[0]?.toUpperCase()}</span>
+    </span>
+  )}
+  <h3 class="mb-2 font-mono text-base font-semibold tracking-tight text-hal0-fg">
+    {title}
+  </h3>
+  <div class="text-sm leading-relaxed text-hal0-fg-muted">
+    <slot />
+  </div>
+</Wrapper>

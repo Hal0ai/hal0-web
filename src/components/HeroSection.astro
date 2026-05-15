@@ -1,0 +1,85 @@
+---
+/**
+ * HeroSection — large landing hero with title, subtitle, primary +
+ * secondary CTA, and optional terminal/code visual on the right.
+ *
+ * Slots:
+ *   default     → main HTML content (paragraphs, badges)
+ *   visual      → right-side visual (terminal, hardware diagram, code)
+ *
+ * Props:
+ *   eyebrow      – small uppercase tag above title (e.g. "v1 pre-alpha")
+ *   title        – main headline (string; allows newlines via \n)
+ *   subtitle     – supporting paragraph
+ *   ctaPrimary   – { href, label }
+ *   ctaSecondary – { href, label }
+ */
+interface Cta {
+  href: string;
+  label: string;
+}
+interface Props {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  ctaPrimary?: Cta;
+  ctaSecondary?: Cta;
+}
+
+const { eyebrow, title, subtitle, ctaPrimary, ctaSecondary } = Astro.props;
+---
+
+<section class="relative overflow-hidden border-b border-hal0-border bg-hal0-bg">
+  <div class="mx-auto grid max-w-6xl gap-12 px-6 py-20 md:grid-cols-2 md:py-28">
+    <div class="flex flex-col justify-center">
+      {eyebrow && (
+        <span class="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-hal0-border bg-hal0-bg-elevated px-3 py-1 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+          <span class="size-1.5 rounded-full bg-hal0-accent shadow-[0_0_8px_var(--hal0-accent)]"></span>
+          {eyebrow}
+        </span>
+      )}
+
+      <h1 class="text-balance text-4xl font-semibold leading-tight tracking-tight text-hal0-fg md:text-6xl">
+        {title}
+      </h1>
+
+      {subtitle && (
+        <p class="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
+          {subtitle}
+        </p>
+      )}
+
+      <slot />
+
+      {(ctaPrimary || ctaSecondary) && (
+        <div class="mt-10 flex flex-wrap gap-3">
+          {ctaPrimary && (
+            <a
+              href={ctaPrimary.href}
+              class="inline-flex items-center gap-2 rounded-md bg-hal0-accent px-5 py-3 font-mono text-sm font-medium text-black transition hover:bg-hal0-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hal0-accent focus-visible:ring-offset-2 focus-visible:ring-offset-hal0-bg"
+            >
+              {ctaPrimary.label}
+            </a>
+          )}
+          {ctaSecondary && (
+            <a
+              href={ctaSecondary.href}
+              class="inline-flex items-center gap-2 rounded-md border border-hal0-border bg-transparent px-5 py-3 font-mono text-sm font-medium text-hal0-fg transition hover:border-hal0-border-strong hover:bg-hal0-bg-elevated"
+            >
+              {ctaSecondary.label}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+
+    <div class="flex items-center justify-center">
+      <slot name="visual" />
+    </div>
+  </div>
+
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-x-0 -bottom-32 h-64 bg-[radial-gradient(ellipse_at_center,var(--hal0-accent-glow),transparent_70%)]"
+  ></div>
+</section>

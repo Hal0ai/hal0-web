@@ -1,0 +1,37 @@
+---
+/**
+ * Wordmark — "hal0" rendered in JetBrains Mono with the slashed-zero
+ * accent on the "0". Use anywhere we say the product name in display
+ * context (header logo, hero, footer, OG cards).
+ *
+ * Props:
+ *   size  – tailwind text size class (default "text-xl")
+ *   class – extra classes (forwarded)
+ *   tone  – "default" keeps fg + accent zero; "mono" forces single color
+ */
+interface Props {
+  size?: string;
+  class?: string;
+  tone?: 'default' | 'mono';
+  as?: 'span' | 'div' | 'h1' | 'a';
+  href?: string;
+}
+
+const {
+  size = 'text-xl',
+  class: extra = '',
+  tone = 'default',
+  as = 'span',
+  href,
+} = Astro.props;
+
+const Tag = as;
+---
+
+<Tag
+  class:list={['wordmark inline-flex items-baseline tracking-tight', size, extra]}
+  href={href}
+>
+  <span class="text-hal0-fg">hal</span>
+  <span class={tone === 'mono' ? 'text-hal0-fg' : 'text-hal0-accent'}>0</span>
+</Tag>

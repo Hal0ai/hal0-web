@@ -1,0 +1,57 @@
+---
+/**
+ * CodeBlock — preformatted code with a language pill and copy-to-clipboard
+ * button. Use this on landing/marketing pages where Astro's
+ * markdown-rendered <pre> isn't available.
+ *
+ * Slot:
+ *   default → the raw code string (newlines preserved)
+ *
+ * Props:
+ *   lang   – language label shown in the pill ("sh", "toml", "python")
+ *   title? – optional filename/title shown left of the pill
+ *
+ * Copy button hydrates with a tiny inline script — no client framework.
+ */
+interface Props {
+  lang: string;
+  title?: string;
+}
+const { lang, title } = Astro.props;
+---
+
+<figure class="overflow-hidden rounded-md border border-hal0-border bg-hal0-bg-sunken font-mono text-sm">
+  <figcaption class="flex items-center justify-between border-b border-hal0-border bg-hal0-bg-elevated px-4 py-2 text-xs">
+    <span class="text-hal0-fg-muted">{title ?? lang}</span>
+    <div class="flex items-center gap-3">
+      <span class="rounded bg-hal0-bg px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-hal0-accent">
+        {lang}
+      </span>
+      <button
+        type="button"
+        class="hal0-copy text-hal0-fg-muted transition hover:text-hal0-fg"
+        aria-label="Copy code to clipboard"
+      >
+        copy
+      </button>
+    </div>
+  </figcaption>
+  <pre class="hal0-code overflow-x-auto px-4 py-4 text-hal0-fg leading-relaxed"><code><slot /></code></pre>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.hal0-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const fig = btn.closest('figure');
+      const code = fig?.querySelector('code')?.textContent ?? '';
+      try {
+        await navigator.clipboard.writeText(code.trim());
+        const original = btn.textContent;
+        btn.textContent = 'copied';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+      } catch {
+        btn.textContent = 'failed';
+      }
+    });
+  });
+</script>
