@@ -1,0 +1,209 @@
+---
+/**
+ * /roadmap — direction for hal0. No dates, no commitments — these are
+ * the shapes the platform is growing into.
+ *
+ * Three groups, rendered as columns on desktop and stacked on mobile:
+ *   Shipped (v1)        — what landed in the v1 cut
+ *   Soon (v0.2)         — next milestone, scope locked, work in flight
+ *   Exploring (v1.x +)  — direction we believe in, not yet committed
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import RoadmapColumn from '../components/RoadmapColumn.astro';
+import RoadmapCard from '../components/RoadmapCard.astro';
+
+const shipped = [
+  {
+    title: 'OpenAI-compatible /v1/* API',
+    why: 'Chat, completions, embeddings, rerank, transcriptions, speech — every OpenAI SDK works unchanged against your local box.',
+  },
+  {
+    title: 'Slot lifecycle state machine',
+    why: 'Real atomic transitions (offline → pulling → starting → warming → ready → serving), persisted and SSE-streamed so the dashboard reflects reality, not snapshots.',
+  },
+  {
+    title: 'Hardware-aware probe',
+    why: 'Detects GPU, NPU, and unified memory; surfaces VRAM/RAM fit warnings inline before you load a model that won’t fit.',
+  },
+  {
+    title: 'Hugging Face model pulls',
+    why: 'Streaming downloads from the dashboard or CLI with live progress. No manual GGUF wrangling.',
+  },
+  {
+    title: 'Bundled OpenWebUI',
+    why: 'Prewired chat on :3001 pointed at the local API. Zero config — the installer wires it for you.',
+  },
+  {
+    title: 'Cosign-signed self-update',
+    why: 'Atomic version swap with rollback. Stable and nightly channels, GitHub OIDC-verified release tarballs.',
+  },
+  {
+    title: 'Four-provider stack',
+    why: 'llama.cpp (Vulkan / ROCm) for chat + embed, FLM for NPU multiplex, Moonshine for STT, Kokoro for TTS — all first-class in v1.',
+  },
+];
+
+const soon = [
+  {
+    title: 'Agent management & integration',
+    why: 'First-class agents stored on hal0 with conversation orchestration and deterministic tool-use loops. The platform for agents to run on, not just chat with.',
+  },
+  {
+    title: 'Unified memory system',
+    why: 'Persistent, federated memory across local slots and (optionally) external models. Mem0-style API with sources, search, and scoping.',
+  },
+  {
+    title: 'MCP support — host and server',
+    why: 'hal0 speaks Model Context Protocol both directions. Compose tools across local slots and external MCP services; discover them from the dashboard.',
+  },
+  {
+    title: 'Extensions framework',
+    why: 'Third-party apps packaged as hal0 extensions: systemd unit + dashboard tile + healthcheck. Bring-your-own-app, lifecycle-managed.',
+  },
+  {
+    title: 'Image generation',
+    why: 'ComfyUI as a hal0 provider — image slots run inside the same lifecycle as chat, embed, and audio.',
+  },
+  {
+    title: 'Benchmarks & presets UI',
+    why: 'In-dashboard tok/s + latency runs, plus curated loadout presets you can flash onto a fresh install.',
+  },
+  {
+    title: 'AUR PKGBUILD & Ubuntu PPA',
+    why: 'Native distro packages on top of the install script — pacman and apt as first-class install paths.',
+  },
+  {
+    title: 'Caddy reverse proxy & hal0.local mDNS',
+    why: 'Auth, TLS, and zero-config LAN discovery wired in. Share the box on your network without hand-rolling nginx.',
+  },
+];
+
+const exploring = [
+  {
+    title: 'Multi-host federation',
+    why: 'A slot mesh across LAN boxes — primary on the Strix Halo, embed on the workstation, all behind one /v1/* surface.',
+  },
+  {
+    title: 'Fine-tune & LoRA hot-swap',
+    why: 'Attach and rotate LoRAs against a warm base model without unloading the underlying weights.',
+  },
+  {
+    title: 'Per-model rate limits & budgets',
+    why: 'Cost-style accounting for local inference — cap a chatty agent without taking the whole box down.',
+  },
+  {
+    title: 'Voice mode end-to-end',
+    why: 'Moonshine + agent loop + Kokoro stitched into a hands-free streaming conversation, gated through the slot lifecycle.',
+  },
+  {
+    title: 'ChatOps adapters',
+    why: 'Slack and Matrix bridges as extensions — talk to hal0 from the rooms you already live in.',
+  },
+];
+---
+
+<MarketingLayout
+  title="hal0 roadmap — local AI platform, agents, memory, MCP"
+  description="hal0 is an open-source, self-hosted LLM platform: OpenAI-compatible API, slot lifecycle, local agent framework, MCP host. Roadmap for v1, v0.2, and beyond."
+  navTone="solid"
+>
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-20 md:py-24">
+      <span class="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-hal0-border bg-hal0-bg-elevated px-3 py-1 font-mono text-xs uppercase tracking-wider text-hal0-fg-muted">
+        <span class="size-1.5 rounded-full bg-hal0-accent shadow-[0_0_8px_var(--hal0-accent)]"></span>
+        roadmap
+      </span>
+
+      <h1 class="text-balance text-4xl font-semibold leading-tight tracking-tight text-hal0-fg md:text-5xl">
+        A platform for the local AI stack.
+      </h1>
+
+      <p class="mt-6 max-w-3xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
+        hal0 is not a llama-server wrapper. v1 ships a polished
+        OpenAI-compatible inference platform — slots, dispatcher,
+        hardware probe, bundled chat, signed self-update. v0.2 takes
+        the same lifecycle discipline and extends it into the rest of
+        the local AI stack: agents, persistent memory, MCP, tools,
+        image, voice, third-party extensions. The goal is one place on
+        your hardware that runs the whole stack, not seven daemons
+        glued together.
+      </p>
+
+      <p class="mt-4 max-w-3xl text-pretty text-sm leading-relaxed text-hal0-fg-dim">
+        No dates below. Items are direction — the closer a thing is
+        to the left column, the closer it is to running on your box.
+      </p>
+    </div>
+  </section>
+
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-16 md:py-20">
+      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <RoadmapColumn title="Shipped" eyebrow="v1">
+          {shipped.map((item) => (
+            <RoadmapCard title={item.title} status="shipped">
+              {item.why}
+            </RoadmapCard>
+          ))}
+        </RoadmapColumn>
+
+        <RoadmapColumn title="Soon" eyebrow="v0.2" tone="primary">
+          {soon.map((item) => (
+            <RoadmapCard title={item.title} status="in-progress">
+              {item.why}
+            </RoadmapCard>
+          ))}
+        </RoadmapColumn>
+
+        <RoadmapColumn title="Exploring" eyebrow="v1.x +">
+          {exploring.map((item) => (
+            <RoadmapCard title={item.title} status="later">
+              {item.why}
+            </RoadmapCard>
+          ))}
+        </RoadmapColumn>
+      </div>
+
+      <p class="mt-12 max-w-3xl text-sm leading-relaxed text-hal0-fg-dim">
+        Exploring items are bets we believe in, not promises. Scope and
+        order will shift as v0.2 lands and we learn what people actually
+        do with a local platform.
+      </p>
+    </div>
+  </section>
+
+  <section class="bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-16 md:py-20">
+      <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-8 md:p-10">
+        <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">
+          shape it
+        </p>
+        <h2 class="mt-3 text-balance text-2xl font-semibold tracking-tight text-hal0-fg md:text-3xl">
+          The roadmap is a conversation.
+        </h2>
+        <p class="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-hal0-fg-muted">
+          File issues, open discussions, send patches. hal0 is
+          Apache-2.0 — the platform is yours to extend, fork, or
+          steer. The agents / memory / MCP track in particular benefits
+          from real-world use cases more than from our guesses.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a
+            href="https://github.com/hal0ai/hal0/issues"
+            rel="noopener"
+            class="inline-flex items-center gap-2 rounded-md bg-hal0-accent px-5 py-3 font-mono text-sm font-medium text-black transition hover:bg-hal0-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hal0-accent focus-visible:ring-offset-2 focus-visible:ring-offset-hal0-bg"
+          >
+            Open an issue
+          </a>
+          <a
+            href="https://github.com/hal0ai/hal0"
+            rel="noopener"
+            class="inline-flex items-center gap-2 rounded-md border border-hal0-border bg-transparent px-5 py-3 font-mono text-sm font-medium text-hal0-fg transition hover:border-hal0-border-strong hover:bg-hal0-bg-elevated"
+          >
+            Browse the repo
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</MarketingLayout>
