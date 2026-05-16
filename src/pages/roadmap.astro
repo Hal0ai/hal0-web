@@ -46,8 +46,8 @@ const shipped = [
     why: 'POST /v1/images/generations served by a ComfyUI provider on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell with license badges; the img slot runs inside the same lifecycle as chat, embed, and audio.',
   },
   {
-    title: 'Caddy + auth + HTTPS',
-    why: 'install.sh --auth=basic brings up Caddy at the edge with basic_auth, Bearer tokens for the OpenAI API, and automatic HTTPS — internal CA for .local, Let’s Encrypt for real domains. Post-install round-trip self-test verifies the path.',
+    title: 'Caddy + auth + HTTPS + mDNS',
+    why: 'install.sh --auth=basic brings up Caddy at the edge with basic_auth, Bearer tokens for the OpenAI API, automatic HTTPS (internal CA for .local, Let’s Encrypt for real domains), and a best-effort Avahi service file so hal0.local resolves on the LAN. Off by default — opt in when you’re ready to expose the box.',
   },
   {
     title: 'Installer overhaul',
@@ -81,8 +81,8 @@ const soon = [
     why: 'Native distro packages on top of the install script — pacman and apt as first-class install paths.',
   },
   {
-    title: 'hal0.local mDNS auto-discovery',
-    why: 'Zero-config LAN discovery so the box is reachable as hal0.local without DNS edits. Pairs with the Caddy + auth wiring already in v1.',
+    title: 'OIDC / SSO at the edge',
+    why: 'Swap Caddy basic_auth for OIDC (Google, GitHub, Authelia) by editing the Caddyfile — no hal0 changes. The X-Forwarded-Email contract stays the same. Documented templates plus a one-liner installer flag.',
   },
 ];
 
