@@ -97,6 +97,58 @@ keeps `--accent` constant.
 - Add a `prefers-contrast: more` override that raises accent to `#FFD27A`
   for low-vision users.
 
+## v0.2 auth landed (2026-05-15)
+
+Team J shipped Caddy + basic_auth + bearer tokens + automatic HTTPS
+to `hal0/main` (PR'd as one commit on its worktree). Docs updated:
+
+- **New page** — `src/content/docs/docs/operate/auth.mdx` ("Authentication
+  & HTTPS"). Covers the `--auth=basic` flag, browser vs programmatic
+  auth paths, automatic HTTPS via Caddy's internal CA (`.local`) or
+  ACME / Let's Encrypt (real domains), token CRUD, scopes, public-route
+  allowlist, mDNS setup, and rollback.
+- **Updated** — `getting-started/install.mdx` adds a callout pointing
+  at `--auth=basic`.
+- **Updated** — `api/openai-compat.mdx` and `operate/openwebui.mdx`
+  swap the "v0.2 deferred" notes for live links to the new auth page.
+
+### Landing page + marketing follow-ups (TODO before launch)
+
+The landing page (`src/pages/index.astro`) and feature grid still
+present hal0 as "no auth, trusted LAN only." Update before public
+launch:
+
+1. **`HeroSection.astro` / `FeatureGrid.astro`** — add a feature card:
+   "Bring your own auth. Caddy + basic_auth out of the box, OIDC
+   one Caddyfile edit away. HTTPS via Let's Encrypt with zero
+   config." Sodium-amber accent, terminal-style icon (lock or shield).
+2. **`pages/install.astro`** — surface the `--auth=basic` flag in the
+   one-liner picker. Two tabs: "Trusted LAN" (default `curl | bash`)
+   and "Public-facing" (the flag + a short note about HTTPS being
+   automatic).
+3. **`ComparisonTable.astro`** — there's a row about deployment
+   flexibility; update the cells to reflect that hal0 now ships with
+   real auth, not just "OpenWebUI's own login."
+4. **OG card / share image** — the current `og-default.png` says
+   "trusted-LAN home AI." If we want to lead with a "safe to expose"
+   story, regenerate via `scripts/build-og.sh` with new copy.
+5. **Roadmap card** — the "v0.2 deferred" tile listing Caddy + auth
+   needs to flip to "shipped" or move out of the deferred column.
+   See `src/components/RoadmapColumn.astro` and
+   `src/pages/roadmap.astro`.
+
+### Copy direction for the landing-page mention
+
+Don't lead with the technical setup. Lead with the outcome: "hal0
+runs locally and stays local — but when you want to expose it, the
+hardening is one flag." That positions the auth story as a sign of
+maturity, not as a complication.
+
+The differentiator vs. Ollama / LM Studio: **automatic HTTPS** out of
+the box. Most home-AI stacks make you wire up nginx + certbot + some
+auth proxy yourself. hal0 ships that whole pipeline behind a single
+installer flag.
+
 ## Halo companion mark
 
 A flattened ellipse, outlined in sodium amber `#FFB000`, sitting above

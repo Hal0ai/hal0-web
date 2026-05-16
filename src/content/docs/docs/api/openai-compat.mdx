@@ -148,8 +148,10 @@ You can mix local + remote per-model in one config; the dispatcher
 picks the right backend based on the `model` field.
 
 <Aside type="note">
-  Authentication: hal0 binds `:8080` to all interfaces but **does
-  not** require an API key by default — it's a home appliance, not a
-  multi-tenant cloud. v0.2 adds Caddy + auth in front for remote
-  access; until then, keep the port off the open internet.
+  Authentication: by default hal0 binds `:8080` with **no API key
+  required** — the trusted-LAN home-appliance posture. For remote
+  access or any internet-facing deployment, run `install.sh
+  --auth=basic` to bring up the Caddy reverse proxy with HTTPS,
+  basic_auth at the edge, and bearer tokens for the OpenAI API. See
+  [Authentication & HTTPS](/docs/operate/auth/) for the full setup.
 </Aside>

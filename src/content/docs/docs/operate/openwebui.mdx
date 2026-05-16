@@ -64,11 +64,12 @@ The installer writes this file once at install time; it's not
 overwritten on `hal0 update`.
 
 <Aside type="note">
-  `:3001` binds public interfaces by default. For LAN-only access,
-  bind to `127.0.0.1` and put it behind your reverse proxy of
-  choice. v0.2 adds Caddy + auth on the hal0 side; until then,
-  treat `:3001` like any other web app — keep it off the open
-  internet.
+  `:3001` binds public interfaces by default with no auth — fine on a
+  trusted LAN. For remote access, run `install.sh --auth=basic` to
+  bring up the Caddy reverse proxy. OpenWebUI gets single-sign-on
+  through Caddy's basic_auth identity (no second login), and the
+  bundled bearer-token auth gates the OpenAI API surface. See
+  [Authentication & HTTPS](/docs/operate/auth/) for the full flow.
 </Aside>
 
 ## Turning it off

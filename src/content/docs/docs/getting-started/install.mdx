@@ -119,6 +119,23 @@ HAL0_PORT=9090 HAL0_OPENWEBUI_PORT=9091 \
 For dev installs, set `HAL0_HOME=$PWD/.hal0` to relocate the whole tree
 under your working directory and skip the systemd path entirely.
 
+## Authentication & HTTPS (optional)
+
+The default install has **no auth in front** — fine on a trusted home
+LAN, not safe on the open internet. To enable Caddy + basic_auth +
+bearer tokens + automatic HTTPS, add `--auth=basic`:
+
+```sh frame="terminal"
+sudo bash installer/install.sh --auth=basic
+```
+
+The installer prompts for an admin user/password, installs Caddy,
+generates a TLS cert (self-signed for `.local` hostnames, Let's
+Encrypt for real domains), and brings the dashboard up at
+`https://hal0.local/`. See
+[Authentication & HTTPS](/docs/operate/auth/) for the full flow,
+client-side cert trust, and ACME setup.
+
 ## From a clone
 
 If you already have the repo and want to test changes locally:
