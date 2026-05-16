@@ -1,0 +1,12 @@
+# Cloudflare Pages headers config.
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Release-manifest endpoints: short cache (60s) so a freshly-published
+# tag is picked up quickly by `hal0 update --check`, plus permissive
+# CORS so the dashboard can fetch from a different origin during dev.
+
+/releases/*
+  Cache-Control: public, max-age=60, must-revalidate
+  Access-Control-Allow-Origin: *
+  Content-Type: application/json; charset=utf-8
+  X-Content-Type-Options: nosniff

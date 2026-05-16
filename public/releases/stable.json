@@ -1,0 +1,17 @@
+{
+  "_schema": "hal0.releases.v1",
+  "_placeholder": true,
+  "_note": "Pre-release placeholder. Real manifest published by hal0ai/hal0 release.yml on each tagged release. Do NOT consume operationally — digest_sha256 is a sentinel and cosign verify will fail.",
+  "version": "0.0.0",
+  "channel": "stable",
+  "url": "https://github.com/hal0ai/hal0/releases/download/v0.0.0/hal0-0.0.0.tar.gz",
+  "sig_url": "https://github.com/hal0ai/hal0/releases/download/v0.0.0/hal0-0.0.0.tar.gz.sig",
+  "digest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signer_identity": "^(?i)https://github\\.com/hal0ai/hal0/\\.github/workflows/release\\.yml@refs/tags/v0\\.0\\.0$",
+  "signer_issuer": "https://token.actions.githubusercontent.com",
+  "min_data_version": 1,
+  "released_at": "2026-05-15T00:00:00Z",
+  "notes_url": "https://github.com/hal0ai/hal0/releases",
+  "manifest_url": "https://releases.hal0.dev/stable.json",
+  "toolbox_images": {}
+}
