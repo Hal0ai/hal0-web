@@ -95,7 +95,7 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
         URL at the end.
       </p>
 
-      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div class="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
           <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
             pre-flight
@@ -138,6 +138,21 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
             <code class="font-mono">slots/primary.toml</code> with
             <code>enabled = false</code> waiting for a model pull.
             Operator-edited files are never overwritten.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            recovery hints
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Contextual ERR trap
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            A <code class="font-mono">trap … ERR</code> in
+            <code class="font-mono">install.sh</code> catches non-zero
+            exits and prints the failing step plus a focused hint —
+            disk full, missing build deps, blocked port, or a stale
+            venv — instead of dumping a raw bash trace at you.
           </p>
         </article>
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
