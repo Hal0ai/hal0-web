@@ -102,6 +102,87 @@ vercel --prod          # ship to hal0.dev
 DNS for `hal0.dev` must be cut over to Vercel separately. Until the
 user does both steps, the site is local-only.
 
+## Release manifest hosting (`releases.hal0.dev`)
+
+The hal0 self-updater (`src/hal0/updater/updater.py`) fetches per-channel
+release manifests from:
+
+```
+https://releases.hal0.dev/{stable|nightly}.json
+```
+
+Schema: `hal0.releases.v1` — see
+[`hal0/docs/release-manifest.md`](https://github.com/hal0ai/hal0/blob/main/docs/release-manifest.md)
+for the full field reference.
+
+### Where the JSON lives in this repo
+
+```
+public/releases/
+├── stable.json      ← served at https://releases.hal0.dev/stable.json
+└── nightly.json     ← served at https://releases.hal0.dev/nightly.json
+```
+
+`public/` is copied verbatim into `dist/` by Astro, so the files land at
+`/releases/*.json` on whatever host serves the site. Both URL forms work:
+
+| Form           | URL                                              |
+| -------------- | ------------------------------------------------ |
+| Path-based     | `https://hal0.dev/releases/stable.json`          |
+| Subdomain      | `https://releases.hal0.dev/stable.json`          |
+
+The two are wired up by:
+
+- `public/_headers` — sets `Cache-Control: max-age=60` + permissive CORS
+  on `/releases/*` so freshly-published tags propagate within a minute.
+- `public/_redirects` — when the same Cloudflare Pages project is
+  fronted by both `hal0.dev` and `releases.hal0.dev`, rewrites the
+  subdomain's root to `/releases/` (`200` rewrite, no client redirect)
+  so `https://releases.hal0.dev/stable.json` resolves to
+  `dist/releases/stable.json` without polluting the site root.
+
+### Cloudflare Pages + DNS setup (one-time)
+
+1. **Pages project** — point Cloudflare Pages at this repo. Build
+   command: `npm run build`. Output dir: `dist`. CF Pages auto-detects
+   `_headers` and `_redirects`.
+2. **Custom domains** — in the Pages project, add both:
+   - `hal0.dev` (primary)
+   - `releases.hal0.dev` (subdomain for the updater)
+3. **DNS records** (Cloudflare DNS zone for `hal0.dev`):
+   - `hal0.dev`              → CNAME → `<project>.pages.dev` (proxied)
+   - `releases.hal0.dev`     → CNAME → `<project>.pages.dev` (proxied)
+4. **Verify** — once DNS propagates:
+   ```sh
+   curl -s https://releases.hal0.dev/stable.json | jq .
+   curl -sI https://releases.hal0.dev/stable.json | grep -i cache-control
+   ```
+
+### Publish workflow (how a tag updates `stable.json`)
+
+The publisher is `release.yml` in
+[hal0ai/hal0](https://github.com/hal0ai/hal0/tree/main/.github/workflows)
+(not yet implemented — placeholder manifests live in this repo until it
+ships). The intended flow:
+
+1. Tag `vX.Y.Z` on `hal0ai/hal0` triggers `release.yml`.
+2. Workflow builds `hal0-X.Y.Z.tar.gz`, computes its sha256, and signs
+   it with cosign keyless against the GH Actions OIDC identity. Release
+   assets (tarball + `.sig`) attach to the GH Release.
+3. Workflow generates the new `stable.json` (or `nightly.json` on
+   `main`) using the schema in `public/releases/*.json` as a template,
+   filled in with real `version` / `digest_sha256` / `signer_identity`.
+4. Workflow opens a PR against `hal0ai/hal0-web` (or commits directly
+   on a `releases/` branch via a deploy key with write scope limited to
+   `public/releases/`), updating only `public/releases/{channel}.json`.
+5. Merge → CF Pages auto-deploys → updater clients see the new manifest
+   on next `--check`.
+
+The placeholder manifests currently in this repo (`_placeholder: true`,
+all-zeros digest) will be schema-valid but will fail cosign verify if
+anything tries to `apply()` them — intentional, until `release.yml`
+exists.
+
 ## Build state
 
 `npm run build` produces **32 static pages** (4 marketing + 27 docs +
