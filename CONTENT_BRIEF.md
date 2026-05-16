@@ -104,6 +104,12 @@ repo citations:
   `qrencode -t ANSIUTF8` pointing at `DASHBOARD_URL` when `qrencode`
   is present (silent soft-skip otherwise; lines 798–806), and a
   reachability summary printed in a UI box. Commit `f10c99d`.
+- **`hal0` lands on PATH automatically** — the CLI install step drops
+  an idempotent symlink at `/usr/local/bin/hal0 → ${VENV_DIR}/bin/hal0`
+  (`installer/install.sh:229–233`); override with `HAL0_PATH_LINK`,
+  skipped in `--dev`, removed by `uninstall.sh`. Commit `523e4c1`.
+  Operators no longer need `source /etc/profile.d/hal0.sh` after
+  install.
 
 ## Quick API usage example
 

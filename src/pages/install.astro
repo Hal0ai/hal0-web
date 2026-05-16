@@ -154,6 +154,23 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
             available, and a reachability summary box on exit.
           </p>
         </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            PATH
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            <code>hal0</code> on PATH automatically
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            Idempotent
+            <code class="font-mono">{'ln -sfn ${VENV_DIR}/bin/hal0 /usr/local/bin/hal0'}</code>
+            during the CLI install step. No manual export, no
+            <code>source /etc/profile.d/hal0.sh</code>. Override the link
+            target with <code class="font-mono">HAL0_PATH_LINK</code>;
+            skipped in <code>--dev</code> and removed by
+            <code>uninstall.sh</code>.
+          </p>
+        </article>
       </div>
 
       <div class="mt-10 rounded-lg border border-hal0-accent/40 bg-hal0-bg-elevated p-6 shadow-[inset_3px_0_0_var(--hal0-accent)]">
@@ -517,15 +534,21 @@ huggingface-cli download \\
 
         <Expandable summary="hal0 isn’t on PATH after install">
           <p>
-            The installer drops a profile snippet at
-            <code>/etc/profile.d/hal0.sh</code> that adds
-            <code>/usr/lib/hal0/current/bin</code> to <code>PATH</code>.
-            Login shells pick it up automatically — fresh terminals
-            won&rsquo;t see it until you log out and back in, or source
-            it manually:
+            The installer drops a symlink at
+            <code>{'/usr/local/bin/hal0 → ${VENV_DIR}/bin/hal0'}</code>
+            so the binary is on the default <code>PATH</code> on every
+            mainstream distro out of the box. If you don&rsquo;t see
+            it, the symlink step printed a warning — re-run the
+            installer or recreate it by hand:
           </p>
-          <CodeBlock lang="sh">{`source /etc/profile.d/hal0.sh
+          <CodeBlock lang="sh">{`sudo ln -sfn /usr/lib/hal0/current/bin/hal0 /usr/local/bin/hal0
 hal0 --version`}</CodeBlock>
+          <p>
+            Override the symlink location at install time with
+            <code>HAL0_PATH_LINK=/opt/bin/hal0 sudo bash install.sh</code>.
+            Dev installs (<code>--dev</code>) skip the symlink so the
+            dev tree stays self-contained.
+          </p>
         </Expandable>
       </div>
     </div>
