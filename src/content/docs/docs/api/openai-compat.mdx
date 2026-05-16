@@ -27,6 +27,7 @@ Routes are implemented in `src/hal0/api/routes/v1.py`.
 | `POST` | `/v1/rerankings`              | Rerank candidates against a query.   |
 | `POST` | `/v1/audio/transcriptions`    | Speech-to-text (Moonshine).          |
 | `POST` | `/v1/audio/speech`            | Text-to-speech (Kokoro).             |
+| `POST` | `/v1/images/generations`      | Image generation (ComfyUI on ROCm).  |
 
 ## curl: list models
 
@@ -117,6 +118,25 @@ curl http://localhost:8080/v1/audio/speech \
     "voice": "af_bella"
   }' --output speech.wav
 ```
+
+## curl: image generation
+
+```sh
+curl http://localhost:8080/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "sdxl-turbo",
+    "prompt": "a cat in a hat, studio lighting",
+    "size": "1024x1024",
+    "response_format": "url"
+  }'
+```
+
+Curated models: `sdxl-turbo` (SAI Non-Commercial Research),
+`sd-1.5-pruned-emaonly` (CreativeML Open RAIL-M), `flux-schnell`
+(Apache-2.0). See [Image generation](/docs/api/images-generation/)
+for the full request shape, response shape, slot configuration, and
+hardware requirements.
 
 ## Structured errors
 
