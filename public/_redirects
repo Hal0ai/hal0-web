@@ -1,14 +1,8 @@
 # Cloudflare Pages redirects/rewrites.
 # https://developers.cloudflare.com/pages/configuration/redirects/
 #
-# When the same Pages project is fronted by both `hal0.dev` and
-# `releases.hal0.dev`, rewrite the bare subdomain root to /releases/
-# so `https://releases.hal0.dev/stable.json` resolves to
-# `dist/releases/stable.json` without polluting the marketing-site
-# root with channel manifests.
+# Host-conditional rewrite for releases.hal0.dev is handled by
+# `functions/_middleware.ts` instead — `_redirects` host rules
+# don't reliably fire for same-project subdomain rewrites.
 #
-# 200 = rewrite (transparent, no client redirect). The path-based
-# canonical URL (`https://hal0.dev/releases/stable.json`) keeps
-# working unchanged.
-
-https://releases.hal0.dev/* /releases/:splat 200
+# Add path-based redirects here as needed.
