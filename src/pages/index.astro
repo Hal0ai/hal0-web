@@ -196,47 +196,49 @@ const description =
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <article class="rounded-lg border border-hal0-accent/40 bg-hal0-bg-elevated p-6 shadow-[inset_3px_0_0_var(--hal0-accent)]">
           <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
-            Strix Halo first-class
+            Strix Halo native
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            UMA-aware hardware probe, FLM provider for the XDNA NPU,
-            unified-memory slot fit warnings. The 128 GB Ryzen AI Max+
-            395 is the reference deployment — not an afterthought port.
+            UMA-aware probe, FLM provider for the XDNA NPU,
+            unified-memory slot-fit warnings sized to the real pool —
+            not the BAR carve-out. 128 GB Ryzen AI Max+ 395 is the
+            reference deployment, not a hopeful port.
           </p>
         </article>
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
           <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
-            OpenAI-compatible
+            Concurrent chat + embed + voice
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            <code class="font-mono text-hal0-fg">/v1/chat</code>,
-            <code class="font-mono text-hal0-fg">embeddings</code>,
-            <code class="font-mono text-hal0-fg">rerankings</code>,
-            <code class="font-mono text-hal0-fg">audio/transcriptions</code>,
-            <code class="font-mono text-hal0-fg">audio/speech</code>.
-            Drop in any OpenAI SDK — point it at
-            <code class="font-mono text-hal0-fg">:8080</code>.
+            Five built-in slot classes — chat, embed, STT, TTS, image —
+            each a real systemd-managed process on its own port. Run
+            them at once: primary + embed concurrent on Strix Halo
+            measures <strong class="text-hal0-fg">~258 tok/s</strong>
+            with <strong class="text-hal0-fg">&lt;200 ms</strong> dispatch.
           </p>
         </article>
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
           <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
-            Lifecycle, not just launch
+            Image gen, day one
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            Each slot is a typed state machine (offline → pulling →
-            starting → warming → ready → serving ↔ idle), persisted to
-            disk and streamed over SSE. systemd owns the units; the API
-            never holds a model in its own memory.
+            <code class="font-mono text-hal0-fg">POST /v1/images/generations</code>
+            served by ComfyUI on ROCm, inside the same slot lifecycle
+            as everything else. Curated SDXL Turbo, SD 1.5, and Flux
+            Schnell ship pre-pinned by sha256. Not a side-quest — a
+            first-class slot.
           </p>
         </article>
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
           <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
-            Open + no phone-home
+            Dispatcher with single-flight
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            Apache-2.0. Telemetry is off by default; the only optional
-            ping carries hardware class + version + slot count. Your
-            weights, your data, your box.
+            Registry-aware routing across local slots
+            <em>and</em> external upstreams (OpenRouter, Anthropic,
+            OpenAI). Cold-cache prefetch with request coalescing — a
+            thundering herd of identical prefetches becomes one HTTP
+            call. Every routing decision logged as structured breadcrumbs.
           </p>
         </article>
       </div>
