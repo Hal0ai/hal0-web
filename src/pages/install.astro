@@ -39,10 +39,11 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
         The installer drops a systemd-managed <code class="font-mono text-hal0-fg">hal0-api</code>
         on port <code class="font-mono text-hal0-fg">:8080</code>, probes your
         hardware, writes a config file at <code class="font-mono text-hal0-fg">/etc/hal0/</code>,
-        and starts the four built-in slots (<code class="font-mono text-hal0-fg">primary</code>,
+        and prepares the five built-in slots (<code class="font-mono text-hal0-fg">primary</code>,
         <code class="font-mono text-hal0-fg">embed</code>,
         <code class="font-mono text-hal0-fg">stt</code>,
-        <code class="font-mono text-hal0-fg">tts</code>). Linux + systemd
+        <code class="font-mono text-hal0-fg">tts</code>,
+        <code class="font-mono text-hal0-fg">img</code>). Linux + systemd
         only — non-interactive and idempotent.
       </p>
 
@@ -57,15 +58,121 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
       <div class="mt-8">
         <Callout tone="warning" title="Active development — install on a sandbox host first.">
           hal0 is v1 pre-alpha. The installer is real and tested
-          (Phase&nbsp;2 done), but several pieces are still in flight:
-          the <code>FLM</code>, <code>Moonshine</code>, <code>Kokoro</code>,
-          and <code>ROCm</code> toolbox images haven't been published to
-          <code>ghcr.io/hal0ai/</code> yet (only the Vulkan
-          <code>:dev</code> tag exists today), <code>hal0 model pull</code>
-          returns <code>501</code> as a stub, and <code>hal0 uninstall</code>
-          isn't implemented. Run it on a spare Linux box or a fresh LXC
-          before pointing it at anything you care about.
+          (Phase&nbsp;2+ done) and most toolbox images
+          (<code>vulkan</code>, <code>rocm</code>, <code>moonshine</code>,
+          <code>kokoro</code>, <code>comfyui</code>) are pinned by
+          sha256 in <code>hal0/manifest.json</code>. Two known gaps
+          remain: the <code>flm</code> NPU toolbox image is still
+          unpublished (<code>manifest.json</code>
+          <code>toolbox_images.flm.digest</code> is <code>null</code>),
+          <code>hal0 model pull</code> returns <code>501</code> as a
+          stub, and <code>hal0 uninstall</code> isn't implemented.
+          Run it on a spare Linux box or a fresh LXC before pointing it
+          at anything you care about.
         </Callout>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- What's new in the installer (2026-05-15 overhaul)             -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        new in 2026-05-15
+      </p>
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Installer overhaul.
+      </h2>
+      <p class="mb-8 max-w-2xl text-hal0-fg-muted">
+        The install path was hardened end-to-end this cycle. ASCII banner
+        + step counter + spinners up top; structured pre-flight checks
+        you can re-run any time with <code class="font-mono text-hal0-fg">hal0 doctor</code>;
+        hardware cards + a pre-populated <code class="font-mono text-hal0-fg">slots/primary.toml</code>
+        based on what was detected; contextual recovery hints on failure;
+        optional auth round-trip + a live "hello" + a QR for the dashboard
+        URL at the end.
+      </p>
+
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            pre-flight
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Extracted &amp; re-runnable
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            <code class="font-mono">installer/lib/preflight.sh</code>
+            gates systemd, Python 3.11–3.14, disk
+            (≥ 20 GB under <code>/var/lib</code>), and port collisions
+            (<code>:8080</code>, <code>:3001</code>) before any
+            apt/pip work.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            probe
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Hardware cards
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            After the venv lands, the installer prints four single-line
+            hardware cards via <code class="font-mono">format_cards()</code>
+            in <code class="font-mono">src/hal0/hardware/probe.py</code>
+            and writes <code class="font-mono">/etc/hal0/hardware.json</code>.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            slot defaults
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Auto-populated primary
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            <code class="font-mono">recommend_primary_slot()</code>
+            picks the largest curated chat model that fits and renders
+            <code class="font-mono">slots/primary.toml</code> with
+            <code>enabled = false</code> waiting for a model pull.
+            Operator-edited files are never overwritten.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            finish
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Live hello + QR + reachability
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            A live "hello" prompt streamed through the freshly-spawned
+            slot, a QR code for the dashboard URL rendered with
+            <code class="font-mono">qrencode -t ANSIUTF8</code> when
+            available, and a reachability summary box on exit.
+          </p>
+        </article>
+      </div>
+
+      <div class="mt-10 rounded-lg border border-hal0-accent/40 bg-hal0-bg-elevated p-6 shadow-[inset_3px_0_0_var(--hal0-accent)]">
+        <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+          re-run the pre-flight any time
+        </p>
+        <p class="mb-4 text-pretty text-hal0-fg-muted">
+          <code class="font-mono text-hal0-fg">hal0 doctor</code> shells
+          the same <code class="font-mono">installer/lib/preflight.sh</code>
+          the installer sources, so you can audit a live host without
+          re-installing.
+        </p>
+        <CodeBlock lang="sh" title="hal0 doctor">{`hal0 doctor`}</CodeBlock>
+        <p class="mt-3 text-sm text-hal0-fg-dim">
+          Flags: <code>--plain</code> forces ASCII output for log capture,
+          <code>--ports "8080 3001 8186"</code> tunes the port collision
+          check. Exit code matches the script's so it composes with
+          shell tooling (<code>hal0 doctor &amp;&amp; hal0 status</code>).
+        </p>
       </div>
     </div>
   </section>
@@ -109,9 +216,13 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
           </li>
           <li>
             <strong class="font-mono text-hal0-fg">Hardware probe.</strong>
-            Runs <code>hal0 probe</code> and writes
-            <code>/etc/hal0/hardware.json</code>. Detects GPU / NPU /
-            unified memory (UMA pool on Strix Halo). Skip with
+            Runs <code>HardwareProbe().probe()</code>, writes
+            <code>/etc/hal0/hardware.json</code>, prints four hardware
+            summary cards via <code>format_cards()</code>, and renders
+            <code>/etc/hal0/slots/primary.toml</code> with a recommended
+            backend + curated model via
+            <code>recommend_primary_slot()</code> if no primary file
+            exists. Skip the whole step with
             <code>HAL0_NO_PROBE=1</code>.
           </li>
           <li>
@@ -371,17 +482,17 @@ hal0 slot logs primary --follow`}</CodeBlock>
           </p>
         </Expandable>
 
-        <Expandable summary="“No such image” — FLM / Moonshine / Kokoro / ROCm">
+        <Expandable summary="“No such image” — flm toolbox">
           <p>
-            Only the Vulkan toolbox is published today
-            (<code>ghcr.io/hal0ai/hal0-toolbox-vulkan:dev</code>).
-            <code>hal0-toolbox-flm</code>,
-            <code>hal0-toolbox-moonshine</code>,
-            <code>hal0-toolbox-kokoro</code>, and
-            <code>hal0-toolbox-rocm</code> are pending Phase&nbsp;2 publish.
-            Until they ship, the <code>primary</code> and
-            <code>embed</code> slots work out of the box on Vulkan; the
-            <code>stt</code> and <code>tts</code> slots will sit
+            As of 2026-05-15 the <code>vulkan</code>, <code>rocm</code>,
+            <code>moonshine</code>, <code>kokoro</code>, and
+            <code>comfyui</code> toolbox images are pinned by sha256 in
+            <code>hal0/manifest.json</code> and pull cleanly. Only
+            <code>flm</code> is still unpublished —
+            <code>toolbox_images.flm.digest</code> is <code>null</code>.
+            Until that lands, the <code>primary</code>, <code>embed</code>,
+            <code>stt</code>, <code>tts</code>, and <code>img</code>
+            slots work out of the box; an FLM-backed slot will sit
             <code>offline</code>.
           </p>
         </Expandable>
