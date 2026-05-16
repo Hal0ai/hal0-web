@@ -243,7 +243,7 @@ const description =
     </div>
   </section>
 
-  <!-- Features grid — 8 tiles, grounded in PLAN.md (see CONTENT_BRIEF features list). -->
+  <!-- Features grid — 10 tiles, grounded in PLAN.md (see CONTENT_BRIEF features list). -->
   <FeatureGrid
     eyebrow="What ships in v1"
     title="A complete home inference platform."
@@ -298,6 +298,17 @@ const description =
       Linux + systemd, idempotent, non-interactive. Pre-flight checks,
       systemd template units, working slot defaults dropped on disk —
       no manual yaml.
+    </FeatureCard>
+    <FeatureCard
+      title="Image generation"
+      icon="image"
+      href="/docs/api/images-generation/"
+    >
+      <code>POST /v1/images/generations</code> served by ComfyUI on
+      ROCm — same OpenAI shape your SDK already speaks. Curated
+      SDXL&nbsp;Turbo / SD&nbsp;1.5 / Flux&nbsp;Schnell with license
+      badges. <code>img</code> is a built-in slot with the same
+      lifecycle as chat, embed, and audio.
     </FeatureCard>
   </FeatureGrid>
 
@@ -547,15 +558,25 @@ curl -fsSL https://hal0.dev/install | bash
         </a>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <RoadmapColumn title="Now" eyebrow="v1" tone="primary">
           <RoadmapCard title="Slot lifecycle + dispatcher" status="shipped" eta="v1">
             State machine, single-flight, adaptive cold-boot, atomic
             TOML config, structured error envelopes.
           </RoadmapCard>
-          <RoadmapCard title="Four providers wired" status="shipped" eta="v1">
+          <RoadmapCard title="Five providers wired" status="shipped" eta="v1">
             llama.cpp (Vulkan), FLM (XDNA NPU), Moonshine (STT),
-            Kokoro (TTS).
+            Kokoro (TTS), ComfyUI (image gen on ROCm).
+          </RoadmapCard>
+          <RoadmapCard title="Image generation" status="shipped" eta="v1">
+            <code>POST /v1/images/generations</code> served by ComfyUI
+            on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell, slot
+            named <code>img</code>.
+          </RoadmapCard>
+          <RoadmapCard title="Caddy + auth + HTTPS" status="shipped" eta="v1">
+            <code>install.sh --auth=basic</code> brings up Caddy with
+            basic_auth + Bearer tokens + automatic HTTPS, with a
+            post-install round-trip self-test.
           </RoadmapCard>
         </RoadmapColumn>
 
@@ -568,15 +589,9 @@ curl -fsSL https://hal0.dev/install | bash
             Model Context Protocol surface so hal0 can host MCP servers
             alongside slots.
           </RoadmapCard>
-        </RoadmapColumn>
-
-        <RoadmapColumn title="Next" eyebrow="v0.2">
-          <RoadmapCard title="Kyuzo · image generation" status="next">
-            ComfyUI-backed provider as a fourth slot class.
-          </RoadmapCard>
-          <RoadmapCard title="Caddy + auth + hal0.local" status="next">
-            Reverse proxy with optional auth and mDNS so the box is
-            reachable as <code>hal0.local</code> on your LAN.
+          <RoadmapCard title="hal0.local mDNS" status="next">
+            Zero-config LAN discovery so the box is reachable as
+            <code>hal0.local</code> without DNS edits.
           </RoadmapCard>
         </RoadmapColumn>
 
