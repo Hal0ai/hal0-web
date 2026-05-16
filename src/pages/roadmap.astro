@@ -38,8 +38,20 @@ const shipped = [
     why: 'Atomic version swap with rollback. Stable and nightly channels, GitHub OIDC-verified release tarballs.',
   },
   {
-    title: 'Four-provider stack',
-    why: 'llama.cpp (Vulkan / ROCm) for chat + embed, FLM for NPU multiplex, Moonshine for STT, Kokoro for TTS — all first-class in v1.',
+    title: 'Five-provider stack',
+    why: 'llama.cpp (Vulkan / ROCm) for chat + embed, FLM for NPU multiplex, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation — all first-class in v1.',
+  },
+  {
+    title: 'Image generation',
+    why: 'POST /v1/images/generations served by a ComfyUI provider on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell with license badges; the img slot runs inside the same lifecycle as chat, embed, and audio.',
+  },
+  {
+    title: 'Caddy + auth + HTTPS',
+    why: 'install.sh --auth=basic brings up Caddy at the edge with basic_auth, Bearer tokens for the OpenAI API, and automatic HTTPS — internal CA for .local, Let’s Encrypt for real domains. Post-install round-trip self-test verifies the path.',
+  },
+  {
+    title: 'Installer overhaul',
+    why: 'ASCII banner + step counter, extracted preflight.sh (disk + ports + python + systemd), hal0 doctor for re-running it post-install, hardware cards + auto-populated slots/primary.toml, contextual ERR-trap recovery hints, and a live-hello + QR + reachability finish.',
   },
 ];
 
@@ -61,10 +73,6 @@ const soon = [
     why: 'Third-party apps packaged as hal0 extensions: systemd unit + dashboard tile + healthcheck. Bring-your-own-app, lifecycle-managed.',
   },
   {
-    title: 'Image generation',
-    why: 'ComfyUI as a hal0 provider — image slots run inside the same lifecycle as chat, embed, and audio.',
-  },
-  {
     title: 'Benchmarks & presets UI',
     why: 'In-dashboard tok/s + latency runs, plus curated loadout presets you can flash onto a fresh install.',
   },
@@ -73,8 +81,8 @@ const soon = [
     why: 'Native distro packages on top of the install script — pacman and apt as first-class install paths.',
   },
   {
-    title: 'Caddy reverse proxy & hal0.local mDNS',
-    why: 'Auth, TLS, and zero-config LAN discovery wired in. Share the box on your network without hand-rolling nginx.',
+    title: 'hal0.local mDNS auto-discovery',
+    why: 'Zero-config LAN discovery so the box is reachable as hal0.local without DNS edits. Pairs with the Caddy + auth wiring already in v1.',
   },
 ];
 
