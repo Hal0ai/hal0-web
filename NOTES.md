@@ -114,40 +114,47 @@ to `hal0/main` (PR'd as one commit on its worktree). Docs updated:
 
 ### Landing page + marketing follow-ups (TODO before launch)
 
-The landing page (`src/pages/index.astro`) and feature grid still
-present hal0 as "no auth, trusted LAN only." Update before public
-launch:
+Positioning decision (2026-05-15): auth is a **capability bullet**,
+not the headline. The inference story stays primary; auth gets a card
+in the v1-features grid as a "safe to expose" signal. Don't rewrite
+the hero.
 
-1. **`HeroSection.astro` / `FeatureGrid.astro`** — add a feature card:
-   "Bring your own auth. Caddy + basic_auth out of the box, OIDC
-   one Caddyfile edit away. HTTPS via Let's Encrypt with zero
-   config." Sodium-amber accent, terminal-style icon (lock or shield).
-2. **`pages/install.astro`** — surface the `--auth=basic` flag in the
-   one-liner picker. Two tabs: "Trusted LAN" (default `curl | bash`)
-   and "Public-facing" (the flag + a short note about HTTPS being
-   automatic).
-3. **`ComparisonTable.astro`** — there's a row about deployment
+1. **`pages/index.astro` "What ships in v1" grid** — DONE 2026-05-15.
+   Added a 9th `FeatureCard` ("Auth + HTTPS, one flag", icon
+   `shield-check`), bumped the grid from `columns={4}` (two rows of
+   four) to `columns={3}` (three rows of three) so the new card lands
+   in a clean grid. The card links through to `/docs/operate/auth/`.
+   Hero copy intentionally left alone.
+2. **`pages/install.astro`** — TODO. Surface the `--auth=basic` flag
+   in the one-liner picker. Two tabs: "Trusted LAN" (default `curl |
+   bash`) and "Public-facing" (the flag + a short note about HTTPS
+   being automatic).
+3. **`ComparisonTable.astro`** — TODO. There's a row about deployment
    flexibility; update the cells to reflect that hal0 now ships with
    real auth, not just "OpenWebUI's own login."
-4. **OG card / share image** — the current `og-default.png` says
-   "trusted-LAN home AI." If we want to lead with a "safe to expose"
-   story, regenerate via `scripts/build-og.sh` with new copy.
-5. **Roadmap card** — the "v0.2 deferred" tile listing Caddy + auth
-   needs to flip to "shipped" or move out of the deferred column.
+4. **OG card / share image** — SKIP. The current `og-default.png`
+   says "trusted-LAN home AI" which is still accurate as the default
+   posture under capability-bullet positioning. Regenerate only if we
+   later decide auth IS the headline.
+5. **Roadmap card** — TODO. The "v0.2 deferred" tile listing Caddy +
+   auth needs to flip to "shipped" or move out of the deferred column.
    See `src/components/RoadmapColumn.astro` and
    `src/pages/roadmap.astro`.
 
 ### Copy direction for the landing-page mention
 
-Don't lead with the technical setup. Lead with the outcome: "hal0
-runs locally and stays local — but when you want to expose it, the
-hardening is one flag." That positions the auth story as a sign of
-maturity, not as a complication.
+Capability-bullet posture: don't lead with auth. The card copy reads
+"Off by default for trusted-LAN installs. `--auth=basic` brings up
+Caddy with basic_auth at the edge, bearer tokens for the OpenAI API,
+and automatic HTTPS — internal CA for `.local`, Let's Encrypt for
+real domains. Zero certbot." That signals maturity (it's there when
+you need it) without overclaiming (we're not pitching as a
+multi-tenant cloud).
 
 The differentiator vs. Ollama / LM Studio: **automatic HTTPS** out of
 the box. Most home-AI stacks make you wire up nginx + certbot + some
 auth proxy yourself. hal0 ships that whole pipeline behind a single
-installer flag.
+installer flag — the card surfaces it without making it the lead.
 
 ## Halo companion mark
 

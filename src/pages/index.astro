@@ -247,7 +247,7 @@ const description =
   <FeatureGrid
     eyebrow="What ships in v1"
     title="A complete home inference platform."
-    columns={4}
+    columns={3}
   >
     <FeatureCard title="Slot state machine" icon="layers">
       Every workload has typed states (offline → pulling → warming →
@@ -277,6 +277,17 @@ const description =
       Nine views — Slots, Models, Hardware, Logs, Settings, Providers,
       First-run, plus error shell. Dark by default. SSE-backed live
       status and log tail.
+    </FeatureCard>
+    <FeatureCard
+      title="Auth + HTTPS, one flag"
+      icon="shield-check"
+      href="/docs/operate/auth/"
+    >
+      Off by default for trusted-LAN installs. <code>--auth=basic</code>
+      brings up Caddy with basic_auth at the edge, bearer tokens for
+      the OpenAI API, and automatic HTTPS — internal CA for
+      <code>.local</code>, Let's Encrypt for real domains. Zero
+      certbot.
     </FeatureCard>
     <FeatureCard title="Atomic self-update" icon="refresh-cw">
       <code>hal0 update --channel stable|nightly</code>. Cosign-verified
