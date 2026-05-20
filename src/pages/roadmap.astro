@@ -15,7 +15,7 @@ import RoadmapCard from '../components/RoadmapCard.astro';
 const shipped = [
   {
     title: 'OpenAI-compatible /v1/* API',
-    why: 'Chat, completions, embeddings, rerank, transcriptions, speech — every OpenAI SDK works unchanged against your local box.',
+    why: 'Chat, completions, embeddings, rerank, transcriptions, speech, images — every OpenAI SDK works unchanged against your local box.',
   },
   {
     title: 'Slot lifecycle state machine',
@@ -24,10 +24,6 @@ const shipped = [
   {
     title: 'Hardware-aware probe',
     why: 'Detects GPU, NPU, and unified memory; surfaces VRAM/RAM fit warnings inline before you load a model that won’t fit.',
-  },
-  {
-    title: 'Hugging Face model pulls',
-    why: 'Streaming downloads from the dashboard or CLI with live progress. No manual GGUF wrangling.',
   },
   {
     title: 'Bundled OpenWebUI',
@@ -53,9 +49,45 @@ const shipped = [
     title: 'Installer overhaul',
     why: 'ASCII banner + step counter, extracted preflight.sh (disk + ports + python + systemd), hal0 doctor for re-running it post-install, hardware cards + auto-populated slots/primary.toml, contextual ERR-trap recovery hints, and a live-hello + QR + reachability finish.',
   },
+  {
+    title: 'Capability slots overlay',
+    why: 'Embed / Voice / Img capability cards plus an NPU backend rollup in the dashboard, backed by /etc/hal0/capabilities.toml and GET|POST /api/capabilities/*. The orchestrator picks one model per child, validates (backend, model) pairs against the catalog, and reconciles drift on every apply.',
+  },
+  {
+    title: 'FLM NPU provider live',
+    why: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1 image bundles FLM; chat + embed surfaced in the picker only when XDNA hardware and the local toolbox image are both present. Model namespace comes from flm list -j; STT slice deferred.',
+  },
+  {
+    title: 'embed-rerank built-in slot',
+    why: 'The capability orchestrator auto-creates an embed-rerank slot on first enable — default bge-reranker-v2-m3-q4_k_m on port 8086 with --reranking, so /v1/rerankings stays separate from the chat surface on :8081.',
+  },
+  {
+    title: 'First-run wizard rewrite',
+    why: 'Eight linear steps from password through hardware, primary model, capabilities, HF token, license, install, done. HF-token step is conditional on a gated model selection; legacy 5-step picker and three IA prototypes deleted.',
+  },
+  {
+    title: '--models-dir install flag',
+    why: 'install.sh --models-dir=PATH (or HAL0_MODELS_DIR, or an interactive tty prompt) points a fresh install at an existing model store. Persisted as [models].pull_root and included in [models].roots so the on-disk tree scans on first boot.',
+  },
+  {
+    title: 'Models scan preview overhaul',
+    why: 'POST /api/models/scan/preview is inspection-only; kind-driven gating (llama / moonshine / kokoro / flm), shared skip rules, per-row select, dedup across HF blob-cache symlinks, GGUF magic-byte detection regardless of extension, GGUF general.name → suggested name, HF-cache repo-name fallback.',
+  },
+  {
+    title: 'Per-slot live metrics',
+    why: 'GET /api/slots/metrics reads docker cgroup memory + ActiveEnterTimestampMonotonic + scraped llama-server /metrics, with a fallback to the systemd unit’s MemoryCurrent for native-host slots.',
+  },
+  {
+    title: 'Orchestrator drift reconcile',
+    why: 'CapabilityOrchestrator.apply() now reconciles capabilities.toml ↔ slots/*.toml on every call, not just on selection diff — prior failed applies, manual edits, and install-time seeds can no longer leave the two disagreeing.',
+  },
 ];
 
 const soon = [
+  {
+    title: 'Hugging Face model pulls',
+    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for v1.0. FLM tags also need an FLM-aware pull path since they don’t carry an HF repo + filename.',
+  },
   {
     title: 'Agent management & integration',
     why: 'First-class agents stored on hal0 with conversation orchestration and deterministic tool-use loops. The platform for agents to run on, not just chat with.',

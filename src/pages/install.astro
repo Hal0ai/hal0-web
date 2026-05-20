@@ -58,17 +58,19 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
       <div class="mt-8">
         <Callout tone="warning" title="Active development — install on a sandbox host first.">
           hal0 is v1 pre-alpha. The installer is real and tested
-          (Phase&nbsp;2+ done) and most toolbox images
-          (<code>vulkan</code>, <code>rocm</code>, <code>moonshine</code>,
-          <code>kokoro</code>, <code>comfyui</code>) are pinned by
-          sha256 in <code>hal0/manifest.json</code>. Two known gaps
-          remain: the <code>flm</code> NPU toolbox image is still
-          unpublished (<code>manifest.json</code>
-          <code>toolbox_images.flm.digest</code> is <code>null</code>),
+          (Phase&nbsp;2+ done); the <code>vulkan</code>,
+          <code>rocm</code>, <code>moonshine</code>, <code>kokoro</code>,
+          and <code>comfyui</code> toolbox images are pinned by sha256
+          in <code>hal0/manifest.json</code>. The FLM NPU provider is
+          live with a self-contained
+          <code>ghcr.io/hal0ai/hal0-toolbox-flm:v1</code> image, but
+          the post-publish manifest patch hasn’t auto-PR’d yet so
+          <code>toolbox_images.flm.digest</code> is still
+          <code>null</code>. Two CLI gaps remain:
           <code>hal0 model pull</code> returns <code>501</code> as a
-          stub, and <code>hal0 uninstall</code> isn't implemented.
-          Run it on a spare Linux box or a fresh LXC before pointing it
-          at anything you care about.
+          stub, and <code>hal0 uninstall</code> isn’t implemented. Run
+          it on a spare Linux box or a fresh LXC before pointing it at
+          anything you care about.
         </Callout>
       </div>
     </div>
@@ -186,6 +188,40 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
             <code>uninstall.sh</code>.
           </p>
         </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            existing models
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            <code>--models-dir=PATH</code>
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            Point a fresh install at an existing model store at
+            provision time. Resolution order: explicit flag →
+            <code class="font-mono">HAL0_MODELS_DIR</code> env →
+            interactive tty prompt →
+            <code class="font-mono">/var/lib/hal0/models</code> default.
+            Persisted as <code class="font-mono">[models].pull_root</code>
+            and added to <code class="font-mono">[models].roots</code>
+            so the tree scans on first boot.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            first-run wizard
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Eight linear steps
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
+            Password → hardware + storage → primary chat model →
+            capabilities (embed / voice.stt / voice.tts / img with
+            smart defaults; rerank as a sub-disclosure) → conditional
+            HF token (only when a selected model is gated) → license
+            acceptance → parallel install with retry-per-row → done.
+            Replaces the legacy 5-step picker and three IA prototypes.
+          </p>
+        </article>
       </div>
 
       <div class="mt-10 rounded-lg border border-hal0-accent/40 bg-hal0-bg-elevated p-6 shadow-[inset_3px_0_0_var(--hal0-accent)]">
@@ -204,6 +240,14 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
           <code>--ports "8080 3001 8186"</code> tunes the port collision
           check. Exit code matches the script's so it composes with
           shell tooling (<code>hal0 doctor &amp;&amp; hal0 status</code>).
+        </p>
+        <p class="mt-3 text-sm text-hal0-fg-dim">
+          Sibling subcommand: <code class="font-mono">hal0
+          capabilities migrate [--dry-run]</code> walks
+          <code class="font-mono">capabilities.toml</code> and snaps
+          illegal (backend, model) pairs to the model’s first legal
+          backend; selections whose model is gone get cleared.
+          Idempotent.
         </p>
       </div>
     </div>
@@ -316,6 +360,12 @@ cd hal0`}</CodeBlock>
             <code>HAL0_*</code> environment overrides apply here too:
           </p>
           <CodeBlock lang="sh">{`sudo HAL0_PORT=18080 HAL0_NO_PROBE=1 bash installer/install.sh`}</CodeBlock>
+          <p>
+            Point it at an existing model store with
+            <code>--models-dir=&lt;abs path&gt;</code> (must be absolute;
+            equivalent to <code>HAL0_MODELS_DIR</code>):
+          </p>
+          <CodeBlock lang="sh">{`sudo bash installer/install.sh --models-dir=/srv/models`}</CodeBlock>
         </StepItem>
 
         <StepItem n={3} title="Pick a model">
@@ -514,18 +564,23 @@ hal0 slot logs primary --follow`}</CodeBlock>
           </p>
         </Expandable>
 
-        <Expandable summary="“No such image” — flm toolbox">
+        <Expandable summary="FLM NPU isn’t in the picker">
           <p>
-            As of 2026-05-15 the <code>vulkan</code>, <code>rocm</code>,
+            The capability layer only advertises the NPU backend when
+            two things are true: XDNA is present in the hardware probe
+            <em>and</em> the self-contained
+            <code>ghcr.io/hal0ai/hal0-toolbox-flm:v1</code> image is
+            locally available
+            (<code>_flm_image_present()</code> in
+            <code>src/hal0/capabilities/catalog.py</code>). The image
+            bundles FLM at <code>/opt/fastflowlm/</code> — no host
+            bind-mount of the FLM tree is required. The
+            <code>vulkan</code>, <code>rocm</code>,
             <code>moonshine</code>, <code>kokoro</code>, and
-            <code>comfyui</code> toolbox images are pinned by sha256 in
-            <code>hal0/manifest.json</code> and pull cleanly. Only
-            <code>flm</code> is still unpublished —
-            <code>toolbox_images.flm.digest</code> is <code>null</code>.
-            Until that lands, the <code>primary</code>, <code>embed</code>,
-            <code>stt</code>, <code>tts</code>, and <code>img</code>
-            slots work out of the box; an FLM-backed slot will sit
-            <code>offline</code>.
+            <code>comfyui</code> toolbox images are pinned by sha256
+            in <code>hal0/manifest.json</code>; FLM is live too but
+            its <code>toolbox_images.flm.digest</code> is still
+            <code>null</code> pending the manifest-patch CI step.
           </p>
         </Expandable>
 

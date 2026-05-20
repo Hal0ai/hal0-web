@@ -103,7 +103,11 @@ const matrixRows = [
         <code class="font-mono text-hal0-fg">llama.cpp</code> is the
         universal baseline — it&rsquo;s what every install gets out of
         the box. ROCm, CUDA, and the AMD XDNA NPU (FLM) layer on top
-        where the hardware supports them.
+        where the hardware supports them. Moonshine STT stays on CPU —
+        upstream <code class="font-mono text-hal0-fg">useful-moonshine-onnx</code>
+        ships an ONNX Runtime CPU EP only, so the picker pins its
+        runtime fan-out to <code>("cpu",)</code> and never advertises
+        a backend the slot can&rsquo;t honour.
       </p>
 
       <ul class="mt-8 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -121,7 +125,7 @@ const matrixRows = [
         </li>
         <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
           <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">stt</p>
-          <p class="mt-1 font-mono text-sm text-hal0-fg">Moonshine · CPU / Vulkan</p>
+          <p class="mt-1 font-mono text-sm text-hal0-fg">Moonshine · CPU only</p>
         </li>
         <li class="rounded-lg border border-hal0-border bg-hal0-bg-elevated px-4 py-3">
           <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">tts</p>
@@ -166,13 +170,18 @@ const matrixRows = [
             The reference deployment. APU + XDNA NPU + a single unified
             memory pool — the iGPU carveout is BIOS-tunable up to
             ~96&nbsp;GB on 128&nbsp;GB SKUs, and the slot lifecycle and
-            FLM provider were written against this hardware first.
+            FLM provider were written against this hardware first. FLM
+            is live with a self-contained
+            <code class="font-mono">ghcr.io/hal0ai/hal0-toolbox-flm:v1</code>
+            image; chat + embed are surfaced in the picker when XDNA
+            and the toolbox image are both present. STT slice deferred.
           </p>
           <p class="mt-2 font-mono text-xs text-hal0-fg-dim">
             Verified on Ryzen AI Max iGPU + Vulkan: Qwen 0.5B
             217&ndash;413&nbsp;tok/s; Phi-3 Mini Q4 ~71&nbsp;tok/s,
             ~280&nbsp;ms round-trip; concurrent primary + embed
-            ~258&nbsp;tok/s, &lt;200&nbsp;ms dispatch.
+            ~258&nbsp;tok/s, &lt;200&nbsp;ms dispatch. NPU tok/s
+            measurements pending (manifest digest still null).
           </p>
         </TierCard>
 

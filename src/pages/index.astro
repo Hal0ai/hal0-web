@@ -268,10 +268,13 @@ const description =
       ready → serving ↔ idle → unloading) with atomic transitions,
       persisted to <code>state.json</code> and streamed over SSE.
     </FeatureCard>
-    <FeatureCard title="Hugging Face model pulls" icon="cloud-download">
-      Streaming GGUF downloads from the dashboard or
-      <code>hal0 model pull</code>, with live progress and resumable
-      transfers. No manual repo wrangling, no <code>git lfs</code>.
+    <FeatureCard title="Capability cards" icon="cloud-download">
+      Dashboard groups slots into <strong>Embed</strong> /
+      <strong>Voice</strong> / <strong>Img</strong> cards plus an
+      <strong>NPU</strong> backend rollup. Pick a model and the
+      orchestrator validates the (backend, model) pair against the
+      catalog and reconciles the underlying slot on every apply.
+      State lives in <code>/etc/hal0/capabilities.toml</code>.
     </FeatureCard>
     <FeatureCard title="Prewired OpenWebUI" icon="message-circle">
       Chat UI on <code>:3001</code>, zero config — the installer points
@@ -325,9 +328,11 @@ const description =
         caption="Provider matrix — picked automatically by the hardware probe"
       />
       <p class="mt-6 max-w-3xl text-sm text-hal0-fg-dim">
-        macOS and Windows are not in scope for v1. NPU benchmarks land
-        once the FLM toolbox image is published to
-        <code class="font-mono">ghcr.io/hal0ai/</code>.
+        macOS and Windows are not in scope for v1. The FLM NPU provider
+        is live with a self-contained
+        <code class="font-mono">ghcr.io/hal0ai/hal0-toolbox-flm:v1</code>
+        image; NPU benchmarks land once the manifest digest pin lands
+        in <code class="font-mono">hal0/manifest.json</code>.
       </p>
     </div>
   </section>
@@ -554,27 +559,37 @@ curl -fsSL https://hal0.dev/install | bash
 
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <RoadmapColumn title="Now" eyebrow="v1" tone="primary">
-          <RoadmapCard title="Slot lifecycle + dispatcher" status="shipped" eta="v1">
-            State machine, single-flight, adaptive cold-boot, atomic
-            TOML config, structured error envelopes.
+          <RoadmapCard title="Capability slots overlay" status="shipped" eta="v1">
+            Embed / Voice / Img cards + NPU backend rollup, backed by
+            <code>/etc/hal0/capabilities.toml</code> and
+            <code>GET|POST /api/capabilities/*</code>. Drift between
+            <code>capabilities.toml</code> ↔ <code>slots/*.toml</code>
+            reconciles on every apply.
           </RoadmapCard>
-          <RoadmapCard title="Five providers wired" status="shipped" eta="v1">
-            llama.cpp (Vulkan), FLM (XDNA NPU), Moonshine (STT),
-            Kokoro (TTS), ComfyUI (image gen on ROCm).
+          <RoadmapCard title="FLM NPU live" status="shipped" eta="v1">
+            Self-contained <code>ghcr.io/hal0ai/hal0-toolbox-flm:v1</code>
+            image. Chat + embed surfaced in the picker when XDNA and
+            the toolbox image are both present; model namespace from
+            <code>flm list -j</code>.
           </RoadmapCard>
           <RoadmapCard title="Image generation" status="shipped" eta="v1">
             <code>POST /v1/images/generations</code> served by ComfyUI
             on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell, slot
             named <code>img</code>.
           </RoadmapCard>
-          <RoadmapCard title="Caddy + auth + HTTPS" status="shipped" eta="v1">
-            <code>install.sh --auth=basic</code> brings up Caddy with
-            basic_auth + Bearer tokens + automatic HTTPS, with a
-            post-install round-trip self-test.
+          <RoadmapCard title="First-run wizard" status="shipped" eta="v1">
+            Eight linear steps from password through hardware,
+            capabilities, conditional HF token, license, install,
+            done. Legacy 5-step picker and three IA prototypes deleted.
           </RoadmapCard>
         </RoadmapColumn>
 
         <RoadmapColumn title="Next" eyebrow="v0.2">
+          <RoadmapCard title="Hugging Face model pulls" status="next">
+            <code>POST /api/models/{'{id}'}/pull</code> streaming
+            download is still <code>501</code>. FLM tags also need an
+            FLM-aware pull path.
+          </RoadmapCard>
           <RoadmapCard title="Memory subsystem" status="next">
             Conversation memory store wired into the dispatcher —
             opt-in per slot.
@@ -582,10 +597,6 @@ curl -fsSL https://hal0.dev/install | bash
           <RoadmapCard title="MCP support" status="next">
             Model Context Protocol surface so hal0 can host MCP servers
             alongside slots.
-          </RoadmapCard>
-          <RoadmapCard title="hal0.local mDNS" status="next">
-            Zero-config LAN discovery so the box is reachable as
-            <code>hal0.local</code> without DNS edits.
           </RoadmapCard>
         </RoadmapColumn>
 
