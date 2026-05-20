@@ -110,6 +110,14 @@ repo citations:
   skipped in `--dev`, removed by `uninstall.sh`. Commit `523e4c1`.
   Operators no longer need `source /etc/profile.d/hal0.sh` after
   install.
+- **`--models-dir=PATH` install flag** — point the install at an
+  existing model store at provisioning time. Resolution order: explicit
+  flag → `HAL0_MODELS_DIR` env → interactive prompt on a tty →
+  `/var/lib/hal0/models` default. Must be absolute (die check at
+  `installer/install.sh:157–158`). Persisted as `[models].pull_root`
+  and auto-included in `[models].roots` so a fresh install scans the
+  existing tree on first boot (`installer/install.sh:64–93`,
+  `installer/install.sh:142–160`, `installer/install.sh:263–292`).
 
 ## Quick API usage example
 
@@ -207,6 +215,70 @@ The five always-present slots (`BUILTIN_SLOTS` in
 
 User-defined slots (e.g. `npu`, `vision`) can be added on top.
 
+The capabilities layer also creates one **auto-managed non-builtin
+slot** on first use: `embed-rerank` for the embed.rerank child
+(`src/hal0/capabilities/orchestrator.py:50`). Default model
+`bge-reranker-v2-m3-q4_k_m`, default port `8086`, requires
+`defaults.extra_args = "--reranking"` in the slot TOML so llama-server
+exposes `/v1/rerankings` instead of the chat surface. The
+orchestrator's `_ensure_slot_exists()`
+(`src/hal0/capabilities/orchestrator.py:446`) synthesises the TOML
+from the operator's selection on first enable and `_next_free_slot_port()`
+(`:510`) picks a non-8081 port to avoid collision with `primary`.
+
+## Capability slots layer (dashboard overlay)
+
+The flat slot layer above is what runs; the dashboard groups it into
+**capability cards** so an operator picks "embed" or "voice" without
+needing to know about systemd templates. State lives in
+`/etc/hal0/capabilities.toml` (path resolved by
+`capabilities_toml_path()` in `src/hal0/capabilities/config.py:83`).
+
+- **Capability → child → slot bridge** — hardcoded in
+  `_CHILD_TO_SLOT` (`src/hal0/capabilities/orchestrator.py:48–54`):
+  embed → {embed, rerank → `embed-rerank`}, voice → {stt, tts},
+  img → {img}. Legal capability set is
+  `LEGAL_SLOTS = ("embed", "voice", "img")`
+  (`src/hal0/capabilities/orchestrator.py:62`).
+- **Catalog (picker rows)** — `models_for_capability()` in
+  `src/hal0/capabilities/catalog.py:511` returns model-first grouped
+  rows (`id`, `capabilities`, `size_gb`, `backends[]`) per child, so
+  the dashboard offers one model dropdown and narrows the backend
+  dropdown to that model's legal options. Replaces the older flat
+  per-(model, backend) shape that let operators pick incompatible
+  pairs (`backend=npu` + a llama.cpp GGUF) which then crashed the slot
+  at start-up.
+- **Backend rollup** — `available_backends()`
+  (`src/hal0/capabilities/catalog.py:110`) orders backends NPU → GPU
+  (Vulkan) → GPU (ROCm) → CPU. NPU is only advertised when XDNA is
+  present AND the FLM toolbox image is locally available
+  (`_flm_image_present()`, `src/hal0/capabilities/catalog.py:79`).
+- **NPU backend card** — rolls up every NPU-capable model across
+  chat / embed slots in one disclosure (`catalogs_by_slot()` includes
+  a `chat` bucket explicitly for this card to walk — see
+  `src/hal0/capabilities/catalog.py:636–660`). Vue components in
+  `ui/src/components/capabilities/{EmbedCard,VoiceCard,ImgCard,
+  NPUBackendCard,CapabilityToggle,CapabilitiesSection}.vue`.
+- **API routes** — `src/hal0/api/routes/capabilities.py`. `GET
+  /api/capabilities` returns `{backends, catalogs, selections}`;
+  `POST /api/capabilities/{slot}/{child}` accepts a partial
+  `{backend, provider, model, enabled}` body and reconciles slot
+  lifecycle (typed `BadRequest` envelopes for unknown slot / child /
+  field keys).
+- **Lifecycle dispatch** — `CapabilityOrchestrator.apply()`
+  (`src/hal0/capabilities/orchestrator.py:268`) shallow-merges the
+  partial, validates the (model, backend) pair against the catalog
+  (`_validate_model_in_catalog`, `:387`), then flips the underlying
+  slot: off→on calls `load()`, on→off calls `unload()`, hot-swaps
+  call `swap()`. Non-builtin children (`embed-rerank`) auto-create
+  their slot TOML on first enable via `_ensure_slot_exists()`
+  (`:446`), picking the next free port in 8081–8099.
+- **CLI** — `hal0 capabilities migrate [--dry-run]`
+  (`src/hal0/cli/capabilities_commands.py:82`) walks
+  `capabilities.toml` and snaps illegal (backend, model) pairs to the
+  model's first legal backend; selections whose model is gone get
+  cleared. Idempotent.
+
 ## Provider matrix (v1)
 
 From `hal0/PLAN.md` §1 + `src/hal0/providers/`:
@@ -214,7 +286,7 @@ From `hal0/PLAN.md` §1 + `src/hal0/providers/`:
 | Provider | Hardware | What it serves |
 |---|---|---|
 | **llama.cpp** | Vulkan (default) / ROCm (opt-in) | chat, embed, rerank, vision |
-| **FLM** | AMD XDNA NPU (opt-in) | chat / embed / ASR multiplex |
+| **FLM** | AMD XDNA NPU (opt-in) | chat / embed / ASR multiplex (chat + embed surfaced to picker today; STT slice deferred) |
 | **Moonshine** | CPU / Vulkan | STT (`/v1/audio/transcriptions`) |
 | **Kokoro** | CPU / Vulkan | TTS (`/v1/audio/speech`) |
 | **ComfyUI** | ROCm (Strix Halo iGPU class) | Image gen (`/v1/images/generations`) |
@@ -222,6 +294,45 @@ From `hal0/PLAN.md` §1 + `src/hal0/providers/`:
 All five are first-class in v1. Each provider is a class with
 `build_env() / start_cmd() / health() / infer()` — stateless, swappable
 (`ARCHITECTURE.md` §Key boundaries).
+
+### FLM NPU (AMD XDNA) deep-dive
+
+FLM is live as the NPU provider — opt-in, surfaced in the picker only
+when XDNA hardware AND a local toolbox image are both present.
+
+- **Provider** — `src/hal0/providers/flm.py:105` (`FLMProvider`). Health
+  probe REQUIRES a real `/v1/chat/completions` round-trip with
+  `max_tokens=1`, not just a populated `/v1/models` list — Tier-1 fix
+  for the haloai-era latent-failure bug
+  (`src/hal0/providers/flm.py:108–111`).
+- **Self-contained toolbox image** — `ghcr.io/hal0ai/hal0-toolbox-flm:v1`
+  (`src/hal0/providers/flm.py:45`). The image bundles FLM at
+  `/opt/fastflowlm/` (binary, libs, xclbins, share assets) and
+  symlinks `/usr/local/bin/flm` — no host bind-mount of the FLM tree
+  is required, ENTRYPOINT runs the in-image `flm` via tini and the
+  `container_spec` only supplies the subcommand + args
+  (`src/hal0/providers/flm.py:48–60`). Default port `8086`
+  (`src/hal0/providers/flm.py:129`).
+- **Model namespace** — FLM has its own model registry; it can't run
+  arbitrary GGUFs. Available tags come from
+  `flm list -j` against the bundled
+  `/opt/fastflowlm/share/flm/model_list.json`
+  (`src/hal0/providers/flm.py:246`, probed by `_probe_flm_catalog()`
+  at `:414` and lifted into hal0 capability shape by
+  `flm_served_models()` at `:460`).
+- **Per-(backend, model) validation** — the catalog reshape emits one
+  row per `(model, backend)` and the orchestrator rejects illegal
+  pairs with `capability.illegal_backend_model_pair`
+  (`src/hal0/capabilities/orchestrator.py:432–444`). `hal0
+  capabilities migrate` retroactively cleans up pre-reshape selections
+  (`src/hal0/cli/capabilities_commands.py:82`).
+- **Pull path** — `pullable=False` on NPU rows: the existing
+  `POST /api/models/{id}/pull` handler resolves an HF repo + filename,
+  which FLM tags don't carry. Operators currently run
+  `flm pull <tag>` inside the toolbox container; an FLM-aware pull
+  path is a follow-up (`src/hal0/capabilities/catalog.py:586–593`).
+- **Perf** — no measured tok/s yet. `[TODO: verify]` (manifest digest
+  still `null`, see Open questions).
 
 ## Image generation
 
@@ -295,7 +406,15 @@ hal0 config migrate
 
 hal0 update [--channel stable|nightly] [--check] [--rollback]
 hal0 uninstall [--keep-data]         # not implemented yet
+
+hal0 capabilities migrate [--dry-run]   # snap illegal (backend, model)
+                                        # pairs in capabilities.toml
+hal0 doctor                             # re-run preflight against the
+                                        # live host (post-install)
 ```
+
+(The installer flag `install.sh --models-dir=<abs path>` lives in
+shell, not the Typer app — see "Installer overhaul" above.)
 
 Implementation status verified against `docs/handoff-2026-05-15-autonomous.md`
 "What landed" section. `hal0 model pull` and `hal0 uninstall` are stubs
@@ -321,7 +440,91 @@ Transitions are atomic, validated against `LEGAL_TRANSITIONS`, persisted
 to `/var/lib/hal0/slots/<name>/state.json`, and streamed over SSE so the
 dashboard reflects reality (not just `systemctl is-active` snapshots).
 
-## Differentiators (honest comparisons)
+## First-run wizard (8 linear steps)
+
+`ui/src/views/FirstRun.vue:1–60` (state in
+`ui/src/components/firstrun/useFirstRun.js`). Replaces the legacy
+5-step picker and three competing IA prototypes that lived in
+`components/firstrun-proto/` (all deleted). Sequence:
+
+1. Password (optional; auto-skips when
+   `/api/auth/status.password_set` is already true).
+2. Detected hardware + model storage directories.
+3. Primary chat model — curated picker, hardware-aware.
+4. Capabilities — embed / voice.stt / voice.tts / img with smart
+   defaults; rerank is a sub-disclosure inside the embed row, locked
+   off-by-default.
+5. HF token — **conditional**; only rendered when at least one
+   selected model is gated (`s.needsHfToken`).
+6. License acceptance — aggregated across every selected model.
+7. Install — parallel pulls + capability registration with
+   retry-per-row.
+8. Done — links to dashboard, OpenWebUI chat, settings.
+
+Step transitions live in `goNext()` at `ui/src/views/FirstRun.vue:79`;
+the HF-token skip mirrors on Back so the user can retreat from
+License to Capabilities without snapping through token entry.
+
+## Models scan preview overhaul
+
+`POST /api/models/scan/preview`
+(`src/hal0/api/routes/models.py:148`) is inspection-only — no
+registry mutation, no event emission. The UI uses it to populate the
+"Scan directory" preview table where the operator edits backends +
+capabilities + id before committing through `POST /api/models/scan`
+with a `rows` body (`src/hal0/api/routes/models.py:270`, commit path
+`_commit_scan_rows()` at `:326`).
+
+What the preview pipeline now does (`src/hal0/registry/detect.py` +
+`discover.py`):
+
+- **Kind-driven gating** — `DetectionResult.kind` is one of
+  `llama / moonshine / kokoro / flm / unknown`
+  (`src/hal0/registry/detect.py:70–84`); the UI uses it to decide
+  which backends and capability checkboxes to surface for each row.
+- **Shared skip rules** — preview reuses `is_skippable()` from
+  `src/hal0/registry/discover.py:308` so mmproj sidecars, multi-file
+  shards, hex blobs, and HF/ComfyUI accessory dirs are filtered the
+  same way as the on-disk auto-scan.
+- **Per-row select checkbox** — the commit body shape is
+  `{"rows": [...]}` with whichever rows the operator ticked
+  (`src/hal0/api/routes/models.py:282–286`); user edits to
+  `backends`/`capabilities`/`id`/`name`/`defaults` always win over
+  the detection output.
+- **Dedup** — resolved-path dedup (`seen: set[Path]`) handles
+  HF blob-cache symlinks; a second pass dedups by
+  `(suggested_name, size_bytes, kind)` to collapse multiple
+  `snapshots/<rev>/` copies of the same repo
+  (`src/hal0/api/routes/models.py:246–265`).
+- **GGUF magic-byte detect** — `read_gguf_header()` is tried
+  regardless of file extension so HF blob-cache content-hash
+  filenames (no suffix) still classify as GGUF
+  (`src/hal0/registry/detect.py:171–175`).
+- **GGUF `general.name` → suggested name** — pulled out of the
+  header and used as `suggested_name`; fall back to
+  `general.basename` then to `_hf_repo_name_from_path()` (an
+  HF-cache repo-name fallback) when both are missing
+  (`src/hal0/registry/detect.py:199–203`).
+- **Pooling-type embed signal** — `pooling_type > 0` flips the
+  capability to `embed`; filename embed-token fallback handles
+  converters that drop the KV
+  (`src/hal0/registry/detect.py:181–193`).
+
+## Moonshine STT (CPU-only)
+
+Moonshine is the default STT provider but stays on CPU: upstream
+`useful-moonshine-onnx` ships an ONNX Runtime CPU EP only and there's
+no Vulkan/ROCm EP in the wheel. The catalog reflects that — the
+`moonshine` runtime fan-out is pinned to `("cpu",)` so the picker
+never advertises a backend the slot can't honour
+(`src/hal0/capabilities/catalog.py:65–70`).
+
+The toolbox image was rebuilt 2026-05-20 to fix a `TypeError` against
+`MoonshineOnnxModel(...)` — the constructor needs **both**
+`models_dir=` (for local encoder/decoder paths) and `model_name=`
+(used internally for the `if "tiny" in model_name` branch); passing
+only `models_dir` raises (see comments at
+`packaging/toolbox/moonshine/moonshine_server.py:122–141`).
 
 - **vs. ollama** — hal0 isn't an inference engine; it's the
   orchestration + lifecycle + multi-modal surface around llama.cpp,
@@ -360,6 +563,37 @@ dashboard reflects reality (not just `systemctl is-active` snapshots).
 - Toolbox image digests pinned for vulkan, rocm, moonshine, kokoro,
   comfyui (`hal0/manifest.json`)
 - 353 unit tests passing, integration tier on Vulkan-CPU + Qwen 0.5B
+- Capability slots overlay (embed / voice / img cards + NPU backend
+  rollup), `/etc/hal0/capabilities.toml`, `GET|POST
+  /api/capabilities/*`, `hal0 capabilities migrate`
+  (`src/hal0/capabilities/{catalog,orchestrator,config}.py`,
+  `src/hal0/api/routes/capabilities.py`,
+  `src/hal0/cli/capabilities_commands.py`)
+- FLM NPU provider live with self-contained toolbox image, per-(backend,
+  model) validation, and model-first grouped catalog
+  (`src/hal0/providers/flm.py`,
+  `src/hal0/capabilities/catalog.py:577`)
+- First-run wizard rewrite: 8 linear steps with conditional HF-token
+  step (`ui/src/views/FirstRun.vue`, legacy + prototypes deleted)
+- `--models-dir=PATH` install flag + interactive prompt
+  (`installer/install.sh:64–93`, `:142–160`)
+- `embed-rerank` slot auto-managed by the capability orchestrator
+  (`_ensure_slot_exists`, `src/hal0/capabilities/orchestrator.py:446`)
+- Orchestrator drift fix: `apply()` now reconciles
+  `capabilities.toml` ↔ `slots/*.toml` on every call rather than only
+  on selection diff, so prior failed applies / manual edits /
+  install-time seeds can't leave the two disagreeing
+  (`src/hal0/capabilities/orchestrator.py:332–343`)
+- Models scan preview overhaul: kind-driven gating, shared skip
+  rules, per-row select, dedup, GGUF magic-byte detect, GGUF
+  `general.name` → suggested name, HF-cache repo-name fallback
+  (`src/hal0/api/routes/models.py:148`,
+  `src/hal0/registry/detect.py:140`)
+- Per-slot live metrics endpoint — `GET /api/slots/metrics` reads
+  docker container cgroup memory + `ActiveEnterTimestampMonotonic` +
+  scraped llama-server `/metrics`; falls back to the systemd unit's
+  own `MemoryCurrent` for native-host slots
+  (`src/hal0/api/routes/slots.py:376–467`)
 
 ### Soon (v0.2, deferred from v1; PLAN §1 "v0.2 deferred")
 
