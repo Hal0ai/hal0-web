@@ -613,10 +613,12 @@ only `models_dir` raises (see comments at
 
 - `[TODO: verify]` Anything beyond v0.2 isn't in PLAN.md.
 
-### Remaining gaps for v1.0 cut (`docs/handoff-2026-05-15-autonomous.md`)
+### Closed before v0.1.0-alpha cut (2026-05-21)
 
-- `flm` toolbox image not yet published — `manifest.json`
-  `toolbox_images.flm.digest` is `null`
+All six toolbox images (`vulkan`, `rocm`, `flm`, `moonshine`, `kokoro`,
+`comfyui`) are published with pinned sha256 digests in `manifest.json`.
+The release.yml + cosign-keyless OIDC pipeline was smoke-tested
+end-to-end via `v0.0.0-rc1` before tagging the alpha.
 
 ## Hardware targets
 
