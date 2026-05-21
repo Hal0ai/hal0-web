@@ -395,7 +395,7 @@ hal0 slot swap <name> --model M
 hal0 slot logs <name> [--follow]     # SSE tail of journalctl
 
 hal0 model list
-hal0 model pull <ref>                # 501 today; staged with FirstRun
+hal0 model pull <ref>                # HF streaming pull + tqdm progress
 hal0 model rm <ref>
 hal0 model assign <ref> --slot S
 
@@ -405,7 +405,8 @@ hal0 config validate
 hal0 config migrate
 
 hal0 update [--channel stable|nightly] [--check] [--rollback]
-hal0 uninstall [--keep-data]         # not implemented yet
+hal0 uninstall [--keep-data] [--force] [--dev]
+                                     # thin wrapper over installer/uninstall.sh
 
 hal0 capabilities migrate [--dry-run]   # snap illegal (backend, model)
                                         # pairs in capabilities.toml
@@ -416,9 +417,10 @@ hal0 doctor                             # re-run preflight against the
 (The installer flag `install.sh --models-dir=<abs path>` lives in
 shell, not the Typer app — see "Installer overhaul" above.)
 
-Implementation status verified against `docs/handoff-2026-05-15-autonomous.md`
-"What landed" section. `hal0 model pull` and `hal0 uninstall` are stubs
-returning `NOT_IMPLEMENTED`; the rest hit real endpoints.
+Implementation status: every command above hits real endpoints.
+`hal0 model pull` streams from Hugging Face with a tqdm-style progress
+bar; `hal0 uninstall` exec's `installer/uninstall.sh` (the script is the
+source of truth and inherits the live TTY for its DELETE prompt).
 
 ## Slot lifecycle states
 
@@ -610,10 +612,8 @@ only `models_dir` raises (see comments at
 
 ### Remaining gaps for v1.0 cut (`docs/handoff-2026-05-15-autonomous.md`)
 
-- `POST /api/models/{id}/pull` (HF streaming download) is still 501
 - `flm` toolbox image not yet published — `manifest.json`
   `toolbox_images.flm.digest` is `null`
-- `hal0 uninstall` not implemented
 
 ## Hardware targets
 

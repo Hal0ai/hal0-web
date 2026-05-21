@@ -67,8 +67,9 @@ const installCmd = `curl -fsSL https://hal0.dev/install | bash`;
           the post-publish manifest patch hasn’t auto-PR’d yet so
           <code>toolbox_images.flm.digest</code> is still
           <code>null</code>. Two CLI gaps remain:
-          <code>hal0 model pull</code> returns <code>501</code> as a
-          stub, and <code>hal0 uninstall</code> isn’t implemented. Run
+          <code>hal0 model pull</code> streams HF downloads with a
+          progress bar, and <code>hal0 uninstall</code> wraps
+          <code>installer/uninstall.sh</code>. Either way you can run
           it on a spare Linux box or a fresh LXC before pointing it at
           anything you care about.
         </Callout>
@@ -370,7 +371,8 @@ cd hal0`}</CodeBlock>
 
         <StepItem n={3} title="Pick a model">
           <p>
-            <code>hal0 model pull</code> is a stub today (<code>501</code>).
+            <code>hal0 model pull</code> drives the same HF download
+            path the FirstRun wizard uses.
             For the moment, drop a GGUF file into
             <code>/var/lib/hal0/models/</code> and point a slot at it:
           </p>
@@ -471,10 +473,11 @@ xdg-open http://localhost:3001/`}</CodeBlock>
         Uninstall.
       </h2>
       <p class="mb-6 max-w-2xl text-hal0-fg-muted">
-        The <code>hal0 uninstall</code> CLI is on the v1 punch list but
-        not implemented yet — it currently returns a
-        <code>NOT_IMPLEMENTED</code> stub. Until that lands, do it by
-        hand:
+        <code>hal0 uninstall [--keep-data] [--force] [--dev]</code>
+        is a thin wrapper over <code>installer/uninstall.sh</code> — the
+        shell script remains the source of truth. Either invocation
+        below does the same work; the CLI exec&rsquo;s the script so
+        the DELETE prompt inherits the live TTY.
       </p>
 
       <CodeBlock lang="sh" title="manual uninstall">{`# stop + disable units
@@ -584,21 +587,18 @@ hal0 slot logs primary --follow`}</CodeBlock>
           </p>
         </Expandable>
 
-        <Expandable summary="hal0 model pull returns 501">
+        <Expandable summary="hal0 model pull — usage">
           <p>
-            <code>POST /api/models/&#123;id&#125;/pull</code> (HF streaming
-            download) is still <code>501&nbsp;NOT_IMPLEMENTED</code> — it&rsquo;s
-            on the remaining-gaps list for v1.0. Workaround: download the
-            GGUF manually with <code>huggingface-cli</code> and drop the
-            file into <code>/var/lib/hal0/models/</code>:
+            <code>POST /api/models/&#123;id&#125;/pull</code> is live; the CLI
+            wrapper streams progress as it goes. By alias:
           </p>
-          <CodeBlock lang="sh">{`pip install --user 'huggingface_hub[cli]'
-huggingface-cli download \\
-  Qwen/Qwen2.5-0.5B-Instruct-GGUF \\
-  qwen2.5-0.5b-instruct-q4_k_m.gguf \\
-  --local-dir /var/lib/hal0/models/`}</CodeBlock>
+          <CodeBlock lang="sh">{`hal0 model pull phi3-mini
+# or by full HF ref
+hal0 model pull bartowski/Llama-3.2-3B-Instruct-GGUF`}</CodeBlock>
           <p>
-            Then <code>hal0 slot load primary --model qwen2.5-0.5b-instruct-q4_k_m</code>.
+            For gated repos (e.g. some Qwen variants), export
+            <code>HF_TOKEN</code> first. Cancel an in-flight pull with
+            <code>POST /api/models/&#123;id&#125;/pull/cancel</code>.
           </p>
         </Expandable>
 
