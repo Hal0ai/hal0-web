@@ -1,13 +1,26 @@
-# hal0-web
+<div align="center">
 
-Source for [hal0.dev](https://hal0.dev) — the marketing site + docs
-for the [hal0](https://github.com/hal0ai/hal0) home AI inference
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./public/brand/logo-halo-dark.svg">
+  <img src="./public/brand/logo-halo-light.svg" alt="hal0" width="220">
+</picture>
+
+### hal0.dev — marketing site + docs
+
+[hal0.dev](https://hal0.dev) · [hal0 product repo](https://github.com/Hal0ai/hal0)
+
+</div>
+
+---
+
+Source for [hal0.dev](https://hal0.dev) — the marketing site + Starlight
+docs for the [hal0](https://github.com/Hal0ai/hal0) home AI inference
 platform.
 
 Built with **Astro 6 + Starlight 0.39 + Tailwind v4**, **Geist Variable**
 for body, **JetBrains Mono** for code/display, all fonts self-hosted.
-No GitHub remote yet, no production deploy. Local-only during initial
-buildout.
+Deployed at [hal0-web.vercel.app](https://hal0-web.vercel.app); apex
+domain `hal0.dev` to follow.
 
 Licensed **Apache-2.0** (matches the upstream hal0 product repo).
 
