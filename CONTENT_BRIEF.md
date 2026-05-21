@@ -38,7 +38,7 @@ Anything else (vs. ollama benchmarks, NPU numbers, etc.) is
 ## Install command
 
 ```sh
-curl -fsSL https://hal0.dev/install | bash
+curl -fsSL https://hal0.dev/install.sh | bash
 ```
 
 From `hal0/installer/README.md` line 9. Idempotent, non-interactive.
@@ -825,7 +825,7 @@ placeholder.
 
 ## Open questions / things to surface to the user before publishing
 
-- **`hal0.dev/install` URL is aspirational** — currently the installer
+- **`hal0.dev/install.sh` URL is aspirational** — currently the installer
   is fetched out of the repo. Need to confirm DNS / static-host plan
   for serving the raw `install.sh` over HTTPS at that URL before the
   one-liner on the landing page is real.
