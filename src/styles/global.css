@@ -98,16 +98,16 @@ body {
 	font-feature-settings: 'cv11' 1, 'ss01' 1; /* Geist stylistic alternates */
 }
 
-code, pre, kbd, .tabular, .wordmark {
+code, pre, kbd, .tabular {
 	font-feature-settings: 'zero' 1, 'ss02' 1;
 }
 
-/* The wordmark — JetBrains Mono with slashed zero, slightly tightened. */
+/* The wordmark is rendered by <Wordmark /> as inline SVG (brand mark:
+ * Monomaniac One "hal" + JetBrains Mono "0"). The class only carries
+ * layout-affecting defaults now; the SVG glyph geometry comes from the
+ * component itself. */
 .wordmark {
-	font-family: var(--hal0-font-display);
-	font-weight: 700;
-	letter-spacing: -0.02em;
-	font-feature-settings: 'zero' 1;
+	letter-spacing: 0;
 }
 
 /* Subtle focus ring in accent — keyboard nav matters. */

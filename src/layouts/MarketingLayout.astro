@@ -53,6 +53,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/brand/logo-halo-dark-favico.png" />
+    <link rel="mask-icon" href="/favicon.svg" color="#feaf00" />
 
     <!-- Preload critical latin web fonts so above-the-fold content
          doesn't reflow when the swap finally arrives. -->
