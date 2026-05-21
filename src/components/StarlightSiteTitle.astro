@@ -1,0 +1,35 @@
+---
+/**
+ * Override Starlight's default <img>-based SiteTitle so the wordmark
+ * renders as inline SVG and inherits theme-aware colour via currentColor.
+ * The amber "0" stays accented; the "hal" glyphs follow the docs nav
+ * text colour (white in dark theme, near-black in light theme).
+ */
+import config from 'virtual:starlight/user-config';
+import Wordmark from './Wordmark.astro';
+
+const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<a href={siteTitleHref} class="site-title sl-flex">
+  <Wordmark size="text-xl" />
+  <span class:list={{ 'sr-only': config.logo?.replacesTitle }} translate="no">
+    {siteTitle}
+  </span>
+</a>
+
+<style>
+  @layer starlight.core {
+    .site-title {
+      align-items: center;
+      gap: var(--sl-nav-gap);
+      color: var(--sl-color-white);
+      text-decoration: none;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    span {
+      overflow: hidden;
+    }
+  }
+</style>

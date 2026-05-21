@@ -62,8 +62,11 @@ export default defineConfig({
 				},
 			],
 			components: {
-				// Custom marketing pages render through their own layout;
-				// no Starlight overrides needed yet.
+				// Inline the wordmark SVG so the "hal" glyphs inherit
+				// the docs nav text colour (white in dark, dark in light).
+				// Starlight's default loads the SVG as <img>, which traps
+				// currentColor and leaves the "hal" invisible on dark.
+				SiteTitle: './src/components/StarlightSiteTitle.astro',
 			},
 			// Sensible OG / social defaults.
 			head: [
