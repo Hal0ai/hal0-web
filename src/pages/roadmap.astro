@@ -86,7 +86,7 @@ const shipped = [
 const soon = [
   {
     title: 'Hugging Face model pulls',
-    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for v1.0. (FLM-aware pull for NPU tags landed in PR #89 — Ollama-style family:size ids now pull from the dashboard.)',
+    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for the next 0.1.x alpha. (FLM-aware pull for NPU tags landed in PR #89 — Ollama-style family:size ids now pull from the dashboard.)',
   },
   {
     title: 'Agent management & integration',
@@ -155,7 +155,7 @@ const exploring = [
       </h1>
 
       <p class="mt-6 max-w-3xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
-        hal0 is not a llama-server wrapper. v1 ships a polished
+        hal0 is not a llama-server wrapper. v0.1.0-alpha ships a polished
         OpenAI-compatible inference platform — slots, dispatcher,
         hardware probe, bundled chat, signed self-update. v0.2 takes
         the same lifecycle discipline and extends it into the rest of
@@ -191,7 +191,7 @@ const exploring = [
           ))}
         </RoadmapColumn>
 
-        <RoadmapColumn title="Exploring" eyebrow="v1.x +">
+        <RoadmapColumn title="Exploring" eyebrow="post-v1.0">
           {exploring.map((item) => (
             <RoadmapCard title={item.title} status="later">
               {item.why}

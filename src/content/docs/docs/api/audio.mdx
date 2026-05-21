@@ -74,16 +74,10 @@ hal0 slot swap tts --model f5-tts
 
 ## Status today
 
-Moonshine and Kokoro are **first-class providers** in the v1
-plan — they have working code paths and a slot lifecycle integration.
-The **toolbox container images** (`hal0-toolbox-moonshine`,
-`hal0-toolbox-kokoro`) are **not yet published** to
-`ghcr.io/hal0ai/` — Phase 2 publishes them, and that's the last gap
-before v1.0 cut.
-
-Until those images land, the `stt` and `tts` slots are visible in the
-UI but won't start. The dashboard's Slots view marks them
-"image pending" with a link to the relevant roadmap entry.
+Moonshine and Kokoro are **first-class providers** as of v0.1.0-alpha —
+they have working code paths, slot lifecycle integration, and published
+toolbox container images on `ghcr.io/hal0ai/`. The `stt` and `tts`
+slots are configurable from the dashboard and start cleanly.
 
 <Aside type="caution">
   CPU-only boxes can technically run Moonshine and Kokoro, but
