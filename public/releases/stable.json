@@ -6,6 +6,7 @@
   "channel": "stable",
   "url": "https://github.com/hal0ai/hal0/releases/download/v0.0.0/hal0-0.0.0.tar.gz",
   "sig_url": "https://github.com/hal0ai/hal0/releases/download/v0.0.0/hal0-0.0.0.tar.gz.sig",
+  "cert_url": "https://github.com/hal0ai/hal0/releases/download/v0.0.0/hal0-0.0.0.tar.gz.crt",
   "digest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
   "signer_identity": "^(?i)https://github\\.com/hal0ai/hal0/\\.github/workflows/release\\.yml@refs/tags/v0\\.0\\.0$",
   "signer_issuer": "https://token.actions.githubusercontent.com",
