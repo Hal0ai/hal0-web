@@ -86,7 +86,7 @@ const shipped = [
 const soon = [
   {
     title: 'Hugging Face model pulls',
-    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for v1.0. FLM tags also need an FLM-aware pull path since they don’t carry an HF repo + filename.',
+    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for v1.0. (FLM-aware pull for NPU tags landed in PR #89 — Ollama-style family:size ids now pull from the dashboard.)',
   },
   {
     title: 'Agent management & integration',

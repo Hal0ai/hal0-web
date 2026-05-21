@@ -326,11 +326,14 @@ when XDNA hardware AND a local toolbox image are both present.
   (`src/hal0/capabilities/orchestrator.py:432–444`). `hal0
   capabilities migrate` retroactively cleans up pre-reshape selections
   (`src/hal0/cli/capabilities_commands.py:82`).
-- **Pull path** — `pullable=False` on NPU rows: the existing
-  `POST /api/models/{id}/pull` handler resolves an HF repo + filename,
-  which FLM tags don't carry. Operators currently run
-  `flm pull <tag>` inside the toolbox container; an FLM-aware pull
-  path is a follow-up (`src/hal0/capabilities/catalog.py:586–593`).
+- **Pull path** — FLM tags are now first-class in
+  `POST /api/models/{id}/pull` (PR #89). `is_flm_tag()` detects the
+  Ollama-style `family:size` ids the toolbox owns; `run_flm_pull()`
+  shells `flm pull <tag>` inside the toolbox image, parses the
+  `Downloading: …%` progress lines, and writes an HF-shaped registry
+  entry on completion. `pullable=True` on NPU rows so the dashboard
+  button is live (`src/hal0/capabilities/catalog.py`,
+  `src/hal0/registry/pull.py`, `src/hal0/providers/flm.py`).
 - **Perf** — no measured tok/s yet. `[TODO: verify]` (manifest digest
   still `null`, see Open questions).
 
