@@ -199,6 +199,19 @@ and curated models.
     against `https://${HAL0_HOSTNAME}/api/health` before exiting
     (commits `ba79427`, `f62902c`; install.sh lines 294+ and 645+).
     Trusted-LAN posture remains the default (`--auth=off`).
+13. **Proxmox host-pressure segment (LXC deployments)** — drop a
+    read-only `PVEAuditor` API token into Settings → "Proxmox
+    integration" and the dashboard's unified-memory bar shows the
+    physical host's DIMM total + a muted "Proxmox host" segment for
+    other-tenant + ZFS ARC + kernel pressure instead of just the
+    LXC's cgroup slice. Token is sensitive and stored 0600 at
+    `/etc/hal0/proxmox.json`; the API redacts it on read (only
+    `token_value_set: bool`). Bare-metal installs leave the panel off
+    and the dashboard stays quiet. Token-rot signalled by persistent
+    pills on Dashboard + FooterBar plus a one-shot
+    `system.proxmox_unreachable` event on the ok→broken transition
+    (PR #103, `src/hal0/hardware/pve.py`,
+    `src/hal0/api/routes/proxmox.py`).
 
 ## Built-in slots
 
@@ -599,8 +612,12 @@ only `models_dir` raises (see comments at
   scraped llama-server `/metrics`; falls back to the systemd unit's
   own `MemoryCurrent` for native-host slots
   (`src/hal0/api/routes/slots.py:376–467`)
-
-### Soon (v0.2, deferred from v1; PLAN §1 "v0.2 deferred")
+- Proxmox host-pressure segment for LXC deployments — optional PVE
+  API token plumbed through `/api/settings/proxmox` → cached probe in
+  `pve.py` → slim projection on `/api/stats/hardware`. Dashboard +
+  Hardware views swap to the physical-host memory total when
+  configured; token-rot fires `system.proxmox_unreachable` event and
+  surfaces a persistent FooterBar pill (PR #103, 2026-05-21).
 
 - Memory subsystem
 - MCP support
