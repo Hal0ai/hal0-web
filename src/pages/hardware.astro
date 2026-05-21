@@ -371,6 +371,34 @@ const matrixRows = [
   </section>
 
   <!-- ============================================================ -->
+  <!-- Proxmox LXC deployment callout                                -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        deployment
+      </p>
+      <h2 class="mb-4 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Running as a Proxmox LXC? Plug in the host token.
+      </h2>
+      <p class="max-w-3xl text-pretty leading-relaxed text-hal0-fg-muted">
+        Inside an LXC, hal0 only sees its own cgroup slice of memory.
+        Other tenants, ZFS ARC, and the host kernel pull from the same
+        physical DIMMs as GPU GTT but stay invisible to the container.
+        Drop a read-only
+        <code class="font-mono text-hal0-fg">PVEAuditor</code>
+        API token into Settings → Proxmox integration and the
+        dashboard's unified-memory bar switches to the physical host
+        total + adds a muted "Proxmox host" segment for the rest of
+        the pressure. Token is stored 0600 at
+        <code class="font-mono text-hal0-fg">/etc/hal0/proxmox.json</code>;
+        the API redacts it on read. Bare-metal and VM installs leave
+        the panel off and the bar stays quiet.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
   <!-- CTA band                                                      -->
   <!-- ============================================================ -->
   <CTA
