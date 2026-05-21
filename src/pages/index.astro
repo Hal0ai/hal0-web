@@ -31,7 +31,7 @@ const softwareApplicationLd = {
   description:
     'Open-source home AI inference platform for Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, prewired OpenWebUI, self-hosted, no telemetry.',
   url: canonicalUrl,
-  downloadUrl: 'https://hal0.dev/install',
+  downloadUrl: 'https://hal0.dev/install.sh',
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
   softwareVersion: 'v1 pre-alpha',
   codeRepository: 'https://github.com/hal0ai/hal0',
@@ -180,7 +180,7 @@ const description =
     ctaSecondary={{ href: '/docs/getting-started/', label: 'Read the docs' }}
   >
     <CodeBlock slot="visual" lang="sh" title="install on any modern Linux box">
-{`curl -fsSL https://hal0.dev/install | bash`}
+{`curl -fsSL https://hal0.dev/install.sh | bash`}
     </CodeBlock>
   </HeroSection>
 
@@ -454,7 +454,7 @@ const description =
           </p>
           <CodeBlock lang="sh" title="install.sh">
 {`# install on any modern Linux box with systemd
-curl -fsSL https://hal0.dev/install | bash
+curl -fsSL https://hal0.dev/install.sh | bash
 
 # optional overrides
 # HAL0_PORT=9090 HAL0_PREFIX=/opt/hal0 curl … | bash`}
