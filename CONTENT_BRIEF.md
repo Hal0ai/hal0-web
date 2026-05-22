@@ -633,10 +633,12 @@ Settled via grilling 2026-05-22; ADRs in
 docs at `hal0/docs/api/mcp.md` + `hal0/docs/api/agents.md`.
 
 - **Bundled agent app** — single-pick at install. Choose between
-  `pi-coder` (CLI, `badlogic/pi-mono`) and `Hermes-Agent` (service,
-  user-owned upstream). Wizard step 7 picks one; CLI parity via
-  `hal0 agent install <name>`; atomic swap with `--switch`.
-  install.sh stays non-interactive.
+  `pi-coder` (CLI; installed from `Hal0ai/pi-mono` fork via
+  `@earendil-works/pi-coding-agent` on npm) and `Hermes-Agent` (service;
+  installed via hal0-owned `hal0-hermes` wrapper that env-file-injects
+  HAL0_* into unmodified upstream `hermes`). Wizard step 7 picks one;
+  CLI parity via `hal0 agent install <name>`; atomic swap with
+  `--switch`. install.sh stays non-interactive.
 - **Two MCP servers** — `/mcp/admin` wraps existing `/api/*` routes
   (slot, model, capability, config, hardware, log admin) and
   `/mcp/memory` wraps Cognee. Bearer auth reused from ADR-0001.
