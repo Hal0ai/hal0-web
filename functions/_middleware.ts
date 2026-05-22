@@ -71,6 +71,15 @@ async function proxyChannelManifest(channel: string): Promise<Response | null> {
 	return null;
 }
 
+// Minimal local shape for the Cloudflare Pages function context. We don't
+// pull in `@cloudflare/workers-types` because the production deploy is
+// Vercel; this middleware exists for parity if a Pages preview is wired up.
+type PagesFunctionContext = {
+	request: Request;
+	next: (input?: Request) => Promise<Response>;
+};
+type PagesFunction = (context: PagesFunctionContext) => Promise<Response>;
+
 export const onRequest: PagesFunction = async (context) => {
 	const url = new URL(context.request.url);
 

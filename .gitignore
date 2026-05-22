@@ -33,3 +33,6 @@ Thumbs.db
 # misc
 *.log
 .cache/
+
+# orchestration scratch (style guides, agent notes, etc.)
+.claude/

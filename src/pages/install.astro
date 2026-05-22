@@ -16,9 +16,9 @@ import Expandable from '../components/install/Expandable.astro';
 import StepList from '../components/install/StepList.astro';
 import StepItem from '../components/install/StepItem.astro';
 
-const title = 'Install hal0 — one-line installer';
+const title = 'Install hal0: one-line installer for your homelab';
 const description =
-  'Install hal0, the open-source self-hosted LLM platform, with one line. Strix Halo / Ryzen AI Max+, AMD ROCm, NVIDIA CUDA, and CPU all supported on Linux + systemd.';
+  'Install hal0, the homelab AI inference platform, with one line. Drops cleanly into a privileged Proxmox LXC with GPU/NPU passthrough, a VM, or bare metal. Strix Halo / Ryzen AI Max+, AMD ROCm, NVIDIA CUDA, and CPU all supported on Linux + systemd.';
 
 const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
 ---
@@ -33,7 +33,7 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
         install
       </p>
       <h1 class="mb-6 text-balance text-4xl font-semibold leading-tight tracking-tight text-hal0-fg md:text-5xl">
-        One line installs the platform.
+        One line. Drops cleanly into your homelab.
       </h1>
       <p class="max-w-2xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
         The installer drops a systemd-managed <code class="font-mono text-hal0-fg">hal0-api</code>
@@ -44,19 +44,19 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
         <code class="font-mono text-hal0-fg">stt</code>,
         <code class="font-mono text-hal0-fg">tts</code>,
         <code class="font-mono text-hal0-fg">img</code>). Linux + systemd
-        only — non-interactive and idempotent.
+        required. Non-interactive and idempotent.
       </p>
 
       <div class="mt-10 space-y-4">
         <CodeBlock lang="sh" title="one-line install">{installCmd}</CodeBlock>
         <p class="font-mono text-xs text-hal0-fg-dim">
-          Runs as root via <code>sudo</code> — read the script first if you
+          Runs as root via <code>sudo</code>. Read the script first if you
           haven't yet: <a class="text-hal0-accent underline underline-offset-2 decoration-hal0-accent/50 hover:decoration-hal0-accent" href="https://github.com/hal0ai/hal0/blob/main/installer/install.sh" rel="noopener">installer/install.sh</a>.
         </p>
       </div>
 
       <div class="mt-8">
-        <Callout tone="warning" title="Active development — install on a sandbox host first.">
+        <Callout tone="warning" title="Active development. Install on a sandbox host first.">
           hal0 is v0.1.0-alpha. The installer is real and tested
           (Phase&nbsp;2+ done); the <code>vulkan</code>,
           <code>rocm</code>, <code>moonshine</code>, <code>kokoro</code>,
@@ -69,10 +69,140 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
           <code>null</code>. Two CLI gaps remain:
           <code>hal0 model pull</code> streams HF downloads with a
           progress bar, and <code>hal0 uninstall</code> wraps
-          <code>installer/uninstall.sh</code>. Either way you can run
-          it on a spare Linux box or a fresh LXC before pointing it at
-          anything you care about.
+          <code>installer/uninstall.sh</code>. Spin up a fresh LXC or a
+          spare box before pointing it at anything you care about.
         </Callout>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Where to install it (deployment shapes)                       -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        where to install it
+      </p>
+      <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Three deployment shapes.
+      </h2>
+      <p class="mb-10 max-w-3xl text-hal0-fg-muted">
+        hal0 wants Linux + systemd. Past that, run it wherever your
+        homelab keeps its other tenants. The canonical shape is a
+        privileged LXC on a Proxmox node with GPU/NPU passthrough and
+        AppArmor set to <code class="font-mono">unconfined</code>.
+        Bare metal works too. A VM works if you pin CPUs.
+      </p>
+
+      <div class="grid auto-rows-fr gap-4 md:grid-cols-3">
+        <article class="rounded-lg border border-hal0-accent/60 bg-[var(--hal0-accent-glow)] p-6">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            canonical
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Proxmox LXC + passthrough
+          </p>
+          <p class="mt-3 text-sm leading-relaxed text-hal0-fg-muted">
+            A privileged LXC with GPU/NPU passthrough is the shape hal0
+            was written against. On Strix Halo the working recipe is
+            privileged + AppArmor unconfined + <code class="font-mono">dev0–dev3</code>
+            + cgroup allows for the render nodes and the XDNA
+            accelerator. Boots in seconds, snapshots cheaply, and the
+            dashboard's memory bar accounts for other PVE tenants
+            competing for the same physical RAM pool.
+          </p>
+          <ul class="mt-4 flex flex-wrap gap-2">
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">privileged + apparmor unconfined</li>
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">iGPU / dGPU / NPU passthrough</li>
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">PVEAuditor token plumbing</li>
+          </ul>
+        </article>
+
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            also good
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            Bare metal
+          </p>
+          <p class="mt-3 text-sm leading-relaxed text-hal0-fg-muted">
+            A Linux box with systemd, the GPU/NPU drivers loaded, and
+            a spare 20 GB under <code class="font-mono">/var/lib</code>.
+            The installer does the same work it does inside an LXC. No
+            host-pressure segment in the memory bar because there's no
+            other tenant to account for.
+          </p>
+          <ul class="mt-4 flex flex-wrap gap-2">
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">CachyOS / Arch / Ubuntu / Debian</li>
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">Vulkan / ROCm / CUDA</li>
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">single tenant</li>
+          </ul>
+        </article>
+
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <p class="mb-2 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            works with care
+          </p>
+          <p class="font-mono text-base font-semibold text-hal0-fg">
+            VM (KVM / QEMU / Hyper-V Gen2)
+          </p>
+          <p class="mt-3 text-sm leading-relaxed text-hal0-fg-muted">
+            A full Linux VM honours systemd and works as soon as the
+            installer finishes. Pin CPUs for the inference workload or
+            the scheduler will eat your tok/s; passthrough the GPU
+            with <code class="font-mono">vfio-pci</code> if you want
+            anything past CPU-only. Bigger memory overhead than an
+            LXC for the same workload.
+          </p>
+          <ul class="mt-4 flex flex-wrap gap-2">
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">CPU pinning recommended</li>
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">vfio-pci for GPU</li>
+            <li class="rounded border border-hal0-border bg-hal0-bg px-2 py-1 font-mono text-xs text-hal0-fg">heavier than LXC</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="mt-10 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+        <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            fits the rest of your stack
+          </p>
+          <p class="text-pretty leading-relaxed text-hal0-fg-muted">
+            One public port (<code class="font-mono text-hal0-fg">:8080</code>)
+            and an optional <code class="font-mono text-hal0-fg">:3001</code>
+            for the bundled OpenWebUI. Sits behind Traefik or Caddy
+            cleanly: add <code class="font-mono text-hal0-fg">hal0.lan</code>
+            (or whatever subdomain your gateway already routes) and
+            you're done. Model store at
+            <code class="font-mono text-hal0-fg">/var/lib/hal0/models</code>
+            is a plain directory. Mount it from your NAS over NFS,
+            point a fresh install at it with
+            <code class="font-mono text-hal0-fg">--models-dir=/srv/models</code>,
+            swap backends without re-pulling.
+          </p>
+        </div>
+
+        <figure class="overflow-hidden rounded-lg border border-hal0-border bg-hal0-bg-elevated">
+          <img
+            src="/screenshots/memory-bar.png"
+            srcset="/screenshots/memory-bar.png 1x, /screenshots/memory-bar@2x.png 2x"
+            alt="Unified-memory bar from the hal0 dashboard, showing segments for GTT inference, system RAM, the Proxmox host's other tenants, and free memory"
+            width="1172"
+            height="114"
+            loading="lazy"
+            decoding="async"
+            class="block w-full"
+          />
+          <figcaption class="border-t border-hal0-border px-5 py-3 text-xs text-hal0-fg-dim">
+            Memory bar inside an LXC. Plug a read-only
+            <code class="font-mono">PVEAuditor</code> token in and the
+            <code class="font-mono">Proxmox host</code> segment shows
+            what the rest of the node is eating (other tenants, ZFS
+            ARC, kernel) instead of just the cgroup slice. Bare-metal
+            and VM installs leave the panel off.
+          </figcaption>
+        </figure>
       </div>
     </div>
   </section>
@@ -80,7 +210,7 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
   <!-- ============================================================ -->
   <!-- What's new in the installer (2026-05-15 overhaul)             -->
   <!-- ============================================================ -->
-  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+  <section class="border-b border-hal0-border bg-hal0-bg">
     <div class="mx-auto max-w-6xl px-6 py-16">
       <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
         new in 2026-05-15
@@ -153,9 +283,9 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
           <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
             A <code class="font-mono">trap … ERR</code> in
             <code class="font-mono">install.sh</code> catches non-zero
-            exits and prints the failing step plus a focused hint —
-            disk full, missing build deps, blocked port, or a stale
-            venv — instead of dumping a raw bash trace at you.
+            exits and prints the failing step plus a focused hint
+            (disk full, missing build deps, blocked port, or a stale
+            venv) instead of dumping a raw bash trace at you.
           </p>
         </article>
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
@@ -257,7 +387,7 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
   <!-- ============================================================ -->
   <!-- What this does                                                -->
   <!-- ============================================================ -->
-  <section class="border-b border-hal0-border bg-hal0-bg">
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
     <div class="mx-auto max-w-6xl px-6 py-16">
       <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
         What the installer does.
@@ -268,7 +398,7 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
         and on your daily driver.
       </p>
 
-      <Expandable summary="Step by step — click to expand" open={false}>
+      <Expandable summary="Step by step (click to expand)" open={false}>
         <ol class="list-decimal space-y-2 pl-5">
           <li>
             <strong class="font-mono text-hal0-fg">Preflight.</strong>
@@ -281,7 +411,7 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
             <strong class="font-mono text-hal0-fg">User &amp; directories.</strong>
             Creates a system <code>hal0</code> user and the FHS layout:
             <code>/usr/lib/hal0/current/</code> (atomic symlink to a
-            versioned dir), <code>/etc/hal0/</code> (config — preserved
+            versioned dir), <code>/etc/hal0/</code> (config, preserved
             across updates), <code>/var/lib/hal0/</code> (models,
             registry, OpenWebUI state).
           </li>
@@ -305,8 +435,8 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
           <li>
             <strong class="font-mono text-hal0-fg">systemd units.</strong>
             Installs <code>hal0-api.service</code> plus the
-            <code>hal0-slot@.service</code> template — one template, N
-            slot instances (no hand-written per-slot units).
+            <code>hal0-slot@.service</code> template. One template, N
+            slot instances. No hand-written per-slot units.
           </li>
           <li>
             <strong class="font-mono text-hal0-fg">OpenWebUI wiring.</strong>
@@ -337,14 +467,14 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
   <!-- ============================================================ -->
   <!-- Manual install                                                -->
   <!-- ============================================================ -->
-  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+  <section class="border-b border-hal0-border bg-hal0-bg">
     <div class="mx-auto max-w-6xl px-6 py-16">
       <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
         Manual install.
       </h2>
       <p class="mb-8 max-w-2xl text-hal0-fg-muted">
         Prefer reading the script before running it? Clone the repo and
-        run the installer directly — same code path, no
+        run the installer directly. Same code path, no
         <code>curl | bash</code>.
       </p>
 
@@ -380,7 +510,7 @@ cd hal0`}</CodeBlock>
   /var/lib/hal0/models/
 hal0 slot load primary --model qwen2.5-0.5b-instruct-q4_k_m`}</CodeBlock>
           <p>
-            Qwen 0.5B is the CI smoke model — it fits anywhere and
+            Qwen 0.5B is the CI smoke model. It fits anywhere and
             verifies the slot lifecycle end-to-end (217&ndash;413&nbsp;tok/s
             on Strix Halo iGPU, plenty fast on CPU for a sanity check).
           </p>
@@ -392,7 +522,7 @@ hal0 slot load primary --model qwen2.5-0.5b-instruct-q4_k_m`}</CodeBlock>
   <!-- ============================================================ -->
   <!-- Verify                                                        -->
   <!-- ============================================================ -->
-  <section class="border-b border-hal0-border bg-hal0-bg">
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
     <div class="mx-auto max-w-6xl px-6 py-16">
       <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
         Verify the install.
@@ -409,7 +539,7 @@ hal0 slot load primary --model qwen2.5-0.5b-instruct-q4_k_m`}</CodeBlock>
           <CodeBlock lang="txt" title="expected output">{`hal0 0.1.x`}</CodeBlock>
           <p>
             If the binary isn&rsquo;t found, <code>/usr/lib/hal0/current/bin</code>
-            probably isn&rsquo;t on your <code>PATH</code> — log out and
+            probably isn&rsquo;t on your <code>PATH</code>. Log out and
             back in, or source <code>/etc/profile.d/hal0.sh</code>.
           </p>
         </StepItem>
@@ -442,13 +572,14 @@ hal0 slot load primary --model qwen2.5-0.5b-instruct-q4_k_m`}</CodeBlock>
             After you load a model into a slot you&rsquo;ll see it in
             <code>data[]</code>. The dispatcher exposes the OpenAI surface
             at <code>/v1/*</code>: chat, completions, embeddings, rerank,
-            audio transcription, audio speech. Slot ports (<code>:8081</code>&ndash;<code>:8099</code>)
-            are bound to <code>127.0.0.1</code> only — the API is the
-            single public surface.
+            audio transcription, audio speech. Slot ports
+            (<code>:8081</code>&ndash;<code>:8099</code>) bind
+            <code>127.0.0.1</code> only; the API is the single public
+            surface.
           </p>
         </StepItem>
 
-        <StepItem n={4} title="Optional — open the dashboard">
+        <StepItem n={4} title="Optional: open the dashboard">
           <p>
             The Vue dashboard ships on the same <code>:8080</code> at
             <code>/</code>; OpenWebUI is on <code>:3001</code> prewired
@@ -461,22 +592,48 @@ xdg-open http://localhost:8080/
 xdg-open http://localhost:3001/`}</CodeBlock>
         </StepItem>
       </StepList>
+
+      <div class="mt-12">
+        <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+          what you get after installing
+        </p>
+        <figure class="overflow-hidden rounded-lg border border-hal0-border bg-hal0-bg-elevated">
+          <img
+            src="/screenshots/dashboard-overview.png"
+            srcset="/screenshots/dashboard-overview.png 1x, /screenshots/dashboard-overview@2x.png 2x"
+            alt="hal0 dashboard at /: KPI row (API, Slots, Memory, Throughput), the unified-memory bar with GTT/System/Proxmox-host/Free segments, and the slot grid"
+            width="1440"
+            height="900"
+            loading="lazy"
+            decoding="async"
+            class="block w-full"
+          />
+          <figcaption class="border-t border-hal0-border px-5 py-3 text-xs text-hal0-fg-dim">
+            Dashboard at <code class="font-mono">/</code>. KPI row up top
+            (API / Slots / Memory / Throughput), unified-memory bar with a
+            <code class="font-mono">Proxmox host</code> segment for
+            co-tenant pressure, and the slot grid below it. Slot units
+            stay <code class="font-mono">offline</code> until you assign
+            a model.
+          </figcaption>
+        </figure>
+      </div>
     </div>
   </section>
 
   <!-- ============================================================ -->
   <!-- Uninstall                                                     -->
   <!-- ============================================================ -->
-  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+  <section class="border-b border-hal0-border bg-hal0-bg">
     <div class="mx-auto max-w-6xl px-6 py-16">
       <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
         Uninstall.
       </h2>
       <p class="mb-6 max-w-2xl text-hal0-fg-muted">
         <code>hal0 uninstall [--keep-data] [--force] [--dev]</code>
-        is a thin wrapper over <code>installer/uninstall.sh</code> — the
+        is a thin wrapper over <code>installer/uninstall.sh</code>; the
         shell script remains the source of truth. Either invocation
-        below does the same work; the CLI exec&rsquo;s the script so
+        below does the same work, and the CLI exec&rsquo;s the script so
         the DELETE prompt inherits the live TTY.
       </p>
 
@@ -495,7 +652,7 @@ sudo rm -rf /usr/lib/hal0 /usr/lib/hal0-*
 # remove config (skip this line if you want to keep your slot configs)
 sudo rm -rf /etc/hal0
 
-# remove data — models, registry, OpenWebUI state (skip to keep models)
+# remove data (models, registry, OpenWebUI state). Skip to keep models.
 sudo rm -rf /var/lib/hal0
 
 # remove the system user
@@ -512,7 +669,7 @@ sudo userdel hal0 2>/dev/null || true`}</CodeBlock>
   <!-- ============================================================ -->
   <!-- Troubleshooting                                               -->
   <!-- ============================================================ -->
-  <section class="border-b border-hal0-border bg-hal0-bg">
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
     <div class="mx-auto max-w-6xl px-6 py-16">
       <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
         Troubleshooting.
@@ -526,10 +683,10 @@ sudo userdel hal0 2>/dev/null || true`}</CodeBlock>
           <p>
             The installer hard-fails on non-systemd / non-Linux hosts
             (<code>installer/install.sh:86</code>). macOS and Windows
-            aren&rsquo;t supported in v1. WSL2 isn&rsquo;t either — WSL
-            doesn&rsquo;t expose systemd by default and the slot units
-            won&rsquo;t boot. Run it inside a real Linux VM, LXC, or on
-            bare metal.
+            aren&rsquo;t supported in v1. WSL2 isn&rsquo;t either,
+            since WSL doesn&rsquo;t expose systemd by default and the
+            slot units won&rsquo;t boot. Run it inside a real Linux
+            VM, LXC, or on bare metal.
           </p>
         </Expandable>
 
@@ -563,7 +720,7 @@ hal0 slot logs primary --follow`}</CodeBlock>
             Common causes: toolbox image not pulled, model file missing
             from <code>/var/lib/hal0/models/</code>, GGUF too big for the
             VRAM / GTT carveout. The slot form in the dashboard surfaces
-            a fit warning before you load — check there first.
+            a fit warning before you load. Check there first.
           </p>
         </Expandable>
 
@@ -576,7 +733,7 @@ hal0 slot logs primary --follow`}</CodeBlock>
             locally available
             (<code>_flm_image_present()</code> in
             <code>src/hal0/capabilities/catalog.py</code>). The image
-            bundles FLM at <code>/opt/fastflowlm/</code> — no host
+            bundles FLM at <code>/opt/fastflowlm/</code>, so no host
             bind-mount of the FLM tree is required. The
             <code>vulkan</code>, <code>rocm</code>,
             <code>moonshine</code>, <code>kokoro</code>, and
@@ -587,7 +744,7 @@ hal0 slot logs primary --follow`}</CodeBlock>
           </p>
         </Expandable>
 
-        <Expandable summary="hal0 model pull — usage">
+        <Expandable summary="hal0 model pull usage">
           <p>
             <code>POST /api/models/&#123;id&#125;/pull</code> is live; the CLI
             wrapper streams progress as it goes. By alias:
@@ -606,9 +763,9 @@ hal0 model pull bartowski/Llama-3.2-3B-Instruct-GGUF`}</CodeBlock>
           <p>
             The installer drops a symlink at
             <code>{'/usr/local/bin/hal0 → ${VENV_DIR}/bin/hal0'}</code>
-            so the binary is on the default <code>PATH</code> on every
-            mainstream distro out of the box. If you don&rsquo;t see
-            it, the symlink step printed a warning — re-run the
+            so the binary lands on the default <code>PATH</code> on
+            every mainstream distro out of the box. If you don&rsquo;t
+            see it, the symlink step printed a warning. Re-run the
             installer or recreate it by hand:
           </p>
           <CodeBlock lang="sh">{`sudo ln -sfn /usr/lib/hal0/current/bin/hal0 /usr/local/bin/hal0
@@ -656,7 +813,7 @@ hal0 --version`}</CodeBlock>
             <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">hardware</p>
             <p class="mt-1 font-mono text-base font-semibold text-hal0-fg">What runs where →</p>
             <p class="mt-1 text-sm text-hal0-fg-muted">
-              Strix Halo, ROCm, CUDA, CPU — the support matrix.
+              Strix Halo, ROCm, CUDA, CPU. The support matrix.
             </p>
           </a>
         </li>

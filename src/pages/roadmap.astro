@@ -15,7 +15,7 @@ import RoadmapCard from '../components/RoadmapCard.astro';
 const shipped = [
   {
     title: 'OpenAI-compatible /v1/* API',
-    why: 'Chat, completions, embeddings, rerank, transcriptions, speech, images — every OpenAI SDK works unchanged against your local box.',
+    why: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.',
   },
   {
     title: 'Slot lifecycle state machine',
@@ -27,7 +27,7 @@ const shipped = [
   },
   {
     title: 'Bundled OpenWebUI',
-    why: 'Prewired chat on :3001 pointed at the local API. Zero config — the installer wires it for you.',
+    why: 'Prewired chat on :3001 pointed at the local API. Zero config; the installer wires it for you.',
   },
   {
     title: 'Cosign-signed self-update',
@@ -35,7 +35,7 @@ const shipped = [
   },
   {
     title: 'Five-provider stack',
-    why: 'llama.cpp (Vulkan / ROCm) for chat + embed, FLM for NPU multiplex, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation — all first-class in v1.',
+    why: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for NPU multiplex, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation. All first-class in v1.',
   },
   {
     title: 'Image generation',
@@ -43,7 +43,7 @@ const shipped = [
   },
   {
     title: 'Caddy + auth + HTTPS + mDNS',
-    why: 'install.sh --auth=basic brings up Caddy at the edge with basic_auth, Bearer tokens for the OpenAI API, automatic HTTPS (internal CA for .local, Let’s Encrypt for real domains), and a best-effort Avahi service file so hal0.local resolves on the LAN. Off by default — opt in when you’re ready to expose the box.',
+    why: 'install.sh --auth=basic brings up Caddy at the edge with basic_auth, Bearer tokens for the OpenAI API, automatic HTTPS (internal CA for .local, Let’s Encrypt for real domains), and a best-effort Avahi service file so hal0.local resolves on the LAN. Off by default; opt in when you’re ready to expose the box.',
   },
   {
     title: 'Installer overhaul',
@@ -51,15 +51,19 @@ const shipped = [
   },
   {
     title: 'Capability slots overlay',
-    why: 'Embed / Voice / Img capability cards plus an NPU backend rollup in the dashboard, backed by /etc/hal0/capabilities.toml and GET|POST /api/capabilities/*. The orchestrator picks one model per child, validates (backend, model) pairs against the catalog, and reconciles drift on every apply.',
+    why: 'Embed, Voice, and Img capability cards plus an NPU backend rollup in the dashboard, backed by /etc/hal0/capabilities.toml and GET|POST /api/capabilities/*. The orchestrator picks one model per child, validates (backend, model) pairs against the catalog, and reconciles drift on every apply.',
   },
   {
     title: 'FLM NPU provider live',
-    why: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1 image bundles FLM; chat + embed surfaced in the picker only when XDNA hardware and the local toolbox image are both present. Model namespace comes from flm list -j; STT slice deferred.',
+    why: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1 image bundles FLM; chat and embed surfaced in the picker only when XDNA hardware and the local toolbox image are both present. Model namespace comes from flm list -j; STT slice deferred.',
+  },
+  {
+    title: 'Proxmox host-pressure segment',
+    why: 'Drop a read-only PVEAuditor API token into Settings → Proxmox integration and the dashboard memory bar shows the physical DIMM total plus a muted Proxmox host segment for other-tenant + ZFS ARC + kernel pressure. Token sits 0600 at /etc/hal0/proxmox.json and the API redacts it on read; bare-metal installs leave the panel off.',
   },
   {
     title: 'embed-rerank built-in slot',
-    why: 'The capability orchestrator auto-creates an embed-rerank slot on first enable — default bge-reranker-v2-m3-q4_k_m on port 8086 with --reranking, so /v1/rerankings stays separate from the chat surface on :8081.',
+    why: 'The capability orchestrator auto-creates an embed-rerank slot on first enable: bge-reranker-v2-m3-q4_k_m on port 8086 with --reranking, so /v1/rerankings stays separate from the chat surface on :8081.',
   },
   {
     title: 'First-run wizard rewrite',
@@ -79,25 +83,25 @@ const shipped = [
   },
   {
     title: 'Orchestrator drift reconcile',
-    why: 'CapabilityOrchestrator.apply() now reconciles capabilities.toml ↔ slots/*.toml on every call, not just on selection diff — prior failed applies, manual edits, and install-time seeds can no longer leave the two disagreeing.',
+    why: 'CapabilityOrchestrator.apply() now reconciles capabilities.toml ↔ slots/*.toml on every call rather than only on selection diff, so prior failed applies, manual edits, and install-time seeds can no longer leave the two disagreeing.',
   },
 ];
 
 const soon = [
   {
     title: 'Hugging Face model pulls',
-    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for the next 0.1.x alpha. (FLM-aware pull for NPU tags landed in PR #89 — Ollama-style family:size ids now pull from the dashboard.)',
+    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for the next 0.1.x alpha. (FLM-aware pull for NPU tags landed in PR #89, so Ollama-style family:size ids already pull from the dashboard.)',
   },
   {
     title: 'Agent management & integration',
-    why: 'First-class agents stored on hal0 with conversation orchestration and deterministic tool-use loops. The platform for agents to run on, not just chat with.',
+    why: 'First-class agents stored on hal0 with conversation orchestration and deterministic tool-use loops. A place for agents to live on your box, not only to chat with.',
   },
   {
     title: 'Unified memory system',
     why: 'Persistent, federated memory across local slots and (optionally) external models. Mem0-style API with sources, search, and scoping.',
   },
   {
-    title: 'MCP support — host and server',
+    title: 'MCP support, host and server',
     why: 'hal0 speaks Model Context Protocol both directions. Compose tools across local slots and external MCP services; discover them from the dashboard.',
   },
   {
@@ -110,14 +114,14 @@ const soon = [
   },
   {
     title: 'AUR PKGBUILD & Ubuntu PPA',
-    why: 'Native distro packages on top of the install script — pacman and apt as first-class install paths.',
+    why: 'Native distro packages on top of the install script: pacman and apt as first-class install paths.',
   },
 ];
 
 const exploring = [
   {
     title: 'Multi-host federation',
-    why: 'A slot mesh across LAN boxes — primary on the Strix Halo, embed on the workstation, all behind one /v1/* surface.',
+    why: 'A slot mesh across LAN boxes: primary on the Strix Halo, embed on the workstation, all behind one /v1/* surface.',
   },
   {
     title: 'Fine-tune & LoRA hot-swap',
@@ -125,7 +129,7 @@ const exploring = [
   },
   {
     title: 'Per-model rate limits & budgets',
-    why: 'Cost-style accounting for local inference — cap a chatty agent without taking the whole box down.',
+    why: 'Cost-style accounting for local inference, so a chatty agent can be capped without taking the whole box down.',
   },
   {
     title: 'Voice mode end-to-end',
@@ -133,14 +137,14 @@ const exploring = [
   },
   {
     title: 'ChatOps adapters',
-    why: 'Slack and Matrix bridges as extensions — talk to hal0 from the rooms you already live in.',
+    why: 'Slack and Matrix bridges as extensions, so you can talk to hal0 from the rooms you already live in.',
   },
 ];
 ---
 
 <MarketingLayout
-  title="hal0 roadmap — local AI platform, agents, memory, MCP"
-  description="hal0 is an open-source, self-hosted LLM platform: OpenAI-compatible API, slot lifecycle, local agent framework, MCP host. Roadmap for v1, v0.2, and beyond."
+  title="hal0 roadmap — homelab AI platform, agents, memory, MCP"
+  description="hal0 is an open-source, self-hosted LLM platform for the homelab: OpenAI-compatible API, slot lifecycle, local agent framework, MCP host. Roadmap for v1, v0.2, and beyond."
   navTone="solid"
 >
   <section class="border-b border-hal0-border bg-hal0-bg">
@@ -151,23 +155,22 @@ const exploring = [
       </span>
 
       <h1 class="text-balance text-4xl font-semibold leading-tight tracking-tight text-hal0-fg md:text-5xl">
-        A platform for the local AI stack.
+        One service for the whole local AI stack.
       </h1>
 
       <p class="mt-6 max-w-3xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
-        hal0 is not a llama-server wrapper. v0.1.0-alpha ships a polished
-        OpenAI-compatible inference platform — slots, dispatcher,
-        hardware probe, bundled chat, signed self-update. v0.2 takes
-        the same lifecycle discipline and extends it into the rest of
-        the local AI stack: agents, persistent memory, MCP, tools,
-        image, voice, third-party extensions. The goal is one place on
-        your hardware that runs the whole stack, not seven daemons
-        glued together.
+        v0.1.0-alpha ships the OpenAI-compatible inference layer: slots,
+        dispatcher, hardware probe, bundled chat, signed self-update,
+        Proxmox host-pressure segment. v0.2 takes the same lifecycle
+        discipline and extends it into the rest of the local AI stack:
+        agents, persistent memory, MCP, tools, image, voice, third-party
+        extensions. The goal is one place on your hardware that runs
+        the whole stack, instead of seven daemons glued together.
       </p>
 
       <p class="mt-4 max-w-3xl text-pretty text-sm leading-relaxed text-hal0-fg-dim">
-        No dates below. Items are direction — the closer a thing is
-        to the left column, the closer it is to running on your box.
+        No dates below. Items are direction. The closer a thing is to
+        the left column, the closer it is to running on your box.
       </p>
     </div>
   </section>
@@ -219,9 +222,9 @@ const exploring = [
         </h2>
         <p class="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-hal0-fg-muted">
           File issues, open discussions, send patches. hal0 is
-          Apache-2.0 — the platform is yours to extend, fork, or
-          steer. The agents / memory / MCP track in particular benefits
-          from real-world use cases more than from our guesses.
+          Apache-2.0; the platform is yours to extend, fork, or steer.
+          The agents / memory / MCP track in particular benefits from
+          real-world use cases more than from our guesses.
         </p>
         <div class="mt-8 flex flex-wrap gap-3">
           <a

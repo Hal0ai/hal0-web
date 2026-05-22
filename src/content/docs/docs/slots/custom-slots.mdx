@@ -1,14 +1,14 @@
 ---
 title: Custom slots
-description: Defining your own slots on top of the four built-ins.
+description: Defining your own slots on top of the five built-ins.
 sidebar:
   order: 3
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-The four [built-in slots](/docs/slots/built-in-slots/) cover the
-OpenAI-compatible surface. You can define additional slots — for a
+The five [built-in slots](/docs/slots/built-in-slots/) cover the
+OpenAI-compatible surface. You can define additional slots for a
 second chat model, a vision model, the FLM provider on AMD XDNA,
 ComfyUI, or anything else a provider supports.
 
@@ -18,7 +18,7 @@ ComfyUI, or anything else a provider supports.
   autocomplete, a big slow model for reasoning. Different slot names,
   same `/v1/chat/completions` endpoint, addressed by model name.
 - **Use the NPU alongside the iGPU.** A custom `npu` slot binds the
-  FLM provider to XDNA so the iGPU stays free for `primary` chat.
+  FLM provider to XDNA so the iGPU stays free for the `primary` slot.
 - **Dedicated vision slot.** A multimodal model lives in its own slot
   so swapping the chat primary doesn't unload it.
 
@@ -33,10 +33,10 @@ ComfyUI, or anything else a provider supports.
 The dashboard's Slots view has an **Add slot** form. It takes:
 
 - A name (must match `^[a-z][a-z0-9_-]*$`).
-- A provider (`llama.cpp`, `flm`, `moonshine`, `kokoro`).
+- A provider (`llama.cpp`, `flm`, `moonshine`, `kokoro`, `comfyui`).
 - A model registry ref.
-- An idle-timeout (after which the slot transitions `ready → idle`
-  and becomes an unload candidate).
+- An idle-timeout, after which the slot transitions `ready → idle`
+  and becomes an unload candidate.
 
 The form writes the slot definition to the TOML config atomically
 (see [Config](/docs/operate/config/)), then stages the systemd unit.
@@ -58,8 +58,10 @@ list.
 
 ## Limits
 
-- Slot names must be unique. The four built-in names
-  (`primary`, `embed`, `stt`, `tts`) are reserved.
+- Slot names must be unique. The five built-in names
+  (`primary`, `embed`, `stt`, `tts`, `img`) are reserved, as is the
+  auto-managed `embed-rerank` slot synthesised by the embed
+  capability.
 - Total slot count is capped by the port range (`8081`–`8099`, so
   19 concurrent slots).
 - A slot can only host one model at a time. To run two models on the
@@ -70,7 +72,7 @@ list.
 The full custom-slot authoring guide will cover:
 
 - Choosing a provider for the workload you have in mind.
-- Sizing notes per provider — what fits in VRAM vs unified memory vs
+- Sizing notes per provider: what fits in VRAM vs unified memory vs
   what needs paging.
 - Per-slot env overrides and provider-specific knobs.
 - Defining a slot that fronts an external upstream (OpenRouter,

@@ -1,6 +1,6 @@
 ---
 title: Slot as model
-description: How slot names map to the OpenAI model field — model "primary" picks whatever's currently in the primary slot.
+description: 'How slot names map to the OpenAI model field. `model: "primary"` picks whatever is currently in the primary slot.'
 sidebar:
   order: 2
 ---
@@ -10,10 +10,10 @@ import { Aside } from '@astrojs/starlight/components';
 hal0's OpenAI-compatible API accepts two kinds of identifiers in the
 `model` field:
 
-- A **registry ref** — e.g.
-  `"qwen2.5-0.5b-instruct-q4_k_m"` — picks that exact model file.
-- A **slot name** — e.g. `"primary"` — picks whatever model is
-  currently loaded in that slot.
+- A **registry ref**, e.g. `"qwen2.5-0.5b-instruct-q4_k_m"`. Picks
+  that exact model file.
+- A **slot name**, e.g. `"primary"`. Picks whatever model is currently
+  loaded in that slot.
 
 Both routes go through the dispatcher. Slot names are stable;
 registry refs change every time you pull a newer quant. Most clients
@@ -35,14 +35,14 @@ resp = client.chat.completions.create(
 )
 ```
 
-Tomorrow you swap `primary` from a 7B Qwen-Coder to a 70B
-Hermes-4 — the script still works. Address by slot, swap models
+Tomorrow you swap `primary` from a 7B Qwen-Coder to a 70B Hermes-4
+and the script still works. Address by slot, swap models
 independently of clients.
 
 ## Addressing by registry ref
 
-When you actually want a specific model — say you're benchmarking
-two quants side-by-side — use the registry ref:
+When you want a specific model (benchmarking two quants side-by-side,
+say), use the registry ref:
 
 ```python
 resp = client.chat.completions.create(
@@ -74,7 +74,7 @@ either route:
 ```
 
 OpenWebUI and most clients pick the first registry-ref-looking entry.
-That's why we list slot aliases first — they're stable.
+That's why we list slot aliases first; they're stable.
 
 ## Mapping rules
 

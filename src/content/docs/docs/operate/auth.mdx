@@ -8,17 +8,30 @@ sidebar:
 import { Aside, Steps, Tabs, TabItem, Code, LinkCard, CardGrid } from '@astrojs/starlight/components';
 
 By default, hal0 binds the API on `:8080` and OpenWebUI on `:3001`
-with **no authentication** — a home-appliance posture for a fully-trusted
-LAN. To safely expose hal0 beyond that, the installer ships an opt-in
-auth mode that brings up a Caddy reverse proxy with HTTPS, basic_auth
-at the edge for the dashboard, and bearer-token auth for the OpenAI-compatible
+with no authentication. That's the right posture for the common case:
+an LXC sitting behind your homelab gateway, reached only over the LAN
+or through your existing Traefik / Caddy vhost that already does the
+auth work.
+
+For anything else (a port-forward, a Tailscale exit node that other
+people share, a public hostname), the installer ships an opt-in mode
+that brings up its own Caddy reverse proxy with HTTPS, basic_auth at
+the edge for the dashboard, and bearer-token auth for the OpenAI-compatible
 API.
 
-<Aside type="caution" title="When to enable auth">
-The trusted-LAN posture is fine if your hal0 box is on a wired home
-network with no port forwards. The moment you want **remote access,
-WAN exposure, multi-user, or shared with non-household users** — turn
-on auth. There is no middle ground.
+<Aside type="caution" title="LAN vs. WAN">
+On a trusted LAN with no port forwards, the default no-auth posture
+is fine. If hal0 is reachable from anything you don't physically
+control (the public internet, a shared VPN, a guest VLAN), turn auth
+on. There is no middle ground.
+</Aside>
+
+<Aside type="note" title="Already running Traefik / Caddy / nginx?">
+If your homelab already has a reverse proxy doing TLS for `*.lan` or
+`*.thinmint.dev` style services, you probably don't want hal0's
+bundled Caddy. Point your existing proxy at `http://<hal0-host>:8080`
+and `:3001`, do auth there, and skip `--auth=basic`. The bundled
+Caddy is for boxes that don't already have a reverse proxy.
 </Aside>
 
 ## The one-liner
@@ -92,7 +105,7 @@ You hit `https://hal0.local/`:
 
 4. For `/chat/`, Caddy proxies to OpenWebUI `:3001` with the same
    forwarded header. OpenWebUI's `WEBUI_AUTH_TRUSTED_EMAIL_HEADER`
-   auto-provisions a user — **no second login**.
+   auto-provisions a user, so no second login.
 </Steps>
 
 ### Programmatic path
@@ -112,17 +125,17 @@ Your OpenAI client hits `https://hal0.local/v1/chat/completions`:
    `401 auth.required`.
 </Steps>
 
-`/v1/models` is on the public allowlist — many OpenAI clients probe
+`/v1/models` is on the public allowlist. Many OpenAI clients probe
 it before authenticating, so it returns 200 without a token.
 
 ### Precedence
 
 If a request carries both `Authorization: Bearer ...` and
 `X-Forwarded-Email`, **the bearer wins**. A bad bearer 401s even if
-the forwarded email is valid — you can't downgrade auth by sending a
+the forwarded email is valid; you can't downgrade auth by sending a
 broken token.
 
-## HTTPS — automatic, every time
+## HTTPS, automatic
 
 Caddy handles TLS termination automatically. The behaviour depends on
 the hostname you gave the installer (`HAL0_HOSTNAME`, default `hal0.local`).
@@ -172,7 +185,7 @@ client.
 For an internet-facing hostname (e.g. `hal0.example.com`), Caddy will
 run ACME against Let's Encrypt automatically. Two ways to get there:
 
-**At install time** — pass a real hostname:
+**At install time.** Pass a real hostname:
 
 ```sh frame="terminal"
 HAL0_HOSTNAME=hal0.example.com HAL0_TLS_EMAIL=you@example.com \
@@ -187,7 +200,7 @@ sudo sed -i '/tls internal/d' /etc/hal0/Caddyfile
 sudo systemctl reload hal0-caddy
 ```
 
-**Switching from internal CA to ACME later** — same edit, no reinstall:
+**Switching from internal CA to ACME later.** Same edit, no reinstall:
 
 ```sh frame="terminal"
 sudo sed -i 's/^\(\s*\){\$HAL0_HOSTNAME:hal0.local}/\1hal0.example.com/' /etc/hal0/Caddyfile
@@ -201,12 +214,12 @@ OCSP-staple it; and reload itself before each renewal. Requirements:
 - The hostname must resolve from the public internet to your hal0 box.
 - Port `:80` must be reachable from the internet (Let's Encrypt uses
   the http-01 challenge by default).
-- `HAL0_TLS_EMAIL` must be a real address — it's the ACME contact for
+- `HAL0_TLS_EMAIL` must be a real address. It's the ACME contact for
   expiry warnings.
 
 If port `:80` can't be opened (NAT, firewall policy, or you'd rather
 not expose anything other than `:443`), use the DNS-01 challenge
-instead — add a `tls { dns <provider> ... }` block to
+instead. Add a `tls { dns <provider> ... }` block to
 `/etc/hal0/Caddyfile`. Caddy supports dozens of DNS providers via
 build-time modules; see the
 [Caddy docs](https://caddyserver.com/docs/automatic-https) for the
@@ -216,8 +229,8 @@ list and configuration.
 
 - No certbot install, no cron jobs for renewal.
 - No nginx `ssl_certificate` paths to wire up.
-- No TLS cipher tuning — Caddy ships defaults that score A on SSL Labs.
-- No worrying about expiry — Caddy renews 30 days before expiration
+- No TLS cipher tuning. Caddy ships defaults that score A on SSL Labs.
+- No worrying about expiry. Caddy renews 30 days before expiration
   automatically and reloads itself.
 
 ## Token management
@@ -226,7 +239,7 @@ list and configuration.
 
 Two ways:
 
-**Via the dashboard** — Settings → Authentication → Create token.
+**Via the dashboard.** Settings → Authentication → Create token.
 The raw value is shown **once** in a copy-once modal; the dashboard
 warns you it can't be recovered afterwards.
 
@@ -298,7 +311,7 @@ Even with auth on, these endpoints stay open:
 
 Everything else under `/api/*` and `/v1/*` requires authentication.
 
-## mDNS — `hal0.local` resolution
+## mDNS for `hal0.local`
 
 `hal0.local` only resolves if mDNS is set up. The installer drops an
 Avahi service file when `avahi-daemon` is present on the host:
@@ -310,7 +323,7 @@ sudo pacman -S avahi               # Arch/CachyOS
 sudo systemctl enable --now avahi-daemon
 ```
 
-Re-run the installer — it'll detect avahi this time and announce the
+Re-run the installer. It'll detect avahi this time and announce the
 service. Verify from a client on the same broadcast domain:
 
 ```sh frame="terminal"
@@ -346,7 +359,7 @@ configuration and TLS state remain on disk so you can re-enable with
 ## Why this design
 
 - **Caddy owns the browser-auth boundary.** Swapping basic_auth for
-  OIDC, SAML, or magic-link auth is a Caddyfile change — not a hal0
+  OIDC, SAML, or magic-link auth is a Caddyfile change, not a hal0
   change. The `X-Forwarded-Email` contract stays the same.
 - **Bearer tokens for programmatic access.** No browser handshake, no
   cookies, OpenAI-SDK-compatible.

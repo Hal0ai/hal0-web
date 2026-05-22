@@ -8,8 +8,18 @@ sidebar:
 import { Aside } from '@astrojs/starlight/components';
 
 The **model registry** is hal0's on-disk index of every model it knows
-about — pulled, verified, and ready to be assigned to a slot. It lives
-under `/var/lib/hal0/models/` and survives `hal0 update`.
+about: pulled, verified, and ready to be assigned to a slot. It lives
+under `/var/lib/hal0/models/` and survives `hal0 update`. Mount that
+directory from an NFS export on your NAS and one registry is shared
+across reinstalls.
+
+<img
+  src="/screenshots/models-registry.png"
+  srcset="/screenshots/models-registry.png 1x, /screenshots/models-registry@2x.png 2x"
+  alt="Dashboard /models view showing the registry table with chat, stt, tts, and rerank tagged rows plus size and backend per entry."
+  width="1440"
+  height="900"
+/>
 
 ## Why a registry
 
@@ -29,12 +39,12 @@ what `/v1/models` reflects to OpenAI-shaped clients.
 
 Each entry is one directory under `/var/lib/hal0/models/` with:
 
-- The model file(s) — usually one `.gguf`.
+- The model file(s), usually one `.gguf`.
 - A sidecar JSON describing the source repo, file name, size, and
   checksum.
 - The registry ref (a slug, e.g. `qwen2.5-0.5b-instruct-q4_k_m`).
 
-Entries are written atomically — a failed pull leaves no partial
+Entries are written atomically; a failed pull leaves no partial
 entry, so the registry never lies about what's on disk.
 
 ## Listing the registry
@@ -50,8 +60,8 @@ curl http://localhost:8080/v1/models
 ```
 
 The `/v1/models` response is OpenAI-shaped, with one entry per
-registry model **plus** one entry per loaded slot name (so
-`model: "primary"` works as a model identifier — see
+registry model plus one entry per loaded slot name (so
+`model: "primary"` works as a model identifier; see
 [Slot as model](/docs/api/slot-as-model/)).
 
 ## Assigning a model to a slot
@@ -61,7 +71,7 @@ hal0 model assign qwen2.5-0.5b-instruct-q4_k_m --slot primary
 ```
 
 This updates the slot's TOML config (atomically) and restarts the
-slot through the lifecycle (`unloading → starting → warming → ready`).
+slot through the lifecycle (`unloading → warming → ready`).
 
 ## Removing a model
 
@@ -75,7 +85,7 @@ a slot. Unload the slot or swap its model first.
 ## Curated defaults
 
 A small **curated catalogue** ships with the installer
-(`src/hal0/registry/curated.py`) — it's how the hardware probe picks
+(`src/hal0/registry/curated.py`). It's how the hardware probe picks
 a starting model for each slot on a fresh install. The catalogue is
 not the registry; it's a list of *suggestions* the FirstRun wizard
 draws from. Pulled models land in the registry; the curated list is
@@ -84,8 +94,8 @@ just a starting menu.
 <Aside type="tip">
   The dashboard's Models view distinguishes **registry models** (on
   disk, ready to assign) from **curated suggestions** (one click to
-  pull). See [Recommended loadouts](/docs/slots/loadouts/) for our
-  picks per workload + hardware tier.
+  pull). See [Recommended loadouts](/docs/slots/loadouts/) for picks
+  per workload + hardware tier.
 </Aside>
 
 ## Coming soon — outline

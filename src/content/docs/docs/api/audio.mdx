@@ -1,5 +1,5 @@
 ---
-title: Audio — STT & TTS
+title: Audio (STT & TTS)
 description: /v1/audio/transcriptions (Moonshine) and /v1/audio/speech (Kokoro).
 sidebar:
   order: 4
@@ -7,13 +7,13 @@ sidebar:
 
 import { Aside } from '@astrojs/starlight/components';
 
-hal0 ships two audio endpoints — speech-to-text on the `stt` slot
-and text-to-speech on the `tts` slot. Both speak the OpenAI Audio
-shape so any client that hits OpenAI's audio API works here.
+hal0 ships two audio endpoints: speech-to-text on the `stt` slot, and
+text-to-speech on the `tts` slot. Both speak the OpenAI Audio shape so
+any client that hits OpenAI's audio API works here.
 
-## Speech-to-text — Moonshine
+## Speech-to-text: Moonshine
 
-The `stt` slot defaults to **Moonshine** — a small, fast ASR model
+The `stt` slot defaults to **Moonshine**, a small, fast ASR model
 built for edge real-time. The toolbox image is
 `hal0-toolbox-moonshine`.
 
@@ -35,10 +35,9 @@ Response (OpenAI-shape):
 ### Alternates
 
 The `stt` slot can host any ASR-compatible model the Moonshine
-provider supports — for example a higher-accuracy
-`whisper-large-v3-turbo` (~1.6 GB) if you have the headroom, or
-`Canary-Qwen-2.5B` (Open ASR Leaderboard leader, 5.63% WER) for
-SOTA accuracy. Swap with:
+provider supports. For higher accuracy, `whisper-large-v3-turbo`
+(~1.6 GB) if you have the headroom, or `Canary-Qwen-2.5B` (Open ASR
+Leaderboard leader, 5.63% WER) for SOTA accuracy. Swap with:
 
 ```sh
 hal0 slot swap stt --model whisper-large-v3-turbo
@@ -47,9 +46,9 @@ hal0 slot swap stt --model whisper-large-v3-turbo
 See [Recommended loadouts → Voice mode](/docs/slots/loadouts/#voice-mode-3-gb-total)
 for the picks per tier.
 
-## Text-to-speech — Kokoro
+## Text-to-speech: Kokoro
 
-The `tts` slot defaults to **Kokoro-82M v1.0** — a small open TTS
+The `tts` slot defaults to **Kokoro-82M v1.0**, a small open TTS
 model with 54 voices across 8 languages. The toolbox image is
 `hal0-toolbox-kokoro`.
 
@@ -74,8 +73,8 @@ hal0 slot swap tts --model f5-tts
 
 ## Status today
 
-Moonshine and Kokoro are **first-class providers** as of v0.1.0-alpha —
-they have working code paths, slot lifecycle integration, and published
+Moonshine and Kokoro are **first-class providers** as of v0.1.0-alpha.
+Both have working code paths, slot lifecycle integration, and published
 toolbox container images on `ghcr.io/hal0ai/`. The `stt` and `tts`
 slots are configurable from the dashboard and start cleanly.
 
@@ -86,7 +85,7 @@ slots are configurable from the dashboard and start cleanly.
   reference target.
 </Aside>
 
-## Coming soon — outline
+## Coming soon
 
 - Real-time streaming TTS (chunked PCM output).
 - Speaker diarization for transcription.
