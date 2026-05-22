@@ -1,0 +1,77 @@
+# Mirror src/content/docs/docs/** → Hal0ai/hal0:docs/** whenever the
+# website's user docs change on master. Lets the public hal0 repo carry
+# an always-current snapshot of the docs published at hal0.dev/docs
+# without anyone having to hand-sync the two trees.
+#
+# Setup (one-time):
+#   1. Create a fine-grained Personal Access Token scoped to Hal0ai/hal0
+#      with `Contents: Read and write`.
+#   2. Add it to this repo's Actions secrets as `HAL0_DOCS_MIRROR_TOKEN`.
+#
+# What syncs:
+#   src/content/docs/docs/**  →  hal0/docs/** (flat, no inner "docs/" prefix)
+#   - .mdx and .md are copied verbatim (Starlight component imports
+#     preserved so the mirror stays diff-clean against this repo).
+#   - hal0/docs/internal/ is NEVER touched (hand-maintained dev docs).
+#   - hal0/docs/README.md is NEVER touched (explains the split).
+#   - Files removed upstream are removed in the mirror.
+
+name: mirror-docs
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "src/content/docs/docs/**"
+      - ".github/workflows/mirror-docs.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-docs
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hal0-web (source)
+        uses: actions/checkout@v4
+        with:
+          path: hal0-web
+
+      - name: Checkout Hal0ai/hal0 (target)
+        uses: actions/checkout@v4
+        with:
+          repository: Hal0ai/hal0
+          token: ${{ secrets.HAL0_DOCS_MIRROR_TOKEN }}
+          path: hal0
+          fetch-depth: 0
+
+      - name: Sync user docs
+        run: |
+          rsync -av --delete \
+            --exclude='internal/' \
+            --exclude='README.md' \
+            hal0-web/src/content/docs/docs/ \
+            hal0/docs/
+
+      - name: Commit + push
+        working-directory: hal0
+        run: |
+          git config user.name  "hal0-docs-mirror[bot]"
+          git config user.email "hal0-docs-mirror@users.noreply.github.com"
+
+          if [ -z "$(git status --porcelain docs/)" ]; then
+            echo "No doc changes after sync. Nothing to push."
+            exit 0
+          fi
+
+          source_sha="${{ github.sha }}"
+          source_short="${source_sha:0:7}"
+          git add docs/
+          git commit -m "docs: mirror from hal0-web@${source_short}
+
+          Auto-synced from Hal0ai/hal0-web commit ${source_sha}.
+          See .github/workflows/mirror-docs.yml in hal0-web."
+
+          git push origin HEAD:main
