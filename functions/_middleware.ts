@@ -20,9 +20,23 @@
 // on the static-placeholder response so external probes can distinguish
 // proxy-broken from proxy-not-deployed without `wrangler tail`.
 // `console.warn` calls surface in CF Pages logs for deeper debugging.
+//
+// Auth: if `env.GITHUB_TOKEN` is set in the CF Pages environment, both
+// upstream calls authenticate. Required in practice because CF outbound
+// IPs are shared across every CF customer and the anonymous 60/hr/IP
+// limit is permanently exhausted. Authenticated requests get 5000/hr
+// per token. The token only needs public-repo read scope.
 
 const CHANNEL_RE = /^\/(stable|nightly|dev)\.json$/;
 const RELEASES_API = "https://api.github.com/repos/Hal0ai/hal0/releases?per_page=10";
+
+function authHeaders(token: string | undefined): Record<string, string> {
+	const base: Record<string, string> = {
+		"User-Agent": "hal0-releases-proxy",
+	};
+	if (token) base.Authorization = `Bearer ${token}`;
+	return base;
+}
 
 interface GhAsset {
 	id: number;
@@ -41,12 +55,15 @@ type ProxyOutcome =
 	| { ok: true; response: Response }
 	| { ok: false; reason: string };
 
-async function proxyChannelManifest(channel: string): Promise<ProxyOutcome> {
+async function proxyChannelManifest(
+	channel: string,
+	token: string | undefined,
+): Promise<ProxyOutcome> {
 	let listResp: Response;
 	try {
 		listResp = await fetch(RELEASES_API, {
 			headers: {
-				"User-Agent": "hal0-releases-proxy",
+				...authHeaders(token),
 				Accept: "application/vnd.github+json",
 			},
 		});
@@ -56,7 +73,7 @@ async function proxyChannelManifest(channel: string): Promise<ProxyOutcome> {
 		return { ok: false, reason };
 	}
 	if (!listResp.ok) {
-		const reason = `gh-list-${listResp.status}`;
+		const reason = `gh-list-${listResp.status}${token ? "-auth" : "-anon"}`;
 		console.warn(`[releases-proxy] ${reason} body=${(await listResp.text()).slice(0, 200)}`);
 		return { ok: false, reason };
 	}
@@ -84,7 +101,7 @@ async function proxyChannelManifest(channel: string): Promise<ProxyOutcome> {
 		try {
 			assetResp = await fetch(asset.url, {
 				headers: {
-					"User-Agent": "hal0-releases-proxy",
+					...authHeaders(token),
 					Accept: "application/octet-stream",
 				},
 				redirect: "follow",
@@ -124,9 +141,13 @@ async function proxyChannelManifest(channel: string): Promise<ProxyOutcome> {
 // Minimal local shape for the Cloudflare Pages function context. We don't
 // pull in `@cloudflare/workers-types` because the production deploy is
 // Vercel; this middleware exists for parity if a Pages preview is wired up.
+type PagesEnv = {
+	GITHUB_TOKEN?: string;
+};
 type PagesFunctionContext = {
 	request: Request;
 	next: (input?: Request) => Promise<Response>;
+	env: PagesEnv;
 };
 type PagesFunction = (context: PagesFunctionContext) => Promise<Response>;
 
@@ -151,7 +172,7 @@ export const onRequest: PagesFunction = async (context) => {
 	if (url.hostname === "releases.hal0.dev") {
 		const channelMatch = url.pathname.match(CHANNEL_RE);
 		if (channelMatch) {
-			const outcome = await proxyChannelManifest(channelMatch[1]);
+			const outcome = await proxyChannelManifest(channelMatch[1], context.env.GITHUB_TOKEN);
 			if (outcome.ok) return outcome.response;
 			// Fall through to the static placeholder, but annotate why.
 			const rewritten = new URL(context.request.url);
