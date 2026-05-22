@@ -33,7 +33,7 @@ const softwareApplicationLd = {
   url: canonicalUrl,
   downloadUrl: 'https://hal0.dev/install.sh',
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
-  softwareVersion: 'v0.1.0-alpha',
+  softwareVersion: 'v0.1.0-alpha.1',
   codeRepository: 'https://github.com/hal0ai/hal0',
   offers: {
     '@type': 'Offer',
@@ -452,8 +452,9 @@ const description =
         macOS and Windows are not in scope for v1. The FLM NPU provider
         is live with a self-contained
         <code class="font-mono">ghcr.io/hal0ai/hal0-toolbox-flm:v1</code>
-        image; NPU benchmarks land once the manifest digest pin lands
-        in <code class="font-mono">hal0/manifest.json</code>.
+        image, pinned by sha256 in
+        <code class="font-mono">hal0/manifest.json</code> alongside the
+        other five toolbox images. NPU tok/s measurements pending.
       </p>
     </div>
   </section>
@@ -662,12 +663,12 @@ curl -fsSL https://hal0.dev/install.sh | bash
             Roadmap
           </p>
           <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
-            v1 shipped. v0.2 is where it gets interesting.
+            v0.1.0-alpha shipped. v0.2 is where it gets interesting.
           </h2>
           <p class="text-pretty text-hal0-fg-muted">
-            Phase 1 landed on 2026-05-15 with 353 unit tests passing
-            and the integration tier on Vulkan-CPU + Qwen 0.5B. Here's
-            what's next.
+            v0.1.0-alpha.1 tagged 2026-05-21. Integration tier on
+            Vulkan-CPU + Qwen 0.5B. All six toolbox images published
+            and pinned. Here's what's next.
           </p>
         </div>
         <a
@@ -679,29 +680,37 @@ curl -fsSL https://hal0.dev/install.sh | bash
       </div>
 
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <RoadmapColumn title="Now" eyebrow="v1" tone="primary">
-          <RoadmapCard title="Capability slots overlay" status="shipped" eta="v1">
+        <RoadmapColumn title="Now" eyebrow="v0.1.0-alpha" tone="primary">
+          <RoadmapCard title="Capability slots overlay" status="shipped" eta="v0.1">
             Embed / Voice / Img cards + NPU backend rollup, backed by
             <code>/etc/hal0/capabilities.toml</code> and
             <code>GET|POST /api/capabilities/*</code>. Drift between
             <code>capabilities.toml</code> ↔ <code>slots/*.toml</code>
             reconciles on every apply.
           </RoadmapCard>
-          <RoadmapCard title="FLM NPU live" status="shipped" eta="v1">
+          <RoadmapCard title="FLM NPU live" status="shipped" eta="v0.1">
             Self-contained <code>ghcr.io/hal0ai/hal0-toolbox-flm:v1</code>
-            image. Chat + embed surfaced in the picker when XDNA and
-            the toolbox image are both present; model namespace from
+            image, pinned by sha256 in <code>manifest.json</code>. Chat
+            + embed surfaced in the picker when XDNA and the toolbox
+            image are both present; model namespace from
             <code>flm list -j</code>.
           </RoadmapCard>
-          <RoadmapCard title="Image generation" status="shipped" eta="v1">
+          <RoadmapCard title="Image generation" status="shipped" eta="v0.1">
             <code>POST /v1/images/generations</code> served by ComfyUI
             on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell, slot
             named <code>img</code>.
           </RoadmapCard>
-          <RoadmapCard title="First-run wizard" status="shipped" eta="v1">
+          <RoadmapCard title="First-run wizard" status="shipped" eta="v0.1">
             Eight linear steps from password through hardware,
             capabilities, conditional HF token, license, install,
             done. Legacy 5-step picker and three IA prototypes deleted.
+          </RoadmapCard>
+          <RoadmapCard title="Signed releases live" status="shipped" eta="v0.1">
+            <code>releases.hal0.dev/stable.json</code> serves the live
+            release manifest via a Cloudflare Pages middleware proxy;
+            <code>v*</code> tags on <code>hal0</code> propagate within
+            ~60s. cosign 3.x keyless verify against the GH Actions
+            OIDC identity.
           </RoadmapCard>
         </RoadmapColumn>
 
@@ -791,7 +800,7 @@ curl -fsSL https://hal0.dev/install.sh | bash
             github.com/hal0ai/hal0 →
           </p>
           <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
-            Issues, discussions, release manifests. Pre-alpha; see
+            Issues, discussions, release manifests. v0.1.0-alpha; see
             CONTRIBUTING for contribution status.
           </p>
         </a>
@@ -854,9 +863,9 @@ curl -fsSL https://hal0.dev/install.sh | bash
   </section>
 
   <CTA
-    eyebrow="One Linux box. Your AI."
+    eyebrow="One Linux box in the rack."
     title="Install hal0 in under a minute."
-    subtitle="Linux + systemd is the only hard requirement. The probe picks the right provider for you: Vulkan on Strix Halo, CUDA on NVIDIA, ROCm on AMD discrete, CPU as a fallback."
+    subtitle="Linux + systemd is the only hard requirement. The probe picks the right provider: Vulkan on Strix Halo, CUDA on NVIDIA, ROCm on AMD discrete, CPU as a fallback."
     ctaPrimary={{ href: '/install', label: 'curl … | bash' }}
     ctaSecondary={{ href: '/docs/getting-started/', label: 'Read the docs' }}
   />

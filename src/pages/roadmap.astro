@@ -14,6 +14,10 @@ import RoadmapCard from '../components/RoadmapCard.astro';
 
 const shipped = [
   {
+    title: 'Signed release pipeline live',
+    why: 'releases.hal0.dev/stable.json serves the live manifest via a Cloudflare Pages middleware proxy. A v* tag on hal0 publishes the GH release; the manifest reflects it within ~60s, no hal0-web deploy needed. cosign 3.x keyless verify (--certificate + cert_url in the manifest) against the GH Actions OIDC identity.',
+  },
+  {
     title: 'OpenAI-compatible /v1/* API',
     why: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.',
   },
@@ -55,7 +59,7 @@ const shipped = [
   },
   {
     title: 'FLM NPU provider live',
-    why: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1 image bundles FLM; chat and embed surfaced in the picker only when XDNA hardware and the local toolbox image are both present. Model namespace comes from flm list -j; STT slice deferred.',
+    why: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1 image bundles FLM and is pinned by sha256 in manifest.json alongside the other five toolbox images. Chat and embed surfaced in the picker only when XDNA hardware and the local toolbox image are both present. Model namespace comes from flm list -j; STT slice deferred.',
   },
   {
     title: 'Proxmox host-pressure segment',
@@ -178,7 +182,7 @@ const exploring = [
   <section class="border-b border-hal0-border bg-hal0-bg">
     <div class="mx-auto max-w-6xl px-6 py-16 md:py-20">
       <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <RoadmapColumn title="Shipped" eyebrow="v1">
+        <RoadmapColumn title="Shipped" eyebrow="v0.1.0-alpha">
           {shipped.map((item) => (
             <RoadmapCard title={item.title} status="shipped">
               {item.why}

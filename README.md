@@ -14,13 +14,12 @@
 ---
 
 Source for [hal0.dev](https://hal0.dev) — the marketing site + Starlight
-docs for the [hal0](https://github.com/Hal0ai/hal0) home AI inference
+docs for the [hal0](https://github.com/Hal0ai/hal0) homelab AI inference
 platform.
 
 Built with **Astro 6 + Starlight 0.39 + Tailwind v4**, **Geist Variable**
 for body, **JetBrains Mono** for code/display, all fonts self-hosted.
-Deployed at [hal0-web.vercel.app](https://hal0-web.vercel.app); apex
-domain `hal0.dev` to follow.
+Deployed on Vercel at `hal0.dev`.
 
 Licensed **Apache-2.0** (matches the upstream hal0 product repo).
 
@@ -105,15 +104,13 @@ npm run preview        # serve ./dist/ for smoke-testing
 
 ## Deploy
 
-Vercel — **manual, not configured yet.** When ready:
+The marketing site + docs ship to **Vercel** on every push to `master`.
+Apex `hal0.dev` is wired through Vercel; previews come up on
+`hal0-web-*.vercel.app`.
 
 ```sh
-vercel link            # first time only
-vercel --prod          # ship to hal0.dev
+vercel --prod          # ad-hoc prod ship (CI handles the normal path)
 ```
-
-DNS for `hal0.dev` must be cut over to Vercel separately. Until the
-user does both steps, the site is local-only.
 
 ## Release manifest hosting (`releases.hal0.dev`)
 
@@ -126,75 +123,54 @@ https://releases.hal0.dev/{stable|nightly}.json
 
 Schema: `hal0.releases.v1` — see
 [`hal0/docs/release-manifest.md`](https://github.com/hal0ai/hal0/blob/main/docs/release-manifest.md)
-for the full field reference.
+for the full field reference. The schema's `cert_url` field is
+**required** — cosign 3.x keyless `verify-blob` needs `--certificate`,
+so the manifest carries the URL to the `.crt` artifact alongside
+`url` (tarball) and `sig_url` (signature).
 
-### Where the JSON lives in this repo
+### How it works (as of v0.1.0-alpha.1, 2026-05-21)
+
+`releases.hal0.dev` is **fully operational** and serves the live
+manifest. The subdomain lives on a small Cloudflare Pages project
+whose middleware proxies the canonical asset off the latest GitHub
+Release on `hal0ai/hal0`:
+
+1. Tag `vX.Y.Z` on `hal0ai/hal0` triggers `.github/workflows/release.yml`.
+2. The workflow builds `hal0-X.Y.Z.tar.gz`, computes its sha256, signs
+   it with cosign keyless against the GH Actions OIDC identity, and
+   uploads tarball + `.sig` + `.crt` to the GH Release alongside the
+   generated `stable.json` (manifest schema `hal0.releases.v1`).
+3. The CF Pages middleware on `releases.hal0.dev` fetches
+   `stable.json` from the latest GH Release and serves it with a short
+   cache (~60s). A `v*` tag propagates end-to-end within about a
+   minute — **no hal0-web deploy required**.
+4. Updater clients verify the tarball with `cosign verify-blob
+   --certificate <cert_url> --signature <sig_url> …` against the
+   `signer_identity` regex in the manifest.
+
+Updater clients should point at `https://releases.hal0.dev/stable.json`
+(or `…/nightly.json`). The old GitHub-direct URL form is not used; the
+canonical asset name is `stable.json`, not `latest.json`.
+
+### Static fallback in this repo
 
 ```
 public/releases/
-├── stable.json      ← served at https://releases.hal0.dev/stable.json
-└── nightly.json     ← served at https://releases.hal0.dev/nightly.json
+├── stable.json      ← static backstop (not the primary source)
+└── nightly.json     ← static backstop (not the primary source)
 ```
 
-`public/` is copied verbatim into `dist/` by Astro, so the files land at
-`/releases/*.json` on whatever host serves the site. Both URL forms work:
+`public/` is copied verbatim into `dist/` by Astro, so the files also
+land at `https://hal0.dev/releases/{stable,nightly}.json`. They're
+kept as a backstop and as a schema example; the live manifest is
+whatever the CF Pages middleware on `releases.hal0.dev` returns.
 
-| Form           | URL                                              |
-| -------------- | ------------------------------------------------ |
-| Path-based     | `https://hal0.dev/releases/stable.json`          |
-| Subdomain      | `https://releases.hal0.dev/stable.json`          |
+### Verify
 
-The two are wired up by:
-
-- `public/_headers` — sets `Cache-Control: max-age=60` + permissive CORS
-  on `/releases/*` so freshly-published tags propagate within a minute.
-- `public/_redirects` — when the same Cloudflare Pages project is
-  fronted by both `hal0.dev` and `releases.hal0.dev`, rewrites the
-  subdomain's root to `/releases/` (`200` rewrite, no client redirect)
-  so `https://releases.hal0.dev/stable.json` resolves to
-  `dist/releases/stable.json` without polluting the site root.
-
-### Cloudflare Pages + DNS setup (one-time)
-
-1. **Pages project** — point Cloudflare Pages at this repo. Build
-   command: `npm run build`. Output dir: `dist`. CF Pages auto-detects
-   `_headers` and `_redirects`.
-2. **Custom domains** — in the Pages project, add both:
-   - `hal0.dev` (primary)
-   - `releases.hal0.dev` (subdomain for the updater)
-3. **DNS records** (Cloudflare DNS zone for `hal0.dev`):
-   - `hal0.dev`              → CNAME → `<project>.pages.dev` (proxied)
-   - `releases.hal0.dev`     → CNAME → `<project>.pages.dev` (proxied)
-4. **Verify** — once DNS propagates:
-   ```sh
-   curl -s https://releases.hal0.dev/stable.json | jq .
-   curl -sI https://releases.hal0.dev/stable.json | grep -i cache-control
-   ```
-
-### Publish workflow (how a tag updates `stable.json`)
-
-The publisher is `release.yml` in
-[hal0ai/hal0](https://github.com/hal0ai/hal0/tree/main/.github/workflows)
-(not yet implemented — placeholder manifests live in this repo until it
-ships). The intended flow:
-
-1. Tag `vX.Y.Z` on `hal0ai/hal0` triggers `release.yml`.
-2. Workflow builds `hal0-X.Y.Z.tar.gz`, computes its sha256, and signs
-   it with cosign keyless against the GH Actions OIDC identity. Release
-   assets (tarball + `.sig`) attach to the GH Release.
-3. Workflow generates the new `stable.json` (or `nightly.json` on
-   `main`) using the schema in `public/releases/*.json` as a template,
-   filled in with real `version` / `digest_sha256` / `signer_identity`.
-4. Workflow opens a PR against `hal0ai/hal0-web` (or commits directly
-   on a `releases/` branch via a deploy key with write scope limited to
-   `public/releases/`), updating only `public/releases/{channel}.json`.
-5. Merge → CF Pages auto-deploys → updater clients see the new manifest
-   on next `--check`.
-
-The placeholder manifests currently in this repo (`_placeholder: true`,
-all-zeros digest) will be schema-valid but will fail cosign verify if
-anything tries to `apply()` them — intentional, until `release.yml`
-exists.
+```sh
+curl -s https://releases.hal0.dev/stable.json | jq .
+curl -sI https://releases.hal0.dev/stable.json | grep -i cache-control
+```
 
 ## Build state
 
@@ -210,16 +186,13 @@ and falls back to Starlight's built-in 404 page.
 
 ## Conventions
 
-- **No GitHub remote.** Local-only during buildout. Do not push.
-- **No deploy.** Don't wire Vercel, Netlify, or anything else.
 - **Self-hosted fonts only.** No `fonts.googleapis.com` requests at
   runtime — `@fontsource*` bundles the `.woff2` files into the build.
-- **No telemetry.** Astro telemetry is disabled at the project level
-  via the `.astro-cache` opt-out the user already set.
-- **Multiple semantic commits**, not one mega-commit. Match the
-  existing history: `chore:`, `style:`, `feat:`, `feat(ui):`, `docs:`.
-- **Do not touch `/home/halo/dev/hal0/`** — that's the upstream repo,
-  read-only reference.
+- **No telemetry.** Astro telemetry is disabled at the project level.
+- **Semantic commits.** Match the existing history: `chore:`, `style:`,
+  `feat:`, `feat(ui):`, `docs:`.
+- **Do not touch `/home/halo/dev/hal0/`** — that's the upstream
+  product repo, read-only reference.
 
 ## Cross-references
 

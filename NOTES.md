@@ -152,9 +152,10 @@ you need it) without overclaiming (we're not pitching as a
 multi-tenant cloud).
 
 The differentiator vs. Ollama / LM Studio: **automatic HTTPS** out of
-the box. Most home-AI stacks make you wire up nginx + certbot + some
-auth proxy yourself. hal0 ships that whole pipeline behind a single
-installer flag — the card surfaces it without making it the lead.
+the box. Most homelab inference stacks make you wire up nginx +
+certbot + some auth proxy yourself. hal0 ships that whole pipeline
+behind a single installer flag — the card surfaces it without making
+it the lead.
 
 ## Halo companion mark
 
