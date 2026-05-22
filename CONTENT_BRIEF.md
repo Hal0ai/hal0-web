@@ -6,18 +6,18 @@
 
 ## One-liner
 
-**hal0 — open-source home AI inference platform.**
-
-(Verbatim from `hal0/README.md` line 3.)
+**hal0 — open-source homelab AI inference platform for tinkerers and devs.**
 
 ## Elevator pitch (3 sentences)
 
-hal0 is a polished, reliable inference platform for running LLMs at home
-on Linux. It manages model **slots** with a real lifecycle state machine,
-exposes an **OpenAI-compatible API**, and ships with a built-in
-**dashboard** and a **prewired OpenWebUI** chat interface. One command
-installs the lot on any modern Linux box — Strix Halo iGPU, AMD discrete
-GPU, NVIDIA GPU, or CPU.
+hal0 is a homelab AI inference platform: the Linux box you already
+have in the rack, running real OpenAI-compatible inference. It manages
+model **slots** as systemd units with a typed lifecycle state machine,
+exposes an **OpenAI-compatible `/v1/*` API**, and ships with a Vue
+**dashboard** plus a **prewired OpenWebUI** chat tab. One command
+installs on any modern Linux box — Strix Halo iGPU, AMD discrete,
+NVIDIA, or CPU — and it's happy in a privileged Proxmox LXC with
+GPU/NPU passthrough, behind your Traefik.
 
 (Synthesised from `hal0/README.md` lines 1–24 and `hal0/PLAN.md` §1.)
 
@@ -48,14 +48,13 @@ Overrides (env vars, from `installer/install.sh`):
 `HAL0_PREFIX`, `HAL0_PORT` (default 8080), `HAL0_USER`, `HAL0_PYTHON`,
 `HAL0_NO_PROBE`, per-backend `HAL0_TOOLBOX_IMAGE_*`.
 
-Status caveat: the installer is real (Phase 2+ done) and produces a
-running `hal0-api`. As of 2026-05-15 the **vulkan / rocm / moonshine /
-kokoro / comfyui** toolbox images are pinned by sha256 digest in
-`hal0/manifest.json` `toolbox_images.*.digest`; only **flm** (the AMD
-XDNA NPU toolbox) is still unpublished — `manifest.json` shows
-`toolbox_images.flm.digest = null`. CI builds the flm image
-successfully, but the post-publish manifest-patch step is not yet
-auto-PR'd.
+Status caveat: the installer is real and produces a running
+`hal0-api`. As of v0.1.0-alpha.1 (2026-05-21) **all six toolbox
+images** — `vulkan`, `rocm`, `flm`, `moonshine`, `kokoro`, `comfyui` —
+are published to `ghcr.io/hal0ai/` and pinned by sha256 digest in
+`hal0/manifest.json` (`toolbox_images.*.digest`). FLM chat + embed
+are surfaced in the picker when XDNA hardware and the local toolbox
+image are both present; STT slice deferred. APIs may shift before v1.0.
 
 ### Installer overhaul (2026-05-15)
 
@@ -347,8 +346,7 @@ when XDNA hardware AND a local toolbox image are both present.
   entry on completion. `pullable=True` on NPU rows so the dashboard
   button is live (`src/hal0/capabilities/catalog.py`,
   `src/hal0/registry/pull.py`, `src/hal0/providers/flm.py`).
-- **Perf** — no measured tok/s yet. `[TODO: verify]` (manifest digest
-  still `null`, see Open questions).
+- **Perf** — no measured tok/s yet. `[TODO: verify]`.
 
 ## Image generation
 
@@ -578,8 +576,8 @@ only `models_dir` raises (see comments at
   finish (commits `c392859`, `c16422b`, `13a0764`, `686294e`, `f10c99d`)
 - Caddy reverse proxy + basic auth + Bearer token POC (`--auth=basic`,
   commits `ba79427` + `f62902c`; Team J)
-- Toolbox image digests pinned for vulkan, rocm, moonshine, kokoro,
-  comfyui (`hal0/manifest.json`)
+- Toolbox image digests pinned for all six providers: vulkan, rocm,
+  flm, moonshine, kokoro, comfyui (`hal0/manifest.json`)
 - 353 unit tests passing, integration tier on Vulkan-CPU + Qwen 0.5B
 - Capability slots overlay (embed / voice / img cards + NPU backend
   rollup), `/etc/hal0/capabilities.toml`, `GET|POST
@@ -798,16 +796,18 @@ consistent with this brief.
 
 ## Repo location
 
-- **Code**: `https://github.com/hal0ai/hal0`
-- **Web (this site)**: `https://github.com/hal0ai/hal0.dev`
-- **Toolbox images**: `ghcr.io/hal0ai/hal0-toolbox-{vulkan,rocm,flm,moonshine,kokoro,comfyui}`.
-  As of 2026-05-15 all are published and pinned by sha256 in
-  `hal0/manifest.json` **except** `flm`, whose digest is still `null`
-  pending the manifest-patch CI step.
+- **Code**: `https://github.com/Hal0ai/hal0`
+- **Web (this site)**: `https://github.com/Hal0ai/hal0-web`
+- **Toolbox images**: `ghcr.io/hal0ai/hal0-toolbox-{vulkan,rocm,flm,moonshine,kokoro,comfyui}` —
+  all six published and pinned by sha256 in `hal0/manifest.json` as
+  of v0.1.0-alpha.1.
+- **Release manifest**: `https://releases.hal0.dev/{stable,nightly}.json`
+  (live; CF Pages middleware proxies the asset off the latest GH
+  Release on `hal0ai/hal0`; ~60s propagation).
 
 Settled 2026-05-15 (PLAN §16, MEMORY entry `hal0ai_github_org`).
-GitHub org is `hal0ai` — do not write `hal0-dev`, that's a stale
-placeholder.
+GitHub org is `Hal0ai` (capital H) — do not write `hal0-dev`, that's
+a stale placeholder.
 
 ## Notable code / architectural facts worth surfacing
 
@@ -844,21 +844,14 @@ placeholder.
 
 ## Open questions / things to surface to the user before publishing
 
-- **`hal0.dev/install.sh` URL is aspirational** — currently the installer
-  is fetched out of the repo. Need to confirm DNS / static-host plan
-  for serving the raw `install.sh` over HTTPS at that URL before the
-  one-liner on the landing page is real.
 - **Public launch story** (PLAN §16 still open) — blog post? HN? AI
-  subreddits? Affects what the landing page emphasises ("here it is" vs.
-  "coming soon").
+  subreddits? Affects what the landing page emphasises now that
+  v0.1.0-alpha is out.
 - **Contribution model** (PLAN §16 still open) — README says external
   contributions aren't being accepted until v0.2; should the site echo
   that or punt to GitHub?
-- **Status badge** — pre-alpha banner on README. Do we want the same
-  banner on the landing page, or is the v1 cut close enough to drop it?
-- **NPU perf numbers** — none verified in repo yet (`flm` toolbox image
-  digest still `null` in `manifest.json`); leave NPU claims as
-  "supported, benchmarks TBD" until a real measurement lands.
+- **NPU perf numbers** — none verified in repo yet; leave NPU claims
+  as "supported, benchmarks TBD" until a real measurement lands.
 - **Image-gen perf** — no measured tok-equivalent or s/image numbers
   are in the repo yet for ComfyUI on Strix Halo iGPU; the docs page
   should cite latencies as `[TODO: verify]` until a real run is logged.

@@ -16,7 +16,7 @@ import Expandable from '../components/install/Expandable.astro';
 import StepList from '../components/install/StepList.astro';
 import StepItem from '../components/install/StepItem.astro';
 
-const title = 'Install hal0: one-line installer for your homelab';
+const title = 'Install hal0: one-line installer for the rack';
 const description =
   'Install hal0, the homelab AI inference platform, with one line. Drops cleanly into a privileged Proxmox LXC with GPU/NPU passthrough, a VM, or bare metal. Strix Halo / Ryzen AI Max+, AMD ROCm, NVIDIA CUDA, and CPU all supported on Linux + systemd.';
 
@@ -56,21 +56,18 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
       </div>
 
       <div class="mt-8">
-        <Callout tone="warning" title="Active development. Install on a sandbox host first.">
-          hal0 is v0.1.0-alpha. The installer is real and tested
-          (Phase&nbsp;2+ done); the <code>vulkan</code>,
-          <code>rocm</code>, <code>moonshine</code>, <code>kokoro</code>,
-          and <code>comfyui</code> toolbox images are pinned by sha256
-          in <code>hal0/manifest.json</code>. The FLM NPU provider is
-          live with a self-contained
-          <code>ghcr.io/hal0ai/hal0-toolbox-flm:v1</code> image, but
-          the post-publish manifest patch hasn’t auto-PR’d yet so
-          <code>toolbox_images.flm.digest</code> is still
-          <code>null</code>. Two CLI gaps remain:
+        <Callout tone="warning" title="v0.1.0-alpha. Install on a sandbox host first.">
+          hal0 is v0.1.0-alpha.1 as of 2026-05-21. All six toolbox
+          images (<code>vulkan</code>, <code>rocm</code>,
+          <code>flm</code>, <code>moonshine</code>, <code>kokoro</code>,
+          <code>comfyui</code>) are published to
+          <code>ghcr.io/hal0ai/</code> and pinned by sha256 in
+          <code>hal0/manifest.json</code>.
           <code>hal0 model pull</code> streams HF downloads with a
-          progress bar, and <code>hal0 uninstall</code> wraps
-          <code>installer/uninstall.sh</code>. Spin up a fresh LXC or a
-          spare box before pointing it at anything you care about.
+          progress bar; <code>hal0 uninstall</code> wraps
+          <code>installer/uninstall.sh</code>. APIs may shift before
+          v1.0. Spin up a fresh LXC or a spare box before pointing it
+          at anything you care about.
         </Callout>
       </div>
     </div>
@@ -734,13 +731,11 @@ hal0 slot logs primary --follow`}</CodeBlock>
             (<code>_flm_image_present()</code> in
             <code>src/hal0/capabilities/catalog.py</code>). The image
             bundles FLM at <code>/opt/fastflowlm/</code>, so no host
-            bind-mount of the FLM tree is required. The
-            <code>vulkan</code>, <code>rocm</code>,
-            <code>moonshine</code>, <code>kokoro</code>, and
-            <code>comfyui</code> toolbox images are pinned by sha256
-            in <code>hal0/manifest.json</code>; FLM is live too but
-            its <code>toolbox_images.flm.digest</code> is still
-            <code>null</code> pending the manifest-patch CI step.
+            bind-mount of the FLM tree is required. All six toolbox
+            images (<code>vulkan</code>, <code>rocm</code>,
+            <code>flm</code>, <code>moonshine</code>, <code>kokoro</code>,
+            <code>comfyui</code>) are pinned by sha256 in
+            <code>hal0/manifest.json</code>.
           </p>
         </Expandable>
 

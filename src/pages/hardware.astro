@@ -20,9 +20,9 @@ const title = 'Hardware support: hal0 on Strix Halo, ROCm, CUDA, CPU';
 const description =
   'hal0 hardware compatibility for self-hosted LLMs in your homelab. First-class on Strix Halo / Ryzen AI Max+ 395 with unified memory; supported on AMD ROCm, NVIDIA CUDA, and CPU. Vulkan llama.cpp is the universal baseline. Honest about co-tenant pressure on Proxmox.';
 
-// Hardware matrix rows. Keep these honest. Fallback gets a planned
-// pill for STT/TTS because Moonshine/Kokoro toolbox images aren't
-// published yet per CONTENT_BRIEF §Install status caveat.
+// Hardware matrix rows. Keep these honest. All six toolbox images
+// (vulkan/rocm/flm/moonshine/kokoro/comfyui) are published as of
+// 2026-05-21 — pinned by sha256 in hal0/manifest.json.
 const matrixRows = [
   {
     name: 'Ryzen AI Max+ 395 (Strix Halo, 128 GB)',
@@ -44,7 +44,7 @@ const matrixRows = [
     vendor: 'AMD',
     vram: '16–24 GB',
     status: 'supported' as const,
-    notes: 'Vulkan works today; ROCm toolbox image pending publish.',
+    notes: 'Vulkan baseline; ROCm toolbox image published, pinned by sha256.',
   },
   {
     name: 'NVIDIA RTX 50 / 40 / 30 series',
@@ -173,15 +173,16 @@ const matrixRows = [
             FLM provider were written against this hardware first. FLM
             is live with a self-contained
             <code class="font-mono">ghcr.io/hal0ai/hal0-toolbox-flm:v1</code>
-            image; chat + embed are surfaced in the picker when XDNA
-            and the toolbox image are both present. STT slice deferred.
+            image (pinned by sha256 in <code class="font-mono">hal0/manifest.json</code>);
+            chat + embed are surfaced in the picker when XDNA and the
+            toolbox image are both present. STT slice deferred.
           </p>
           <p class="mt-2 font-mono text-xs text-hal0-fg-dim">
             Verified on Ryzen AI Max iGPU + Vulkan: Qwen 0.5B
             217&ndash;413&nbsp;tok/s; Phi-3 Mini Q4 ~71&nbsp;tok/s,
             ~280&nbsp;ms round-trip; concurrent primary + embed
             ~258&nbsp;tok/s, &lt;200&nbsp;ms dispatch. NPU tok/s
-            measurements pending (manifest digest still null).
+            measurements pending.
           </p>
         </TierCard>
 
@@ -197,7 +198,7 @@ const matrixRows = [
             Same slot lifecycle, same dispatcher, same API surface. What
             changes is dedicated VRAM in place of the unified pool. AMD
             discrete uses the <code>hal0-toolbox-rocm</code> image
-            (pending publish); NVIDIA uses the CUDA-backed
+            (published, pinned by sha256); NVIDIA uses the CUDA-backed
             <code>llama.cpp</code> build. Trade vs. Strix Halo: tighter
             context budgets at the same model size, no headroom for
             STT/TTS alongside a 30B primary.
