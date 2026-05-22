@@ -8,7 +8,7 @@ sidebar:
 import { Aside } from '@astrojs/starlight/components';
 
 hal0 logs everything through **journald**. The API, the dispatcher,
-every slot — all flow into the system journal under a stable set of
+and every slot flow into the system journal under a stable set of
 unit names. The dashboard tails the same stream over SSE; the CLI
 gives you raw `journalctl` access.
 
@@ -17,13 +17,12 @@ gives you raw `journalctl` access.
 | Unit                          | What it logs                                       |
 |-------------------------------|-----------------------------------------------------|
 | `hal0-api.service`            | The main API + dispatcher process.                 |
-| `hal0-slot@<name>.service`    | One per slot — e.g. `hal0-slot@primary.service`.  |
+| `hal0-slot@<name>.service`    | One per slot, e.g. `hal0-slot@primary.service`.   |
 | `hal0-openwebui.service`      | The bundled OpenWebUI on `:3001`.                  |
 
-## Read logs — CLI
+## Read logs from the CLI
 
-For a slot, the simplest tool is the hal0 CLI — it wraps journalctl
-with sensible defaults:
+For a slot, the hal0 CLI wraps journalctl with sensible defaults:
 
 ```sh
 hal0 slot logs primary             # last 100 lines
@@ -38,7 +37,7 @@ journalctl -u 'hal0-slot@*.service' -f
 journalctl -u hal0-api.service --since '10 minutes ago'
 ```
 
-## Read logs — dashboard
+## Read logs in the dashboard
 
 The dashboard's **Logs** view tails the journal stream over SSE in
 real time, with:
@@ -46,14 +45,14 @@ real time, with:
 - Filter by unit (API / each slot / OpenWebUI).
 - Filter by level (info, warn, error).
 - Free-text grep against the stream.
-- Pause / resume — useful when you're trying to read a stack trace.
+- Pause / resume, useful when you're trying to read a stack trace.
 
 The SSE stream is the same one the CLI's `--follow` flag uses, so
 the dashboard and a terminal `--follow` show identical output.
 
 ## Decision logs
 
-The dispatcher writes a **decision log** for every routing choice —
+The dispatcher writes a **decision log** for every routing choice:
 which slot was considered, which was picked, what state each was in,
 which models were resolved. This is one of the most useful things
 for diagnosing "why didn't my request go where I expected?"
@@ -67,7 +66,7 @@ journalctl -u hal0-api.service -g 'dispatcher.decide'
 
 ## Structured errors in the journal
 
-Every API error is logged with its structured envelope intact — so
+Every API error is logged with its structured envelope intact, so
 when a user reports "I got `slot.not_ready`", you can grep journald
 for the exact request:
 

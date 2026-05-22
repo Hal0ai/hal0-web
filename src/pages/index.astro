@@ -29,7 +29,7 @@ const softwareApplicationLd = {
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Linux',
   description:
-    'Open-source home AI inference platform for Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, prewired OpenWebUI, self-hosted, no telemetry.',
+    'Open-source homelab AI inference platform for Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, prewired OpenWebUI, runs in a privileged Proxmox LXC, no telemetry.',
   url: canonicalUrl,
   downloadUrl: 'https://hal0.dev/install.sh',
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
@@ -160,22 +160,22 @@ const hardwareRows = [
     vram: 'System RAM',
     status: 'experimental' as const,
     notes:
-      'Vulkan-CPU fallback. Small models only — CI runs Qwen 0.5B here. Not the headline experience.',
+      'Vulkan-CPU fallback. Small models only. CI runs Qwen 0.5B here. Not the headline experience.',
   },
 ];
 
 const description =
-  'hal0 is an open-source home AI inference platform built for the 128 GB Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, self-hosted, no telemetry.';
+  'hal0 is an open-source homelab AI inference platform built for the 128 GB Strix Halo / Ryzen AI Max+ 395. OpenAI-compatible /v1/* API, systemd-managed slots, runs in a privileged Proxmox LXC, no telemetry.';
 ---
 
 <MarketingLayout
-  title="hal0 — Local AI for your home. Strix Halo native."
+  title="hal0 — Homelab AI inference platform for tinkerers and devs."
   description={description}
 >
   <HeroSection
     eyebrow="v0.1.0-alpha · Apache-2.0"
-    title="Local AI for your home. Strix Halo native."
-    subtitle="hal0 turns a Ryzen AI Max+ 395 with 128 GB of unified memory into a polished, OpenAI-compatible inference box. Slots, dispatcher, prewired chat — one Linux command installs the lot."
+    title="Homelab AI inference platform for tinkerers and devs."
+    subtitle="hal0 is what runs on the Linux box you already have in the rack. OpenAI-compatible API, systemd-managed slots, prewired chat UI. Happy in a Proxmox LXC with GPU and NPU passthrough, behind your Traefik."
     ctaPrimary={{ href: '/install', label: 'Install hal0' }}
     ctaSecondary={{ href: '/docs/getting-started/', label: 'Read the docs' }}
   >
@@ -184,14 +184,14 @@ const description =
     </CodeBlock>
   </HeroSection>
 
-  <!-- Why hal0 — the 4 things that separate it from "another llama-server wrapper". -->
+  <!-- Why hal0 — the 4 things that make it a real homelab citizen. -->
   <section class="border-b border-hal0-border bg-hal0-bg-sunken">
     <div class="mx-auto max-w-6xl px-6 py-20">
       <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
         Why hal0
       </p>
       <h2 class="mb-12 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
-        A polished home AI box, not another llama-server wrapper.
+        Built like a real homelab service.
       </h2>
       <div class="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-4">
         <article class="rounded-lg border border-hal0-accent/40 bg-hal0-bg-elevated p-6 shadow-[inset_3px_0_0_var(--hal0-accent)]">
@@ -200,9 +200,10 @@ const description =
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
             UMA-aware probe, FLM provider for the XDNA NPU,
-            unified-memory slot-fit warnings sized to the real pool —
-            not the BAR carve-out. 128 GB Ryzen AI Max+ 395 is the
-            reference deployment, not a hopeful port.
+            unified-memory slot-fit warnings sized to the real pool
+            rather than the BAR carve-out. The 128 GB Ryzen AI Max+
+            395 is the reference deployment. Every perf number on this
+            page was measured there.
           </p>
         </article>
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
@@ -210,9 +211,9 @@ const description =
             Concurrent chat + embed + voice
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            Five built-in slot classes — chat, embed, STT, TTS, image —
+            Five built-in slot classes (chat, embed, STT, TTS, image),
             each a real systemd-managed process on its own port. Run
-            them at once: primary + embed concurrent on Strix Halo
+            them at once. Primary + embed concurrent on Strix Halo
             measures <strong class="text-hal0-fg">~258 tok/s</strong>
             with <strong class="text-hal0-fg">&lt;200 ms</strong> dispatch.
           </p>
@@ -225,8 +226,8 @@ const description =
             <code class="font-mono text-hal0-fg">POST /v1/images/generations</code>
             served by ComfyUI on ROCm, inside the same slot lifecycle
             as everything else. Curated SDXL Turbo, SD 1.5, and Flux
-            Schnell ship pre-pinned by sha256. Not a side-quest — a
-            first-class slot.
+            Schnell ship pre-pinned by sha256. Image gen is a real slot,
+            on the same lifecycle as chat.
           </p>
         </article>
         <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
@@ -236,9 +237,93 @@ const description =
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
             Registry-aware routing across local slots
             <em>and</em> external upstreams (OpenRouter, Anthropic,
-            OpenAI). Cold-cache prefetch with request coalescing — a
-            thundering herd of identical prefetches becomes one HTTP
+            OpenAI). Cold-cache prefetch with request coalescing folds
+            a thundering herd of identical prefetches into one HTTP
             call. Every routing decision logged as structured breadcrumbs.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Homelab section — Proxmox memory bar screenshot + LXC story. -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Runs in your rack
+      </p>
+      <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        A tenant on your Proxmox node that admits it.
+      </h2>
+      <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
+        hal0 is happy in a privileged LXC with iGPU and XDNA passthrough
+        (the recipe is in the docs). Drop a read-only PVE API token in
+        Settings and the dashboard's unified-memory bar shows the
+        physical DIMM total, your other tenants, ZFS ARC, and the free
+        pool. Token sits 0600 at <code class="font-mono">/etc/hal0/proxmox.json</code>
+        and the API redacts it on read.
+      </p>
+
+      <figure class="mb-12 overflow-hidden rounded-lg border border-hal0-border bg-hal0-bg-elevated">
+        <img
+          src="/screenshots/memory-bar.png"
+          srcset="/screenshots/memory-bar.png 1x, /screenshots/memory-bar@2x.png 2x"
+          alt="hal0 unified-memory bar showing GTT inference, system RAM, a muted Proxmox host segment, and free unified memory."
+          width="1172"
+          height="114"
+          loading="lazy"
+          class="block w-full"
+        />
+        <figcaption class="border-t border-hal0-border px-5 py-3 font-mono text-xs text-hal0-fg-muted">
+          Dashboard memory bar. The <span class="text-hal0-fg">Proxmox host</span>
+          segment is the other-tenant + ZFS ARC + kernel pressure
+          competing for the same physical RAM pool.
+        </figcaption>
+      </figure>
+
+      <div class="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Lives in an LXC
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Privileged LXC + apparmor unconfined + dev0–dev3 passthrough
+            gets you a full iGPU and XDNA NPU without burning a whole
+            VM's worth of RAM. Bare-metal works too.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Behind your Traefik
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Single port (<code class="font-mono">:8080</code>) for the
+            API, <code class="font-mono">:3001</code> for OpenWebUI. Add
+            a vhost on your Traefik or Caddy and you're done. Or run
+            <code class="font-mono">--auth=basic</code> for a bundled
+            Caddy with HTTPS and basic auth.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            NFS-friendly model store
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            <code class="font-mono">/var/lib/hal0/models</code> is just a
+            directory. Mount it from your NAS, point a fresh install at
+            it with <code class="font-mono">--models-dir=PATH</code>, and
+            switch backends without re-pulling.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            systemd all the way
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Slots are <code class="font-mono">hal0-slot@&lt;name&gt;.service</code>
+            instances on a template unit. <code class="font-mono">systemctl status hal0-*</code>
+            tells you what's actually running. Not an Electron app, not
+            a daemon you have to nurse.
           </p>
         </article>
       </div>
@@ -250,18 +335,18 @@ const description =
        (Strix Halo / concurrent perf / image gen / dispatcher live there). -->
   <FeatureGrid
     eyebrow="What ships in v1"
-    title="A complete home inference platform."
+    title="The whole local AI stack, one install."
     columns={3}
   >
     <FeatureCard title="Five-provider stack" icon="layers-3">
-      llama.cpp (Vulkan / ROCm / CUDA) for chat + embed + rerank, FLM
-      for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for
-      image gen — all wrapped in the same slot lifecycle.
+      llama.cpp (Vulkan / ROCm / CUDA) for chat, embed, and rerank.
+      FLM for the XDNA NPU. Moonshine for STT. Kokoro for TTS. ComfyUI
+      for image gen. All wrapped in the same slot lifecycle.
     </FeatureCard>
     <FeatureCard title="OpenAI /v1/* surface" icon="plug">
       Chat, completions, embeddings, rerank, audio transcriptions,
       audio speech, images, models. Same shapes any OpenAI SDK already
-      speaks — point your client at <code>localhost:8080</code> and go.
+      speaks. Point your client at <code>localhost:8080</code> and go.
     </FeatureCard>
     <FeatureCard title="Slot state machine" icon="layers">
       Every workload has typed states (offline → pulling → warming →
@@ -269,21 +354,21 @@ const description =
       persisted to <code>state.json</code> and streamed over SSE.
     </FeatureCard>
     <FeatureCard title="Capability cards" icon="cloud-download">
-      Dashboard groups slots into <strong>Embed</strong> /
-      <strong>Voice</strong> / <strong>Img</strong> cards plus an
+      Dashboard groups slots into <strong>Embed</strong>,
+      <strong>Voice</strong>, and <strong>Img</strong> cards plus an
       <strong>NPU</strong> backend rollup. Pick a model and the
       orchestrator validates the (backend, model) pair against the
       catalog and reconciles the underlying slot on every apply.
       State lives in <code>/etc/hal0/capabilities.toml</code>.
     </FeatureCard>
     <FeatureCard title="Prewired OpenWebUI" icon="message-circle">
-      Chat UI on <code>:3001</code>, zero config — the installer points
-      it at the local hal0 API. Dashboard is for operating the box,
-      not chatting.
+      Chat UI on <code>:3001</code> with zero config. The installer
+      points it at the local hal0 API. The dashboard is for operating
+      the box, not chatting.
     </FeatureCard>
     <FeatureCard title="Dashboard (Vue 3)" icon="gauge">
-      Nine views — Slots, Models, Hardware, Logs, Settings, Providers,
-      First-run, plus error shell. Dark by default. SSE-backed live
+      Nine views (Slots, Models, Hardware, Logs, Settings, Providers,
+      First-run, plus error shell). Dark by default. SSE-backed live
       status and log tail.
     </FeatureCard>
     <FeatureCard
@@ -293,9 +378,9 @@ const description =
     >
       Off by default for trusted-LAN installs. <code>--auth=basic</code>
       brings up Caddy with basic_auth at the edge, bearer tokens for
-      the OpenAI API, and automatic HTTPS — internal CA for
-      <code>.local</code>, Let's Encrypt for real domains. Zero
-      certbot.
+      the OpenAI API, and automatic HTTPS (internal CA for
+      <code>.local</code>, Let's Encrypt for real domains). No certbot
+      ritual.
     </FeatureCard>
     <FeatureCard title="Atomic self-update" icon="refresh-cw">
       <code>hal0 update --channel stable|nightly</code>. Cosign-verified
@@ -304,10 +389,46 @@ const description =
     </FeatureCard>
     <FeatureCard title="One-line install" icon="terminal">
       Linux + systemd, idempotent, non-interactive. Pre-flight checks,
-      systemd template units, working slot defaults dropped on disk —
-      no manual yaml.
+      systemd template units, working slot defaults dropped on disk.
+      No manual yaml.
     </FeatureCard>
   </FeatureGrid>
+
+  <!-- See it running — the dashboard screenshot with a homelab caption. -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        See it running
+      </p>
+      <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        One dashboard, every slot, live.
+      </h2>
+      <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
+        KPIs across the top, the unified-memory bar in the middle (with
+        the Proxmox host segment when a PVE token is configured), the
+        slot grid below with per-slot T/S, ACT, MEM, and uptime. SSE
+        keeps the numbers honest; <code class="font-mono">systemctl is-active</code>
+        is the floor, not the ceiling.
+      </p>
+
+      <figure class="overflow-hidden rounded-lg border border-hal0-border bg-hal0-bg-elevated">
+        <img
+          src="/screenshots/dashboard-overview.png"
+          srcset="/screenshots/dashboard-overview.png 1x, /screenshots/dashboard-overview@2x.png 2x"
+          alt="hal0 dashboard at root path showing API and slot KPIs, the unified-memory bar with a Proxmox host segment, and the slot grid below."
+          width="1440"
+          height="900"
+          loading="lazy"
+          class="block w-full"
+        />
+        <figcaption class="border-t border-hal0-border px-5 py-3 font-mono text-xs text-hal0-fg-muted">
+          Dashboard at <code class="text-hal0-fg">/</code>. The memory
+          bar accounts for the LXC's GTT pool, the host's other PVE
+          tenants, and free unified memory.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
 
   <!-- Hardware matrix — Strix Halo highlighted, everything else honest. -->
   <section class="border-b border-hal0-border bg-hal0-bg-sunken">
@@ -316,7 +437,7 @@ const description =
         Hardware
       </p>
       <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
-        Built for Strix Halo. Honest about everything else.
+        Strix Halo is the reference. The rest of the matrix is honest.
       </h2>
       <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
         Linux + systemd is the only hard requirement
@@ -369,7 +490,7 @@ const description =
             </li>
           </ul>
           <p class="mt-3 font-sans text-sm leading-relaxed text-hal0-fg-muted">
-            MoE with 3B active params — runs near 3B speeds, reasons like
+            MoE with 3B active params. Runs near 3B speeds, reasons like
             a 30B. Pairs with a 140 MB embed for repo-aware search.
           </p>
           <Fragment slot="note">
@@ -483,17 +604,17 @@ curl -fsSL https://hal0.dev/install.sh | bash
     </div>
   </section>
 
-  <!-- "Why not just X?" — honest comparison vs. ollama, LM Studio, raw llama.cpp, cloud. -->
+  <!-- Comparison — honest take on ollama, LM Studio, raw llama.cpp, cloud. -->
   <section class="border-b border-hal0-border bg-hal0-bg-sunken">
     <div class="mx-auto max-w-6xl px-6 py-20">
       <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
         Comparison
       </p>
       <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
-        Why not just ollama, LM Studio, or raw llama.cpp?
+        Where hal0 sits next to ollama, LM Studio, and raw llama.cpp.
       </h2>
       <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
-        hal0 isn't an inference engine — it's the orchestration,
+        hal0 isn't an inference engine. It's the orchestration,
         lifecycle, and multi-modal surface around llama.cpp, FLM,
         Moonshine, and Kokoro. Honest take, in one table.
       </p>
@@ -502,31 +623,31 @@ curl -fsSL https://hal0.dev/install.sh | bash
 
       <div class="mt-10 grid gap-6 text-sm leading-relaxed text-hal0-fg-muted md:grid-cols-2">
         <p>
-          <span class="font-mono text-hal0-fg">vs. ollama</span> —
+          <span class="font-mono text-hal0-fg">vs. ollama.</span>
           systemd-managed slots survive
-          <code class="font-mono">hal0-api</code> restarts; the OpenAI
+          <code class="font-mono">hal0-api</code> restarts. The OpenAI
           surface includes embeddings, rerank,
-          <em>and</em> STT/TTS, not just chat. Hardware probe + slot
+          <em>and</em> STT/TTS, not only chat. Hardware probe and slot
           fit warnings are first-class.
         </p>
         <p>
-          <span class="font-mono text-hal0-fg">vs. LM Studio</span> —
+          <span class="font-mono text-hal0-fg">vs. LM Studio.</span>
           Linux-first, headless-first, one-line install, no GUI
           required. Prewired OpenWebUI handles chat; the dashboard is
           for operating the box.
         </p>
         <p>
-          <span class="font-mono text-hal0-fg">vs. raw llama.cpp</span>
-          — hal0 owns the lifecycle: health probes, atomic env writes,
+          <span class="font-mono text-hal0-fg">vs. raw llama.cpp.</span>
+          hal0 owns the lifecycle: health probes, atomic env writes,
           cold-boot grace, single-flight prefetch, structured errors,
           signed self-update with rollback.
         </p>
         <p>
-          <span class="font-mono text-hal0-fg">vs. cloud APIs</span> —
-          your hardware, your data, your models. External upstreams
+          <span class="font-mono text-hal0-fg">vs. cloud APIs.</span>
+          Your hardware, your data, your models. External upstreams
           (OpenRouter, Anthropic, OpenAI, custom) can be configured as
           fallbacks behind the same <code class="font-mono">/v1/*</code>
-          surface — mix local + remote per-model in one config.
+          surface, so you can mix local and remote per-model in one config.
         </p>
       </div>
     </div>
@@ -544,9 +665,9 @@ curl -fsSL https://hal0.dev/install.sh | bash
             v1 shipped. v0.2 is where it gets interesting.
           </h2>
           <p class="text-pretty text-hal0-fg-muted">
-            Phase 1 landed on 2026-05-15 — 353 unit tests passing,
-            integration tier on Vulkan-CPU + Qwen 0.5B. Here's what's
-            next.
+            Phase 1 landed on 2026-05-15 with 353 unit tests passing
+            and the integration tier on Vulkan-CPU + Qwen 0.5B. Here's
+            what's next.
           </p>
         </div>
         <a
@@ -591,7 +712,7 @@ curl -fsSL https://hal0.dev/install.sh | bash
             NPU tags landed in PR #89.)
           </RoadmapCard>
           <RoadmapCard title="Memory subsystem" status="next">
-            Conversation memory store wired into the dispatcher —
+            Conversation memory store wired into the dispatcher,
             opt-in per slot.
           </RoadmapCard>
           <RoadmapCard title="MCP support" status="next">
@@ -670,7 +791,7 @@ curl -fsSL https://hal0.dev/install.sh | bash
             github.com/hal0ai/hal0 →
           </p>
           <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
-            Issues, discussions, release manifests. Pre-alpha — see
+            Issues, discussions, release manifests. Pre-alpha; see
             CONTRIBUTING for contribution status.
           </p>
         </a>
@@ -724,8 +845,8 @@ curl -fsSL https://hal0.dev/install.sh | bash
             hello@hal0.dev →
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            Anything off the GitHub path — security disclosures,
-            partnerships, hardware loaners, press, or just hello.
+            Anything off the GitHub path (security disclosures,
+            partnerships, hardware loaners, press, or just hello).
           </p>
         </a>
       </div>
@@ -735,7 +856,7 @@ curl -fsSL https://hal0.dev/install.sh | bash
   <CTA
     eyebrow="One Linux box. Your AI."
     title="Install hal0 in under a minute."
-    subtitle="Linux + systemd is the only hard requirement. The probe picks the right provider — Vulkan on Strix Halo, CUDA on NVIDIA, ROCm on AMD discrete, CPU as a fallback."
+    subtitle="Linux + systemd is the only hard requirement. The probe picks the right provider for you: Vulkan on Strix Halo, CUDA on NVIDIA, ROCm on AMD discrete, CPU as a fallback."
     ctaPrimary={{ href: '/install', label: 'curl … | bash' }}
     ctaSecondary={{ href: '/docs/getting-started/', label: 'Read the docs' }}
   />

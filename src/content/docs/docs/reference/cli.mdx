@@ -9,8 +9,8 @@ import { Aside } from '@astrojs/starlight/components';
 
 hal0 ships a single `hal0` binary built with Typer
 (`src/hal0/cli/main.py`). Every non-`serve` subcommand talks to the
-local daemon on `127.0.0.1:8080` — meaning the CLI and the dashboard
-end up calling the same code paths.
+local daemon on `127.0.0.1:8080`, so the CLI and the dashboard end up
+calling the same code paths.
 
 Every command listed below hits a live endpoint. The `# real` /
 `# stub` markers used in earlier builds have been retired now that
@@ -39,9 +39,9 @@ hal0 slot swap <name> --model M
 hal0 slot logs <name> [--follow]             # SSE tail of journald
 ```
 
-`hal0 slot swap` is the most-used command in normal operation —
-change a slot's model in one call, watch it transition through
-`unloading → starting → warming → ready`.
+`hal0 slot swap` is the most-used command in normal operation. It
+changes a slot's model in one call and you watch it transition
+through `unloading → starting → warming → ready`.
 
 `hal0 slot logs <name> --follow` is the journald tail wrapped over
 SSE; it shows the same stream the dashboard's Logs view tails.
@@ -55,6 +55,19 @@ hal0 model rm <ref>
 hal0 model assign <ref> --slot S
 ```
 
+`hal0 model list` is the CLI view of what the dashboard's `/models`
+page shows: every registered model with its size, backend, and
+capability tags. Use it when you've SSH'd in and don't want to bounce
+to the browser.
+
+<img
+  src="/screenshots/models-registry.png"
+  srcset="/screenshots/models-registry.png 1x, /screenshots/models-registry@2x.png 2x"
+  alt="Dashboard /models page showing the same registry rows hal0 model list prints, with chat/stt/tts/rerank tags, sizes, and per-row backend."
+  width="1440"
+  height="900"
+  loading="lazy"
+/>
 
 ## Configuration
 
@@ -106,4 +119,4 @@ curl http://localhost:8080/api/models
 curl -X POST http://localhost:8080/api/slots/primary/restart
 ```
 
-The CLI is for ergonomics; the API is the truth.
+The CLI is for ergonomics; the API is the source of truth.

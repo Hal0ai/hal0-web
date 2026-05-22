@@ -10,11 +10,20 @@ import { Aside } from '@astrojs/starlight/components';
 Every slot in hal0 is in exactly one **state** at any moment. The set
 of states is fixed; the transitions between them are validated against
 `LEGAL_TRANSITIONS`; every transition is persisted atomically to
-`state.json` and streamed over SSE to clients. The dashboard reflects
-real state, not just `systemctl is-active` snapshots.
+`state.json` and streamed over SSE to clients. The dashboard shows
+real model-readiness, beyond what `systemctl is-active` would report.
 
-The canonical enum is `src/hal0/slots/state.py` — a `StrEnum`, wire-
-stable across versions.
+The canonical enum is `src/hal0/slots/state.py`, a `StrEnum`,
+wire-stable across versions.
+
+<img
+  src="/screenshots/slots-lifecycle.png"
+  srcset="/screenshots/slots-lifecycle.png 1x, /screenshots/slots-lifecycle@2x.png 2x"
+  alt="Dashboard /slots view showing six slot cards with per-slot T/S, ACT, MEM, UP metrics and a sparkline. Each card surfaces the current state in this lifecycle."
+  width="1440"
+  height="900"
+  loading="lazy"
+/>
 
 ## States
 
@@ -26,11 +35,11 @@ stable across versions.
 | `warming`    | Container live; model loading into VRAM / GTT.                                                           |
 | `ready`      | Passed health probe (non-empty `/v1/models` + sentinel completion).                                      |
 | `serving`    | Inference request in-flight.                                                                             |
-| `idle`       | Ready but no traffic past the idle timeout — unload candidate.                                           |
+| `idle`       | Ready but no traffic past the idle timeout. Unload candidate.                                            |
 | `unloading`  | Graceful stop in progress.                                                                               |
 | `error`      | Failed; details in `state.json` + journald.                                                              |
 
-`error` is a **sideband** — it's reachable from most other states
+`error` is a **sideband**. It's reachable from most other states
 when something goes wrong, and the slot returns to `offline` from
 there once the failure is acknowledged.
 
@@ -119,8 +128,9 @@ no escape hatch.
 ## Why this matters
 
 A naive setup conflates "the systemd unit is up" with "the model is
-ready to serve". They aren't the same — the model still has to load
-into VRAM, the backend has to pass its first health probe, and the
-sentinel completion has to succeed. hal0's state machine encodes that
-distinction explicitly, which is why the dashboard can show "warming —
-12s elapsed" instead of "service is up" while the request still 503s.
+ready to serve". They aren't the same. The model still has to load
+into VRAM (or GTT, on Strix Halo's unified pool), the backend has to
+pass its first health probe, and the sentinel completion has to
+succeed. hal0's state machine encodes that distinction explicitly,
+which is why the dashboard can show "warming, 12s elapsed" instead of
+"service is up" while the request still 503s.

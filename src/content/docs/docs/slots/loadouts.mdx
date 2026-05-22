@@ -1,18 +1,18 @@
 ---
 title: Recommended loadouts
-description: Curated starting points — which models to put in which slot at every hardware tier.
+description: Curated starting points. Which models to put in which slot at every hardware tier.
 sidebar:
   order: 6
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-Curated starting points, not gospel. Mix, match, tweak — the slot
-system takes a different model per slot whenever you change your
-mind. Sizes are published GGUF Q4\_K\_M / Q8\_0 file sizes (verified on
-Hugging Face, May 2026); no tok/s numbers here. Picks are refreshed
-to the **latest open-weight releases as of 2026-05-15** — each entry
-keeps a previous fallback in parens for users on existing setups.
+Starting points, not gospel. The slot system takes a different model
+per slot whenever you change your mind, so mix and match. Sizes are
+published GGUF Q4\_K\_M / Q8\_0 file sizes (verified on Hugging Face,
+May 2026); no tok/s numbers here. Picks are refreshed to the **latest
+open-weight releases as of 2026-05-15**, with a previous fallback in
+parens for users on existing setups.
 
 ## Headline target: the 128 GB Strix Halo SKU
 
@@ -197,9 +197,9 @@ Strix Halo — what changes is dedicated VRAM vs the unified pool.
 ---
 
 Strix Halo's unified pool is what unlocks the 70B Q4 and large /
-agentic tiers; on discrete cards you trade ceiling for raw tok/s on
+agentic tiers. On discrete cards you trade ceiling for raw tok/s on
 smaller models. hal0 picks the right provider automatically based on
 probe (`hal0/hardware/probe.py` → `/etc/hal0/hardware.json` → slot
 defaults).
 
-Loadouts are starting points. Every real install ends up tweaked.
+Every real install ends up tweaked.

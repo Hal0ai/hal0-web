@@ -1,6 +1,6 @@
 ---
 title: OpenAI-compatible API
-description: The /v1/* endpoints hal0 exposes — chat, completions, embeddings, rerank, audio transcriptions, audio speech, models.
+description: The /v1/* endpoints hal0 exposes (chat, completions, embeddings, rerank, audio transcriptions, audio speech, models).
 sidebar:
   order: 1
 ---
@@ -8,11 +8,16 @@ sidebar:
 import { Aside } from '@astrojs/starlight/components';
 
 hal0 exposes an **OpenAI-compatible API** at `http://localhost:8080/v1`.
-Any client written against the OpenAI SDK — Python `openai`,
-`openai-node`, LangChain, OpenWebUI, LiteLLM, Aider, Cursor with a
-custom base URL — works against hal0 unmodified.
+Any client written against the OpenAI SDK works against hal0 unmodified
+(Python `openai`, `openai-node`, LangChain, OpenWebUI, LiteLLM, Aider,
+Cursor with a custom base URL).
 
-The API binds `0.0.0.0:8080` by default (override with `HAL0_PORT`).
+The API binds `0.0.0.0:8080` by default (override with `HAL0_PORT`),
+so anything on your LAN can hit it. Put `hal0.lan` (or whatever
+hostname your Traefik / Caddy publishes) in front and your laptop's
+chat client points at `http://hal0.lan:8080/v1/chat/completions`. An
+MCP server on another box can point at the same URL.
+
 Routes are implemented in `src/hal0/api/routes/v1.py`.
 
 ## Endpoints
@@ -53,7 +58,7 @@ curl http://localhost:8080/v1/chat/completions \
   }'
 ```
 
-For streaming, add `"stream": true` — see [Streaming](/docs/api/streaming/).
+For streaming, add `"stream": true`. See [Streaming](/docs/api/streaming/).
 
 ## curl: plain completion
 
@@ -155,23 +160,23 @@ Every failure response carries a structured envelope:
 }
 ```
 
-Codes are namespaced — `slot.*`, `model.*`, `dispatch.*`, `config.*`,
-`system.*`. The dashboard surfaces them inline; the CLI prints them
+Codes are namespaced (`slot.*`, `model.*`, `dispatch.*`, `config.*`,
+`system.*`). The dashboard surfaces them inline; the CLI prints them
 with the same code so error reports between users and developers
 stay anchored.
 
 ## External upstreams
 
 The same `/v1/*` surface fronts external OpenAI-compatible providers
-when configured — OpenRouter, Anthropic, OpenAI, custom endpoints.
+when configured (OpenRouter, Anthropic, OpenAI, custom endpoints).
 You can mix local + remote per-model in one config; the dispatcher
 picks the right backend based on the `model` field.
 
 <Aside type="note">
   Authentication: by default hal0 binds `:8080` with **no API key
-  required** — the trusted-LAN home-appliance posture. For remote
-  access or any internet-facing deployment, run `install.sh
-  --auth=basic` to bring up the Caddy reverse proxy with HTTPS,
-  basic_auth at the edge, and bearer tokens for the OpenAI API. See
+  required**. That's the trusted-LAN posture. For remote access or
+  anything internet-facing, run `install.sh --auth=basic` to bring up
+  the Caddy reverse proxy with HTTPS, basic_auth at the edge, and
+  bearer tokens for the OpenAI API. See
   [Authentication & HTTPS](/docs/operate/auth/) for the full setup.
 </Aside>

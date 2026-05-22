@@ -13,8 +13,8 @@ to the local hal0 API automatically — zero config, just open
 
 ## Why bundled
 
-The dashboard is for *operating* the box — slots, models, hardware,
-logs. It's not a chat UI. OpenWebUI is a real chat client with
+The dashboard is for operating the box (slots, models, hardware,
+logs). It isn't a chat UI. OpenWebUI is a full chat client with
 conversation history, model switching, RAG, prompt presets, and
 voice mode, all under a permissive license.
 
@@ -64,13 +64,46 @@ The installer writes this file once at install time; it's not
 overwritten on `hal0 update`.
 
 <Aside type="note">
-  `:3001` binds public interfaces by default with no auth — fine on a
-  trusted LAN. For remote access, run `install.sh --auth=basic` to
-  bring up the Caddy reverse proxy. OpenWebUI gets single-sign-on
-  through Caddy's basic_auth identity (no second login), and the
-  bundled bearer-token auth gates the OpenAI API surface. See
+  `:3001` binds public interfaces by default with no auth, which is
+  fine on a trusted LAN. For remote access, run
+  `install.sh --auth=basic` to bring up the bundled Caddy reverse
+  proxy. OpenWebUI gets single-sign-on through Caddy's basic_auth
+  identity (no second login), and the bundled bearer-token auth gates
+  the OpenAI API surface. See
   [Authentication & HTTPS](/docs/operate/auth/) for the full flow.
 </Aside>
+
+## Behind your existing reverse proxy
+
+If your homelab already runs Traefik or Caddy in front of `*.lan` or
+`*.thinmint.dev` services, point it at OpenWebUI directly instead of
+using hal0's bundled Caddy. OpenWebUI emits root-absolute asset URLs
+and has no base-path config, so give it its own hostname (or port).
+A `PathPrefix` under your dashboard won't work; the assets will 404.
+
+A typical Traefik dynamic config snippet:
+
+```yaml
+http:
+  routers:
+    hal0-chat:
+      rule: "Host(`hal0-chat.lan`)"
+      service: hal0-chat
+      entryPoints: [websecure]
+      tls: {}
+  services:
+    hal0-chat:
+      loadBalancer:
+        servers:
+          - url: "http://<hal0-host>:3001"
+```
+
+Do auth at the proxy (forward-auth, OIDC middleware, basic_auth,
+whatever you already trust). OpenWebUI's `WEBUI_AUTH_TRUSTED_EMAIL_HEADER`
+will pick up the forwarded identity exactly like it does with hal0's
+bundled Caddy. If you want OpenWebUI to be reachable only through the
+proxy and not directly on `:3001`, firewall the port at the host or
+front it with the proxy on a different interface.
 
 ## Turning it off
 
