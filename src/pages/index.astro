@@ -330,6 +330,96 @@ const description =
     </div>
   </section>
 
+  <!-- Bundled agents section (v0.2). Two MCP servers + one bundled agent
+       app, single-pick at install, gated destructives via dashboard inbox. -->
+  <section class="border-b border-hal0-border bg-hal0-bg-sunken">
+    <div class="mx-auto max-w-6xl px-6 py-20">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        Agents, v0.2
+      </p>
+      <h2 class="mb-4 max-w-3xl text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        Bundled agents, two MCP servers, one approval inbox.
+      </h2>
+      <p class="mb-10 max-w-3xl text-pretty text-hal0-fg-muted">
+        hal0 ships <strong>two MCP servers</strong>
+        (<code class="font-mono">/mcp/admin</code> for slot, model,
+        capability, config, and hardware admin;
+        <code class="font-mono">/mcp/memory</code> for Cognee-backed
+        long-term memory) plus <strong>one bundled agent app</strong> —
+        pick <code class="font-mono">pi-coder</code> (CLI) or
+        <code class="font-mono">Hermes-Agent</code> (service) at first
+        run. Capital-D destructive tool calls gate through a header bell
+        and modal inbox in the dashboard, with full CLI parity via
+        <code class="font-mono">hal0 agent approvals</code>.
+      </p>
+
+      <figure class="mb-12 overflow-hidden rounded-lg border border-hal0-border bg-hal0-bg-elevated">
+        <img
+          src="/screenshots/agent-inbox.png"
+          srcset="/screenshots/agent-inbox.png 1x, /screenshots/agent-inbox@2x.png 2x"
+          alt="hal0 dashboard header bell expanded into the approval inbox modal — a pending model_pull request for qwen3:0.6b from pi-coder, with approve / deny buttons inline."
+          width="1280"
+          height="720"
+          loading="lazy"
+          class="block w-full"
+        />
+        <figcaption class="border-t border-hal0-border px-5 py-3 font-mono text-xs text-hal0-fg-muted">
+          Approval inbox modal. The bell badge is canonical; inline
+          pending chips on Models / Slots / Capabilities pages link back
+          here. Pending forever — no auto-expire.
+        </figcaption>
+      </figure>
+
+      <div class="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Bundle, don't build
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Third-party agents install from upstream, byte for byte.
+            hal0 prewires them to use the local OpenAI API and the two
+            MCP servers. No first-party agent runtime.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Single-pick, atomic swap
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            One bundled agent at a time for v0.2.
+            <code class="font-mono">hal0 agent install &lt;name&gt; --switch</code>
+            does an atomic uninstall-then-install so you never end up
+            half-installed.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Cognee-backed memory
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Embedded SQLite + LanceDB + Kuzu, no extra services.
+            Apache 2.0. Shared by default;
+            <code class="font-mono">X-hal0-Private: 1</code> promotes a
+            client's writes to its own private namespace.
+          </p>
+        </article>
+        <article class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+          <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
+            Two-tier scope
+          </h3>
+          <p class="text-sm leading-relaxed text-hal0-fg-muted">
+            Routine ops (slot status, <code class="font-mono">model_swap</code>,
+            hardware probe, memory add/search) run autonomous. Capital-D
+            destructives (<code class="font-mono">model_pull</code>,
+            <code class="font-mono">slot_delete</code>,
+            <code class="font-mono">config_write</code>, bulk deletes)
+            gate through the inbox.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- Features grid — 9 tiles in a 3x3. Headline platform features that
        aren't already covered by the "Why hal0" differentiator cards above
        (Strix Halo / concurrent perf / image gen / dispatcher live there). -->

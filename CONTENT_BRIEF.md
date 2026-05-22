@@ -620,12 +620,48 @@ only `models_dir` raises (see comments at
   configured; token-rot fires `system.proxmox_unreachable` event and
   surfaces a persistent FooterBar pill (PR #103, 2026-05-21).
 
-- Memory subsystem
-- MCP support
 - Benchmarks UI + Presets UI
 - AUR PKGBUILD + Ubuntu PPA
 - `hal0.local` mDNS auto-discovery
 - Light mode toggle
+
+### Closed in v0.2 (Phase 8 — Agents, MCP, basic memory)
+
+Settled via grilling 2026-05-22; ADRs in
+`hal0/docs/internal/adr/0004-agents.md` +
+`hal0/docs/internal/adr/0005-memory-engine-cognee.md`. Public API
+docs at `hal0/docs/api/mcp.md` + `hal0/docs/api/agents.md`.
+
+- **Bundled agent app** — single-pick at install. Choose between
+  `pi-coder` (CLI, `badlogic/pi-mono`) and `Hermes-Agent` (service,
+  user-owned upstream). Wizard step 7 picks one; CLI parity via
+  `hal0 agent install <name>`; atomic swap with `--switch`.
+  install.sh stays non-interactive.
+- **Two MCP servers** — `/mcp/admin` wraps existing `/api/*` routes
+  (slot, model, capability, config, hardware, log admin) and
+  `/mcp/memory` wraps Cognee. Bearer auth reused from ADR-0001.
+  Tool catalog is two-tier: routine ops autonomous, capital-D
+  destructives (`model_pull`, `slot_delete`, `config_write`, bulk
+  `memory_delete`, etc.) gated through the dashboard inbox.
+- **Memory engine** — Cognee (Apache 2.0, embedded
+  SQLite + LanceDB + Kuzu). Shared dataset by default; per-client
+  `X-hal0-Private: 1` header promotes that client's writes to
+  `private:<client_id>`. v0.2 exposes `memory_add` / `memory_search` /
+  `memory_list` / `memory_delete`; graph extraction + Memify pipeline
+  stay disabled until Phase 9.
+- **Approval inbox UX** — header bell + modal canonical; inline
+  pending chips on Models / Slots / Capabilities pages; pending
+  forever (no auto-expire); no per-agent trust toggle (ADR-0004 §5);
+  full CLI parity via `hal0 agent approvals {list,approve,deny}`.
+- **Audit trail** — every MCP call enriched with the Bearer-derived
+  `client_id`, routed through structlog and landing in journald on
+  the `hal0-api` unit. Dashboard `/agent` Activity tab walks the same
+  stream.
+- **Track-latest with nightly smoke test** — both bundled agents
+  track upstream latest (diverges from OWUI pin-per-release by
+  intent); a nightly CI workflow at `.github/workflows/agent-shim-smoke.yml`
+  re-runs `installer/agents/pi-coder.sh` end-to-end and asserts an
+  MCP round-trip.
 
 ### Exploring
 
