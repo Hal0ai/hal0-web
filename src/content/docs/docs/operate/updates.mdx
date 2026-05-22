@@ -11,7 +11,7 @@ hal0 updates itself in one atomic symlink swap, backed by
 cosign-verified release tarballs. If an update goes wrong, one
 command rolls back to the previous version.
 
-## The model
+## The layout
 
 The filesystem layout (PLAN §2) is FHS-aligned and deliberately
 separates the code from the data:
@@ -26,8 +26,8 @@ separates the code from the data:
 
 `hal0 update` unpacks the new version next to the current one, then
 swaps the `current` symlink in a single `rename(2)` call. The systemd
-units point at `/usr/lib/hal0/current/`, so a restart picks up the
-new version atomically — no partial state on disk, ever.
+units point at `/usr/lib/hal0/current/`, so a `systemctl restart`
+picks up the new version atomically. No partial state on disk, ever.
 
 ## Check for an update
 
@@ -82,14 +82,32 @@ Channels are configured in `hal0.toml`. Switch with
 <Aside type="note">
   The release manifest schema is `hal0.releases.v1` (see
   `docs/release-manifest.md` in the hal0 repo). Cosign verification
-  is non-negotiable — an unverified tarball fails the update before
+  is non-negotiable; an unverified tarball fails the update before
   any unpack happens.
 </Aside>
 
+## systemd does the lifecycle work
+
+Because every hal0 process is a systemd unit, the rest of the update
+mechanics are boring on purpose:
+
+- `hal0-api.service` restarts on the symlink swap. `systemctl status
+  hal0-api` shows what version is now active.
+- `hal0-slot@*.service` instances survive the API restart; they keep
+  serving traffic throughout.
+- `hal0-openwebui.service` restarts alongside the API.
+- All four log into journald under their unit names, so a failed
+  update shows up in `journalctl -u hal0-api -n 100` without
+  ceremony.
+
+`systemctl is-active hal0-api` is the single binary check a homelab
+monitor (uptime-kuma, Prometheus blackbox, whatever) should hit after
+an update.
+
 ## Why atomic
 
-The naive approach — `tar xf … && systemctl restart` — has two
-failure modes that bite at 2am:
+The naive approach (`tar xf … && systemctl restart`) has two failure
+modes that bite at 2am:
 
 - **Partial unpack.** Disk fills mid-tar; you have half a new
   version overlaid on the old one. Nothing works.

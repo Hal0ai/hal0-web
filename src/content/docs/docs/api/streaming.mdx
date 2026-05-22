@@ -31,7 +31,7 @@ curl http://localhost:8080/v1/chat/completions \
 ## Wire format
 
 Each chunk is a `data: …` line, JSON-encoded, terminated by a blank
-line. The stream ends with `data: [DONE]`. Same shape OpenAI ships:
+line. The stream ends with `data: [DONE]`. Same shape OpenAI ships.
 
 ```
 data: {"id":"...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant","content":""}}]}
@@ -65,15 +65,20 @@ for chunk in stream:
 Streaming flows through the same dispatcher that handles non-streaming
 requests, so you get:
 
-- **Single-flight prefetch** — if two clients open identical streams
+- **Single-flight prefetch.** If two clients open identical streams
   on a cold slot, the slot fires one upstream call and fans the
   token stream to both.
-- **Adaptive cold-boot** — the first request after a slot reaches
+- **Adaptive cold-boot.** The first request after a slot reaches
   `ready` keeps the connection open while the model finishes
   warming; you don't get a 503 on a request that's about to work.
-- **Structured errors mid-stream** — if the slot transitions to
+- **Structured errors mid-stream.** If the slot transitions to
   `error` part-way through, the stream emits one final SSE event
   with the structured error envelope before closing.
+
+The same SSE wire format works across the LAN. Point an OpenWebUI on
+your laptop or an MCP server on another box at
+`http://hal0.lan:8080/v1` and streaming behaves identically through
+your Traefik vhost.
 
 <Aside type="note">
   Token-level cancellation works: closing the HTTP connection

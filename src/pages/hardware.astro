@@ -16,11 +16,11 @@ import HardwareMatrix from '../components/HardwareMatrix.astro';
 import TierCard from '../components/hardware/TierCard.astro';
 import CTA from '../components/CTA.astro';
 
-const title = 'Hardware support — hal0 (Strix Halo, ROCm, CUDA, CPU)';
+const title = 'Hardware support: hal0 on Strix Halo, ROCm, CUDA, CPU';
 const description =
-  'hal0 hardware compatibility for self-hosted LLMs. First-class on Strix Halo / Ryzen AI Max+ 395 with unified memory; supported on AMD ROCm, NVIDIA CUDA, and CPU. Vulkan llama.cpp is the universal baseline.';
+  'hal0 hardware compatibility for self-hosted LLMs in your homelab. First-class on Strix Halo / Ryzen AI Max+ 395 with unified memory; supported on AMD ROCm, NVIDIA CUDA, and CPU. Vulkan llama.cpp is the universal baseline. Honest about co-tenant pressure on Proxmox.';
 
-// Hardware matrix rows. Keep these honest — fallback gets a planned
+// Hardware matrix rows. Keep these honest. Fallback gets a planned
 // pill for STT/TTS because Moonshine/Kokoro toolbox images aren't
 // published yet per CONTENT_BRIEF §Install status caveat.
 const matrixRows = [
@@ -101,10 +101,10 @@ const matrixRows = [
         <code class="font-mono text-hal0-fg">/etc/hal0/hardware.json</code>,
         and picks the right provider per slot automatically. Vulkan-backed
         <code class="font-mono text-hal0-fg">llama.cpp</code> is the
-        universal baseline — it&rsquo;s what every install gets out of
-        the box. ROCm, CUDA, and the AMD XDNA NPU (FLM) layer on top
-        where the hardware supports them. Moonshine STT stays on CPU —
-        upstream <code class="font-mono text-hal0-fg">useful-moonshine-onnx</code>
+        universal baseline that every install gets out of the box. ROCm,
+        CUDA, and the AMD XDNA NPU (FLM) layer on top where the hardware
+        supports them. Moonshine STT stays on CPU because upstream
+        <code class="font-mono text-hal0-fg">useful-moonshine-onnx</code>
         ships an ONNX Runtime CPU EP only, so the picker pins its
         runtime fan-out to <code>("cpu",)</code> and never advertises
         a backend the slot can&rsquo;t honour.
@@ -151,10 +151,10 @@ const matrixRows = [
         Three tiers, one platform.
       </h2>
       <p class="mb-10 max-w-3xl text-hal0-fg-muted">
-        First-class is the box we design against. Supported is the path
-        every other modern AMD/NVIDIA host takes. Fallback is the CI
-        smoke target — useful for sanity checks, not the headline
-        experience.
+        First-class is the box hal0 is designed against. Supported is
+        the path every other modern AMD/NVIDIA host takes. Fallback is
+        the CI smoke target, useful for sanity checks but not the
+        headline experience.
       </p>
 
       <div class="grid gap-5 md:grid-cols-3">
@@ -168,7 +168,7 @@ const matrixRows = [
         >
           <p>
             The reference deployment. APU + XDNA NPU + a single unified
-            memory pool — the iGPU carveout is BIOS-tunable up to
+            memory pool. The iGPU carveout is BIOS-tunable up to
             ~96&nbsp;GB on 128&nbsp;GB SKUs, and the slot lifecycle and
             FLM provider were written against this hardware first. FLM
             is live with a self-contained
@@ -194,7 +194,7 @@ const matrixRows = [
           docLabel="Provider details"
         >
           <p>
-            Same slot lifecycle, same dispatcher, same API surface — what
+            Same slot lifecycle, same dispatcher, same API surface. What
             changes is dedicated VRAM in place of the unified pool. AMD
             discrete uses the <code>hal0-toolbox-rocm</code> image
             (pending publish); NVIDIA uses the CUDA-backed
@@ -215,10 +215,10 @@ const matrixRows = [
           <p>
             What CI runs on with Qwen 0.5B
             (<code>tests/slots/test_integration.py</code>). Usable for
-            tiny models and dev smoke; expect a few tok/s on chat —
-            fine for occasional Q&amp;A, not a streaming experience.
-            <code>stt</code> and <code>tts</code> work in theory but
-            need at least an iGPU for usable latency.
+            tiny models and dev smoke. Expect a few tok/s on chat,
+            fine for occasional Q&amp;A but not a streaming
+            experience. <code>stt</code> and <code>tts</code> work in
+            theory but want at least an iGPU for usable latency.
           </p>
         </TierCard>
       </div>
@@ -237,7 +237,7 @@ const matrixRows = [
         Compatibility matrix.
       </h2>
       <p class="mb-8 max-w-3xl text-hal0-fg-muted">
-        Status is the honest answer, not aspirational. Anything not on
+        Status reflects what runs today, not aspirations. Anything off
         the v1 CI matrix is marked accordingly.
       </p>
 
@@ -283,13 +283,13 @@ const matrixRows = [
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
             Not in v1 scope. hal0 hard-requires Linux + systemd
-            (<code>installer/install.sh:86</code>) — slot lifecycle is
+            (<code>installer/install.sh:86</code>). Slot lifecycle is
             built on systemd template units, atomic env file writes,
-            <code>journalctl</code> tailing. macOS doesn&rsquo;t have
-            systemd, and porting the lifecycle to <code>launchd</code>
-            isn&rsquo;t on the v1 punch list. If you want hal0 on Apple
-            Silicon today, run it inside an Asahi Linux install or a
-            Linux VM.
+            and <code>journalctl</code> tailing. macOS doesn&rsquo;t
+            have systemd, and porting the lifecycle to
+            <code>launchd</code> isn&rsquo;t on the v1 punch list. If
+            you want hal0 on Apple Silicon today, run it inside an
+            Asahi Linux install or a Linux VM.
           </p>
         </div>
 
@@ -301,10 +301,10 @@ const matrixRows = [
             Experimental via the universal Vulkan path. Mesa&rsquo;s ANV
             driver gives <code>llama.cpp</code>-Vulkan something to talk
             to on Linux, so the <code>primary</code> and <code>embed</code>
-            slots <em>should</em> light up. But Intel isn&rsquo;t on the
-            v1 CI matrix and we don&rsquo;t have a daily-driven Arc box
-            — treat it as "patches welcome, no promises." If you run it,
-            tell us how it goes.
+            slots <em>should</em> light up. Intel isn&rsquo;t on the v1
+            CI matrix and there&rsquo;s no daily-driven Arc box on the
+            project. Treat it as "patches welcome, no promises." If
+            you run it, tell us how it goes.
           </p>
         </div>
 
@@ -313,12 +313,11 @@ const matrixRows = [
             Raspberry Pi / aarch64 / ARM SBCs
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            Not in v1. The installer is x86_64-only today — aarch64
+            Not in v1. The installer is x86_64-only today, and aarch64
             builds aren&rsquo;t on the release matrix. <code>llama.cpp</code>
             itself runs on a Pi 5; bringing hal0 along would mean
             cross-building the toolbox images for arm64 and validating
-            the lifecycle there. It&rsquo;s on the wish list, not the
-            roadmap.
+            the lifecycle there. On the wish list, not the roadmap.
           </p>
         </div>
 
@@ -329,9 +328,10 @@ const matrixRows = [
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
             WSL2 doesn&rsquo;t expose systemd by default, and rootless
             Docker can&rsquo;t hold the slot units. A real Linux VM
-            (KVM/QEMU, Proxmox, Hyper-V Gen2) works fine; a privileged
-            LXC works fine too — see the <code>hal0-test</code> Strix
-            Halo LXC recipe in the docs.
+            (KVM/QEMU, Proxmox, Hyper-V Gen2) works fine, and a
+            privileged LXC with GPU/NPU passthrough is the canonical
+            homelab shape. See the <code>hal0-test</code> Strix Halo
+            LXC recipe in the docs.
           </p>
         </div>
       </div>
@@ -379,22 +379,88 @@ const matrixRows = [
         deployment
       </p>
       <h2 class="mb-4 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
-        Running as a Proxmox LXC? Plug in the host token.
+        Honest memory accounting for Proxmox tenants.
       </h2>
-      <p class="max-w-3xl text-pretty leading-relaxed text-hal0-fg-muted">
-        Inside an LXC, hal0 only sees its own cgroup slice of memory.
-        Other tenants, ZFS ARC, and the host kernel pull from the same
-        physical DIMMs as GPU GTT but stay invisible to the container.
-        Drop a read-only
+      <p class="mb-8 max-w-3xl text-pretty leading-relaxed text-hal0-fg-muted">
+        A privileged LXC with GPU/NPU passthrough is the canonical
+        homelab shape (AppArmor unconfined, <code class="font-mono text-hal0-fg">dev0–dev3</code>
+        + cgroup allows for the render nodes and the XDNA accelerator).
+        Inside that container, hal0 only sees its own
+        cgroup slice of memory. Other tenants, ZFS ARC, and the host
+        kernel pull from the same physical DIMMs as GPU GTT but stay
+        invisible to the container. Drop a read-only
         <code class="font-mono text-hal0-fg">PVEAuditor</code>
         API token into Settings → Proxmox integration and the
         dashboard's unified-memory bar switches to the physical host
-        total + adds a muted "Proxmox host" segment for the rest of
-        the pressure. Token is stored 0600 at
+        total, with a muted
+        <code class="font-mono text-hal0-fg">Proxmox host</code>
+        segment for the rest of the pressure. Token is stored 0600 at
         <code class="font-mono text-hal0-fg">/etc/hal0/proxmox.json</code>;
         the API redacts it on read. Bare-metal and VM installs leave
         the panel off and the bar stays quiet.
       </p>
+
+      <figure class="overflow-hidden rounded-lg border border-hal0-border bg-hal0-bg-elevated">
+        <img
+          src="/screenshots/memory-bar.png"
+          srcset="/screenshots/memory-bar.png 1x, /screenshots/memory-bar@2x.png 2x"
+          alt="Unified-memory bar from the hal0 dashboard: GTT inference 12.9 GB, System RAM, Proxmox host, Free segments"
+          width="1172"
+          height="114"
+          loading="lazy"
+          decoding="async"
+          class="block w-full"
+        />
+        <figcaption class="border-t border-hal0-border px-5 py-3 text-xs text-hal0-fg-dim">
+          Live unified-memory bar from a 128&nbsp;GB Strix Halo LXC on
+          Proxmox. The
+          <code class="font-mono">Proxmox host</code> segment counts
+          everything outside the container competing for the same DIMMs.
+          Nothing else in this space accounts for co-tenant pressure
+          this way.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- See what hal0 knows about your box                            -->
+  <!-- ============================================================ -->
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mb-3 font-mono text-xs uppercase tracking-wider text-hal0-accent">
+        what hal0 knows about your box
+      </p>
+      <h2 class="mb-4 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
+        The hardware view.
+      </h2>
+      <p class="mb-8 max-w-3xl text-pretty leading-relaxed text-hal0-fg-muted">
+        The dashboard surfaces the probe at
+        <code class="font-mono text-hal0-fg">/hardware</code>:
+        detected APU / dGPU / NPU rows, unified-memory pool sizing,
+        GTT/VRAM carveout, and which capability slots each device can
+        host. Same data as
+        <code class="font-mono text-hal0-fg">/etc/hal0/hardware.json</code>,
+        rendered the way an operator wants to read it.
+      </p>
+
+      <figure class="overflow-hidden rounded-lg border border-hal0-border bg-hal0-bg-elevated">
+        <img
+          src="/screenshots/hardware-page.png"
+          srcset="/screenshots/hardware-page.png 1x, /screenshots/hardware-page@2x.png 2x"
+          alt="The /hardware view in the hal0 dashboard: detected APU / NPU / unified memory pool, capability rows, and probe details"
+          width="1220"
+          height="1328"
+          loading="lazy"
+          decoding="async"
+          class="block w-full"
+        />
+        <figcaption class="border-t border-hal0-border px-5 py-3 text-xs text-hal0-fg-dim">
+          <code class="font-mono">/hardware</code> view on a Strix Halo
+          LXC. Probe output rendered as cards plus the raw JSON one
+          click away.
+        </figcaption>
+      </figure>
     </div>
   </section>
 
@@ -403,8 +469,8 @@ const matrixRows = [
   <!-- ============================================================ -->
   <CTA
     eyebrow="ready to try it?"
-    title="One line. Most modern Linux boxes."
-    subtitle="The installer probes hardware on first run and picks providers automatically — Vulkan baseline, ROCm/CUDA where applicable, FLM where the NPU is there."
+    title="One line. Drops cleanly into your homelab."
+    subtitle="The installer probes hardware on first run and picks providers automatically: Vulkan baseline, ROCm/CUDA where the card supports it, FLM where the NPU is there."
     ctaPrimary={{ href: '/install', label: 'Install hal0' }}
     ctaSecondary={{ href: '/docs/hardware/overview/', label: 'Hardware docs' }}
   />

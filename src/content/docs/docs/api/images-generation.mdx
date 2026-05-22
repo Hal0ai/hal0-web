@@ -10,7 +10,7 @@ import { Aside } from '@astrojs/starlight/components';
 hal0 exposes **OpenAI-compatible image generation** at
 `POST /v1/images/generations`, served by a
 [ComfyUI](https://github.com/comfyanonymous/ComfyUI) provider running
-inside the `img` slot. hal0 owns the OpenAI ↔ ComfyUI translation —
+inside the `img` slot. hal0 owns the OpenAI ↔ ComfyUI translation;
 the upstream is treated as a black box that speaks `POST /prompt`,
 `GET /history/<id>`, and `GET /view`.
 
@@ -18,17 +18,29 @@ The route is implemented in `src/hal0/api/routes/v1.py` and the
 provider in `src/hal0/providers/comfyui.py`. Workflow templates live
 under `src/hal0/providers/workflows/`.
 
+The `img` slot sits on the same lifecycle as the chat and embed
+slots, so it shows up in the dashboard's slot grid with the same
+states, controls, and metrics.
+
+<img
+  src="/screenshots/capability-slots.png"
+  srcset="/screenshots/capability-slots.png 1x, /screenshots/capability-slots@2x.png 2x"
+  alt="hal0 /slots view showing the embed, voice, and img capability cards with model pickers."
+  width="1440"
+  height="900"
+/>
+
 ## Overview
 
-- **Endpoint**: `POST /v1/images/generations`
-- **Slot**: `img` — part of `BUILTIN_SLOTS` in
+- **Endpoint**: `POST /v1/images/generations`.
+- **Slot**: `img`. Part of `BUILTIN_SLOTS` in
   `src/hal0/slots/manager.py`, same lifecycle as `primary`, `embed`,
   `stt`, `tts`.
 - **Backend**: ComfyUI inside the
   `ghcr.io/hal0ai/hal0-toolbox-comfyui:v1` toolbox image (pinned by
   sha256 in `hal0/manifest.json`).
 - **Hardware**: ROCm-capable AMD GPU. Strix Halo's iGPU is the
-  reference target — the 128 GB unified pool keeps an SDXL Turbo
+  reference target. The 128 GB unified pool keeps an SDXL Turbo
   checkpoint and a primary chat model warm at the same time.
 
 ## Curated models
@@ -46,7 +58,7 @@ spectrum (see `src/hal0/registry/curated.py`):
   `flux-schnell` is catalogued for completeness, but the default
   `sdxl_turbo_simple` workflow won't load its T5 text encoder. A
   Flux-specific workflow is on the punch list before Flux gets
-  promoted in the picker UI — for now treat it as advanced /
+  promoted in the picker UI. For now treat it as
   bring-your-own-workflow.
 </Aside>
 
@@ -65,11 +77,11 @@ curl http://localhost:8080/v1/images/generations \
 
 Honoured body fields (subset of OpenAI):
 
-- `model` (required) — curated id, e.g. `sdxl-turbo`.
+- `model` (required). Curated id, e.g. `sdxl-turbo`.
 - `prompt` (required).
-- `n` — batch size; default 1.
-- `size` — `WxH` string, e.g. `1024x1024`.
-- `response_format` — `"url"` (default) or `"b64_json"`.
+- `n`. Batch size; default 1.
+- `size`. `WxH` string, e.g. `1024x1024`.
+- `response_format`. `"url"` (default) or `"b64_json"`.
 
 hal0 extensions via `extra_body`: `seed`, `steps`, `cfg`,
 `negative_prompt`.
@@ -96,20 +108,20 @@ is easy to diagnose.
 
 ## Hardware requirements
 
-The v1 first-class target is a ROCm-capable AMD GPU — the
-[Strix Halo](/docs/hardware/strix-halo/) Ryzen AI Max+ 395 iGPU
-specifically. SDXL Turbo runs comfortably alongside a small or mid
-chat model on a 128 GB unified pool; on a discrete AMD GPU you'll
-want at least 8 GB of dedicated VRAM for SDXL Turbo, 4 GB for SD 1.5.
+The v1 first-class target is a ROCm-capable AMD GPU, specifically the
+[Strix Halo](/docs/hardware/strix-halo/) Ryzen AI Max+ 395 iGPU. SDXL
+Turbo runs comfortably alongside a small or mid chat model on a 128 GB
+unified pool; on a discrete AMD GPU you'll want at least 8 GB of
+dedicated VRAM for SDXL Turbo, 4 GB for SD 1.5.
 
-NVIDIA discrete GPUs are not yet wired — the ComfyUI provider
-defaults to the `rocm` backend. See
+NVIDIA discrete GPUs are not yet wired. The ComfyUI provider defaults
+to the `rocm` backend. See
 [the hardware overview](/docs/hardware/overview/) for the full matrix
 and follow the upstream roadmap for CUDA support.
 
 ## Slot configuration
 
-A minimal `slots/img.toml` is shaped like every other slot — the
+A minimal `slots/img.toml` is shaped like every other slot. The
 default backend is `rocm`:
 
 ```toml
@@ -135,13 +147,13 @@ to the `img` slot.
 ## Limitations
 
 - **First-pull is heavy.** The ComfyUI toolbox image is the largest
-  one hal0 ships — the CI build takes ~19 minutes and the layer set
+  one hal0 ships. The CI build takes ~19 minutes and the layer set
   is sizeable. Expect a long first `docker pull` on a fresh box;
   subsequent restarts hit the local layer cache.
 - **No perf claims yet.** No verified seconds-per-image numbers are
   in the repo for ComfyUI on Strix Halo iGPU. Marked `[TODO: verify]`
   in `hal0-web/CONTENT_BRIEF.md` until a real measurement lands.
-- **Flux workflow.** As above — `flux-schnell` is catalogued but the
+- **Flux workflow.** As above: `flux-schnell` is catalogued but the
   default workflow can't drive it. A Flux workflow is the gating
   item before Flux is fully picker-grade.
 - **License spread.** The three curated entries each have a
@@ -151,17 +163,17 @@ to the `img` slot.
 
 ## See also
 
-- [What is a slot?](/docs/slots/what-is-a-slot/) — the `img` slot uses
+- [What is a slot?](/docs/slots/what-is-a-slot/). The `img` slot uses
   the same lifecycle as `primary`, `embed`, `stt`, `tts`.
-- [Provider matrix](/docs/reference/provider-matrix/) — every backend
+- [Provider matrix](/docs/reference/provider-matrix/). Every backend
   hal0 ships, ComfyUI included.
-- [OpenAI-compatible API](/docs/api/openai-compat/) — the full
+- [OpenAI-compatible API](/docs/api/openai-compat/). The full
   `/v1/*` surface, with curl examples for every endpoint.
 
 export const techArticleLd = {
   '@context': 'https://schema.org',
   '@type': 'TechArticle',
-  headline: 'Image generation — /v1/images/generations on hal0',
+  headline: 'Image generation: /v1/images/generations on hal0',
   description:
     'OpenAI-compatible POST /v1/images/generations on hal0, served by a ComfyUI provider on ROCm. Curated SDXL Turbo, SD 1.5, and Flux Schnell.',
   author: {

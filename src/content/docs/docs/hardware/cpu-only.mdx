@@ -25,7 +25,7 @@ boxes without GPUs, and so anyone trying hal0 for the first time can
 do so before deciding whether to commit hardware to it.
 
 It is not the headline experience. The streaming chat feel that makes
-local AI worth using needs at least an iGPU.
+local inference worth using needs at least an iGPU.
 
 ## What works
 
@@ -38,10 +38,10 @@ to smoke-test the slot lifecycle with the Qwen 0.5B model.
 
 All four built-in slots can theoretically run:
 
-- `primary` — small Q4 chat (4B and under)
-- `embed` — embeddings + rerank
-- `stt` — Moonshine (CPU-capable but latency-sensitive)
-- `tts` — Kokoro (CPU-capable but latency-sensitive)
+- `primary`: small Q4 chat (4B and under)
+- `embed`: embeddings and rerank
+- `stt`: Moonshine (CPU-capable but latency-sensitive)
+- `tts`: Kokoro (CPU-capable but latency-sensitive)
 
 The OpenAI-compatible `/v1/*` API, the slot lifecycle state machine,
 the dispatcher, and OpenWebUI all behave identically to a GPU box.
@@ -56,9 +56,9 @@ The honest answer:
   on CPU, but the round-trip latency for streaming audio isn't what
   the slots were designed for. You can sanity-check the path; you
   can't run voice mode comfortably.
-- **Embeddings:** fine. `nomic-embed-text-v2-moe-Q4_K_M` at 140 MB is
-  small enough to run at usable speeds on any modern CPU, and the
-  embed slot doesn't need streaming.
+- **Embeddings:** fine. `nomic-embed-text-v2-moe-Q4_K_M` at 140 MB
+  runs at usable speeds on any modern CPU, and the embed slot doesn't
+  need streaming.
 
 ## Recommended loadout (CPU-only, 32–64 GB RAM, no GPU)
 
@@ -66,22 +66,23 @@ The honest answer:
   `Qwen3-4B-Instruct-2507-Q4_K_M` (~2.5 GB) for a snappier feel.
   *(fallback: `Phi-3-mini-4k-instruct-q4.gguf` ~2.4 GB, the curated
   default.)*
-- `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB) — runs fine on
+- `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB). Runs fine on
   CPU.
-- No `stt` / `tts` slots — leave them in the `offline` state.
+- No `stt` / `tts` slots. Leave them in the `offline` state.
 
 This is also the smallest viable hal0 install. The whole runtime, with
 a model loaded, fits comfortably under 3 GB of RSS.
 
 ## Use cases that make sense
 
-- **Smoke-testing the install** on a VM before committing hardware.
-- **Development**: running the API + dashboard against a tiny model
+- **Smoke-testing the install** in an LXC or VM before committing
+  hardware to it.
+- **Development**: running the API and dashboard against a tiny model
   while you build something against `/v1/*`.
-- **CI**: hal0's own integration tier uses Vulkan-CPU + Qwen 0.5B —
-  same path you'd hit here.
-- **A box that's already running** for some other reason where you'd
-  like an occasional local Q&A endpoint.
+- **CI**: hal0's own integration tier uses Vulkan-CPU + Qwen 0.5B,
+  the same path you'd hit here.
+- **A box that's already running** for some other reason, where you'd
+  like an occasional local Q&A endpoint behind your Traefik or Caddy.
 
 ## Use cases that don't
 
@@ -108,6 +109,12 @@ A few things to check:
 - Mesa's lavapipe (`mesa-vulkan-drivers` / `vulkan-swrast`) provides
   the software Vulkan implementation.
 - `vulkaninfo --summary` should show `llvmpipe` as a device.
+
+CPU-only is the simplest deployment to put in an **unprivileged LXC**:
+no `/dev/dri`, no `/dev/kfd`, no cgroup allows beyond the defaults.
+It's a useful way to validate the slot lifecycle, the dispatcher, and
+the `/v1/*` API surface before you go cut a privileged container for
+real GPU passthrough.
 
 ## Troubleshooting
 
