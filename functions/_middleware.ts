@@ -15,12 +15,19 @@
 //
 // `_redirects` host-conditional rewrites don't reliably fire for
 // same-project routing, hence this Function middleware.
+//
+// Observability: every fallthrough sets `x-hal0-proxy-failed: <reason>`
+// on the static-placeholder response so external probes can distinguish
+// proxy-broken from proxy-not-deployed without `wrangler tail`.
+// `console.warn` calls surface in CF Pages logs for deeper debugging.
 
 const CHANNEL_RE = /^\/(stable|nightly|dev)\.json$/;
 const RELEASES_API = "https://api.github.com/repos/Hal0ai/hal0/releases?per_page=10";
 
 interface GhAsset {
+	id: number;
 	name: string;
+	url: string; // api.github.com asset endpoint
 	browser_download_url: string;
 }
 interface GhRelease {
@@ -30,45 +37,88 @@ interface GhRelease {
 	assets: GhAsset[];
 }
 
-async function proxyChannelManifest(channel: string): Promise<Response | null> {
-	// CF's HTTP cache honors Cache-Control on upstream responses; the GitHub
-	// API ships its own cache headers. For tighter control (per-edge TTL),
-	// switch to the `cf: { cacheTtl }` fetch option once
-	// @cloudflare/workers-types is wired into the Pages tsconfig.
-	const listResp = await fetch(RELEASES_API, {
-		headers: {
-			"User-Agent": "hal0-releases-proxy",
-			Accept: "application/vnd.github+json",
-		},
-	});
-	if (!listResp.ok) return null;
+type ProxyOutcome =
+	| { ok: true; response: Response }
+	| { ok: false; reason: string };
 
-	const releases = (await listResp.json()) as GhRelease[];
+async function proxyChannelManifest(channel: string): Promise<ProxyOutcome> {
+	let listResp: Response;
+	try {
+		listResp = await fetch(RELEASES_API, {
+			headers: {
+				"User-Agent": "hal0-releases-proxy",
+				Accept: "application/vnd.github+json",
+			},
+		});
+	} catch (e) {
+		const reason = `gh-list-threw:${(e as Error).message}`;
+		console.warn(`[releases-proxy] ${reason}`);
+		return { ok: false, reason };
+	}
+	if (!listResp.ok) {
+		const reason = `gh-list-${listResp.status}`;
+		console.warn(`[releases-proxy] ${reason} body=${(await listResp.text()).slice(0, 200)}`);
+		return { ok: false, reason };
+	}
+
+	let releases: GhRelease[];
+	try {
+		releases = (await listResp.json()) as GhRelease[];
+	} catch (e) {
+		const reason = `gh-list-parse:${(e as Error).message}`;
+		console.warn(`[releases-proxy] ${reason}`);
+		return { ok: false, reason };
+	}
+
 	for (const release of releases) {
 		if (release.draft) continue;
 		const asset = release.assets?.find((a) => a.name === `${channel}.json`);
 		if (!asset) continue;
 
-		const assetResp = await fetch(asset.browser_download_url, {
-			headers: { "User-Agent": "hal0-releases-proxy" },
-			redirect: "follow",
-		});
-		if (!assetResp.ok) continue;
+		// Use the api.github.com asset endpoint with octet-stream Accept.
+		// Returns a 302 to objects.githubusercontent.com with the asset
+		// bytes; `redirect: "follow"` lands us on the body in one hop.
+		// This is the documented direct-download path and gets the same
+		// rate-limit budget as the releases-list call above.
+		let assetResp: Response;
+		try {
+			assetResp = await fetch(asset.url, {
+				headers: {
+					"User-Agent": "hal0-releases-proxy",
+					Accept: "application/octet-stream",
+				},
+				redirect: "follow",
+			});
+		} catch (e) {
+			const reason = `gh-asset-threw:${(e as Error).message}:${release.tag_name}`;
+			console.warn(`[releases-proxy] ${reason}`);
+			return { ok: false, reason };
+		}
+		if (!assetResp.ok) {
+			const reason = `gh-asset-${assetResp.status}:${release.tag_name}`;
+			console.warn(`[releases-proxy] ${reason}`);
+			return { ok: false, reason };
+		}
 
 		const body = await assetResp.text();
-		return new Response(body, {
-			status: 200,
-			headers: {
-				"content-type": "application/json; charset=utf-8",
-				"access-control-allow-origin": "*",
-				"cache-control": "public, max-age=60, must-revalidate",
-				"x-content-type-options": "nosniff",
-				"x-hal0-source": `github-release/${release.tag_name}`,
-				"x-hal0-channel": channel,
-			},
-		});
+		return {
+			ok: true,
+			response: new Response(body, {
+				status: 200,
+				headers: {
+					"content-type": "application/json; charset=utf-8",
+					"access-control-allow-origin": "*",
+					"cache-control": "public, max-age=60, must-revalidate",
+					"x-content-type-options": "nosniff",
+					"x-hal0-source": `github-release/${release.tag_name}`,
+					"x-hal0-channel": channel,
+				},
+			}),
+		};
 	}
-	return null;
+	const reason = `no-asset:${channel}.json:${releases.length}releases`;
+	console.warn(`[releases-proxy] ${reason}`);
+	return { ok: false, reason };
 }
 
 // Minimal local shape for the Cloudflare Pages function context. We don't
@@ -80,18 +130,33 @@ type PagesFunctionContext = {
 };
 type PagesFunction = (context: PagesFunctionContext) => Promise<Response>;
 
+async function annotateFallthrough(
+	context: PagesFunctionContext,
+	rewrittenUrl: string,
+	reason: string,
+): Promise<Response> {
+	const fallback = await context.next(new Request(rewrittenUrl, context.request));
+	const headers = new Headers(fallback.headers);
+	headers.set("x-hal0-proxy-failed", reason);
+	return new Response(fallback.body, {
+		status: fallback.status,
+		statusText: fallback.statusText,
+		headers,
+	});
+}
+
 export const onRequest: PagesFunction = async (context) => {
 	const url = new URL(context.request.url);
 
 	if (url.hostname === "releases.hal0.dev") {
 		const channelMatch = url.pathname.match(CHANNEL_RE);
 		if (channelMatch) {
-			try {
-				const live = await proxyChannelManifest(channelMatch[1]);
-				if (live) return live;
-			} catch {
-				// fall through to static backstop
-			}
+			const outcome = await proxyChannelManifest(channelMatch[1]);
+			if (outcome.ok) return outcome.response;
+			// Fall through to the static placeholder, but annotate why.
+			const rewritten = new URL(context.request.url);
+			rewritten.pathname = "/releases" + url.pathname;
+			return annotateFallthrough(context, rewritten.toString(), outcome.reason);
 		}
 
 		if (!url.pathname.startsWith("/releases/")) {
