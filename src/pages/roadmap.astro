@@ -3,14 +3,19 @@
  * /roadmap — direction for hal0. No dates, no commitments — these are
  * the shapes the platform is growing into.
  *
- * Three groups, rendered as columns on desktop and stacked on mobile:
- *   Shipped (v1)        — what landed in the v1 cut
- *   Soon (v0.2)         — next milestone, scope locked, work in flight
- *   Exploring (v1.x +)  — direction we believe in, not yet committed
+ * Two surfaces:
+ *   1. "Shipping now" hero — the 4 most recently landed features in
+ *      the current release (v0.2.0-alpha.3), foregrounded so the page
+ *      reads "what's live and what's next" instead of a long history.
+ *   2. Themed maturity matrix — six themes, each with three lanes
+ *      (shipped, soon, exploring). Length scales horizontally inside
+ *      a theme instead of letting Shipped grow into a wall.
+ *
+ * If you add a new shipped/soon/exploring item below, also map its
+ * theme in `themeOf()` — items that don't match fall into "Security
+ * + UX" by design (it's the catch-all for cross-cutting concerns).
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
-import RoadmapColumn from '../components/RoadmapColumn.astro';
-import RoadmapCard from '../components/RoadmapCard.astro';
 
 const shipped = [
   {
@@ -89,6 +94,23 @@ const shipped = [
     title: 'Orchestrator drift reconcile',
     why: 'CapabilityOrchestrator.apply() now reconciles capabilities.toml ↔ slots/*.toml on every call rather than only on selection diff, so prior failed applies, manual edits, and install-time seeds can no longer leave the two disagreeing.',
   },
+  // ── v0.2.0-alpha.3 (2026-05-22) — landed this cut ──
+  {
+    title: 'Install + version flow locked down',
+    why: '__version__ now reads from importlib.metadata instead of a hard-coded string; pyproject.toml is the single source of truth and the version-drift class of bug is gone. installer/install.sh copies the source tree into PREFIX so editable installs work from a temp checkout under any HAL0_PREFIX.',
+  },
+  {
+    title: 'MCP tool annotations',
+    why: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects. ADR-0004 §1 documents the Anthropic-vs-Cline annotation-spec divergence.',
+  },
+  {
+    title: 'KV-cache % gauge populates',
+    why: 'Vulkan toolbox rebuilt against llama.cpp b9279 and the scrape now falls back to /slots when the legacy llamacpp:kv_cache_usage_ratio Prometheus gauge is missing — synthesises kv_cache_usage = max(n_prompt_tokens) / n_ctx, clamped at 1.0. The previously-empty cache tile on every llama slot finally has a number.',
+  },
+  {
+    title: 'Live TTFT dashboard',
+    why: 'Per-slot time-to-first-token sampled in the request dispatcher, surfaced as a sparkline-pinned HUD readout on SlotCard and aggregated to a fleet-wide card on the Dashboard. 60-second window; the SlotCard stats row drops to KV / ACT / MEM / UP because T/S and TTFT now live on the sparkline itself.',
+  },
 ];
 
 const soon = [
@@ -144,6 +166,42 @@ const exploring = [
     why: 'Slack and Matrix bridges as extensions, so you can talk to hal0 from the rooms you already live in.',
   },
 ];
+
+// ── Hero: 4 most recently landed features in the current release ──
+// `shipped` is appended chronologically. The latest 4 entries are the
+// headline features in the current alpha; surfacing them up top keeps
+// the page anchored on "what's new" instead of "look how much we've done".
+const heroFeatures = shipped.slice(-4).reverse();
+const currentVersion = 'v0.2.0-alpha.3';
+
+// ── Themed maturity matrix: six themes, three lanes per row ──
+// `themeOf()` classifies an item from its title. Order here decides
+// which theme an item lands in if it could match more than one — first
+// match wins. The "Security + UX" theme is intentionally last so it
+// acts as a catch-all for cross-cutting concerns (Caddy/auth, wizard,
+// OpenWebUI, voice mode, STT/TTS) without forcing them into Inference.
+const themeOf = (title: string): string => {
+  if (/inference|provider|llama|FLM|moonshine|kokoro|comfyui|image generation|API|\/v1|fine.tune|lora|rate limit/i.test(title)) return 'inference';
+  if (/slot|capability|orchestrator|metrics|embed.rerank|benchmark/i.test(title)) return 'slot';
+  if (/install|release|cosign|update|models.scan|models.dir|AUR|PPA|extension/i.test(title)) return 'install';
+  if (/hardware|probe|proxmox|host.pressure|federation|multi.host/i.test(title)) return 'hardware';
+  if (/agent|memory|MCP|chatops/i.test(title)) return 'agents';
+  return 'ux';
+};
+const themes = [
+  { key: 'inference', label: 'Inference + providers',         accent: 'border-emerald-700/40' },
+  { key: 'slot',      label: 'Slot lifecycle',                accent: 'border-cyan-700/40' },
+  { key: 'install',   label: 'Install + distribution',        accent: 'border-purple-700/40' },
+  { key: 'hardware',  label: 'Hardware + observability',      accent: 'border-rose-700/40' },
+  { key: 'agents',    label: 'Agents + memory + MCP',         accent: 'border-hal0-accent/60' },
+  { key: 'ux',        label: 'Security + UX',                 accent: 'border-amber-700/40' },
+];
+const grouped = themes.map((t) => ({
+  ...t,
+  shipped:   shipped.filter((i) => themeOf(i.title) === t.key),
+  soon:      soon.filter((i) => themeOf(i.title) === t.key),
+  exploring: exploring.filter((i) => themeOf(i.title) === t.key),
+}));
 ---
 
 <MarketingLayout
@@ -163,54 +221,127 @@ const exploring = [
       </h1>
 
       <p class="mt-6 max-w-3xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
-        v0.1.1 ships the OpenAI-compatible inference layer: slots,
-        dispatcher, portable hardware probe with platform detection,
-        bundled chat, signed self-update, Proxmox host-pressure segment.
-        The first-run wizard completes end-to-end on WSL 2, Proxmox
-        VMs, and bare-metal Linux — not just Strix Halo. v0.2 takes
-        the same lifecycle
-        discipline and extends it into the rest of the local AI stack:
-        agents, persistent memory, MCP, tools, image, voice, third-party
-        extensions. The goal is one place on your hardware that runs
-        the whole stack, instead of seven daemons glued together.
+        v0.2.0-alpha.3 ships live dashboard metrics (per-slot TTFT
+        and KV-cache %), a locked install + version flow, MCP tool
+        annotations on every admin + memory tool, and the toolbox
+        rebuild that finally lights up the cache gauge. The
+        first-run wizard completes end-to-end on WSL 2, Proxmox VMs,
+        and bare-metal Linux — not just Strix Halo. v0.2 takes the
+        same lifecycle discipline and extends it into the rest of
+        the local AI stack: agents, persistent memory, MCP, tools,
+        image, voice, third-party extensions. The goal is one place
+        on your hardware that runs the whole stack, instead of
+        seven daemons glued together.
       </p>
 
       <p class="mt-4 max-w-3xl text-pretty text-sm leading-relaxed text-hal0-fg-dim">
-        No dates below. Items are direction. The closer a thing is to
-        the left column, the closer it is to running on your box.
+        No dates below. Items are direction. Each themed row reads
+        left-to-right: shipped, in flight, exploring — the closer to
+        the left, the closer it is to running on your box.
       </p>
     </div>
   </section>
 
+  {/* ── Shipping now hero — 4 latest landed features ── */}
   <section class="border-b border-hal0-border bg-hal0-bg">
-    <div class="mx-auto max-w-6xl px-6 py-16 md:py-20">
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <RoadmapColumn title="Shipped" eyebrow="v0.1.1">
-          {shipped.map((item) => (
-            <RoadmapCard title={item.title} status="shipped">
-              {item.why}
-            </RoadmapCard>
+    <div class="mx-auto max-w-6xl px-6 py-12 md:py-16">
+      <div class="rounded-xl border border-hal0-accent/40 bg-gradient-to-br from-hal0-bg-elevated to-hal0-bg p-8 shadow-[inset_4px_0_0_var(--hal0-accent)] md:p-10">
+        <div class="mb-3 flex items-baseline gap-3">
+          <span class="font-mono text-xs uppercase tracking-wider text-hal0-accent">
+            shipping now
+          </span>
+          <span class="font-mono text-sm text-hal0-fg-dim">{currentVersion}</span>
+        </div>
+        <h2 class="mb-6 text-balance text-2xl font-semibold tracking-tight text-hal0-fg md:text-3xl">
+          Live dashboard metrics, locked install + version flow, MCP tool annotations.
+        </h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          {heroFeatures.map((item) => (
+            <div class="rounded-md border border-hal0-border bg-hal0-bg-elevated/60 p-4">
+              <h3 class="mb-2 font-mono text-sm font-medium text-hal0-fg">
+                {item.title}
+              </h3>
+              <p class="text-sm leading-relaxed text-hal0-fg-muted">{item.why}</p>
+            </div>
           ))}
-        </RoadmapColumn>
+        </div>
+      </div>
+    </div>
+  </section>
 
-        <RoadmapColumn title="Soon" eyebrow="v0.2" tone="primary">
-          {soon.map((item) => (
-            <RoadmapCard title={item.title} status="in-progress">
-              {item.why}
-            </RoadmapCard>
-          ))}
-        </RoadmapColumn>
-
-        <RoadmapColumn title="Exploring" eyebrow="post-v1.0">
-          {exploring.map((item) => (
-            <RoadmapCard title={item.title} status="later">
-              {item.why}
-            </RoadmapCard>
-          ))}
-        </RoadmapColumn>
+  {/* ── Themed maturity matrix — six themes × three lanes ── */}
+  <section class="border-b border-hal0-border bg-hal0-bg">
+    <div class="mx-auto max-w-7xl px-6 py-12 md:py-16">
+      {/* Lane headers — centered over their columns (desktop only) */}
+      <div class="mb-6 hidden grid-cols-[16rem_1fr_1fr_1fr] items-center gap-6 border-b border-hal0-border pb-3 md:grid">
+        <span class="font-mono text-xs uppercase tracking-wider text-hal0-fg-dim">
+          theme
+        </span>
+        <span class="text-center font-mono text-xs uppercase tracking-wider text-emerald-400">
+          shipped
+        </span>
+        <span class="text-center font-mono text-xs uppercase tracking-wider text-hal0-accent">
+          soon
+        </span>
+        <span class="text-center font-mono text-xs uppercase tracking-wider text-hal0-fg-dim">
+          exploring
+        </span>
       </div>
 
-      <p class="mt-12 max-w-3xl text-sm leading-relaxed text-hal0-fg-dim">
+      <div class="space-y-6">
+        {grouped.map((theme) => (
+          <div class={`grid grid-cols-1 gap-4 rounded-lg border bg-hal0-bg-elevated/40 p-5 md:grid-cols-[16rem_1fr_1fr_1fr] ${theme.accent}`}>
+            {/* Theme label column */}
+            <div class="flex flex-col gap-2 border-b border-hal0-border pb-3 md:border-0 md:pb-0">
+              <h3 class="font-mono text-base font-semibold text-hal0-fg">
+                {theme.label}
+              </h3>
+              <div class="flex gap-3 font-mono text-[10px] uppercase tracking-wider text-hal0-fg-dim">
+                <span><span class="text-emerald-400">{theme.shipped.length}</span> shipped</span>
+                <span><span class="text-hal0-accent">{theme.soon.length}</span> soon</span>
+                <span><span class="text-hal0-fg">{theme.exploring.length}</span> later</span>
+              </div>
+            </div>
+
+            {/* Three lanes */}
+            {(['shipped', 'soon', 'exploring'] as const).map((lane) => {
+              const items = theme[lane];
+              const laneStyles = {
+                shipped:   { bullet: 'bg-emerald-500', text: 'text-emerald-300' },
+                soon:      { bullet: 'bg-hal0-accent', text: 'text-hal0-accent' },
+                exploring: { bullet: 'bg-hal0-fg-dim', text: 'text-hal0-fg-dim' },
+              }[lane];
+              return (
+                <div class="flex flex-col gap-3">
+                  {/* Mobile-only lane label (centered on mobile too) */}
+                  <span class={`md:hidden text-center font-mono text-[10px] uppercase tracking-wider ${laneStyles.text}`}>
+                    {lane}
+                  </span>
+                  {items.length === 0 ? (
+                    <span class="font-mono text-xs italic text-hal0-fg-dim">—</span>
+                  ) : (
+                    items.map((item) => (
+                      <div class="group">
+                        <div class="flex items-baseline gap-2">
+                          <span class={`mt-1.5 size-1.5 shrink-0 rounded-full ${laneStyles.bullet}`}></span>
+                          <h4 class="font-mono text-sm leading-snug text-hal0-fg">
+                            {item.title}
+                          </h4>
+                        </div>
+                        <p class="ml-3.5 mt-1 text-xs leading-relaxed text-hal0-fg-muted">
+                          {item.why}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <p class="mt-10 max-w-3xl text-sm leading-relaxed text-hal0-fg-dim">
         Exploring items are bets we believe in, not promises. Scope and
         order will shift as v0.2 lands and we learn what people actually
         do with a local platform.
