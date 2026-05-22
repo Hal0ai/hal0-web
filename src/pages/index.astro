@@ -33,7 +33,7 @@ const softwareApplicationLd = {
   url: canonicalUrl,
   downloadUrl: 'https://hal0.dev/install.sh',
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
-  softwareVersion: 'v0.1.0-alpha.1',
+  softwareVersion: 'v0.1.1',
   codeRepository: 'https://github.com/hal0ai/hal0',
   offers: {
     '@type': 'Offer',
@@ -173,7 +173,7 @@ const description =
   description={description}
 >
   <HeroSection
-    eyebrow="v0.1.0-alpha · Apache-2.0"
+    eyebrow="v0.1.1 · Apache-2.0"
     title="Homelab AI inference platform for tinkerers and devs."
     subtitle="hal0 is what runs on the Linux box you already have in the rack. OpenAI-compatible API, systemd-managed slots, prewired chat UI. Happy in a Proxmox LXC with GPU and NPU passthrough, behind your Traefik."
     ctaPrimary={{ href: '/install', label: 'Install hal0' }}
@@ -663,12 +663,16 @@ curl -fsSL https://hal0.dev/install.sh | bash
             Roadmap
           </p>
           <h2 class="mb-3 text-balance text-3xl font-semibold tracking-tight text-hal0-fg md:text-4xl">
-            v0.1.0-alpha shipped. v0.2 is where it gets interesting.
+            v0.1.1 shipped. v0.2 is where it gets interesting.
           </h2>
           <p class="text-pretty text-hal0-fg-muted">
-            v0.1.0-alpha.1 tagged 2026-05-21. Integration tier on
-            Vulkan-CPU + Qwen 0.5B. All six toolbox images published
-            and pinned. Here's what's next.
+            v0.1.1 tagged 2026-05-22 — first install that completes
+            end-to-end on WSL 2, Proxmox VMs, and bare-metal Linux,
+            not just Strix Halo. Portable hardware probe with
+            platform detection, optional chat model, seeded capability
+            picks. Integration tier still green on Vulkan-CPU + Qwen
+            0.5B; all six toolbox images published and pinned. Here's
+            what's next.
           </p>
         </div>
         <a
@@ -680,7 +684,7 @@ curl -fsSL https://hal0.dev/install.sh | bash
       </div>
 
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <RoadmapColumn title="Now" eyebrow="v0.1.0-alpha" tone="primary">
+        <RoadmapColumn title="Now" eyebrow="v0.1.1" tone="primary">
           <RoadmapCard title="Capability slots overlay" status="shipped" eta="v0.1">
             Embed / Voice / Img cards + NPU backend rollup, backed by
             <code>/etc/hal0/capabilities.toml</code> and
@@ -800,7 +804,7 @@ curl -fsSL https://hal0.dev/install.sh | bash
             github.com/hal0ai/hal0 →
           </p>
           <p class="mt-2 text-sm leading-relaxed text-hal0-fg-muted">
-            Issues, discussions, release manifests. v0.1.0-alpha; see
+            Issues, discussions, release manifests. v0.1.1; see
             CONTRIBUTING for contribution status.
           </p>
         </a>

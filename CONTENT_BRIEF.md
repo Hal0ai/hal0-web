@@ -49,12 +49,15 @@ Overrides (env vars, from `installer/install.sh`):
 `HAL0_NO_PROBE`, per-backend `HAL0_TOOLBOX_IMAGE_*`.
 
 Status caveat: the installer is real and produces a running
-`hal0-api`. As of v0.1.0-alpha.1 (2026-05-21) **all six toolbox
-images** — `vulkan`, `rocm`, `flm`, `moonshine`, `kokoro`, `comfyui` —
-are published to `ghcr.io/hal0ai/` and pinned by sha256 digest in
+`hal0-api`. As of v0.1.1 (2026-05-22) **all six toolbox images** —
+`vulkan`, `rocm`, `flm`, `moonshine`, `kokoro`, `comfyui` — are
+published to `ghcr.io/hal0ai/` and pinned by sha256 digest in
 `hal0/manifest.json` (`toolbox_images.*.digest`). FLM chat + embed
 are surfaced in the picker when XDNA hardware and the local toolbox
-image are both present; STT slice deferred. APIs may shift before v1.0.
+image are both present; STT slice deferred. v0.1.1 (2026-05-22) is
+the first install that completes end-to-end on non-Strix-Halo hosts:
+WSL 2 (with systemd), Proxmox VMs, and bare-metal Linux with discrete
+GPUs all probe + wizard cleanly. APIs may shift before v1.0.
 
 ### Installer overhaul (2026-05-15)
 
@@ -635,6 +638,35 @@ All six toolbox images (`vulkan`, `rocm`, `flm`, `moonshine`, `kokoro`,
 The release.yml + cosign-keyless OIDC pipeline was smoke-tested
 end-to-end via `v0.0.0-rc1` before tagging the alpha.
 
+### Closed before v0.1.1 cut (2026-05-22)
+
+The first-run wizard now completes end-to-end on non-Strix-Halo hosts:
+
+- **Auth**: `POST /api/auth/password` issues a `hal0_session` cookie
+  on the first-run leg so the wizard's writer calls (PUT
+  `/api/config/models`, model pulls, capability registration)
+  authenticate cleanly. The first-run claim allowlist also covers
+  those writer routes for the "skip — leave open" path. Lockfile is
+  consumed on `POST /api/install/complete` so the open-claim window
+  closes when the wizard finishes.
+- **Wizard UX**: chat-model selection optional ("Skip — no chat
+  model"); image models filtered out of the chat picker;
+  zero-item installs flow straight to the done coda.
+- **Curated catalog**: 3 embed picks (nomic-embed-text-v1.5 Q8,
+  bge-base-en-v1.5 Q4_K_M, embed-gemma:300m) + 2 rerank picks
+  (bge-reranker-base Q4_K_M, bge-reranker-v2-m3 Q4_K_M) seed the
+  capability dropdowns on a standalone install. STT/TTS deferred —
+  moonshine + kokoro need a pull-layer extension.
+- **Portable hardware probe**: real CPU/RAM/GPU on WSL 2 (with
+  systemd), Proxmox VMs, and bare-metal Linux. New `platform` field
+  (`wsl2` / `lxc` / `proxmox-kvm` / `kvm` / `strix-halo` /
+  `bare-metal-{nvidia,amd,intel}-gpu` / `bare-metal-cpu-only` /
+  `unknown`); UI labels memory as "unified" only when it actually is.
+- **Uninstaller**: DELETE confirm prompt no longer prints literal
+  `\033[...` escape sequences.
+
+PR #111, tag `v0.1.1`.
+
 ## Hardware targets
 
 | Tier | Hardware | Status |
@@ -800,7 +832,7 @@ consistent with this brief.
 - **Web (this site)**: `https://github.com/Hal0ai/hal0-web`
 - **Toolbox images**: `ghcr.io/hal0ai/hal0-toolbox-{vulkan,rocm,flm,moonshine,kokoro,comfyui}` —
   all six published and pinned by sha256 in `hal0/manifest.json` as
-  of v0.1.0-alpha.1.
+  of v0.1.1.
 - **Release manifest**: `https://releases.hal0.dev/{stable,nightly}.json`
   (live; CF Pages middleware proxies the asset off the latest GH
   Release on `hal0ai/hal0`; ~60s propagation).

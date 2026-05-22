@@ -324,15 +324,21 @@ const matrixRows = [
 
         <div class="rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5">
           <h3 class="mb-2 font-mono text-base font-semibold text-hal0-fg">
-            WSL2 / Docker Desktop / cloud VMs
+            WSL 2 / Docker Desktop / cloud VMs
           </h3>
           <p class="text-sm leading-relaxed text-hal0-fg-muted">
-            WSL2 doesn&rsquo;t expose systemd by default, and rootless
-            Docker can&rsquo;t hold the slot units. A real Linux VM
-            (KVM/QEMU, Proxmox, Hyper-V Gen2) works fine, and a
-            privileged LXC with GPU/NPU passthrough is the canonical
-            homelab shape. See the <code>hal0-test</code> Strix Halo
-            LXC recipe in the docs.
+            <strong>WSL 2 works as of v0.1.1</strong>, but only with
+            systemd enabled — set <code>systemd=true</code> under
+            <code>[boot]</code> in <code>/etc/wsl.conf</code> then
+            <code>wsl --shutdown</code>. The hardware probe detects
+            the <code>wsl2</code> platform automatically and falls back
+            to portable CPU/RAM parsers; GPU passthrough depends on
+            Microsoft&rsquo;s vGPU shim. Rootless Docker still can&rsquo;t
+            hold the slot units. A real Linux VM (KVM/QEMU, Proxmox,
+            Hyper-V Gen2) works fine, and a privileged LXC with
+            GPU/NPU passthrough is the canonical homelab shape. See
+            the <code>hal0-test</code> Strix Halo LXC recipe in the
+            docs.
           </p>
         </div>
       </div>

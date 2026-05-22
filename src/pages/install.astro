@@ -56,10 +56,12 @@ const installCmd = `curl -fsSL https://hal0.dev/install.sh | bash`;
       </div>
 
       <div class="mt-8">
-        <Callout tone="warning" title="v0.1.0-alpha. Install on a sandbox host first.">
-          hal0 is v0.1.0-alpha.1 as of 2026-05-21. All six toolbox
-          images (<code>vulkan</code>, <code>rocm</code>,
-          <code>flm</code>, <code>moonshine</code>, <code>kokoro</code>,
+        <Callout tone="warning" title="v0.1.1. Install on a sandbox host first.">
+          hal0 is v0.1.1 as of 2026-05-22. The first-run wizard now
+          completes end-to-end on WSL 2, Proxmox VMs, and bare-metal
+          Linux — not just Strix Halo. All six toolbox images
+          (<code>vulkan</code>, <code>rocm</code>, <code>flm</code>,
+          <code>moonshine</code>, <code>kokoro</code>,
           <code>comfyui</code>) are published to
           <code>ghcr.io/hal0ai/</code> and pinned by sha256 in
           <code>hal0/manifest.json</code>.
@@ -680,10 +682,14 @@ sudo userdel hal0 2>/dev/null || true`}</CodeBlock>
           <p>
             The installer hard-fails on non-systemd / non-Linux hosts
             (<code>installer/install.sh:86</code>). macOS and Windows
-            aren&rsquo;t supported in v1. WSL2 isn&rsquo;t either,
-            since WSL doesn&rsquo;t expose systemd by default and the
-            slot units won&rsquo;t boot. Run it inside a real Linux
-            VM, LXC, or on bare metal.
+            aren&rsquo;t supported in v1. WSL 2 <em>is</em> — but only
+            with systemd enabled (set
+            <code>systemd=true</code> under
+            <code>[boot]</code> in <code>/etc/wsl.conf</code>, then
+            <code>wsl --shutdown</code> from PowerShell). As of v0.1.1
+            the wizard + hardware probe complete cleanly on a
+            WSL 2 install. Bare metal and Proxmox LXC remain the
+            primary deployment shapes.
           </p>
         </Expandable>
 

@@ -93,8 +93,8 @@ const shipped = [
 
 const soon = [
   {
-    title: 'Hugging Face model pulls',
-    why: 'POST /api/models/{id}/pull (streaming HF download) is still 501 today; the picker + first-run wizard wire it for the next 0.1.x alpha. (FLM-aware pull for NPU tags landed in PR #89, so Ollama-style family:size ids already pull from the dashboard.)',
+    title: 'STT/TTS curated picks',
+    why: 'v0.1.1 seeded the embed and rerank capability dropdowns with real GGUF picks (nomic, bge-base, embed-gemma, bge-reranker). STT (moonshine) and TTS (kokoro) need a pull-layer extension because their weights aren’t GGUF/safetensors — multi-file ONNX bundles + PyTorch pickles. Next 0.1.x slice teaches the pull route those shapes so the wizard can offer voice picks out of the box.',
   },
   {
     title: 'Agent management & integration',
@@ -163,9 +163,12 @@ const exploring = [
       </h1>
 
       <p class="mt-6 max-w-3xl text-pretty text-lg leading-relaxed text-hal0-fg-muted">
-        v0.1.0-alpha ships the OpenAI-compatible inference layer: slots,
-        dispatcher, hardware probe, bundled chat, signed self-update,
-        Proxmox host-pressure segment. v0.2 takes the same lifecycle
+        v0.1.1 ships the OpenAI-compatible inference layer: slots,
+        dispatcher, portable hardware probe with platform detection,
+        bundled chat, signed self-update, Proxmox host-pressure segment.
+        The first-run wizard completes end-to-end on WSL 2, Proxmox
+        VMs, and bare-metal Linux — not just Strix Halo. v0.2 takes
+        the same lifecycle
         discipline and extends it into the rest of the local AI stack:
         agents, persistent memory, MCP, tools, image, voice, third-party
         extensions. The goal is one place on your hardware that runs
@@ -182,7 +185,7 @@ const exploring = [
   <section class="border-b border-hal0-border bg-hal0-bg">
     <div class="mx-auto max-w-6xl px-6 py-16 md:py-20">
       <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <RoadmapColumn title="Shipped" eyebrow="v0.1.0-alpha">
+        <RoadmapColumn title="Shipped" eyebrow="v0.1.1">
           {shipped.map((item) => (
             <RoadmapCard title={item.title} status="shipped">
               {item.why}
