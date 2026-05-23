@@ -632,13 +632,12 @@ Settled via grilling 2026-05-22; ADRs in
 `hal0/docs/internal/adr/0005-memory-engine-cognee.md`. Public API
 docs at `hal0/docs/api/mcp.md` + `hal0/docs/api/agents.md`.
 
-- **Bundled agent app** — single-pick at install. Choose between
-  `pi-coder` (CLI; installed from `Hal0ai/pi-mono` fork via
-  `@earendil-works/pi-coding-agent` on npm) and `Hermes-Agent` (service;
-  installed via hal0-owned `hal0-hermes` wrapper that env-file-injects
-  HAL0_* into unmodified upstream `hermes`). Wizard step 7 picks one;
-  CLI parity via `hal0 agent install <name>`; atomic swap with
-  `--switch`. install.sh stays non-interactive.
+- **Bundled agent app** — `Hermes-Agent` (service; installed via
+  hal0-owned `hal0-hermes` wrapper that env-file-injects HAL0_* into
+  unmodified upstream `hermes`). Wizard step 7 offers install;
+  CLI parity via `hal0 agent install hermes-agent`. install.sh stays
+  non-interactive. (Second bundled agent — pi-coder — code is parked
+  in-repo for v0.3 reactivation; not currently surfaced to users.)
 - **Two MCP servers** — `/mcp/admin` wraps existing `/api/*` routes
   (slot, model, capability, config, hardware, log admin) and
   `/mcp/memory` wraps Cognee. Bearer auth reused from ADR-0001.
@@ -659,11 +658,11 @@ docs at `hal0/docs/api/mcp.md` + `hal0/docs/api/agents.md`.
   `client_id`, routed through structlog and landing in journald on
   the `hal0-api` unit. Dashboard `/agent` Activity tab walks the same
   stream.
-- **Track-latest with nightly smoke test** — both bundled agents
-  track upstream latest (diverges from OWUI pin-per-release by
+- **Track-latest with nightly smoke test** — the bundled agent
+  tracks upstream latest (diverges from OWUI pin-per-release by
   intent); a nightly CI workflow at `.github/workflows/agent-shim-smoke.yml`
-  re-runs `installer/agents/pi-coder.sh` end-to-end and asserts an
-  MCP round-trip.
+  exercises the `hal0-hermes` wrapper against current upstream and
+  asserts an MCP round-trip.
 
 ### Exploring
 

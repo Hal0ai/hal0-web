@@ -1,0 +1,141 @@
+---
+/**
+ * LiveArtifact — the hero's right-column operator-dashboard preview.
+ *
+ * Animated client-side with vanilla JS (no framework). Respects
+ * prefers-reduced-motion: when reduced, sparklines + tick are static.
+ *
+ * The shape mirrors the real hal0 dashboard's slot grid so the promo
+ * artifact and the operator UI feel like the same product.
+ */
+const slots = [
+  { name: 'primary',      state: 'serving', model: 'Qwen3-30B-A3B-Instruct-2507-Q4_K_M', baseToks: 142, port: 8081 },
+  { name: 'embed',        state: 'serving', model: 'nomic-embed-text-v2-moe-Q4_K_M',     baseToks: 116, port: 8082 },
+  { name: 'embed-rerank', state: 'ready',   model: 'bge-reranker-v2-m3-q4_k_m',          baseToks: 0,   port: 8086 },
+  { name: 'stt',          state: 'idle',    model: 'moonshine-base',                     baseToks: 0,   port: 8083 },
+  { name: 'tts',          state: 'idle',    model: 'kokoro-82M-v1.0',                    baseToks: 0,   port: 8084 },
+  { name: 'img',          state: 'ready',   model: 'sdxl-turbo',                         baseToks: 0,   port: 8085 },
+];
+---
+
+<div class="artifact" aria-label="hal0 dashboard preview">
+  <div class="art-head">
+    <span class="art-tag">host <b>strix-halo-01</b></span>
+    <span class="art-sep">·</span>
+    <span class="art-tag">128 GB UMA · iGPU + XDNA</span>
+    <span class="art-pulse"><span class="dot"></span> SSE connected</span>
+  </div>
+
+  {slots.map((s, i) => (
+    <div class="slot-row" data-base-toks={s.baseToks} data-state={s.state} data-idx={i}>
+      <div class={`slot-name ${s.state}`}><span class="ring"></span>{s.name}</div>
+      <div class="slot-model">{s.model}</div>
+      <div class={`slot-state ${s.state}`}>{s.state}</div>
+      <div class="slot-toks" data-toks-target>
+        {s.state === 'serving' && <span data-toks-num>{s.baseToks}</span>}
+        {s.state === 'serving' && <small> tok/s</small>}
+        {s.state === 'ready'   && <span style="color: var(--hal0-fg-muted)">warm</span>}
+        {s.state === 'idle'    && <span style={`color: var(--hal0-fg-dim)`}>:{s.port}</span>}
+      </div>
+      <div class="slot-spark" data-spark>
+        {Array.from({ length: 18 }).map(() => <span></span>)}
+      </div>
+    </div>
+  ))}
+
+  <div class="art-foot">
+    <div class="art-foot-mem">
+      <div class="mem-row">
+        <span>Unified memory (GTT)</span>
+        <span class="mem-total">
+          <b data-mem-used>9.2</b>
+          <span class="mem-cap"> / 96 GB carveout · 128 GB DIMM</span>
+        </span>
+      </div>
+      <div class="mem-bar">
+        <i class="a" style="width: 6.8%"></i>
+        <i class="b" style="width: 2.4%"></i>
+        <i class="c" style="width: 0.4%"></i>
+        <i class="d" style="width: 4%"></i>
+      </div>
+      <div class="mem-legend">
+        <span><i class="sw a"></i>primary 6.5G</span>
+        <span><i class="sw b"></i>embed 2.3G</span>
+        <span><i class="sw c"></i>rerank 0.4G</span>
+        <span><i class="sw d"></i>kernel + ZFS ARC 3.8G</span>
+      </div>
+    </div>
+    <div class="art-foot-disp">
+      <div class="disp-lbl">dispatch p50</div>
+      <div class="disp-val"><span data-disp-num>174</span><span class="disp-unit">ms</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    if (typeof window === 'undefined') return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+
+    const artifact = document.querySelector('.artifact');
+    if (!artifact) return;
+
+    const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
+
+    let tick = 0;
+    const rows = Array.from(artifact.querySelectorAll<HTMLElement>('.slot-row'));
+    const memUsed = artifact.querySelector<HTMLElement>('[data-mem-used]');
+    const dispNum = artifact.querySelector<HTMLElement>('[data-disp-num]');
+
+    const step = () => {
+      tick += 1;
+
+      rows.forEach((row) => {
+        const baseToks = Number(row.dataset.baseToks || 0);
+        const state = row.dataset.state;
+        const idx = Number(row.dataset.idx || 0);
+
+        if (state === 'serving' && baseToks) {
+          const toks = Math.round(
+            baseToks + Math.sin((tick + idx * 3) * 0.7) * 8 + (Math.random() - 0.5) * 6,
+          );
+          const target = row.querySelector<HTMLElement>('[data-toks-num]');
+          if (target) target.textContent = String(toks);
+        }
+
+        const spark = row.querySelector<HTMLElement>('[data-spark]');
+        if (spark) {
+          const bars = Array.from(spark.children) as HTMLElement[];
+          bars.forEach((bar, b) => {
+            const h =
+              state === 'serving'
+                ? clamp(
+                    40 +
+                      Math.sin((tick + b + idx * 2) * 0.55) * 30 +
+                      (Math.random() - 0.5) * 16,
+                    8,
+                    100,
+                  )
+                : 0;
+            bar.style.height = `${h}%`;
+          });
+        }
+      });
+
+      if (memUsed) memUsed.textContent = (9.2 + Math.sin(tick * 0.4) * 0.3).toFixed(1);
+      if (dispNum) dispNum.textContent = String(Math.round(174 + Math.sin(tick * 0.3) * 12));
+    };
+
+    step();
+    const id = window.setInterval(step, 900);
+
+    // Pause when off-screen to keep the page well-behaved.
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) window.clearInterval(id);
+      });
+    }, { threshold: 0 });
+    io.observe(artifact);
+  })();
+</script>
