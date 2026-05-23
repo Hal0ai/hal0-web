@@ -737,11 +737,11 @@ with shorter context windows.
 
 ### Strix Halo loadouts
 
-#### Coding — small / mid / large
+#### Coding — small / mid / max
 
 - **Small** (~5 GB) — `primary`: `Qwen2.5-Coder-7B-Instruct-Q4_K_M`. No Qwen3-Coder small variant has shipped yet; the 7B Qwen2.5 stays the best small dedicated coder until that lands.
 - **Mid** (~19 GB) — `primary`: `Qwen3-Coder-30B-A3B-Instruct-Q4_K_M` (~18.6 GB, MoE with only 3B active params — runs near 3B speeds, reasons like a 30B); `embed`: `nomic-embed-text-v2-moe-Q4_K_M` (~140 MB) for repo-aware search. *(fallback: `Qwen2.5-Coder-32B-Instruct-Q4_K_M` ~20 GB)*
-- **Large** (~42 GB) — `primary`: `Hermes-4-70B-Q4_K_M` (~42.5 GB) for hybrid reasoning + tool-friendly coding. Alt: `Llama-4-Scout-17B-16E-Instruct-Q4_K_M` (~50 GB, MoE with 17B active and a 10M-token context). No dedicated 70B+ coder exists in GGUF, so the convention is to fall back on a top-tier general/reasoning model for hard problems. 128 GB headroom keeps both the 30B-A3B coder and a 70B reasoning model hot in separate slots. *(fallback: `Llama-3.3-70B-Instruct-Q4_K_M`)*
+- **Max** (~47 GB) — `primary`: `Qwen3-Coder-Next-80B-A3B-Instruct-Q4_K_M` (~47 GB, MoE with 3B active — the Qwen3-Coder lineup's largest published variant, dedicated coder weights). Alts: `Hermes-4-70B-Q4_K_M` (~42.5 GB, hybrid reasoning + tool-friendly coding for problems where a general reasoner beats a coder) and `Qwen3.6-27B-A3B-MTP-Q4_K_M` (~18.8 GB, MoE with Multi-Token Prediction — fast reasoning fallback when the 80B is paged out). 128 GB headroom keeps the 30B-A3B coder hot alongside an 80B coder in separate slots. *(fallback: `Llama-3.3-70B-Instruct-Q4_K_M`)*
 
 #### General chat — small / mid / large
 

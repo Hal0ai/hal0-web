@@ -192,9 +192,10 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
       { k: 'primary', v: 'Qwen3-Coder-30B-A3B', d: 'Q4_K_M · MoE 3B active · runs near 3B speeds, reasons like 30B' },
       { k: 'embed',   v: 'nomic-embed-text-v2-moe', d: 'Q4_K_M · 140 MB · repo-aware search' },
     ]},
-    { size: '~42 GB · ceiling', title: 'Tool-call faithful 70B', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid reasoning + tool-friendly coding' },
-      { k: 'alt',     v: 'Llama-4-Scout-17B-16E', d: 'Q4_K_M · MoE 17B active · 10M context' },
+    { size: '~47 GB · max', title: 'Qwen3-Coder-Next 80B-A3B', vram: '64 GB+ UMA', slots: [
+      { k: 'primary', v: 'Qwen3-Coder-Next-80B-A3B', d: 'Q4_K_M · MoE 3B active · Qwen3-Coder lineup ceiling' },
+      { k: 'alt',     v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid reasoning + tool-friendly coding' },
+      { k: 'alt',     v: 'Qwen3.6-27B-A3B-MTP', d: 'Q4_K_M · 18.8 GB · MoE with MTP · fast reasoning fallback' },
     ]},
   ],
   chat: [
