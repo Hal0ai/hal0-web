@@ -398,7 +398,6 @@ const shipNowHighlights = [
   },
 ];
 
-const installCmd = 'curl -fsSL https://hal0.dev/install.sh | bash';
 ---
 
 <MarketingLayout
@@ -422,21 +421,15 @@ const installCmd = 'curl -fsSL https://hal0.dev/install.sh | bash';
           <strong>Ryzen AI Max+ 395</strong> with 128 GB of unified memory and
           an XDNA NPU — into a polished, OpenAI-compatible inference appliance.
           Slots, dispatcher, hardware probe, prewired chat UI, signed self-update.
-          <strong>One command installs the lot.</strong>
+          <strong>Installer being overhauled — relaunching soon.</strong>
         </p>
 
-        <div class="install" id="install">
-          <div class="install-head">
-            <span class="install-dots"><i></i><i></i><i></i></span>
-            <span class="install-title">~/hal0 — bash</span>
-            <span class="install-meta">5 slots · 0 errors</span>
-          </div>
-          <div class="install-body">
-            <span class="prompt">$</span>
-            <span class="cmd" id="install-cmd">{installCmd}</span>
-            <span class="caret"></span>
-            <button class="copy-btn" data-copy={installCmd}>copy</button>
-          </div>
+        <div class="holding" id="install">
+          <span class="holding-pill">overhaul in flight</span>
+          <span class="holding-msg">
+            Big overhaul in flight.
+            <strong>Installer relaunching soon.</strong>
+          </span>
         </div>
 
         <div class="cta-row">
@@ -823,24 +816,18 @@ const installCmd = 'curl -fsSL https://hal0.dev/install.sh | bash';
   <!-- CTA -->
   <section class="cta-section">
     <div class="shell-wide cta-inner">
-      <div class="sec-tag cta-tag">/ one command</div>
+      <div class="sec-tag cta-tag">/ overhaul in flight</div>
       <h2 class="cta-h">Stop running models<br />from a <span class="accent">chat tab.</span></h2>
       <p class="cta-sub">
-        Idempotent, non-interactive. Drops a venv at <code class="mono accent-mono">/usr/lib/hal0</code>,
-        wires systemd units, lands <code class="mono accent-mono">hal0</code> on PATH, prints a QR.
+        The installer is being rebuilt for the next release.
+        Watch the repo, or read the docs to see where it's heading.
       </p>
-      <div class="install cta-install">
-        <div class="install-head">
-          <span class="install-dots"><i></i><i></i><i></i></span>
-          <span class="install-title">~/hal0 — bash</span>
-          <span class="install-meta">5 slots · 0 errors</span>
-        </div>
-        <div class="install-body">
-          <span class="prompt">$</span>
-          <span class="cmd">{installCmd}</span>
-          <span class="caret"></span>
-          <button class="copy-btn" data-copy={installCmd}>copy</button>
-        </div>
+      <div class="holding cta-holding">
+        <span class="holding-pill">overhaul in flight</span>
+        <span class="holding-msg">
+          Big overhaul in flight.
+          <strong>Installer relaunching soon.</strong>
+        </span>
       </div>
       <div class="cta-row cta-row-centered">
         <a href="/docs/getting-started/" class="btn">Read the docs →</a>
@@ -1062,6 +1049,44 @@ const installCmd = 'curl -fsSL https://hal0.dev/install.sh | bash';
     cursor: pointer;
   }
   .copy-btn:hover { color: var(--hal0-fg); border-color: var(--hal0-fg-dim); }
+
+  /* Holding banner — installer overhaul */
+  .holding {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: var(--hal0-bg-elevated);
+    border: 1px solid var(--hal0-accent);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 24px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--hal0-accent) 18%, transparent) inset;
+  }
+  .holding-pill {
+    font-family: var(--hal0-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--hal0-accent);
+    border: 1px solid var(--hal0-accent);
+    border-radius: 999px;
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
+  .holding-msg {
+    flex: 1 1 auto;
+    color: var(--hal0-fg);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .holding-msg strong { color: var(--hal0-accent); font-weight: 600; }
+  .cta-holding {
+    max-width: 640px;
+    margin: 0 auto 28px;
+    justify-content: center;
+    text-align: left;
+  }
 
   .cta-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .cta-row-centered { justify-content: center; }
