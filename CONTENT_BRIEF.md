@@ -44,6 +44,19 @@ curl -fsSL https://hal0.dev/install.sh | bash
 From `hal0/installer/README.md` line 9. Idempotent, non-interactive.
 Repo fallback: `sudo bash installer/install.sh` from a clone.
 
+**Proxmox VE one-liner (added 2026-05-26).** On a Proxmox host:
+
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Hal0ai/hal0/main/scripts/proxmox-ve/hal0.sh)"
+```
+
+Creates an unprivileged Debian 13 LXC and runs the standard bootstrap
+inside it. `--advanced` opens whiptail prompts; every parameter has
+an env-var override (`CTID`, `RAM_MB`, `STORAGE`, `NET_CONFIG`, …).
+Hardware-agnostic — Strix Halo iGPU/NPU passthrough still needs the
+privileged-LXC recipe documented in the main hal0 repo.
+Source of truth: `Hal0ai/hal0:scripts/proxmox-ve/hal0.sh`.
+
 Overrides (env vars, from `installer/install.sh`):
 `HAL0_PREFIX`, `HAL0_PORT` (default 8080), `HAL0_USER`, `HAL0_PYTHON`,
 `HAL0_NO_PROBE`, per-backend `HAL0_TOOLBOX_IMAGE_*`.
