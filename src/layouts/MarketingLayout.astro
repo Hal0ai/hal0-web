@@ -34,10 +34,14 @@ interface Props {
 
 const {
   title,
-  description = 'Local AI for your home. Strix Halo native.',
+  description = 'Open-source homelab AI inference platform. Strix Halo native. Early developer release.',
   ogImage = '/og-default.png',
   navTone = 'solid',
 } = Astro.props;
+
+// TODO(discord): swap the placeholder once the invite URL is minted.
+// Search "<TBD>" across this repo to find every spot that needs updating.
+const discordUrl = 'https://discord.gg/<TBD>';
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
 ---
@@ -90,6 +94,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
           <li>
             <a
               class="transition hover:text-hal0-fg"
+              href={discordUrl}
+              rel="noopener"
+            >discord</a>
+          </li>
+          <li>
+            <a
+              class="transition hover:text-hal0-fg"
               href="https://github.com/hal0ai/hal0"
               rel="noopener"
             >github</a>
@@ -107,7 +118,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
         <div class="flex items-center gap-3">
           <Wordmark size="text-base" />
           <span class="font-mono text-xs text-hal0-fg-dim">
-            Apache-2.0 · v0.2.0-alpha.3
+            Apache-2.0 · v0.3.0-alpha.1 · early dev release
           </span>
         </div>
         <ul class="flex flex-wrap items-center gap-6 font-mono text-xs">
@@ -115,6 +126,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
           <li><a class="hover:text-hal0-fg" href="/#install">install</a></li>
           <li><a class="hover:text-hal0-fg" href="/#hardware">hardware</a></li>
           <li><a class="hover:text-hal0-fg" href="/#roadmap">roadmap</a></li>
+          <li>
+            <a class="hover:text-hal0-fg" href={discordUrl} rel="noopener">
+              discord
+            </a>
+          </li>
           <li>
             <a class="hover:text-hal0-fg" href="mailto:hello@hal0.dev">
               hello@hal0.dev

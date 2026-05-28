@@ -10,10 +10,14 @@ import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
 
 const canonicalUrl = 'https://hal0.dev/';
-const version = 'v0.2.0-alpha.3';
+const version = 'v0.3.0-alpha.1';
+
+// TODO(discord): swap the placeholder once the invite URL is minted.
+// Search "<TBD>" across this repo to find every spot that needs updating.
+const discordUrl = 'https://discord.gg/<TBD>';
 
 const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, prewired chat UI, signed self-update. One command installs the lot.';
+  'hal0 is an open-source homelab AI inference platform for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with up to 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, prewired chat UI. Early developer release: install at your own pace, expect rough edges.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -61,8 +65,8 @@ const features = [
   },
   {
     tag: 'dashboard',
-    title: 'Vue 3 + Tailwind 4 admin UI',
-    body: 'Dark-by-default operator console. SSE-backed status and log tail. Capability cards group flat slots into embed / voice / image picks for one-click ops.',
+    title: 'React v3 dashboard, live-data first',
+    body: 'New v3 dashboard scaffold landed in v0.3.0-alpha.1. SSE-backed status and log tail; capability cards group flat slots into embed / voice / image picks. ~70% of panels wired to live data; the rest fall back to seed data while the close-out lands.',
   },
 ];
 
@@ -234,10 +238,11 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
     ]},
   ],
   agentic: [
-    { size: '~42 GB', title: 'Tool-use + MCP', vram: '64 GB+ UMA', slots: [
+    { size: '~42 GB', title: 'Hermes-Agent + MCP', vram: '64 GB+ UMA', slots: [
       { k: 'primary', v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid-reasoning, tuned for tool-call faithfulness' },
+      { k: 'agent',   v: 'Hermes-Agent', d: 'bundled · hal0 agent install hermes-agent · talks /v1/* + MCP' },
       { k: 'embed',   v: 'bge-m3', d: '600 MB · retrieval-augmented routing' },
-      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Cognee-backed memory · two-tier scope' },
+      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Cognee-backed memory · per-agent allow-list (ADR-0013)' },
     ]},
   ],
   small: [
@@ -305,13 +310,14 @@ const themes: RoadmapTheme[] = [
   {
     id: 'install',
     name: 'Install + distribution',
-    blurb: 'One command. Signed. Resumable.',
+    blurb: 'One command. Signed. Auth/Caddy out of the way.',
     shipped: [
       { t: 'Signed release pipeline live', d: 'releases.hal0.dev/stable.json via Cloudflare middleware proxy. A v* tag publishes the GH release; manifest reflects it in ~60s.' },
       { t: 'Cosign-signed self-update', d: 'Atomic version swap with rollback. Stable + nightly channels, GitHub OIDC-verified release tarballs.' },
       { t: 'Installer overhaul', d: 'ASCII banner + step counter, extracted preflight.sh, hal0 doctor, hardware cards + auto-populated slots/primary.toml, live-hello + QR.' },
       { t: '--models-dir install flag', d: 'install.sh --models-dir=PATH (or HAL0_MODELS_DIR, or interactive tty prompt) points a fresh install at an existing model store.' },
-      { t: 'Install + version flow locked down', d: '__version__ reads from importlib.metadata. pyproject.toml is the single source of truth; installer copies the source tree into PREFIX.' },
+      { t: 'Proxmox VE one-liner', d: 'bash -c "$(curl … scripts/proxmox-ve/hal0.sh)" creates an unprivileged Debian 13 LXC and runs the bootstrap inside it. Whiptail-driven --advanced, env-var overrides for every parameter.' },
+      { t: 'Auth + Caddy removed (ADR-0012)', d: 'hal0-api binds 0.0.0.0:8080 open; trusted-LAN by default. Agent identity now flows via the X-hal0-Agent header. Simpler install, fewer moving parts for early users.' },
     ],
     soon: [
       { t: 'Extensions framework', d: 'Third-party apps packaged as hal0 extensions: systemd unit + dashboard tile + healthcheck. Bring-your-own-app, lifecycle-managed.' },
@@ -340,12 +346,14 @@ const themes: RoadmapTheme[] = [
     blurb: 'A place for agents to live, not only to chat with.',
     shipped: [
       { t: 'MCP tool annotations', d: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations so SDK clients can render confirmation UIs and reason about side-effects.' },
-      { t: 'Approval inbox + bell', d: 'Capital-D destructive tool calls gate through a header bell and modal inbox in the dashboard, with full CLI parity via hal0 agent approvals.' },
+      { t: 'Approval inbox + bell', d: 'Capital-D destructive tool calls gate through a header bell and modal inbox in the dashboard, with full CLI parity via hal0 agent approvals. (See the Agents docs once PR-6 wires the screenshot.)' },
+      { t: 'Hermes-Agent bootstrap CLI', d: 'hal0 agent install hermes-agent provisions the bundled agent against the local /v1/* + MCP servers, env-file-injected via the hal0-hermes wrapper.' },
+      { t: 'MCP-client allow-list', d: 'Per-agent allow-lists in the dashboard MCP page (#304) so every agent only sees the tools you grant it. ADR-0013.' },
+      { t: 'Cognee graph extraction + Memory tab', d: 'Embedded SQLite + LanceDB + Kuzu. Memory tab walks the graph; per-agent X-hal0-Private routing in flight (#317).' },
     ],
     soon: [
-      { t: 'Bundled agent app', d: 'Hermes-Agent installable from the dashboard, prewired to the local OpenAI API + MCP servers.' },
-      { t: 'Cognee-backed memory', d: 'Embedded SQLite + LanceDB + Kuzu. Shared by default; X-hal0-Private: 1 promotes a client\'s writes to its own namespace.' },
-      { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions. Compose tools across local slots and external MCP services; discover them from the dashboard.' },
+      { t: 'Per-agent private memory', d: 'Honour the X-hal0-Agent identity end-to-end so private:<agent> writes don\'t collapse to the shared dataset (issue #317).' },
+      { t: 'MCP host platform', d: 'Install + supervise arbitrary aftermarket MCP servers from the dashboard, treated like capability slots (ADR-0015 draft).' },
     ],
     later: [
       { t: 'ChatOps adapters', d: 'Slack and Matrix bridges as extensions, so you can talk to hal0 from the rooms you already live in.' },
@@ -354,13 +362,14 @@ const themes: RoadmapTheme[] = [
   {
     id: 'security',
     name: 'Security + UX',
-    blurb: 'Off by default. Opt in when you\'re ready to expose the box.',
+    blurb: 'Trusted-LAN by default. Bring your own front door.',
     shipped: [
       { t: 'Bundled OpenWebUI', d: 'Prewired chat on :3001 pointed at the local API. Zero config; the installer wires it for you.' },
-      { t: 'Caddy + auth + HTTPS + mDNS', d: 'install.sh --auth=basic brings up Caddy with basic_auth, Bearer tokens for the API, automatic HTTPS, and a best-effort Avahi service file.' },
+      { t: 'Dashboard restructure', d: 'Chat moved to /chat, system overview to /dashboard, journal + footer pane. Header bell + inbox stays one click from anywhere.' },
       { t: 'First-run wizard rewrite', d: 'Eight linear steps from password through hardware, primary model, capabilities, HF token, license, install, done. Conditional HF-token step.' },
     ],
     soon: [
+      { t: 'Dashboard mock-fallback close-out', d: '~20 named issues to swap the remaining seed-data panels for live data — slot modals, model catalog dropdowns, capability cards.' },
       { t: 'STT / TTS curated picks', d: 'v0.1.1 seeded embed/rerank with real GGUF picks. STT (moonshine) and TTS (kokoro) need a pull-layer extension because their weights aren\'t GGUF / safetensors.' },
     ],
     later: [
@@ -375,26 +384,28 @@ const stages = [
   { id: 'later',   label: 'exploring',  sub: 'bets, not promises' },
 ];
 
+const installCmd = 'curl -fsSL https://hal0.dev/install.sh | bash';
+
 const shipNowHighlights = [
   {
-    tag: 'live metrics',
-    title: 'Live TTFT dashboard',
-    body: 'Per-slot time-to-first-token sampled in the dispatcher, surfaced as a sparkline-pinned HUD on SlotCard and aggregated fleet-wide. 60-second window; the stats row drops to KV / ACT / MEM / UP because T/S now lives on the sparkline itself.',
+    tag: 'v3 dashboard',
+    title: 'React v3 dashboard scaffold',
+    body: 'v0.3.0-alpha.1 ships the new React dashboard scaffold — chat at /chat, system overview at /dashboard, MCP + Memory tabs first-class. About 70% of panels are wired to live data; the remaining mock-fallbacks are tracked through to alpha.2.',
   },
   {
-    tag: 'kv-cache',
-    title: 'KV-cache % gauge populates',
-    body: 'Vulkan toolbox rebuilt against llama.cpp b9279. Scrape falls back to /slots when the legacy Prometheus gauge is missing — synthesises kv_cache_usage = max(n_prompt_tokens) / n_ctx, clamped at 1.0. The previously-empty cache tile finally has a number.',
+    tag: 'auth out',
+    title: 'Auth + Caddy fully removed',
+    body: 'ADR-0012 takes the entire FastAPI auth stack and the Caddy reverse proxy out of the picture. hal0-api binds 0.0.0.0:8080 open; trusted-LAN is the default posture. Agent identity flows via the X-hal0-Agent header. Simpler to reason about; easier to put behind your own proxy.',
   },
   {
-    tag: 'mcp',
-    title: 'MCP tool annotations',
-    body: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects.',
+    tag: 'agents',
+    title: 'Hermes-Agent bootstrap + MCP allow-list',
+    body: 'hal0 agent install hermes-agent provisions the bundled agent against the local /v1/* and MCP servers. Per-agent MCP allow-lists in the dashboard (ADR-0013) so each agent only sees the tools you grant it.',
   },
   {
-    tag: 'install',
-    title: 'Install + version flow locked down',
-    body: '__version__ reads from importlib.metadata instead of a hard-coded string. pyproject.toml is the single source of truth. installer/install.sh copies the source tree into PREFIX so editable installs work from a temp checkout under any HAL0_PREFIX.',
+    tag: 'memory',
+    title: 'Cognee graph extraction + Memory tab',
+    body: 'The dashboard Memory tab now walks a Cognee-backed knowledge graph (Apache 2.0; SQLite + LanceDB + Kuzu). Per-agent private-memory routing is in flight for alpha.2 (issue #317).',
   },
 ];
 
@@ -409,7 +420,7 @@ const shipNowHighlights = [
     <div class="shell-wide hero-grid">
       <div>
         <div class="eyebrow">
-          <span class="blip"></span> {version} — shipping on every supported host
+          <span class="blip"></span> {version} — early developer release
         </div>
         <h1 class="h1">
           Your Strix Halo box,<br />
@@ -418,22 +429,38 @@ const shipNowHighlights = [
         </h1>
         <p class="lede">
           <strong>hal0</strong> turns a Linux box — ideally a
-          <strong>Ryzen AI Max+ 395</strong> with 128 GB of unified memory and
-          an XDNA NPU — into a polished, OpenAI-compatible inference appliance.
+          <strong>Ryzen AI Max+ 395</strong> with up to 128 GB of unified memory
+          and an XDNA NPU — into an OpenAI-compatible inference platform.
           Slots, dispatcher, hardware probe, prewired chat UI, signed self-update.
-          <strong>Installer being overhauled — relaunching soon.</strong>
+          <strong>{version} shipped — install at your own pace, expect rough edges.</strong>
         </p>
 
         <div class="holding" id="install">
-          <span class="holding-pill">overhaul in flight</span>
+          <span class="holding-pill">early dev release</span>
           <span class="holding-msg">
-            Big overhaul in flight.
-            <strong>Installer relaunching soon.</strong>
+            Have a <strong>Strix Halo</strong> machine? Want to help shape hal0?
+            <a class="holding-link" href={discordUrl} rel="noopener">Join the Discord</a>
+            for access, builds, and the rough-edge backchannel.
           </span>
+        </div>
+
+        <div class="install">
+          <div class="install-head">
+            <span class="install-dots"><i></i><i></i><i></i></span>
+            <span class="install-title">~/hal0 — bash</span>
+            <span class="install-meta">{version} · alpha</span>
+          </div>
+          <div class="install-body">
+            <span class="prompt">$</span>
+            <span class="cmd" id="install-cmd">{installCmd}</span>
+            <span class="caret"></span>
+            <button class="copy-btn" data-copy={installCmd}>copy</button>
+          </div>
         </div>
 
         <div class="cta-row">
           <a href="/docs/getting-started/" class="btn">Read the docs →</a>
+          <a href={discordUrl} rel="noopener" class="btn">Join Discord ↗</a>
           <a href="https://github.com/hal0ai/hal0" rel="noopener" class="btn ghost">★ Star on GitHub</a>
           <span class="cta-meta">Apache-2.0 · Linux + systemd</span>
         </div>
@@ -806,8 +833,9 @@ const shipNowHighlights = [
         <span class="mono accent-mono">※</span>
         <span>
           <strong>Exploring items are bets we believe in, not promises.</strong>{' '}
-          Scope and order will shift as v0.2 lands and we learn what people actually do with a local platform.
-          <a href="https://github.com/hal0ai/hal0/issues" class="rm-footnote-link">open an issue ↗</a>
+          Scope and order will shift as v0.3 close-out lands and we learn what people actually do with a local platform.
+          <a href="https://github.com/hal0ai/hal0/issues" class="rm-footnote-link">open an issue ↗</a>{' '}
+          or <a href={discordUrl} rel="noopener" class="rm-footnote-link">drop in on Discord ↗</a>.
         </span>
       </div>
     </div>
@@ -816,21 +844,30 @@ const shipNowHighlights = [
   <!-- CTA -->
   <section class="cta-section">
     <div class="shell-wide cta-inner">
-      <div class="sec-tag cta-tag">/ overhaul in flight</div>
+      <div class="sec-tag cta-tag">/ early dev release</div>
       <h2 class="cta-h">Stop running models<br />from a <span class="accent">chat tab.</span></h2>
       <p class="cta-sub">
-        The installer is being rebuilt for the next release.
-        Watch the repo, or read the docs to see where it's heading.
+        {version} is the first public alpha. One command on any modern Linux box —
+        Strix Halo is the reference target, the rest of the matrix is along for
+        the ride. Have a Strix Halo machine and want to help shape it? Join the
+        Discord.
       </p>
-      <div class="holding cta-holding">
-        <span class="holding-pill">overhaul in flight</span>
-        <span class="holding-msg">
-          Big overhaul in flight.
-          <strong>Installer relaunching soon.</strong>
-        </span>
+      <div class="install cta-install">
+        <div class="install-head">
+          <span class="install-dots"><i></i><i></i><i></i></span>
+          <span class="install-title">~/hal0 — bash</span>
+          <span class="install-meta">{version} · alpha</span>
+        </div>
+        <div class="install-body">
+          <span class="prompt">$</span>
+          <span class="cmd">{installCmd}</span>
+          <span class="caret"></span>
+          <button class="copy-btn" data-copy={installCmd}>copy</button>
+        </div>
       </div>
       <div class="cta-row cta-row-centered">
-        <a href="/docs/getting-started/" class="btn">Read the docs →</a>
+        <a href={discordUrl} rel="noopener" class="btn">Join Discord ↗</a>
+        <a href="/docs/getting-started/" class="btn ghost">Read the docs →</a>
         <a href="https://github.com/hal0ai/hal0" rel="noopener" class="btn ghost">View on GitHub ↗</a>
       </div>
       <div class="cta-pills">
@@ -838,6 +875,7 @@ const shipNowHighlights = [
         <span class="pill">Linux + systemd</span>
         <span class="pill">no telemetry by default</span>
         <span class="pill">cosign-signed releases</span>
+        <span class="pill">trusted-LAN by default</span>
       </div>
     </div>
   </section>
@@ -1081,6 +1119,13 @@ const shipNowHighlights = [
     line-height: 1.5;
   }
   .holding-msg strong { color: var(--hal0-accent); font-weight: 600; }
+  .holding-link {
+    color: var(--hal0-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 600;
+  }
+  .holding-link:hover { filter: brightness(1.1); }
   .cta-holding {
     max-width: 640px;
     margin: 0 auto 28px;

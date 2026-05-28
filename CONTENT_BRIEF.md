@@ -13,13 +13,16 @@
 hal0 is a homelab AI inference platform: the Linux box you already
 have in the rack, running real OpenAI-compatible inference. It manages
 model **slots** as systemd units with a typed lifecycle state machine,
-exposes an **OpenAI-compatible `/v1/*` API**, and ships with a Vue
-**dashboard** plus a **prewired OpenWebUI** chat tab. One command
+exposes an **OpenAI-compatible `/v1/*` API**, and ships with a **React
+v3 dashboard** plus a **prewired OpenWebUI** chat tab. One command
 installs on any modern Linux box — Strix Halo iGPU, AMD discrete,
 NVIDIA, or CPU — and it's happy in a privileged Proxmox LXC with
-GPU/NPU passthrough, behind your Traefik.
+GPU/NPU passthrough, behind your own reverse proxy.
 
-(Synthesised from `hal0/README.md` lines 1–24 and `hal0/PLAN.md` §1.)
+(Synthesised from `hal0/README.md` lines 1–24 and `hal0/PLAN.md` §1.
+Dashboard rewrite in v0.3.0-alpha.1 took the surface from the v2 Vue
+SPA to the v3 React scaffold; ~70% of panels wired live, the rest fall
+back to seed data while close-out lands.)
 
 ## Verified perf numbers (do not invent)
 
@@ -67,10 +70,22 @@ Status caveat: the installer is real and produces a running
 published to `ghcr.io/hal0ai/` and pinned by sha256 digest in
 `hal0/manifest.json` (`toolbox_images.*.digest`). FLM chat + embed
 are surfaced in the picker when XDNA hardware and the local toolbox
-image are both present; STT slice deferred. v0.1.1 (2026-05-22) is
-the first install that completes end-to-end on non-Strix-Halo hosts:
-WSL 2 (with systemd), Proxmox VMs, and bare-metal Linux with discrete
-GPUs all probe + wizard cleanly. APIs may shift before v1.0.
+image are both present; STT slice deferred. v0.1.1 (2026-05-22) was
+the first install that completed end-to-end on non-Strix-Halo hosts.
+
+**Current state: `v0.3.0-alpha.1` (2026-05-24, latest GitHub release).**
+v0.3 brought the new **React v3 dashboard scaffold** + the complete
+**removal of auth and Caddy** (ADR-0012). `hal0-api` now binds
+`0.0.0.0:8080` open; trusted-LAN is the default posture. Agent
+identity flows via the `X-hal0-Agent` header instead of Bearer tokens.
+80+ post-alpha.1 commits on `main` heading to `v0.3.0-alpha.2` have
+landed the **Hermes-Agent bootstrap CLI**, Lemonade backend polish
+(serialised loading, GPU-cleanup recovery, whisper RUNPATH patchelf),
+**MCP-client allow-list per ADR-0013**, and **Cognee graph extraction
++ Memory tab**. Roughly 70% of dashboard panels are wired to live
+data; the remaining mock-fallback close-out is tracked through ~20
+named issues. APIs may shift before v1.0. **This is an early
+developer release — install at your own pace, expect rough edges.**
 
 ### Installer overhaul (2026-05-15)
 
@@ -191,9 +206,13 @@ and curated models.
 6. **Bundled prewired OpenWebUI** — chat UI on `:3001`, zero config:
    the installer writes `openwebui.env` pointing at the local hal0 API.
    (PLAN §8)
-7. **Vue 3 + Tailwind 4 dashboard** — 9 views: Dashboard, Slots,
-   Models, Hardware, Logs, Settings, Providers, FirstRun, plus error
-   shell. Dark mode default; SSE for status + log tail. (PLAN §6)
+7. **React v3 dashboard, live-data first** — v0.3.0-alpha.1 ships the
+   new React scaffold (chat at `/chat`, system overview at
+   `/dashboard`, MCP + Memory tabs first-class, journal/footer pane).
+   Dark by default; SSE for status + log tail. About 70% of panels
+   are wired to live data; the rest fall back to seed data while the
+   close-out lands (~20 named issues through alpha.2). Replaced the
+   v2 Vue SPA. (PLAN §6, ADR-0012)
 8. **Atomic self-update with rollback** — `hal0 update --channel
    stable|nightly`; cosign-verified tarballs swap a
    `/usr/lib/hal0/current` symlink; `--rollback` reverts. (PLAN §9,
@@ -208,12 +227,13 @@ and curated models.
     (OpenAI-shaped), curated SDXL Turbo / SD 1.5 / Flux Schnell,
     workflow translation owned by hal0 (commits `1a8a480`, `76b7f8b`;
     `src/hal0/providers/comfyui.py`, `src/hal0/api/routes/v1.py:259`).
-12. **Optional Caddy reverse proxy with basic_auth + Bearer token POC**
-    — `install.sh --auth=basic` provisions Caddy, writes a hashed
-    `basic_auth`, mints a Bearer token, and round-trips a self-test
-    against `https://${HAL0_HOSTNAME}/api/health` before exiting
-    (commits `ba79427`, `f62902c`; install.sh lines 294+ and 645+).
-    Trusted-LAN posture remains the default (`--auth=off`).
+12. **Trusted-LAN by default; bring your own front door** —
+    **ADR-0012 (v0.3.0-alpha.1)** removed the entire FastAPI auth
+    stack and the bundled Caddy reverse proxy. `hal0-api` binds
+    `0.0.0.0:8080` open; put it behind your own Traefik / Caddy /
+    nginx when you want HTTPS or basic_auth. Agent identity flows via
+    the `X-hal0-Agent` header (set from `HAL0_AGENT_ID`) rather than
+    Bearer tokens. The old `install.sh --auth=basic` path is gone.
 13. **Proxmox host-pressure segment (LXC deployments)** — drop a
     read-only `PVEAuditor` API token into Settings → "Proxmox
     integration" and the dashboard's unified-memory bar shows the
@@ -578,6 +598,48 @@ only `models_dir` raises (see comments at
 
 ## Roadmap
 
+### Shipped in v0.3.0-alpha.1 (2026-05-24, latest GitHub release)
+
+- **React v3 dashboard scaffold** — chat moved to `/chat`, system
+  overview to `/dashboard`, MCP + Memory tabs first-class, journal +
+  footer pane. ~70% of panels wired to live data; remaining
+  mock-fallback close-out tracked through ~20 named issues heading to
+  alpha.2.
+- **Auth + Caddy removed (ADR-0012)** — entire FastAPI auth stack and
+  the bundled Caddy reverse proxy taken out. `hal0-api` binds
+  `0.0.0.0:8080` open; trusted-LAN is the default posture. Agent
+  identity flows via the `X-hal0-Agent` header.
+- **Lemonade backend** as the single runtime path (replaces the
+  prior llama.cpp wrapper plumbing).
+
+### On `main` heading to v0.3.0-alpha.2
+
+- **Hermes-Agent bootstrap CLI** — `hal0 agent install hermes-agent`
+  provisions the bundled agent against the local `/v1/*` + MCP
+  servers, env-file-injected via the `hal0-hermes` wrapper.
+- **MCP-client allow-list** (ADR-0013) — per-agent allow-lists in the
+  dashboard MCP page (#304), so each agent only sees the tools you
+  grant it.
+- **Cognee graph extraction + Memory tab** — embedded SQLite +
+  LanceDB + Kuzu; Memory tab walks the graph.
+- **Lemonade polish** — serialised model loading, GPU-cleanup
+  recovery, whisper RUNPATH patchelf workaround for the bundled
+  whisper-server.
+- **Dashboard restructure** — chat → `/chat`, system overview →
+  `/dashboard`, journal/footer pane.
+
+### In flight (close-out to alpha.2 / alpha.3)
+
+- **Dashboard mock-fallback close-out** — ~20 named issues to swap
+  remaining seed-data panels (slot modals, model catalog dropdowns,
+  capability cards) for live data.
+- **Per-agent private memory** — honour the `X-hal0-Agent` identity
+  end-to-end so `private:<agent>` writes don't collapse to the shared
+  dataset (issue #317).
+- **MCP host platform** — install + supervise arbitrary aftermarket
+  MCP servers from the dashboard, treated like capability slots
+  (ADR-0015 draft).
+
 ### Shipped (Phase 1+ as of 2026-05-15, per PLAN §15)
 
 - Slot manager + dispatcher port from haloai
@@ -591,7 +653,9 @@ only `models_dir` raises (see comments at
   ERR-trap hints + post-auth round-trip + live-hello / QR / reachability
   finish (commits `c392859`, `c16422b`, `13a0764`, `686294e`, `f10c99d`)
 - Caddy reverse proxy + basic auth + Bearer token POC (`--auth=basic`,
-  commits `ba79427` + `f62902c`; Team J)
+  commits `ba79427` + `f62902c`; Team J) — **REMOVED in v0.3 per
+  ADR-0012; kept here as historical context only. Do not surface on
+  the landing page.**
 - Toolbox image digests pinned for all six providers: vulkan, rocm,
   flm, moonshine, kokoro, comfyui (`hal0/manifest.json`)
 - 353 unit tests passing, integration tier on Vulkan-CPU + Qwen 0.5B
