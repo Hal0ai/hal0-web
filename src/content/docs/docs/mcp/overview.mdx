@@ -1,0 +1,88 @@
+---
+title: MCP on hal0
+description: The Model Context Protocol surface on hal0 — two bundled servers (`hal0-admin`, `hal0-memory`), FastMCP Streamable-HTTP transport, mounted under `/mcp/*` on hal0-api.
+sidebar:
+  order: 1
+---
+
+import { Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+hal0 hosts a small set of **MCP servers** — Model Context Protocol
+endpoints that agents and external clients can connect to in order to
+do useful things on the box (run admin operations, read and write
+memory, etc.). v0.3 bundles two: `hal0-admin` and `hal0-memory`. Both
+ride the FastMCP Streamable-HTTP transport and are mounted directly
+on hal0-api.
+
+## Transport
+
+Both bundled servers use **FastMCP Streamable-HTTP**:
+
+- One HTTP endpoint per server (`/mcp/admin`, `/mcp/memory`).
+- Bidirectional JSON-RPC over a single long-lived HTTP connection.
+- Server-sent events for notifications and streaming responses.
+
+No separate process per server. No socket files. No port juggling.
+The MCP mount lives inside hal0-api itself, which means there's one
+process to monitor and one log to tail.
+
+## Mounted endpoints
+
+| Server          | Mount         | What it does                                                      |
+|-----------------|---------------|-------------------------------------------------------------------|
+| `hal0-admin`    | `/mcp/admin`  | Admin / introspection — slot status, model registry, system info. |
+| `hal0-memory`   | `/mcp/memory` | Memory engine (Cognee) — add, search, list datasets.              |
+
+Both endpoints are unauthenticated in v0.3 (auth was removed in
+ADR-0012). They identify the caller via the `X-hal0-Agent` header
+(see [Agent identity](/docs/agents/identity/) — the server-side read
+of this header is still landing).
+
+## Catalog: bundled servers
+
+<CardGrid>
+  <LinkCard
+    title="hal0-admin"
+    href="/docs/mcp/hal0-admin/"
+    description="Slot status, model registry, system info — the introspection surface." />
+  <LinkCard
+    title="hal0-memory"
+    href="/docs/mcp/hal0-memory/"
+    description="Cognee-backed memory engine — datasets, add, search." />
+</CardGrid>
+
+## Aftermarket MCP servers
+
+The v0.3 dashboard treats the `/agents` view as the MCP host
+platform: a catalog of aftermarket MCP servers you can install,
+supervise, and assign to agent allow-lists, much like the capability
+slots view. The catalog isn't shipped yet; for now, third-party
+servers can be wired manually by editing `/etc/hal0/mcp/servers.toml`
+and the agent allow-list.
+
+## Why MCP
+
+hal0's job is local AI for your home. The interesting workloads
+aren't single-shot completions; they're agents that read your notes,
+write to a journal, look up a slot's status, restart a backend.
+That's all tool calls. MCP is the protocol that lets one process
+expose tools to another in a language- and runtime-agnostic way, so
+the same hal0 surface works whether the agent is bundled Hermes,
+your own Python script, or an external IDE like Claude Code.
+
+<Aside type="note" title="MCP clients">
+Agents are MCP clients. So is any external tool you point at the
+mounted endpoints — Claude Code, an IDE plugin, a shell wrapper.
+Pointing an external client at `/mcp/admin` doesn't go through any
+agent allow-list (that's an agent-runtime check). External clients
+talk to hal0's mounted servers directly.
+</Aside>
+
+## Related
+
+- [hal0-admin](/docs/mcp/hal0-admin/)
+- [hal0-memory](/docs/mcp/hal0-memory/)
+- [MCP client allow-list](/docs/agents/mcp-client/) — the per-agent
+  enforcement of which MCP servers an agent may connect to.
+- [Agent identity](/docs/agents/identity/) — the `X-hal0-Agent`
+  header MCP servers consume.

@@ -1,0 +1,129 @@
+---
+title: Hermes-Agent bootstrap
+description: The 12-phase `hal0 agent bootstrap hermes` pipeline, what each phase verifies, and the four silent-fallback regressions fixed in PR #316.
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+Hermes-Agent is the bundled agent in v0.3. It runs as
+`hal0-hermes.service`, a hal0-owned wrapper around the upstream
+`hermes` runtime (binary: `hal0-hermes`). Bringing it up the first
+time is a 12-phase pipeline driven by:
+
+```sh frame="terminal"
+hal0 agent bootstrap hermes
+```
+
+The pipeline is idempotent. Re-running it after a partial failure
+picks up where it left off, and each phase emits a structured row
+the dashboard can render in real time.
+
+## The 12 phases
+
+<Steps>
+1. **Pre-flight** — verify hal0-api is up, `HAL0_AGENT_ID=hermes-agent`
+   is set, and `/etc/hal0/agents/hermes.toml` exists (the installer
+   drops it).
+
+2. **Primary slot resolve** — find the primary slot id the agent
+   should target. Reads from the live `/slots` API; does **not** fall
+   back to a hard-coded `primary` literal (see the
+   [silent-fallback regressions](#silent-fallback-regressions) note
+   below).
+
+3. **Primary slot warm** — if the primary slot isn't `ready`, send a
+   `/slots/<id>/load` and wait for `ready`. Uses the slot's normal
+   cold-boot grace window.
+
+4. **MCP allow-list register** — write the agent's allow-list to
+   `/etc/hal0/agents/hermes.allowlist.toml`. By default this is
+   `hal0-admin` + `hal0-memory`.
+
+5. **MCP probe** — for every server on the allow-list, open a real
+   Streamable-HTTP connection and call `tools/list`. Records the
+   tool count. Fails loudly on transport errors.
+
+6. **context_link bootstrap** — write the per-agent
+   `/var/lib/hal0/agents/hermes/context.json` linking the agent's
+   identity to its memory dataset (`private:hermes-agent`) and its
+   approval queue. Per-agent private memory is currently broken
+   ([#317](https://github.com/Hal0ai/hal0/issues/317)); the
+   bootstrap still wires the link so the fix lands cleanly.
+
+7. **Identity handshake** — POST to `/api/agents/identity` with the
+   agent_id and a registration timestamp. Server records the agent
+   in the agent registry.
+
+8. **Inbox stream subscribe** — open the SSE stream at
+   `/api/agents/hermes/inbox/events` to confirm the channel is alive.
+   Closes immediately after the first heartbeat.
+
+9. **Chat smoke** — send one OpenAI-compatible `/v1/chat/completions`
+   request through the agent's client, against the primary slot,
+   with a fixed prompt. Records TTFT and tok/s.
+
+10. **Tool-call smoke** — invoke one MCP tool (the
+    `hal0-admin.status` no-op) end-to-end through the agent's MCP
+    client. Confirms the allow-list and identity path both work.
+
+11. **Approval round-trip** — enqueue a synthetic approval, then
+    resolve it from a second client. Confirms the inbox journal,
+    SSE channel, and resolver are all wired.
+
+12. **systemd enable** — `systemctl enable --now hal0-hermes.service`
+    so the agent comes up on every boot.
+</Steps>
+
+A successful bootstrap exits 0 and writes
+`/var/lib/hal0/agents/hermes/bootstrap.json` with the per-phase
+durations and the smoke results.
+
+## Silent-fallback regressions (PR #316)
+
+Earlier in v0.3 development the bootstrap had four silent fallbacks
+against the new Lemonade-embed and FastMCP transports. They all
+looked green on paper and failed quietly in production:
+
+1. **Primary slot resolver** fell back to the literal string
+   `"primary"` when the live API didn't match.
+2. **MCP probe** caught transport errors and continued to the next
+   phase, hiding broken transports.
+3. **context_link** wrote a placeholder link instead of failing when
+   the agent registry rejected the identity.
+4. **Chat smoke** treated any HTTP 2xx as success, including the
+   `model.not_found` JSON-200 surface.
+
+PR #316 fixed all four. Smoke pass rate went from 2/6 to 5/6 on the
+LXC. The remaining 1/6 is the per-agent private memory case
+gated on [#317](https://github.com/Hal0ai/hal0/issues/317).
+
+<Aside type="tip" title="If smoke fails">
+The dashboard's `/agents` view renders the per-phase journal in
+real time. Failing phases are clickable and expand the structured
+error payload. The same data is on disk at
+`/var/lib/hal0/agents/hermes/bootstrap.json` if you'd rather grep.
+</Aside>
+
+## CLI surface
+
+| Command                                | What it does                                          |
+|----------------------------------------|-------------------------------------------------------|
+| `hal0 agent bootstrap hermes`          | Run the full 12-phase pipeline.                       |
+| `hal0 agent bootstrap hermes --resume` | Re-run from the last failed phase.                    |
+| `hal0 agent status hermes`             | Print last bootstrap result + current unit state.     |
+| `hal0 agent restart hermes`            | `systemctl restart hal0-hermes.service`.              |
+| `hal0 agent logs hermes`               | Tail `journalctl -u hal0-hermes.service`.             |
+
+See [`hal0` CLI reference](/docs/reference/cli/) for the full
+subcommand surface.
+
+## Where to look next
+
+- [Agent identity](/docs/agents/identity/) — the `X-hal0-Agent`
+  contract and outstanding server-side wiring.
+- [MCP client allow-list](/docs/agents/mcp-client/) — how the allow-list
+  is enforced for every outbound MCP call.
+- [hal0-memory MCP server](/docs/mcp/hal0-memory/) — what Hermes-Agent
+  talks to for memory.

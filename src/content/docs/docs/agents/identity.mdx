@@ -1,0 +1,83 @@
+---
+title: Agent identity
+description: Agents identify themselves with the `X-hal0-Agent` header, populated from the `HAL0_AGENT_ID` env. The server-side read path is still landing.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+In v0.3, hal0 removed all built-in auth (ADR-0012; the dashboard and
+API bind `0.0.0.0:8080` open). What replaces it for agent-vs-user
+disambiguation is a single header: `X-hal0-Agent`. Every agent
+process is started with a `HAL0_AGENT_ID` environment variable, and
+the agent runtime sets the header on every outbound HTTP and MCP
+request.
+
+## The contract
+
+| Direction                      | Contract                                                                       |
+|--------------------------------|---------------------------------------------------------------------------------|
+| Agent → hal0-api (HTTP / `/v1/*`) | `X-hal0-Agent: <agent_id>` on every request.                                |
+| Agent → hal0 MCP servers       | Same header on the MCP `Streamable-HTTP` connect.                              |
+| User → hal0 (browser, CLI)     | No header. The server treats this as the "user" identity.                       |
+| Reverse proxy in front of hal0 | Inject `X-hal0-Agent` server-side if you need richer identity. Strip inbound copies first. |
+
+`HAL0_AGENT_ID` is set by the systemd unit (e.g. `hal0-hermes.service`
+sets `Environment=HAL0_AGENT_ID=hermes-agent`). Agent runtimes never
+derive the id themselves; they read it from the env at startup and
+keep it for the process lifetime.
+
+## What the server does with it
+
+Today: the API mounts the header into the request context and
+journals it on every approval, every memory write, every MCP tool
+call. Agents-vs-user disambiguation in logs and the agent inbox
+journal works.
+
+What's still landing — see the caution block below.
+
+<Aside type="caution" title="🚧 TO BE DOCUMENTED">
+This section is intentionally a placeholder. The underlying surface is not yet
+wired end-to-end on `main`:
+
+- **Server-side X-hal0-Agent read**: clients send the `X-hal0-Agent` header
+  (set from `HAL0_AGENT_ID` env), but `src/hal0/api/mcp_mount.py` still
+  resolves `client_id` from `Authorization: Bearer` and falls back to
+  `"anonymous"`. The `MCPAuthMiddleware → MCPIdentityMiddleware` rename
+  + server-side header read are deferred follow-ups to ADR-0012.
+- **Per-agent private memory**: issue [#317](https://github.com/Hal0ai/hal0/issues/317)
+  — `/api/memory/add` and the hal0-memory MCP server force `dataset` to
+  `"shared"` regardless of the incoming `private:<agent_id>` namespace.
+  Per-agent private memory is currently a no-op.
+
+This page will be completed once both land (target: v0.3.0-alpha.2).
+</Aside>
+
+## Why a header, not a token
+
+Auth in v0.3 lives **at the edge** (your reverse proxy, your LAN
+posture, your homelab gateway). hal0 no longer mints, stores, or
+validates secrets. That means agent identity has to be a thing the
+proxy can inject and the server can trust within its trust boundary,
+not a thing that has to round-trip through a credential store.
+
+A plain header satisfies that:
+
+- Reverse proxies can override it server-side (strip inbound, inject
+  the real value) the same way they'd handle `X-Forwarded-For`.
+- The dashboard's "user" identity is just the absence of the header.
+- Agents don't have to bootstrap a credential before they can call
+  hal0.
+
+See [Authentication](/docs/operate/auth/) for the reverse-proxy
+recipes.
+
+## Related
+
+- [Authentication](/docs/operate/auth/) — the no-built-in-auth posture
+  and reverse-proxy recipes.
+- [MCP client allow-list](/docs/agents/mcp-client/) — per-agent
+  allow-list keyed on the same agent_id.
+- [hal0-memory](/docs/mcp/hal0-memory/) — where per-agent identity
+  matters most (and where it's currently broken).

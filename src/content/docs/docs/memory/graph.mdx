@@ -1,0 +1,93 @@
+---
+title: Graph extraction
+description: Cognee's knowledge-graph pipeline. Off by default per ADR-0014, managed via `hal0 memory graph {status,enable,disable}`.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Cognee can extract entities and relationships from text as it's added
+to memory, and build a knowledge graph alongside the regular vector
+index. hal0 ships the pipeline disabled by default per **ADR-0014**:
+graph extraction is heavyweight (LLM calls per add, additional
+storage, additional surface area to reason about) and the right
+default for a homelab is "off until you ask for it".
+
+## Status check
+
+```sh frame="terminal"
+hal0 memory graph status
+```
+
+Prints whether the pipeline is currently enabled, the underlying
+config, and how many graph nodes / edges exist if it's on.
+
+## Turn it on
+
+```sh frame="terminal"
+hal0 memory graph enable
+```
+
+Flips `[memory.graph].enabled = true` in `/etc/hal0/memory/config.toml`,
+hot-reloads the engine, and from that point on every `memory.add`
+runs through the extractor in addition to the embedder. Items added
+before the flag flip aren't retro-extracted; the dashboard surfaces
+a "rebuild graph" affordance for that.
+
+## Turn it off
+
+```sh frame="terminal"
+hal0 memory graph disable
+```
+
+Flips the flag back. Existing graph data stays on disk (so re-enabling
+later doesn't re-run all the extractions) but new adds skip the
+extractor. To wipe the graph entirely:
+
+```sh frame="terminal"
+hal0 memory graph disable --wipe
+```
+
+## Config (read-only reference)
+
+The flag lives in `/etc/hal0/memory/config.toml`:
+
+```toml
+[memory.graph]
+enabled = false       # default per ADR-0014
+
+# Optional: which primary slot to use for extraction. Defaults to the
+# primary slot at the time the extraction runs.
+extractor_slot = "primary"
+```
+
+Edit via the CLI, not the file. The CLI handles the hot-reload and
+keeps the on-disk state consistent.
+
+## What the graph buys you
+
+- `memory.search` can fall back to graph traversal when the embedding
+  similarity is below a threshold.
+- The dashboard's memory view can render a small graph alongside the
+  list of items.
+- Future RAG-style flows can traverse the graph for context expansion.
+
+The cost is one extra LLM call per add (against the primary slot, in
+the current iteration). For a homelab with a modest add rate this is
+typically fine. For batch ingest of large corpora, leave it off and
+flip it on once the bulk import is done.
+
+<Aside type="tip" title="Recommended posture">
+Leave graph extraction off while you're getting a feel for what
+you're actually putting into memory. Once the dataset is meaningful,
+turn it on, let the dashboard's "rebuild graph" run overnight, then
+keep it on for incremental adds.
+</Aside>
+
+## Related
+
+- [Memory overview](/docs/memory/overview/)
+- [hal0-memory MCP server](/docs/mcp/hal0-memory/) — the MCP-side
+  tool surface for the graph.
+- [Private namespacing](/docs/memory/private-namespacing/)

@@ -1,0 +1,89 @@
+---
+title: MCP client allow-list
+description: Per-agent allow-list of MCP servers the agent is permitted to talk to. Edited from the dashboard, enforced before connect.
+sidebar:
+  order: 4
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Each agent in hal0 has an **allow-list** of MCP servers it's permitted
+to open a client connection to. The list is per-agent (not global),
+enforced before the connection is opened, and editable from the
+dashboard. ADR-0013 covers the design; shipped post-alpha.1 in
+PR #293, with the dashboard editor in PR #300.
+
+## What's on the list
+
+The allow-list is a flat list of MCP server ids. For Hermes-Agent
+the default list is:
+
+```toml
+# /etc/hal0/agents/hermes.allowlist.toml
+allowed = [
+  "hal0-admin",
+  "hal0-memory",
+]
+```
+
+Both ids resolve to bundled servers — see
+[MCP overview](/docs/mcp/overview/) for the catalog.
+
+When an agent attempts to open a new MCP client connection, the
+runtime checks the server id against this list. A hit opens the
+connection; a miss denies it and writes a structured rejection to the
+agent's journal (the dashboard's `/agents` view surfaces these).
+
+## Why per-agent
+
+The same hal0 install can host multiple agents with different trust
+boundaries. A coding agent might be allowed to talk to a filesystem
+MCP server; a journaling agent might only be allowed to read memory.
+A global allow-list would force the weakest agent's restrictions on
+the strongest, or the strongest agent's permissions on the weakest.
+Per-agent keeps the principle of least privilege honest.
+
+## Editing the allow-list
+
+Two paths:
+
+**Dashboard.** `/agents` → pick the agent → **MCP clients** tab →
+add/remove entries. Writes the TOML file atomically; the agent
+runtime hot-reloads the list before the next connect.
+
+**TOML.** Edit `/etc/hal0/agents/<agent>.allowlist.toml` directly and
+restart the agent's systemd unit:
+
+```sh frame="terminal"
+sudoedit /etc/hal0/agents/hermes.allowlist.toml
+sudo systemctl restart hal0-hermes.service
+```
+
+The schema is validated on load; a malformed list prevents the agent
+from starting (loud failure rather than a silent reset to "no
+servers").
+
+## Enforcement is at connect, not call
+
+The check fires when the agent runtime opens the MCP client. Once a
+connection is open, all tool calls on that connection are allowed —
+the allow-list is about which servers the agent can speak to, not
+which tools on a server it can call. Per-tool gating is a separate
+surface (the approval queue, surfaced via the agent inbox).
+
+<Aside type="tip" title="Adding aftermarket MCP servers">
+Once the v0.3 dashboard's MCP host platform lands, you'll be able to
+install aftermarket MCP servers from a catalog and add them to an
+agent's allow-list the same way bundled servers are added. Until
+then, third-party servers can be wired manually by adding them to
+`/etc/hal0/mcp/servers.toml` and the agent's allow-list.
+</Aside>
+
+## Related
+
+- [MCP overview](/docs/mcp/overview/) — what an MCP server is on
+  hal0 and which ones ship bundled.
+- [Agent identity](/docs/agents/identity/) — the agent_id the
+  allow-list is keyed on.
+- [hal0-admin](/docs/mcp/hal0-admin/), [hal0-memory](/docs/mcp/hal0-memory/)
+  — the two bundled servers most allow-lists will contain.

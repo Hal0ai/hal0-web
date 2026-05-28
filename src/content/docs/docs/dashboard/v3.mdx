@@ -1,0 +1,131 @@
+---
+title: Dashboard v3 walkthrough
+description: A tour of the v3 hal0 dashboard shipped in v0.3.0-alpha.1 — `/dashboard` system overview, `/chat`, `/slots`, `/memory`, `/agents`, and what's still being wired.
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The hal0 dashboard was rebuilt for v0.3. The v3 scaffold landed in
+v0.3.0-alpha.1 (shipped 2026-05-23) and the post-alpha.1 wiring is
+~70% complete on `main`. This page is a tour of what's there, what
+each view is for, and which surfaces are still being wired.
+
+## The five top-level views
+
+| Path           | Purpose                                                                |
+|----------------|-------------------------------------------------------------------------|
+| `/chat`        | Conversational UI against the primary slot. The default landing page.   |
+| `/dashboard`   | System overview — hardware, slot rollup, memory bar, recent activity.  |
+| `/slots`       | Per-slot detail. Lifecycle, model assignment, swap, load/unload.       |
+| `/memory`      | Browse and search across memory datasets.                              |
+| `/agents`      | Per-agent view: inbox, MCP allow-list, bootstrap journal.              |
+
+Per issue #356, `/chat` is the user-facing default and `/dashboard`
+is the operator's home. The split exists so people who just want to
+chat don't have to wade through unit status panels first.
+
+## `/dashboard` — the system overview
+
+The system overview rolls up:
+
+- Hardware: CPU, RAM, GTT, NPU presence, the kernel.
+- Slot rollup: a one-line summary of every slot's lifecycle state
+  and current model.
+- Memory bar: total / used / GTT split, sourced from `/api/system/memory`.
+- Recent activity: a scrolling feed of slot transitions, agent
+  approvals, and registry pulls.
+
+<img
+  src="/screenshots/dashboard-overview.png"
+  srcset="/screenshots/dashboard-overview.png 1x, /screenshots/dashboard-overview@2x.png 2x"
+  alt="hal0 dashboard system overview, with the hardware card, slot rollup, memory bar, and a recent-activity feed."
+  width="1440"
+  height="900"
+/>
+
+## `/chat` — the conversational entry point
+
+`/chat` is the dashboard's chat surface, talking to the primary slot
+through `/v1/chat/completions`. It is being rolled forward as PR #200
+(closes #148): the ChatSurface features that originally landed in
+PR-18 are being ported into the v3 Composer so v3 has feature parity
+with v2.
+
+If you prefer a full chat UI, the bundled OpenWebUI tab on `:3001`
+is still the right place — see [OpenWebUI](/docs/operate/openwebui/).
+
+## `/slots` — per-slot detail
+
+The slots view is the full lifecycle surface from v2, restyled for
+v3. For each slot you get:
+
+- Live state (and the sparkline of the last few minutes).
+- Model assignment, swap dropdown, load / unload buttons.
+- Per-slot metrics (T/S, ACT, MEM, UP, TTFT, KV%).
+- Inline error payloads when the slot is `errored`.
+
+See [Slots / Built-in slots](/docs/slots/built-in-slots/) for which
+slots ship out of the box.
+
+## `/memory` — memory browser
+
+The memory view renders the three datasets (`shared`, `private:*`,
+`agents`) as separate panes with paginated walks and a search box
+that fans the query out across all of them. Adding items from the
+dashboard writes through the same `/api/memory/add` path that the
+MCP server uses, so dashboard adds and agent adds are identical
+on the back end.
+
+See [Memory overview](/docs/memory/overview/).
+
+## `/agents` — the agent surface
+
+The `/agents` view is the home for everything agent-shaped:
+
+- The **agent inbox** for each agent — pending approvals, accept /
+  reject, expanded tool-call payload.
+- The **MCP allow-list editor** for the agent.
+- The **bootstrap journal** (per-phase results from
+  `hal0 agent bootstrap <agent>`).
+- A future MCP host catalog so aftermarket MCP servers can be
+  installed and assigned to agents.
+
+<img
+  src="/screenshots/agent-inbox.png"
+  srcset="/screenshots/agent-inbox.png 1x, /screenshots/agent-inbox@2x.png 2x"
+  alt="The /agents inbox view, showing a list of pending approval items from Hermes-Agent with accept/reject affordances and the underlying tool-call payload expanded."
+  width="1440"
+  height="900"
+/>
+
+See [Agents on hal0](/docs/agents/overview/) for the agent model
+overall, and [Hermes-Agent bootstrap](/docs/agents/hermes-bootstrap/)
+for the 12-phase pipeline whose journal renders here.
+
+## What's still being wired
+
+Of the post-alpha.1 work, the open threads are:
+
+- `/chat` ↔ v2 ChatSurface feature parity (PR #200).
+- The MCP host catalog inside `/agents`.
+- The "rebuild graph" affordance in `/memory`.
+- Per-agent private memory in the memory views — blocked on
+  [#317](https://github.com/Hal0ai/hal0/issues/317).
+
+<Aside type="note" title="Where to file dashboard feedback">
+The dashboard v3 plan doc in the hal0 repo
+(`docs/internal/dashboard-v2-implementation-plan-2026-05-23.md`)
+is the canonical scratch surface. UX papercuts → GitHub issue,
+behaviour bugs → GitHub issue, "I want this view" → GitHub
+discussion.
+</Aside>
+
+## Related
+
+- [Authentication](/docs/operate/auth/) — putting the dashboard
+  behind a reverse proxy.
+- [Slots / What is a slot?](/docs/slots/what-is-a-slot/)
+- [Memory overview](/docs/memory/overview/)
+- [Agents on hal0](/docs/agents/overview/)

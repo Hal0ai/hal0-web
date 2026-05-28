@@ -1,0 +1,208 @@
+---
+title: Lemonade
+description: hal0's Strix Halo runtime is AMD's Lemonade. Lives on `127.0.0.1:13305`, fronted by hal0-api's `/v1/*`. Operational gotchas, recovery recipes, and where the WhisperCPP RUNPATH patch lives.
+sidebar:
+  order: 6
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+v0.3 replaced hal0's previous per-provider runtime with **AMD's
+Lemonade Server**. The decision is captured in ADR-0008 (which
+supersedes the earlier ADR-0006 and ADR-0007 from the spike phase).
+
+Lemonade runs as `hal0-lemonade.service` and binds
+`127.0.0.1:13305` internally. hal0-api reverse-proxies its
+OpenAI-compatible surface at `/v1/*`, so every client talks to hal0
+on port `8080` as usual — Lemonade itself is an internal detail.
+
+## Layout
+
+| Piece                       | Where it lives                                         |
+|-----------------------------|--------------------------------------------------------|
+| systemd unit                | `hal0-lemonade.service`                                |
+| Internal port               | `127.0.0.1:13305`                                      |
+| OpenAI-compatible surface   | proxied via hal0-api at `:8080/v1/*`                   |
+| Health probe                | `GET http://127.0.0.1:13305/api/v1/health`             |
+| Cache / config root         | `$HOME` of the lemonade service user; see "HF cache"   |
+| Server model catalog        | `server_models.json` under the lemonade cache root     |
+| Logs                        | `journalctl -u hal0-lemonade.service`                  |
+| Realtime audio              | WebSocket at `/realtime` (OpenAI-compatible)           |
+| Log stream                  | WebSocket at `/logs/stream`                            |
+
+<Aside type="note" title="Why 13305, not 9000">
+Earlier docs and ADR drafts referenced port 9000 for Lemonade.
+That was the spike-phase port; the shipped install binds 13305 to
+avoid colliding with the wider Lemonade ecosystem default.
+</Aside>
+
+## Operational gotchas
+
+Burn these into your operator brain — every one of them has bitten us:
+
+### Nuclear evict-all on load failure
+
+If a model fails to load, Lemonade currently evicts **all** loaded
+models in the process. Not just the one that failed. There is no
+"sorry, that one didn't take, keep your other slots warm" mode.
+Workaround: only attempt loads when you can afford the eviction, and
+treat a load failure as if every other slot just unloaded too.
+
+### No idle TTL
+
+Lemonade does **not** ship an idle-based unload. Loaded models stay
+loaded until you (or hal0's slot manager) ask them to unload. If you
+relied on idle eviction to free GTT during quiet periods, you have to
+issue the unload yourself.
+
+### Serialized loading
+
+Concurrent `/v1/load` requests serialize, not parallelize. Two loads
+take roughly the time of two single loads end-to-end, not max(a, b).
+This is fine for typical use but matters for batch warm-up scripts.
+
+### Weekly breaking releases
+
+Lemonade has been moving fast (~weekly breaking releases). The hal0
+installer pins a known-good Lemonade version. Don't blindly update
+Lemonade via `apt upgrade` without checking the hal0 release notes
+for compatibility.
+
+### No built-in Prometheus
+
+Lemonade doesn't emit a Prometheus scrape endpoint. hal0 stitches the
+relevant metrics together from `/api/v1/health`, `/api/v1/models`,
+and the model-process logs.
+
+### NPU is XDNA2-only
+
+The NPU code path is XDNA2-only. Strix Halo has XDNA2; older Phoenix /
+Hawk Point parts do not, and the FLM-NPU recipes won't help on those.
+
+## Recovery recipes
+
+### Unload-hang (GPU cleanup deadlock)
+
+Lemonade 10.6.0 has a known deadlock in `ProcessManager` GPU cleanup
+after a model unload — the port stays open, `/api/v1/health` times
+out, but the systemd unit doesn't restart on its own (NRestarts=0).
+This is distinct from the nuclear-evict-all behaviour.
+
+Recovery:
+
+```sh frame="terminal"
+sudo systemctl restart hal0-lemonade
+```
+
+That's it. The cache is intact; just restart the unit.
+
+### WhisperCPP RUNPATH bug
+
+Lemonade ≤ 10.6 ships its bundled `whispercpp/vulkan` with
+`RUNPATH=/home/runner` (a leftover from the upstream CI builder).
+Result: `whisper-server` exits 127, the STT slot fails to load, and
+the nuclear-evict-all wipes everything else loaded.
+
+The hal0 fix is a `patchelf` helper that re-applies the correct
+RUNPATH before each Lemonade start:
+
+```
+/usr/local/sbin/hal0-patchelf-whisper
+```
+
+It's wired in as an `ExecStartPre` drop-in on the
+`hal0-lemonade.service` unit, so it runs on every restart. If you
+see the symptom (STT load HTTP 500 + nuclear evict), check that the
+drop-in is in place:
+
+```sh frame="terminal"
+sudo systemctl cat hal0-lemonade.service | grep -A1 ExecStartPre
+```
+
+If you upgrade Lemonade to a version that fixes this upstream, the
+drop-in is still safe to keep (it's a no-op when the RUNPATH is
+already correct).
+
+### `--threads` deadlock on small LXCs
+
+Lemonade's default child invocation **omits** `--threads`. On an LXC
+with 12 (or fewer) cores running 2+ concurrent llama-server children,
+the Vulkan dispatcher gets starved and you get a 30-second deadlock
+on the first concurrent request.
+
+Fix it in the Lemonade cache `config.json` **before** first start:
+
+```json
+{
+  "llamacpp": {
+    "args": "--parallel 1 --threads <N>"
+  }
+}
+```
+
+where `<N>` is roughly your core count minus one or two for the
+serving runtime.
+
+## HF cache (`/mnt/ai-models/huggingface`)
+
+Lemonade resolves the Hugging Face cache via `$HOME`. hal0
+consolidates this in v0.3:
+
+- `/mnt/ai-models/huggingface` is the **single HF cache** for the
+  whole box.
+- The Lemonade service user's `$HOME/.cache/huggingface` is a symlink
+  to it.
+- `server_models.json` (the catalog Lemonade reads to decide what's
+  available) is at the Lemonade cache root.
+
+Three gotchas, in order of how often they bite:
+
+1. **`$HOME` mismatch.** If the systemd unit and your interactive
+   shell disagree on `$HOME`, Lemonade will look in a different
+   place than you do.
+2. **Empty stub false positives.** A zero-byte file in the HF cache
+   that looks like the model name will satisfy Lemonade's
+   "is it there?" check and then explode at load time. Delete the
+   stub.
+3. **Curated filename drift.** When the upstream model author renames
+   a GGUF, the cached filename in `server_models.json` becomes stale
+   and `/v1/load` returns `model.not_found` while the dashboard
+   still shows the entry. Re-pull or hand-edit the catalog.
+
+## `/v1/load` schema gotcha
+
+Only `model_name` is required. Every other field is optional. The
+sentinels for "use default" are:
+
+- empty string `""` for strings
+- `-1` for ints
+- `"auto"` for the threading hint
+
+**Never** send JSON `null`. Lemonade's `nlohmann::json` accessor is
+unconditional and throws `"type must be string, but is null"`,
+which surfaces as a 500 with a confusing payload.
+
+## Lemonade ↔ hal0 model resolution
+
+When `/slots/<id>/swap` rejects with `model.not_found`, the resolution
+order is:
+
+1. Check the hal0 registry (`/var/lib/hal0/registry/registry.toml`)
+   for the model id.
+2. If present in the registry but **not** in Lemonade's
+   `server_models.json`, the slot manager has to register it with
+   Lemonade first.
+3. Multiple dashboard surfaces still read seed data from
+   `HAL0_DATA.*` rather than the live `/api/models` surface; the
+   dropdown might "see" a model that the load path doesn't (the
+   slot-modals fix from 2026-05-27 closed the worst of this; the
+   broader issue is #345).
+
+## Related
+
+- [Authentication](/docs/operate/auth/) — proxying hal0-api (which
+  is what fronts Lemonade) behind your reverse proxy.
+- [Slots / What is a slot?](/docs/slots/what-is-a-slot/) — how hal0
+  layers the slot abstraction on top of Lemonade.
+- [Built-in slots](/docs/slots/built-in-slots/)
+- [`hal0` CLI](/docs/reference/cli/)

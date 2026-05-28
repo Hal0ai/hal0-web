@@ -1,0 +1,101 @@
+---
+title: hal0-memory MCP server
+description: The bundled memory MCP server. Cognee-backed, three datasets (shared / private / agents), graph extraction available behind a flag.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`hal0-memory` is the bundled MCP server that exposes hal0's memory
+engine. The engine itself is **Cognee** (settled in ADR-0005), and
+this server is the canonical MCP surface in front of it.
+
+- **Mount**: `/mcp/memory` on hal0-api.
+- **Transport**: FastMCP Streamable-HTTP.
+- **Auth**: none (post-ADR-0012). Identity via `X-hal0-Agent`.
+- **Engine**: Cognee.
+
+## Datasets
+
+Memory is partitioned into three datasets:
+
+| Dataset                    | Who can write                                | Who can read                       |
+|----------------------------|----------------------------------------------|------------------------------------|
+| `shared`                   | User + every agent.                          | Same.                              |
+| `private:<agent_id>`       | One specific agent only.                     | Same agent + user (per ADR).       |
+| `agents`                   | Agent-runtime journal (approvals, decisions).| User + every agent.                |
+
+The `private:<agent_id>` namespace is wired in the API and CLI but
+the server-side enforcement is currently broken — see the
+[Private namespacing](/docs/memory/private-namespacing/) caution
+block for details.
+
+## Tools
+
+| Tool             | What it does                                                          |
+|------------------|------------------------------------------------------------------------|
+| `memory.add`     | Add one or more items to a dataset.                                    |
+| `memory.search`  | Semantic search against one or all datasets.                           |
+| `memory.list`    | Walk a dataset (paginated).                                            |
+| `memory.get`     | Fetch one item by id.                                                  |
+| `memory.delete`  | Delete one item by id.                                                 |
+| `memory.datasets`| List available datasets and item counts.                               |
+| `memory.graph.*` | Graph extraction tools (gated on `[memory.graph].enabled`).            |
+
+See [Memory overview](/docs/memory/overview/) for the higher-level
+shape and [Graph extraction](/docs/memory/graph/) for the graph tool
+subset.
+
+## Configuration
+
+Server-side config lives under `/etc/hal0/memory/`:
+
+```toml
+# /etc/hal0/memory/config.toml
+[engine]
+provider = "cognee"
+
+[storage]
+root = "/var/lib/hal0/memory"
+
+[graph]
+enabled = false       # ADR-0014: off by default
+```
+
+`[memory.graph]` toggles the graph-extraction pipeline. Manage it from
+the CLI rather than editing this file directly:
+
+```sh frame="terminal"
+hal0 memory graph status
+hal0 memory graph enable
+hal0 memory graph disable
+```
+
+## Use from an agent
+
+When `hal0-memory` is on the agent's
+[allow-list](/docs/agents/mcp-client/), the agent runtime opens a
+FastMCP client and the memory tools show up in the agent's tool
+catalog. Agents almost always have `hal0-memory` on their allow-list;
+it's the canonical way for an agent to remember anything.
+
+## Use from an external MCP client
+
+```
+http://<hal0-host>:8080/mcp/memory
+```
+
+<Aside type="caution" title="Per-agent private memory is broken">
+Issue [#317](https://github.com/Hal0ai/hal0/issues/317): `/api/memory/add`
+and `hal0-memory` force `dataset` to `"shared"` regardless of the
+incoming `private:<agent_id>` namespace. Per-agent private memory is
+currently a no-op — see [Private namespacing](/docs/memory/private-namespacing/).
+</Aside>
+
+## Related
+
+- [Memory overview](/docs/memory/overview/)
+- [Graph extraction](/docs/memory/graph/)
+- [Private namespacing](/docs/memory/private-namespacing/)
+- [MCP overview](/docs/mcp/overview/)

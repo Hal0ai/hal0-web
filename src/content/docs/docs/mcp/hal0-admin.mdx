@@ -1,0 +1,85 @@
+---
+title: hal0-admin MCP server
+description: The bundled admin / introspection MCP server. Slot status, model registry, system info, log tail.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`hal0-admin` is the bundled MCP server that exposes hal0's introspection
+surface to MCP clients. It's a thin shim over the same data the
+dashboard renders — slot lifecycle, model registry, system info — but
+through MCP tool calls instead of REST.
+
+- **Mount**: `/mcp/admin` on hal0-api.
+- **Transport**: FastMCP Streamable-HTTP.
+- **Auth**: none (post-ADR-0012). Identity via `X-hal0-Agent`.
+
+## Tools
+
+The exposed tool surface, grouped by area:
+
+### Slots
+
+| Tool                  | What it does                                                |
+|-----------------------|-------------------------------------------------------------|
+| `slots.list`          | List every slot with its current lifecycle state.           |
+| `slots.get`           | Fetch one slot by id (state, model, port, last_load_ms).    |
+| `slots.load`          | Trigger a load on a slot (returns when `ready` or errors).  |
+| `slots.unload`        | Unload a slot back to `offline`.                            |
+| `slots.swap`          | Swap a slot's model assignment to another registry entry.   |
+
+### Models / registry
+
+| Tool                  | What it does                                                |
+|-----------------------|-------------------------------------------------------------|
+| `models.list`         | List every registered model with its provider and size.     |
+| `models.get`          | Fetch one model by id.                                      |
+| `models.pull`         | Trigger a HF pull into `/mnt/ai-models/local`.              |
+
+### System
+
+| Tool                  | What it does                                                |
+|-----------------------|-------------------------------------------------------------|
+| `system.info`         | CPU, RAM, GTT, NPU presence, kernel, hal0 version.          |
+| `system.status`       | Coarse liveness — same payload as `/api/status`.            |
+| `system.metrics`      | Snapshot of the Prometheus-style metrics surface.           |
+| `system.logs.tail`    | Tail recent log lines (per-unit filter optional).           |
+
+The exact tool schema is the source of truth; this table is the
+"why each tool exists" view. Clients should always read the live
+`tools/list` response.
+
+## Use from an agent
+
+For agents on the same hal0 box, the runtime opens a FastMCP client
+to `/mcp/admin` automatically when `hal0-admin` is on the agent's
+[allow-list](/docs/agents/mcp-client/). The tools then show up
+alongside any other server's tools in the agent's tool catalog.
+
+## Use from an external MCP client
+
+Any MCP client that speaks Streamable-HTTP can talk to `hal0-admin`
+directly. Point it at:
+
+```
+http://<hal0-host>:8080/mcp/admin
+```
+
+If you front hal0 with a reverse proxy doing auth, route `/mcp/*`
+the same way you route `/v1/*` — see [Authentication](/docs/operate/auth/).
+
+<Aside type="tip" title="What this is not">
+`hal0-admin` is not a configuration writer. It exposes the read-mostly
+introspection surface plus a handful of safe mutations (load, unload,
+swap, pull). Editing `/etc/hal0/*.toml` is out of scope — that's still
+either the dashboard or a text editor + a restart.
+</Aside>
+
+## Related
+
+- [MCP overview](/docs/mcp/overview/)
+- [hal0-memory](/docs/mcp/hal0-memory/) — the other bundled server.
+- [`hal0` CLI](/docs/reference/cli/) — same operations exposed through
+  the terminal.

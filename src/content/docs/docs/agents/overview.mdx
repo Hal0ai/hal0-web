@@ -1,0 +1,96 @@
+---
+title: Agents on hal0
+description: hal0 ships a single bundled agent (Hermes-Agent) in v0.3, plus the surfaces an agent needs — identity, MCP client allow-list, and the agent inbox in the dashboard.
+sidebar:
+  order: 1
+---
+
+import { Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+An **agent** in hal0 is a long-running process that talks to your local
+models the same way any other OpenAI-compatible client would, plus an
+MCP client connection to the bundled `hal0-admin` and `hal0-memory`
+servers. Agents have an identity (an `agent_id`), an allow-list of
+MCP servers they're permitted to talk to, and an inbox in the
+dashboard where approvals and notifications land.
+
+## What v0.3 ships
+
+v0.3.0-alpha.1 ships **one bundled agent**:
+
+- **Hermes-Agent** — internal name `hermes`, identity `hermes-agent`.
+  Runs as `hal0-hermes.service`, a hal0-owned wrapper around the
+  upstream `hermes` runtime. Bootstraps via
+  `hal0 agent bootstrap hermes` (a 12-phase pipeline that pre-warms
+  the primary slot, registers the MCP allow-list, and runs a chat
+  smoke).
+
+The pi-coder code is in the repo but **dropped from the v0.3 promo**
+and is not started by default. It will return as a first-class
+bundled agent in a later release once the dashboard agents view ships
+end-to-end.
+
+<Aside type="note" title="Why only one">
+The agent surface (identity, approvals, inbox, allow-list editor) is
+intentionally narrow in v0.3 so the wiring can settle. Adding more
+bundled agents is cheap once the contract is locked.
+</Aside>
+
+## The agent inbox
+
+Every agent gets an inbox in the dashboard. Items in the inbox are
+**approvals** — the agent asks the user to confirm a tool call, a
+file write, or a privileged MCP operation, and the user resolves the
+item from the dashboard.
+
+<img
+  src="/screenshots/agent-inbox.png"
+  srcset="/screenshots/agent-inbox.png 1x, /screenshots/agent-inbox@2x.png 2x"
+  alt="Agent inbox view in the hal0 dashboard, showing a list of pending approval items from Hermes-Agent with accept/reject affordances and the underlying tool-call payload expanded."
+  width="1440"
+  height="900"
+/>
+
+The inbox is backed by a small journal (per-agent), surfaced over SSE,
+and rendered by the dashboard's `/agents` view. Approvals time out
+after a configurable window; an unresolved approval is treated as a
+rejection.
+
+## Identity
+
+Agents identify themselves to hal0 with the `X-hal0-Agent` header.
+The agent process reads its identity from the `HAL0_AGENT_ID` env
+variable (set by the systemd unit) and sets the header on every
+outbound HTTP and MCP request.
+
+See [Agent identity](/docs/agents/identity/) for the full contract,
+the upstream read path, and the open issues.
+
+## MCP client allow-list
+
+Each agent has an allow-list of MCP servers it's permitted to
+connect to. The list is per-agent (not global), edited from the
+dashboard, and enforced before the connection is opened.
+
+See [MCP client allow-list](/docs/agents/mcp-client/).
+
+## Next
+
+<CardGrid>
+  <LinkCard
+    title="Hermes-Agent bootstrap"
+    href="/docs/agents/hermes-bootstrap/"
+    description="The 12-phase pipeline behind `hal0 agent bootstrap hermes`." />
+  <LinkCard
+    title="Agent identity"
+    href="/docs/agents/identity/"
+    description="`X-hal0-Agent`, `HAL0_AGENT_ID`, and the outstanding server-side wiring." />
+  <LinkCard
+    title="MCP client allow-list"
+    href="/docs/agents/mcp-client/"
+    description="Per-agent MCP server allow-list, editor, enforcement." />
+  <LinkCard
+    title="hal0-memory MCP server"
+    href="/docs/mcp/hal0-memory/"
+    description="The bundled memory MCP server agents talk to." />
+</CardGrid>

@@ -53,6 +53,46 @@ export default defineConfig({
 					items: [{ autogenerate: { directory: 'docs/api' } }],
 				},
 				{
+					label: 'Agents',
+					items: [
+						{ label: 'Overview', link: '/docs/agents/overview/' },
+						{
+							label: 'Hermes-Agent bootstrap',
+							link: '/docs/agents/hermes-bootstrap/',
+						},
+						{ label: 'Agent identity', link: '/docs/agents/identity/' },
+						{
+							label: 'MCP client allow-list',
+							link: '/docs/agents/mcp-client/',
+						},
+					],
+				},
+				{
+					label: 'MCP',
+					items: [
+						{ label: 'Overview', link: '/docs/mcp/overview/' },
+						{ label: 'hal0-admin', link: '/docs/mcp/hal0-admin/' },
+						{ label: 'hal0-memory', link: '/docs/mcp/hal0-memory/' },
+					],
+				},
+				{
+					label: 'Memory',
+					items: [
+						{ label: 'Overview', link: '/docs/memory/overview/' },
+						{ label: 'Graph extraction', link: '/docs/memory/graph/' },
+						{
+							label: 'Private namespacing',
+							link: '/docs/memory/private-namespacing/',
+						},
+					],
+				},
+				{
+					label: 'Dashboard',
+					items: [
+						{ label: 'v3 walkthrough', link: '/docs/dashboard/v3/' },
+					],
+				},
+				{
 					label: 'Operate',
 					items: [{ autogenerate: { directory: 'docs/operate' } }],
 				},

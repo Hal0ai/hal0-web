@@ -1,0 +1,74 @@
+---
+title: Memory
+description: hal0's memory engine is Cognee (ADR-0005). Three datasets, semantic search, optional graph extraction, surfaced via the hal0-memory MCP server.
+sidebar:
+  order: 1
+---
+
+import { Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+hal0 ships a memory engine so that agents (and you, from the dashboard
+or CLI) can write down things and look them up later. The engine is
+**Cognee**, settled in ADR-0005. It's wrapped by the
+[`hal0-memory`](/docs/mcp/hal0-memory/) MCP server and surfaced in the
+dashboard's `/memory` view.
+
+## Datasets
+
+Memory is partitioned into three datasets, each with its own write
+and read rules:
+
+- **`shared`** — the everyone-can-write, everyone-can-read pile.
+  This is the default destination when an agent or the user writes
+  something without specifying a dataset.
+- **`private:<agent_id>`** — namespaced per-agent. The intent is that
+  Hermes-Agent can write to `private:hermes-agent` and only it (plus
+  the human user) can read those rows. This namespace is currently
+  broken — see [Private namespacing](/docs/memory/private-namespacing/).
+- **`agents`** — the journal of agent-runtime events: approvals,
+  decisions, tool-call outcomes. Written by the runtime itself,
+  readable by user and agents alike.
+
+## What memory does
+
+Three core operations:
+
+- **Add.** Write one or more items into a dataset. Cognee handles
+  chunking, embedding, and indexing.
+- **Search.** Semantic search against one or all datasets. Results
+  carry their source dataset.
+- **List / walk.** Paginated walk of a dataset, for the dashboard's
+  memory browser and for migration tools.
+
+Plus, behind a flag:
+
+- **Graph extraction.** Cognee can extract entities and relationships
+  from added text and build a knowledge graph. Off by default per
+  ADR-0014; see [Graph extraction](/docs/memory/graph/).
+
+## Where to go from here
+
+<CardGrid>
+  <LinkCard
+    title="hal0-memory MCP server"
+    href="/docs/mcp/hal0-memory/"
+    description="The MCP surface in front of the memory engine — tools, mount, config." />
+  <LinkCard
+    title="Graph extraction"
+    href="/docs/memory/graph/"
+    description="The optional knowledge-graph pipeline. Off by default; ADR-0014." />
+  <LinkCard
+    title="Private namespacing"
+    href="/docs/memory/private-namespacing/"
+    description="Per-agent `private:<agent_id>` datasets. Currently broken; tracking #317." />
+</CardGrid>
+
+<Aside type="note" title="Why Cognee">
+hal0 evaluated several memory engines (mem0, raw R2R, hand-rolled
+SQLite + pgvector). Cognee won on three counts: it does chunking +
+embedding + retrieval + optional graph extraction as one coherent
+pipeline; it's a single Python dep, not a separate service; and its
+storage layout is plain on-disk SQLite + Parquet, which means there
+is no DB to babysit. The graph extraction is the headline feature
+but cleanly opt-in.
+</Aside>

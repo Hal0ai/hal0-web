@@ -1,0 +1,96 @@
+---
+title: Private namespacing
+description: Per-agent `private:<agent_id>` memory datasets — the target shape, the current breakage (#317), and what's expected for v0.3.0-alpha.2.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The memory engine partitions data into three datasets: `shared`,
+`agents`, and `private:<agent_id>`. The third is the one that gives
+each agent its own private notebook — the place where, e.g.,
+Hermes-Agent can stash its own scratch thoughts without polluting
+the shared pile or revealing them to other agents.
+
+## Target shape
+
+| Action                                  | Resolves to dataset                           |
+|-----------------------------------------|------------------------------------------------|
+| `memory.add` from agent (no dataset)    | `private:<agent_id>` (the agent's own namespace).|
+| `memory.add` from agent with `dataset=shared` | `shared`.                                |
+| `memory.add` from user (no dataset)     | `shared`.                                      |
+| `memory.search` from agent (no dataset) | Federated over `shared` + `private:<agent_id>` + `agents`. |
+| `memory.search` from user               | Federated over all datasets the user can read. |
+
+The `agent_id` comes from the `X-hal0-Agent` header (see
+[Agent identity](/docs/agents/identity/)).
+
+<Aside type="caution" title="🚧 TO BE DOCUMENTED">
+This section is intentionally a placeholder. The underlying surface is not yet
+wired end-to-end on `main`:
+
+- **Server-side X-hal0-Agent read**: clients send the `X-hal0-Agent` header
+  (set from `HAL0_AGENT_ID` env), but `src/hal0/api/mcp_mount.py` still
+  resolves `client_id` from `Authorization: Bearer` and falls back to
+  `"anonymous"`. The `MCPAuthMiddleware → MCPIdentityMiddleware` rename
+  + server-side header read are deferred follow-ups to ADR-0012.
+- **Per-agent private memory**: issue [#317](https://github.com/Hal0ai/hal0/issues/317)
+  — `/api/memory/add` and the hal0-memory MCP server force `dataset` to
+  `"shared"` regardless of the incoming `private:<agent_id>` namespace.
+  Per-agent private memory is currently a no-op.
+
+This page will be completed once both land (target: v0.3.0-alpha.2).
+</Aside>
+
+## Why per-agent matters
+
+Agents accumulate context. Some of that context is genuinely shared —
+"the user lives in CET, prefers dark themes" — but most of it is
+agent-specific scratch: tool-call outcomes, partial reasoning,
+preference for a particular search strategy. Mixing it all into
+`shared` makes search noisier for every other consumer and breaks
+the multi-agent story before it starts.
+
+The per-agent namespace also gives each agent a natural unit of
+"reset": wiping `private:hermes-agent` cleanly resets that agent's
+memory without touching anything else.
+
+## What works today
+
+- The `private:<agent_id>` dataset name is recognised in the CLI
+  and dashboard.
+- The agent-runtime context-link points each agent at its private
+  dataset name (the Hermes-Agent bootstrap phase 6 wires this).
+- The dashboard's memory view will render the per-agent datasets
+  separately once data actually lands in them.
+
+## What's broken
+
+The server-side resolver in `/api/memory/add` and the corresponding
+`hal0-memory` tool overrides the incoming `dataset` field with the
+literal string `"shared"` before passing it to Cognee. The result is
+that everything an agent writes lands in `shared`, regardless of
+what it asked for.
+
+Tracking: [#317](https://github.com/Hal0ai/hal0/issues/317).
+
+## Migration plan (post-fix)
+
+When #317 lands:
+
+1. New writes go to the right dataset automatically.
+2. A one-shot `hal0 memory migrate-private --agent <id> --since <ts>`
+   helper will be available to move historical rows that *should*
+   have landed in `private:<agent_id>` out of `shared`. By default
+   it's interactive (review each row); a `--yes` flag exists for
+   non-interactive bulk migrations.
+
+Both items are scoped to the alpha.2 release.
+
+## Related
+
+- [Memory overview](/docs/memory/overview/)
+- [hal0-memory MCP server](/docs/mcp/hal0-memory/)
+- [Agent identity](/docs/agents/identity/) — the source of the
+  `agent_id` used in the namespace.
