@@ -39,3 +39,9 @@ Thumbs.db
 
 # Serena MCP cache
 .serena/
+.claude/wip.json
+graphify-out/graph.html
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/.graphify_*
+graphify-out/.rebuild.lock

@@ -1,0 +1,447 @@
+{
+  ".claude/wip.json": {
+    "mtime": 1780643884.936226,
+    "ast_hash": "58e0494c51d30eb3494f7c9198986bb9",
+    "semantic_hash": ""
+  },
+  ".vscode/extensions.json": {
+    "mtime": 1778602465.0,
+    "ast_hash": "3adedb22d082dbd1ebb00b75d21403aa",
+    "semantic_hash": ""
+  },
+  ".vscode/launch.json": {
+    "mtime": 1778602465.0,
+    "ast_hash": "60493763dcbc2d109e57da86d997602a",
+    "semantic_hash": ""
+  },
+  "astro.config.mjs": {
+    "mtime": 1779325882.9365838,
+    "ast_hash": "aa3e2f4efbfd6dd58572b6c98ffbfc4d",
+    "semantic_hash": ""
+  },
+  "functions/_middleware.ts": {
+    "mtime": 1779428808.873968,
+    "ast_hash": "faa08f5281723342a4a750ffe8d4f209",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1778884100.0270286,
+    "ast_hash": "0accec96db51aced1287c9968cdd9002",
+    "semantic_hash": ""
+  },
+  "public/install.sh": {
+    "mtime": 1780644493.5487208,
+    "ast_hash": "b378258d392ad7e7bd5905ac545e90c3",
+    "semantic_hash": ""
+  },
+  "public/releases/nightly.json": {
+    "mtime": 1779325882.931584,
+    "ast_hash": "5110e1afa635b4446972d8464722b084",
+    "semantic_hash": ""
+  },
+  "public/releases/stable.json": {
+    "mtime": 1779385508.7702436,
+    "ast_hash": "db44c75157402f0776343c2f5dff509c",
+    "semantic_hash": ""
+  },
+  "scripts/build-og.sh": {
+    "mtime": 1778883095.3076973,
+    "ast_hash": "db15168c8e40ecfd2fa8f7bc623a20b5",
+    "semantic_hash": ""
+  },
+  "src/components/CTA.astro": {
+    "mtime": 1778879105.5531206,
+    "ast_hash": "f701a2a7114ad8244981cf1746d1846d",
+    "semantic_hash": ""
+  },
+  "src/components/CodeBlock.astro": {
+    "mtime": 1778879083.082844,
+    "ast_hash": "8aeb05d1897fd477dd9f18a942cfde1a",
+    "semantic_hash": ""
+  },
+  "src/components/StarlightSiteTitle.astro": {
+    "mtime": 1779325882.9385839,
+    "ast_hash": "4afbc9f57318a0ae1f0327282a5e1f2b",
+    "semantic_hash": ""
+  },
+  "src/components/Wordmark.astro": {
+    "mtime": 1779325882.9385839,
+    "ast_hash": "aee4f26f72de72329bd3d45a23a74652",
+    "semantic_hash": ""
+  },
+  "src/components/landing/LiveArtifact.astro": {
+    "mtime": 1779501081.5513387,
+    "ast_hash": "59adb49a896e3ef598c1c321ddf0630c",
+    "semantic_hash": ""
+  },
+  "src/components/landing/LoadoutCard.astro": {
+    "mtime": 1778880166.3259342,
+    "ast_hash": "31fea1a66be664e080e9890587aa4f32",
+    "semantic_hash": ""
+  },
+  "src/content.config.ts": {
+    "mtime": 1778602465.0,
+    "ast_hash": "9333c054c16ebc82d9223347ffd02563",
+    "semantic_hash": ""
+  },
+  "src/layouts/MarketingLayout.astro": {
+    "mtime": 1779517511.3492978,
+    "ast_hash": "e53eb2b7f72256f8235a8fe9ab07ad3f",
+    "semantic_hash": ""
+  },
+  "src/pages/index.astro": {
+    "mtime": 1779728872.6432543,
+    "ast_hash": "f7e8131cffdaedda3647db9b65d9cd0b",
+    "semantic_hash": ""
+  },
+  "tsconfig.json": {
+    "mtime": 1778602465.0,
+    "ast_hash": "1d3613ac08bdda17e2b82251613dbc21",
+    "semantic_hash": ""
+  },
+  ".claude/STYLE_GUIDE.md": {
+    "mtime": 1779410328.4249299,
+    "ast_hash": "700d4316c05aaf078f785105d2695769",
+    "semantic_hash": ""
+  },
+  ".github/workflows/mirror-docs.yml": {
+    "mtime": 1779430132.6577713,
+    "ast_hash": "05eec6901c1a0aec9ee580888c671a43",
+    "semantic_hash": ""
+  },
+  ".serena/project.local.yml": {
+    "mtime": 1779949988.8390634,
+    "ast_hash": "f136e7d47205d9a758913615074760e5",
+    "semantic_hash": ""
+  },
+  ".serena/project.yml": {
+    "mtime": 1779950000.526217,
+    "ast_hash": "5c685c6810984a585b62d676dc66c8cd",
+    "semantic_hash": ""
+  },
+  "CONTENT_BRIEF.md": {
+    "mtime": 1779784763.190971,
+    "ast_hash": "45a1dff36cba3f9662074dcaa83a22de",
+    "semantic_hash": ""
+  },
+  "NOTES.md": {
+    "mtime": 1779428808.872968,
+    "ast_hash": "2ad01368e56dfaedef5d9386c4d29fa7",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1779428808.873968,
+    "ast_hash": "86f3f7d12ccbd226eeef03bf66a7b166",
+    "semantic_hash": ""
+  },
+  "docs/SITE-FIXES.md": {
+    "mtime": 1780854403.9733822,
+    "ast_hash": "baab98143a969a8d81cb595a3ec1511c",
+    "semantic_hash": ""
+  },
+  "docs/audit-2026-06-07/WEBSITE-BACKLOG.md": {
+    "mtime": 1780854739.9278502,
+    "ast_hash": "109f4105af0c67de07ffd97e33c860ef",
+    "semantic_hash": ""
+  },
+  "docs/audit-2026-06-07/WEBSITE-NAVIGATION.md": {
+    "mtime": 1780854685.4249372,
+    "ast_hash": "48d3e2f81a2cd357393e67e79da14215",
+    "semantic_hash": ""
+  },
+  "docs/audit-2026-06-07/web-content-map.md": {
+    "mtime": 1780853724.0354657,
+    "ast_hash": "c0768c837b5c8e8992f0f49371990153",
+    "semantic_hash": ""
+  },
+  "docs/audit-2026-06-07/web-quality.md": {
+    "mtime": 1780854417.1743617,
+    "ast_hash": "86cba5c7a207d269c866a9c39de5e511",
+    "semantic_hash": ""
+  },
+  "public/robots.txt": {
+    "mtime": 1778880781.4671445,
+    "ast_hash": "2cde95c09f03d1d61cc686f945829aa2",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/api/audio.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "f883fa53610566e0e5f5bd578b6b0c11",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/api/images-generation.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "490a72faac7c7776464cbdf1876930c2",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/api/openai-compat.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "48b2e540cb476611319374acadeee66f",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/api/slot-as-model.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "93692d05e25863a267bdc973247b0eee",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/api/streaming.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "4481600c531d4e71073ff1985ebc9b9a",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/getting-started/first-chat.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "e9c4c81e42b81ea9515ae9bf289a9ff6",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/getting-started/first-model.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "927646360f67adc7c843ad22c0630a60",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/getting-started/install.mdx": {
+    "mtime": 1779784763.190971,
+    "ast_hash": "28020f973b0614cfa2e0c13bba2c8240",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/hardware/amd-discrete.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "f26f7a725fde151757aa0b0cd9378b6d",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/hardware/cpu-only.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "5496117d2975603c7b82cdbfca0af77a",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/hardware/nvidia.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "9c73937d0623ea29762f84ca37c454d1",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/hardware/overview.md": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "f936f250049ee100c97fb11c8dcd98c7",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/hardware/strix-halo.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "b5da87367125009d298b7ba1905fb9b4",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/index.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "555406775f22c09d883be05f6aa4c893",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/operate/auth.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "5dd6a8193de719e8f92e1cfd11abb66d",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/operate/config.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "61a73f5712ded1d314b703d19c96e6a1",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/operate/logs.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "43d157736630bea26ce45e55c36ba01a",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/operate/openwebui.mdx": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "4c32b7ba25138958bcb7cab0c6b77fc3",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/operate/updates.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "c45b09ee2c8c40a919b38dc1d5f151ab",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/reference/cli.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "76732e1710fc56a43b1fecbe8df85168",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/reference/config-schema.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "d751ba0cc816980b8456884241729087",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/reference/provider-matrix.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "3275bb51a16b3ad655a7538b9e96bd79",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/reference/slot-lifecycle.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "e20a8dc34989eeff29aefc106a57a741",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/slots/built-in-slots.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "861461793c4e69f571f9d8f1eff89fa5",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/slots/custom-slots.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "d680f0d91c9cf4300cdaac0e68b11ddc",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/slots/huggingface-pulls.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "6f7d86ed1e0bb60bc691999a98b5fdf7",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/slots/loadouts.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "884f9efe18d20a276a988994e68d8c9d",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/slots/model-registry.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "ec759a9182418d9962e3d2701f8931e3",
+    "semantic_hash": ""
+  },
+  "src/content/docs/docs/slots/what-is-a-slot.mdx": {
+    "mtime": 1779428808.878968,
+    "ast_hash": "d50c768199eb31ddd265756f265a3692",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-dark-favico.png": {
+    "mtime": 1779325882.9365838,
+    "ast_hash": "bfa0cd8f6c78c7f079a6455fb55e9131",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-dark-favico.svg": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "f9f8ada66259d6458a1935dee96e19f2",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-dark.png": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "c2acb5ee2dc6dea0044f0340b9a4ea6c",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-dark.svg": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "c3af7bfbfafa26ccb9b7272b8dfb0e26",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-light-favico.png": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "87faaa284fd78568d7d7979c56a4f221",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-light-favico.svg": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "3428fe30afc3caf0820d4ea4c1afeca9",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-light.png": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "282a0185f9f5727b940dc7c41ac0b963",
+    "semantic_hash": ""
+  },
+  "public/brand/logo-halo-light.svg": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "439846e41288d01b2622ff19a2abadb8",
+    "semantic_hash": ""
+  },
+  "public/favicon.svg": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "f9f8ada66259d6458a1935dee96e19f2",
+    "semantic_hash": ""
+  },
+  "public/og-default.png": {
+    "mtime": 1779325882.9379463,
+    "ast_hash": "5d6fa0ef384b45133f9314a90770edf9",
+    "semantic_hash": ""
+  },
+  "public/screenshots/agent-inbox.png": {
+    "mtime": 1779442744.4948041,
+    "ast_hash": "03a56556069d4d1993716939bdb71024",
+    "semantic_hash": ""
+  },
+  "public/screenshots/agent-inbox@2x.png": {
+    "mtime": 1779442744.4948041,
+    "ast_hash": "db3352843db35993b50f61b01a3bf8fd",
+    "semantic_hash": ""
+  },
+  "public/screenshots/capability-card-embed.png": {
+    "mtime": 1779428808.873968,
+    "ast_hash": "d67af6a02efb88e9db99a2a7c5deb3df",
+    "semantic_hash": ""
+  },
+  "public/screenshots/capability-card-embed@2x.png": {
+    "mtime": 1779428808.8742747,
+    "ast_hash": "fdb10fc632c446527d65890cfff3884b",
+    "semantic_hash": ""
+  },
+  "public/screenshots/capability-slots.png": {
+    "mtime": 1779428808.8742747,
+    "ast_hash": "a0d16d6f8de26ec3f92ecce73b583de8",
+    "semantic_hash": ""
+  },
+  "public/screenshots/capability-slots@2x.png": {
+    "mtime": 1779428808.874968,
+    "ast_hash": "bba2b776a3fafb208b2db02914779b70",
+    "semantic_hash": ""
+  },
+  "public/screenshots/dashboard-overview.png": {
+    "mtime": 1779428808.874968,
+    "ast_hash": "52b6d7ee525335b6e57e3b1861c2696e",
+    "semantic_hash": ""
+  },
+  "public/screenshots/dashboard-overview@2x.png": {
+    "mtime": 1779428808.875968,
+    "ast_hash": "9ae43cd0157c723bb27660c3de998fe1",
+    "semantic_hash": ""
+  },
+  "public/screenshots/hardware-page.png": {
+    "mtime": 1779428808.875968,
+    "ast_hash": "af03b958cf88f88554329e22629f97fd",
+    "semantic_hash": ""
+  },
+  "public/screenshots/hardware-page@2x.png": {
+    "mtime": 1779428808.875968,
+    "ast_hash": "55e2e6dfc31cc6c59c223c13b1af71e0",
+    "semantic_hash": ""
+  },
+  "public/screenshots/memory-bar.png": {
+    "mtime": 1779428808.875968,
+    "ast_hash": "f5dd8aca1a8f3befcd2bffa4846280fb",
+    "semantic_hash": ""
+  },
+  "public/screenshots/memory-bar@2x.png": {
+    "mtime": 1779428808.875968,
+    "ast_hash": "bce2989bfd6aa123c1e2ab0b30e98c51",
+    "semantic_hash": ""
+  },
+  "public/screenshots/models-registry.png": {
+    "mtime": 1779428808.8769681,
+    "ast_hash": "d9ed0f9366c698e4d842ddf01fa98a46",
+    "semantic_hash": ""
+  },
+  "public/screenshots/models-registry@2x.png": {
+    "mtime": 1779428808.8769681,
+    "ast_hash": "bc252926ac6664a5143e0c62b26e69df",
+    "semantic_hash": ""
+  },
+  "public/screenshots/slots-lifecycle.png": {
+    "mtime": 1779428808.8769681,
+    "ast_hash": "c8bf687b739d110200df01c4ba1b9c77",
+    "semantic_hash": ""
+  },
+  "public/screenshots/slots-lifecycle@2x.png": {
+    "mtime": 1779428808.877968,
+    "ast_hash": "50551beb2c1d205263fe9148e7dcb3a6",
+    "semantic_hash": ""
+  },
+  "src/assets/wordmark.svg": {
+    "mtime": 1779325882.9385839,
+    "ast_hash": "9365df285cdb74a4b147536d296cdd15",
+    "semantic_hash": ""
+  }
+}

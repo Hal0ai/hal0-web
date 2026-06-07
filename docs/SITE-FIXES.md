@@ -2,7 +2,7 @@
 
 > **Living task list** for bringing the website back in sync with the backend (v0.3.2-alpha.1).
 > Source: website↔backend drift pass, 2026-06-07 → `~/.graphify/crosslink/DRIFT-REPORT.md` (+ `crosslink-edges.json`).
-> **Progress: 0 / 36 fixes · 0 / 13 content-adds — last updated 2026-06-07**
+> **Progress: 0 / 62 items — last updated 2026-06-07** (36 drift fixes · 13 content-adds · 13 website self-audit)
 
 ## How to work this list (cross-session)
 - This committed file **is** the tracker — any session reads it, does fixes, checks items, and **commits**. Git history = the multi-day record.
@@ -62,9 +62,35 @@ _(Most marketing-worthy first. Each is real + user-facing.)_
 
 ---
 
+## 🔍 Website self-audit (B-series) — from `docs/audit-2026-06-07/WEBSITE-BACKLOG.md`
+_New items beyond the drift report. Full detail + verification notes in the backlog doc._
+
+### 🔴 HIGH — OSS / broken copy-paste
+- [ ] **B2 — Scrub private IPs/domains from the website repo** · `astro.config.mjs:93` (`allowedHosts ['.thinmint.dev']` → localhost) · `operate/openwebui.mdx:79,81` (`hal0.thinmint.dev` → `hal0.local`) · `operate/auth.mdx:31,331,337` (`10.0.1.230` — goes away with B1)
+- [ ] **B3 — Fix invalid `--provider` / `provider =` examples (they error on validation)** · valid set `{lemonade,llama-server,flm,moonshine,kokoro}` · `hardware/amd-discrete.mdx:69`, `hardware/nvidia.mdx:160`, `reference/config-schema.mdx:50`
+
+### 🟡 MEDIUM
+- [ ] **B6 — Remove `hal0-slot@.service` from install step 5** (template removed PR-9) · `getting-started/install.mdx:137-148`
+- [ ] **B7 — Add `starting` state to the lifecycle diagram** · `slots/what-is-a-slot.mdx`
+- [ ] **B8 — Default model path `/mnt/ai-models` → `/var/lib/hal0/models/`** · `slots/what-is-a-slot.mdx:110`, `model-registry.mdx:13`, `huggingface-pulls.mdx:59`
+- [ ] **B9 — Mark `HAL0_OPENWEBUI_PORT` dev-only** (installed unit hardcodes :3001) · `getting-started/install.mdx:109,194`
+- [ ] **B11 — Roadmap links to nonexistent `docs/agents`,`docs/mcp` → 404 risk** — add stubs or link to GitHub · `src/pages/index.astro`
+
+### 🟢 LOW — polish / SEO / OSS
+- [ ] **B12 — Single source of truth for version** (build-time inject; prevents recurring version drift)
+- [ ] **B13 — README "Layout" lists 7 nonexistent components** · `README.md:28-61`
+- [ ] **B14 — 9 "Coming soon" stubs indexed by search** — flesh out or `noindex`
+- [ ] **B15 — Thin per-page OG/Twitter/JSON-LD metadata** — add to top pages (install, strix-halo, first-chat)
+- [ ] **B16 — Orphaned screenshots** (`public/screenshots/agent-inbox*.png`) — link or delete
+- [ ] **B17 — `HAL0_USER` default column wrong** (installer runs as root, writes `User=hal0`) · `getting-started/install.mdx:195`
+
+> Overlaps already tracked above: B1≈Caddy/auth · B4≈version sweep · B5≈slot-docs rewrite · B10≈hf-pull-501.
+> **Suggested first sweep** (all low-effort find/replace): **B2, B3, B4, B8, B9, B17.**
+
 ## Notes
 - **39 claims ALIGNED** (correct) — left untouched: OpenAI-compat endpoint surface, slot-as-model routing, SSE+single-flight, cosign self-update/rollback, OpenWebUI on :3001, Proxmox overlay, `no-auth-default`, bge-reranker model name, 258 tok/s Strix Halo perf, Apache-2.0, and the correctly-roadmapped items (LoRA, multi-host, OIDC).
-- **Pending merge:** the hal0-web audit workflow (`wnu1g4unh`) will add a `WEBSITE-BACKLOG.md` (content gaps, structure, SEO, OSS polish) — fold its items in here when it lands.
+- **Reference docs:** full website audit in `docs/audit-2026-06-07/` (`WEBSITE-NAVIGATION.md` = where-to-edit index, `WEBSITE-BACKLOG.md` = verified backlog, `web-content-map.md`, `web-quality.md`). Cross-repo drift detail in `~/.graphify/crosslink/DRIFT-REPORT.md`.
 
 ## Session log
-- **2026-06-07** — Tracker created from the cross-link drift report (15 overclaim · 9 contradiction · 14 stale · 13 undocumented · 39 aligned). 36 fixes + 13 content-adds queued. None started.
+- **2026-06-07** — Tracker created from the cross-link drift report (15 overclaim · 9 contradiction · 14 stale · 13 undocumented · 39 aligned). 36 fixes + 13 content-adds queued.
+- **2026-06-07** — Folded in the website self-audit (B-series, 13 items incl. B2 private-IP leak in `astro.config.mjs`, B3 broken `--provider` examples). hal0-web graph enriched with 74 content concepts (now queryable via Hermes `graphify-web`). 62 items total, none started.
