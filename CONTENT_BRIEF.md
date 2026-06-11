@@ -208,6 +208,9 @@ and curated models.
     (OpenAI-shaped), curated SDXL Turbo / SD 1.5 / Flux Schnell,
     workflow translation owned by hal0 (commits `1a8a480`, `76b7f8b`;
     `src/hal0/providers/comfyui.py`, `src/hal0/api/routes/v1.py:259`).
+    The dashboard operates ComfyUI as a containerized generation
+    engine with a gated inference ⇄ generation iGPU switchover
+    (hal0 PRs #686/#690, 2026-06-11 — see "Image generation" below).
 12. **Optional Caddy reverse proxy with basic_auth + Bearer token POC**
     — `install.sh --auth=basic` provisions Caddy, writes a hashed
     `basic_auth`, mints a Bearer token, and round-trips a self-test
@@ -365,6 +368,33 @@ when XDNA hardware AND a local toolbox image are both present.
 - **Perf** — no measured tok/s yet. `[TODO: verify]`.
 
 ## Image generation
+
+### ComfyUI generation engine + iGPU switchover (dashboard, 2026-06-11)
+
+The dashboard now treats ComfyUI as **one containerized "generation
+engine"**, not per-model slot cards. The slots page splits into
+**Inference | Image Gen** tabs (hal0 PR #686); the Image-Gen tab
+renders an engine pane backed by the read-only
+`GET /api/comfyui/status` aggregator — container state, which mode
+owns the iGPU, live GTT/RAM gauges with memory-pressure warning,
+render-queue depth, and **verified** model-inventory counts from the
+share (never invented numbers).
+
+The pane's **inference ⇄ generation switchover** is real (hal0
+PR #690): a blast-radius confirm dialog (messaging bots go dark,
+background memory extraction pauses), then
+`POST /api/comfyui/switchover` runs the root-owned script pair on the
+runtime host in the background behind a `202`; the `switchover` block
+on `/status` drives the "switching…" UI. Dropping a busy render queue
+requires explicit `force`; the whole write path is opt-in per host via
+`HAL0_COMFYUI_SWITCHOVER_ENABLED` (`501` when off). On a single-iGPU
+box (Strix Halo) the LLM stack and ComfyUI are mutually exclusive —
+this is the supported way to hand the GPU back and forth.
+
+Site copy guidance: pitch as "run Wan 2.2 / Qwen-Image / SDXL on the
+same box that serves your LLMs — flip the GPU from the dashboard."
+Cite hal0 PRs #686 and #690. `[TODO: screenshot of the Image-Gen pane
+via the γ-suite harness]`
 
 Image generation landed in commit `1a8a480 feat(image-gen): ship
 ComfyUI provider + /v1/images/generations + curated SD models`,
