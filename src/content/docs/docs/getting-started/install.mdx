@@ -60,10 +60,10 @@ below).
 ## Deployment shapes
 
 hal0 doesn't care which slice of your homelab it runs on, as long as
-the kernel speaks systemd and Docker. Three shapes worth naming:
+the kernel speaks systemd and podman. Three shapes worth naming:
 
 - **Bare-metal Linux.** The simplest case. `hal0-api`, `hal0-openwebui`,
-  and the per-slot toolbox containers all live on the host.
+  and the per-slot podman containers all live on the host.
 - **VM.** Works if you give it enough RAM and pass the GPU through.
   Eats more host memory than an LXC for the same workload.
 - **Privileged LXC on Proxmox (recommended for homelabs).** GPU and
@@ -99,8 +99,9 @@ loads one.
 
 2. **x86_64.** ARM is not currently supported.
 
-3. **Docker reachable.** The slot toolboxes run as containers. The
-   installer checks `docker ps` before doing anything destructive.
+3. **Podman reachable.** Slot inference containers run under podman.
+   The installer checks podman availability before doing anything
+   destructive.
 
 4. **At least 20 GB free under `/var/lib`.** Models, registry, and
    OpenWebUI state land there. Override via `--models-dir=/path` if
@@ -113,7 +114,7 @@ loads one.
 ## What the installer does
 
 <Steps>
-1. **Pre-flight checks.** Verifies systemd, x86\_64, Docker, free
+1. **Pre-flight checks.** Verifies systemd, x86\_64, podman, free
    space, and free ports. Bails before touching anything if a check
    fails. Re-runnable on its own as `hal0 doctor`.
 
@@ -134,10 +135,11 @@ loads one.
    pull a model and flip it on yourself. Existing files are never
    overwritten on re-run.
 
-5. **systemd units.** Drops `hal0-api.service`,
-   `hal0-openwebui.service`, and the `hal0-slot@.service` template into
-   `/etc/systemd/system/`. Reloads the daemon, enables and starts the
-   API plus OpenWebUI.
+5. **systemd units.** Drops `hal0-api.service` and
+   `hal0-openwebui.service` into `/etc/systemd/system/`. The
+   `hal0-slot@.service` template is written separately for per-slot
+   podman containers. Reloads the daemon, enables and starts the API
+   plus OpenWebUI.
 
 6. **`hal0` on PATH.** Symlinks `/usr/local/bin/hal0` →
    `${VENV_DIR}/bin/hal0` so the CLI works without sourcing anything.
@@ -153,7 +155,7 @@ The installer needs `sudo` to drop systemd unit files in
 `/etc/systemd/system/`, create the `/usr/lib/hal0/` tree, and
 optionally write the `/usr/local/bin/hal0` symlink. The `hal0-api`
 service itself runs as the unprivileged `hal0` user, as do the
-per-slot toolbox containers (each declares `User=hal0` in the
+per-slot podman containers (each declares `User=hal0` in the
 template unit).
 </Aside>
 
@@ -209,22 +211,15 @@ then `/var/lib/hal0/models`. The path is persisted as
 `[models].pull_root` and auto-included in `[models].roots` so a fresh
 install scans the existing tree on first boot.
 
-## Authentication & HTTPS (optional)
+## Authentication & HTTPS
 
-The default install has no auth in front. Fine on a trusted home LAN
-behind your Traefik or Caddy. For exposed deployments add
-`--auth=basic`:
-
-```sh frame="terminal"
-sudo bash installer/install.sh --auth=basic
-```
-
-The installer prompts for an admin user and password, installs Caddy,
-generates a TLS cert (self-signed for `.local` hostnames, Let's
-Encrypt for real domains), mints a Bearer token, and round-trips
-`https://${HAL0_HOSTNAME}/api/health` as a self-test before exiting.
-See [Authentication & HTTPS](/docs/operate/auth/) for the full flow
-including client-side cert trust and ACME setup.
+hal0-api binds `0.0.0.0:8080` with no built-in auth or TLS. On a
+trusted home LAN behind your Traefik this is the correct default.
+For exposed deployments, put a reverse proxy (Traefik, nginx,
+Cloudflare Tunnel) in front and handle auth and TLS there.
+See [Authentication & Security](/docs/operate/auth/) for recommended
+patterns including WebSocket passthrough and the MCP transport
+allowlists.
 
 ## From a clone
 
@@ -258,7 +253,7 @@ hal0 doctor
 ```
 
 Re-runs the pre-flight pack against the live host. Handy after a
-kernel upgrade, a Docker daemon swap, or whenever something feels off.
+kernel upgrade, a podman update, or whenever something feels off.
 
 ## Next steps
 

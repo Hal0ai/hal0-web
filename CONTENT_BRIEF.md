@@ -12,12 +12,12 @@
 
 hal0 is a homelab AI inference platform: the Linux box you already
 have in the rack, running real OpenAI-compatible inference. It manages
-model **slots** as systemd units with a typed lifecycle state machine,
-exposes an **OpenAI-compatible `/v1/*` API**, and ships with a Vue
-**dashboard** plus a **prewired OpenWebUI** chat tab. One command
-installs on any modern Linux box — Strix Halo iGPU, AMD discrete,
-NVIDIA, or CPU — and it's happy in a privileged Proxmox LXC with
-GPU/NPU passthrough, behind your Traefik.
+model **slots** as podman containers under per-slot systemd units with
+a typed lifecycle state machine, exposes an **OpenAI-compatible
+`/v1/*` API**, and ships with a React **dashboard** plus a **prewired
+OpenWebUI** chat tab. One command installs on any modern Linux box —
+Strix Halo iGPU, AMD discrete, NVIDIA, or CPU — and it's happy in a
+privileged Proxmox LXC with GPU/NPU passthrough, behind your Traefik.
 
 (Synthesised from `hal0/README.md` lines 1–24 and `hal0/PLAN.md` §1.)
 
@@ -62,15 +62,15 @@ Overrides (env vars, from `installer/install.sh`):
 `HAL0_NO_PROBE`, per-backend `HAL0_TOOLBOX_IMAGE_*`.
 
 Status caveat: the installer is real and produces a running
-`hal0-api`. As of v0.1.1 (2026-05-22) **all six toolbox images** —
+`hal0-api`. All six toolbox images —
 `vulkan`, `rocm`, `flm`, `moonshine`, `kokoro`, `comfyui` — are
 published to `ghcr.io/hal0ai/` and pinned by sha256 digest in
-`hal0/manifest.json` (`toolbox_images.*.digest`). FLM chat + embed
-are surfaced in the picker when XDNA hardware and the local toolbox
-image are both present; STT slice deferred. v0.1.1 (2026-05-22) is
-the first install that completes end-to-end on non-Strix-Halo hosts:
-WSL 2 (with systemd), Proxmox VMs, and bare-metal Linux with discrete
-GPUs all probe + wizard cleanly. APIs may shift before v1.0.
+`hal0/manifest.json` (`toolbox_images.*.digest`). Slots run as
+**podman containers** under per-slot `hal0-slot@<name>.service`
+systemd units, orchestrated by hal0-api; container images and tuned
+flags come from slot profiles. FLM chat + embed are surfaced in the
+picker when XDNA hardware and the local toolbox image are both present.
+APIs may shift before v1.0.
 
 ### Installer overhaul (2026-05-15)
 
@@ -177,9 +177,13 @@ and curated models.
    warming → ready → serving ↔ idle → unloading; error sideband).
    Persisted to `state.json`, streamed over SSE. (PLAN §5 Tier 3,
    `src/hal0/slots/state.py`)
-3. **systemd-managed containers** — each slot is an instance of the
-   `hal0-slot@.service` template unit. The API process never holds a
-   model in its own memory. (`ARCHITECTURE.md` §Process model)
+3. **systemd-managed podman containers** — each slot runs as a podman
+   container under a `hal0-slot@<name>.service` unit; container images
+   and tuned flags come from slot profiles. The API process never holds
+   a model in its own memory. An exclusive GPU arbiter swaps the iGPU
+   between LLM serving and ComfyUI image generation. The NPU runs a
+   single FastFlowLM container serving chat + ASR + embeddings.
+   (`ARCHITECTURE.md` §Process model)
 4. **Hardware-aware probe** — detects GPU / NPU / unified memory (UMA
    pool on Strix Halo), writes `/etc/hal0/hardware.json`, surfaces
    VRAM/RAM fit warnings inline in the slot form. (PLAN §6,
@@ -191,9 +195,9 @@ and curated models.
 6. **Bundled prewired OpenWebUI** — chat UI on `:3001`, zero config:
    the installer writes `openwebui.env` pointing at the local hal0 API.
    (PLAN §8)
-7. **Vue 3 + Tailwind 4 dashboard** — 9 views: Dashboard, Slots,
-   Models, Hardware, Logs, Settings, Providers, FirstRun, plus error
-   shell. Dark mode default; SSE for status + log tail. (PLAN §6)
+7. **React 18 + TypeScript + Vite dashboard** — 9 views: Dashboard,
+   Slots, Models, Hardware, Logs, Settings, Providers, FirstRun, plus
+   error shell. Dark mode default; SSE for status + log tail. (PLAN §6)
 8. **Atomic self-update with rollback** — `hal0 update --channel
    stable|nightly`; cosign-verified tarballs swap a
    `/usr/lib/hal0/current` symlink; `--rollback` reverts. (PLAN §9,
@@ -211,12 +215,12 @@ and curated models.
     The dashboard operates ComfyUI as a containerized generation
     engine with a gated inference ⇄ generation iGPU switchover
     (hal0 PRs #686/#690, 2026-06-11 — see "Image generation" below).
-12. **Optional Caddy reverse proxy with basic_auth + Bearer token POC**
-    — `install.sh --auth=basic` provisions Caddy, writes a hashed
-    `basic_auth`, mints a Bearer token, and round-trips a self-test
-    against `https://${HAL0_HOSTNAME}/api/health` before exiting
-    (commits `ba79427`, `f62902c`; install.sh lines 294+ and 645+).
-    Trusted-LAN posture remains the default (`--auth=off`).
+12. **Trusted-LAN default — no built-in auth** — hal0-api binds
+    `0.0.0.0:8080` with no network gate (ADR-0012; Caddy / `--auth=basic`
+    removed in v0.3). Deploy behind your own Traefik/nginx/Cloudflare
+    Tunnel when you need authentication or TLS. The Origin allowlist
+    and HMAC session cookie still gate the chat-proxy WebSocket path.
+    (`src/hal0/api/routes/agents/_auth.py`)
 13. **Proxmox host-pressure segment (LXC deployments)** — drop a
     read-only `PVEAuditor` API token into Settings → "Proxmox
     integration" and the dashboard's unified-memory bar shows the
@@ -238,8 +242,8 @@ The five always-present slots (`BUILTIN_SLOTS` in
 
 | Slot | What it does | Default backend |
 |---|---|---|
-| `primary` | Chat / general LLM (`/v1/chat/completions`, `/v1/completions`) | llama.cpp (Vulkan) |
-| `embed`   | Embeddings (`/v1/embeddings`) and rerank (`/v1/rerankings`) | llama.cpp (Vulkan) |
+| `primary` | Chat / general LLM (`/v1/chat/completions`, `/v1/completions`) | llama-server (Vulkan) |
+| `embed`   | Embeddings (`/v1/embeddings`) and rerank (`/v1/rerankings`) | llama-server (Vulkan) |
 | `stt`     | Speech-to-text (`/v1/audio/transcriptions`) | Moonshine |
 | `tts`     | Text-to-speech (`/v1/audio/speech`) | Kokoro |
 | `img`     | Image generation (`/v1/images/generations`) | ComfyUI (ROCm) |
@@ -316,15 +320,21 @@ From `hal0/PLAN.md` §1 + `src/hal0/providers/`:
 
 | Provider | Hardware | What it serves |
 |---|---|---|
-| **llama.cpp** | Vulkan (default) / ROCm (opt-in) | chat, embed, rerank, vision |
-| **FLM** | AMD XDNA NPU (opt-in) | chat / embed / ASR multiplex (chat + embed surfaced to picker today; STT slice deferred) |
-| **Moonshine** | CPU / Vulkan | STT (`/v1/audio/transcriptions`) |
+| **llama.cpp** (llama-server) | Vulkan (default) / ROCm (opt-in) | chat, embed, rerank, vision |
+| **FLM** | AMD XDNA NPU (opt-in) | chat / embed / ASR multiplex — one FastFlowLM container serves all three |
+| **Moonshine** | CPU only | STT (`/v1/audio/transcriptions`) |
 | **Kokoro** | CPU / Vulkan | TTS (`/v1/audio/speech`) |
-| **ComfyUI** | ROCm (Strix Halo iGPU class) | Image gen (`/v1/images/generations`) |
+| **ComfyUI** | ROCm (Strix Halo iGPU class) | Image gen (`/v1/images/generations`) — exclusive GPU arbiter swaps iGPU between inference and generation |
 
-All five are first-class in v1. Each provider is a class with
+All five are first-class in v1. Every slot runs as a **podman container**
+under a `hal0-slot@<name>.service` unit; container images + tuned flags
+come from profiles. Each provider is a class with
 `build_env() / start_cmd() / health() / infer()` — stateless, swappable
 (`ARCHITECTURE.md` §Key boundaries).
+
+**Provider name in TOML**: use `llama-server` (not `llama.cpp`) in slot
+TOML files — `_VALID_PROVIDERS` = `{llama-server, flm, moonshine, kokoro}`
+(`src/hal0/config/schema.py:89`).
 
 ### FLM NPU (AMD XDNA) deep-dive
 
@@ -652,7 +662,7 @@ only `models_dir` raises (see comments at
   (`src/hal0/api/routes/models.py:148`,
   `src/hal0/registry/detect.py:140`)
 - Per-slot live metrics endpoint — `GET /api/slots/metrics` reads
-  docker container cgroup memory + `ActiveEnterTimestampMonotonic` +
+  podman container cgroup memory + `ActiveEnterTimestampMonotonic` +
   scraped llama-server `/metrics`; falls back to the systemd unit's
   own `MemoryCurrent` for native-host slots
   (`src/hal0/api/routes/slots.py:376–467`)
@@ -927,10 +937,11 @@ a stale placeholder.
   versioned dir), `/etc/hal0/` (config, preserved across updates),
   `/var/lib/hal0/` (models, registry, OpenWebUI state). `HAL0_HOME`
   overrides all of the above for dev installs. (PLAN §2)
-- **systemd template units** — slots are `hal0-slot@<name>.service`
-  instances (`packaging/systemd/hal0-slot@.service`), not per-slot
-  hand-written units. One template, N instances, all rendered from
-  config.
+- **systemd template units + podman containers** — slots are
+  `hal0-slot@<name>.service` instances that each launch a **podman**
+  container; not per-slot hand-written units and not Docker Compose.
+  One template, N instances, all rendered from config. Container images
+  and flags come from slot profiles managed by hal0-api.
 - **Atomic TOML config** — every config write is
   `NamedTemporaryFile(delete=False) + os.replace()`; a failed write
   leaves the prior file intact (PLAN §5 Tier 1).

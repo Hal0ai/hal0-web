@@ -18,8 +18,8 @@
 - [ ] **Dashboard framework wrong** — "Vue 3" → **React 18 + TypeScript + Vite** · `src/pages/index.astro:64`
 - [ ] **Version eyebrow 1–2 minors stale** → `0.3.2-alpha.1` (sweep ALL version strings; ideally template from release manifest) · `src/pages/index.astro:13`, `src/content/docs/docs/index.mdx:16`, `src/content/docs/docs/operate/updates.mdx:13`
 - [ ] **Caddy / `--auth=basic` / auto-HTTPS = broken install** — entire auth/TLS subsystem retired (ADR-0012; API binds `0.0.0.0:8080` open). Delete/rewrite to the honest `no-auth-default` story · `src/pages/index.astro:361`, `src/content/docs/docs/operate/auth.mdx:228,288`
-- [ ] **Per-slot toolbox containers / `hal0-slot@.service` / 6 published images** — superseded by the single `lemond` runtime; slots are logical name→model mappings. Rewrite slot + provider-matrix docs · `getting-started/install.mdx:154`, `reference/provider-matrix.mdx:31`, `slots/what-is-a-slot.mdx:53`, `custom-slots.mdx:65`
-- [ ] **Provider matrix = pre-Lemonade set** (Moonshine/ComfyUI/Kokoro first-class) — rewrite around Lemonade-unified runtime · `reference/provider-matrix.mdx:12,39,62,76,90,99,110`, `api/audio.mdx:15`
+- [ ] **Per-slot container runtime story** — slots run as **podman** containers under `hal0-slot@<name>.service` units (not Docker, not lemond); container images + flags from profiles; GPU arbiter for iGPU; NPU = single FastFlowLM container. Rewrite slot + provider-matrix + install docs · `getting-started/install.mdx:66,103,138,156`, `reference/provider-matrix.mdx:31`, `slots/what-is-a-slot.mdx:48-52`, `custom-slots.mdx:65`
+- [ ] **Provider matrix uses wrong provider names** — `llama.cpp` → `llama-server` in TOML examples and matrix; `_VALID_PROVIDERS = {llama-server, flm, moonshine, kokoro}` · `reference/provider-matrix.mdx:20`, `hardware/amd-discrete.mdx:69`, `hardware/nvidia.mdx:160`, `reference/config-schema.mdx:50`
 - [ ] **Hermes-Agent labelled "(roadmap: soon)" but SHIPPED** — promote to shipped; document install + dashboard chat surface · `src/pages/index.astro:346`
 
 ## ⛔ BLOCKED — backend must reconcile code↔docs first (do NOT edit site yet)
@@ -51,7 +51,7 @@ _(Most marketing-worthy first. Each is real + user-facing.)_
 - [ ] **Bundle-tier first-run picker** — Lite/Default/Pro/Max/LMX-Omni, RAM-gated · `api/routes/bundles.py:46-82`
 - [ ] **NPU FLM trio** — agent + stt-npu + embed-npu from one `flm serve` · `CONTEXT.md:115-136`
 - [ ] **Bundled pi-coder agent** (single-pick with Hermes) · `agents/pi_coder.py`
-- [ ] **Lemonade admin panel** — `GET/POST /api/lemonade/config` · `api/routes/lemonade_admin.py:297`
+- [ ] **Slot container admin** — expose container-runtime management story (podman slot containers, GPU arbiter, profile-driven image selection) in the docs; `api/routes/lemonade_admin.py` is removed in the lemonade-removal epic
 - [ ] **Prometheus metrics endpoint** · `api/routes/health.py:112`
 - [ ] **Merged journal SSE** — `/api/journal` + `/stream` + Lemonade log proxy · `api/routes/journal.py:203`
 - [ ] **HMAC session cookie** for agents chat proxy (HttpOnly, SameSite=Lax, 8h) · `api/agents/_auth.py`
@@ -67,7 +67,7 @@ _New items beyond the drift report. Full detail + verification notes in the back
 
 ### 🔴 HIGH — OSS / broken copy-paste
 - [ ] **B2 — Scrub private IPs/domains from the website repo** · `astro.config.mjs:93` (`allowedHosts ['.thinmint.dev']` → localhost) · `operate/openwebui.mdx:79,81` (`hal0.thinmint.dev` → `hal0.local`) · `operate/auth.mdx:31,331,337` (`10.0.1.230` — goes away with B1)
-- [ ] **B3 — Fix invalid `--provider` / `provider =` examples (they error on validation)** · valid set `{lemonade,llama-server,flm,moonshine,kokoro}` · `hardware/amd-discrete.mdx:69`, `hardware/nvidia.mdx:160`, `reference/config-schema.mdx:50`
+- [ ] **B3 — Fix invalid `--provider` / `provider =` examples (they error on validation)** · valid set `{llama-server,flm,moonshine,kokoro}` (lemonade removed in phase-F epic) · `hardware/amd-discrete.mdx:69`, `hardware/nvidia.mdx:160`, `reference/config-schema.mdx:50`
 
 ### 🟡 MEDIUM
 - [ ] **B6 — Remove `hal0-slot@.service` from install step 5** (template removed PR-9) · `getting-started/install.mdx:137-148`
