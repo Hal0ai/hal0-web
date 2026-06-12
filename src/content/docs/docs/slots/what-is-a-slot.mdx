@@ -15,9 +15,11 @@ slot that owns the model, and the slot answers.
 
 Concretely, each slot is a real systemd unit (e.g.
 `hal0-slot@primary.service`, an instance of the `hal0-slot@.service`
-template) running inside your LXC. `systemctl status hal0-slot@primary`
-works the way you expect it to. The slot shares the LXC's unified
-memory pool with any other Proxmox tenants on the same node.
+template) that launches a **podman container** on the host.
+`systemctl status hal0-slot@primary` works the way you expect it to.
+Container images and tuned flags come from slot profiles managed by
+hal0-api. The slot shares the LXC's unified memory pool with any
+other Proxmox tenants on the same node.
 
 ## Why slots exist
 
@@ -45,11 +47,12 @@ Each slot has:
 - A **name** (`primary`, `embed`, `stt`, `tts`, `img`, or a user-defined name).
 - A **model assignment** (a registry ref like
   `qwen2.5-0.5b-instruct-q4_k_m`).
-- A **provider** (`llama.cpp`, `flm`, `moonshine`, `kokoro`, `comfyui`)
-  that knows how to build the env, start the process, and run a health
-  probe.
+- A **provider** (`llama-server`, `flm`, `moonshine`, `kokoro`, or
+  `comfyui`) that knows how to build the env, start the container, and
+  run a health probe.
 - A **systemd unit**, an instance of the `hal0-slot@.service`
-  template (e.g. `hal0-slot@primary.service`).
+  template (e.g. `hal0-slot@primary.service`), which launches a
+  podman container.
 - A **port** in the range `8081`–`8099`, bound to `127.0.0.1` only.
 - A **state file** at `/var/lib/hal0/slots/<name>/state.json`,
   updated atomically on every transition and streamed to clients
@@ -103,14 +106,14 @@ to that slot's local port.
 
 ## What a slot is not
 
-- **Not a container manager.** Slots use plain systemd template
-  units, not Docker Compose or Kubernetes. Containerised backends
-  (toolbox images for FLM, ROCm, ComfyUI, etc.) are an implementation
-  detail of each provider.
-- **Not a model cache.** Weights live under `/mnt/ai-models/local`
-  with the index at `/var/lib/hal0/registry/registry.toml` (see the
-  [model registry](/docs/slots/model-registry/)); slots only reference
-  registry entries.
+- **Not a container orchestrator.** Slots use `hal0-slot@.service`
+  systemd template units that each launch one podman container — not
+  Docker Compose or Kubernetes. Container images and flags are an
+  implementation detail managed by each provider profile.
+- **Not a model cache.** Weights live under `/var/lib/hal0/models/`
+  (default) with the index at `/var/lib/hal0/registry/registry.toml`
+  (see the [model registry](/docs/slots/model-registry/)); slots only
+  reference registry entries.
 - **Not multi-tenant inside hal0.** Slot names are global to the
   install. There's no per-user partitioning in the v0.1 alpha line;
   agent / multi-tenant work is on the v0.2 roadmap. Multi-tenancy

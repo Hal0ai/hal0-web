@@ -61,14 +61,14 @@ const features = [
   },
   {
     tag: 'dashboard',
-    title: 'Vue 3 + Tailwind 4 admin UI',
+    title: 'React 18 + Tailwind admin UI',
     body: 'Dark-by-default operator console. SSE-backed status and log tail. Capability cards group flat slots into embed / voice / image picks for one-click ops.',
   },
 ];
 
 const providers = [
   {
-    prov: 'llama.cpp',
+    prov: 'llama-server',
     ver: 'b9279',
     hw: 'Vulkan (default) · ROCm · CUDA',
     uses: 'chat · embed · rerank · vision',
@@ -276,9 +276,9 @@ const themes: RoadmapTheme[] = [
     blurb: 'The /v1/* surface and the engines behind it.',
     shipped: [
       { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm / CUDA) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
+      { t: 'Five-provider stack', d: 'llama-server (Vulkan / ROCm / CUDA) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation. Each runs as a podman container under per-slot systemd units.' },
       { t: 'Image generation', d: 'POST /v1/images/generations served by a ComfyUI provider on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell with license badges.' },
-      { t: 'FLM NPU provider live', d: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1, pinned by sha256. Chat + embed surfaced in the picker only when XDNA hardware is present.' },
+      { t: 'FLM NPU provider live', d: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1, pinned by sha256. Single FastFlowLM container serves chat + ASR + embeddings on the NPU; surfaced in the picker only when XDNA hardware is present.' },
     ],
     soon: [],
     later: [
@@ -294,7 +294,7 @@ const themes: RoadmapTheme[] = [
       { t: 'Slot lifecycle state machine', d: 'Atomic transitions (offline → pulling → starting → warming → ready → serving), persisted and SSE-streamed.' },
       { t: 'Capability slots overlay', d: 'Embed / Voice / Img capability cards plus an NPU backend rollup, backed by /etc/hal0/capabilities.toml.' },
       { t: 'embed-rerank built-in slot', d: 'Auto-created on first enable: bge-reranker-v2-m3-q4_k_m on :8086 with --reranking. /v1/rerankings stays separate from chat.' },
-      { t: 'Per-slot live metrics', d: 'GET /api/slots/metrics reads docker cgroup memory + ActiveEnterTimestampMonotonic + scraped /metrics.' },
+      { t: 'Per-slot live metrics', d: 'GET /api/slots/metrics reads podman container cgroup memory + ActiveEnterTimestampMonotonic + scraped /metrics.' },
       { t: 'Orchestrator drift reconcile', d: 'apply() reconciles capabilities.toml ↔ slots/*.toml on every call, not only on selection diff.' },
     ],
     soon: [
