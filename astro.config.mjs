@@ -35,26 +35,21 @@ export default defineConfig({
 			},
 			// Pages outside /docs use their own marketing layout, so the
 			// sidebar only applies inside /docs/*.
+			// Diátaxis 4-group IA. Each group autogenerates from its directory,
+			// so adding a page = dropping a .mdx into the dir + sidebar.order.
+			// reference/api/ nests automatically as a collapsible subgroup.
 			sidebar: [
 				{
-					label: 'Getting started',
+					label: 'Start here',
 					items: [{ autogenerate: { directory: 'docs/getting-started' } }],
 				},
 				{
-					label: 'Hardware',
-					items: [{ autogenerate: { directory: 'docs/hardware' } }],
+					label: 'Concepts',
+					items: [{ autogenerate: { directory: 'docs/concepts' } }],
 				},
 				{
-					label: 'Slots',
-					items: [{ autogenerate: { directory: 'docs/slots' } }],
-				},
-				{
-					label: 'API',
-					items: [{ autogenerate: { directory: 'docs/api' } }],
-				},
-				{
-					label: 'Operate',
-					items: [{ autogenerate: { directory: 'docs/operate' } }],
+					label: 'Guides',
+					items: [{ autogenerate: { directory: 'docs/guides' } }],
 				},
 				{
 					label: 'Reference',

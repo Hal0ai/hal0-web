@@ -1,132 +1,93 @@
 ---
 title: Load your first model
-description: Walk through the FirstRun wizard — hardware, model, capabilities, license, pull. Watch the primary slot come up.
+description: Pull a model from Hugging Face into hal0's registry and assign it to a slot — through the first-run picker or with the hal0 model CLI.
 sidebar:
-  order: 2
+  order: 30
 ---
 
-import { Aside, Steps, LinkCard, CardGrid } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-A fresh hal0 install boots into the **FirstRun wizard**. Open the
-dashboard at `http://localhost:8080` and the wizard owns the screen
-until the `primary` slot has a model and reaches `ready`.
+Models in hal0 live in a local registry, the single source of truth for
+Hugging Face coordinates, SHA-256 digests, and curated filenames. You can
+populate it through the first-run picker or directly from the CLI.
 
-## What the wizard does
+## Via the bundle picker
 
-The wizard is a guarded route at `/firstrun`. Until the API reports
-`first_run: false` every other dashboard navigation redirects back to
-it. There's no point operating an empty box.
+If you ran [first-run setup](/docs/getting-started/setup/) and chose a
+tier, hal0 already seeded the registry and kicked off background pulls for
+each model in the bundle. The install-progress pane reattaches to those
+download streams and shows per-model progress. Nothing more is required —
+when a pull completes, its slot is ready to start.
 
-It owns a linear sequence: confirm the password, confirm the detected
-hardware and model storage, pick a primary chat model, pick which
-capabilities to bring up (embed, voice, image), accept any
-click-through licenses, then stream the pulls into their slots. When
-`primary` reaches `ready` the wizard hands you the rest of the
-dashboard.
+## Via the CLI
 
-## The steps
+The `hal0 model` subcommand is a thin HTTP client to the API. The common
+flow is **list → pull → assign**.
 
 <Steps>
-1. **Password.** Optional. Auto-skips when
-   `/api/auth/status.password_set` is already true.
 
-2. **Hardware + storage.** Confirms what the probe wrote to
-   `/etc/hal0/hardware.json` and which directories the registry will
-   scan and pull into.
+1. **List what's available** — registry rows plus models advertised by
+   configured upstreams:
 
-3. **Primary chat model.** A curated list, hardware-aware. Fit
-   warnings appear inline next to anything that would offload
-   heavily. The default highlight is `Phi-3-mini-4k-instruct-q4` — a
-   2.4 GB Q4 GGUF that pulls in roughly 10 seconds on a decent
-   connection and fits anywhere hal0 runs. Strix Halo operators
-   should jump straight to a Q4 7B-class chat model or a Q4 MoE 30B;
-   see [recommended loadouts](/docs/hardware/strix-halo/#recommended-loadouts).
+   ```sh
+   hal0 model list
+   ```
 
-4. **Capabilities.** Embed, voice (STT + TTS), and image generation,
-   each with smart defaults. Rerank is a sub-disclosure inside the
-   embed row, locked off by default.
+   Add `--json` to emit the raw `/api/models` payload for scripting.
 
-5. **Hugging Face token.** Conditional. Only renders when at least
-   one selected model is gated.
+2. **Pull a model** from Hugging Face. The argument is either a curated
+   alias (e.g. `qwen3-4b`) or a registered model id:
 
-6. **License acceptance.** Aggregated across every selected model.
-   Skipped if nothing requires it.
+   ```sh
+   hal0 model pull qwen3-4b
+   ```
 
-7. **Install.** Parallel pulls plus capability registration, with
-   per-row retry. Progress streams over SSE: bytes, percent, and the
-   slot state walking through
-   `pulling → starting → warming → ready`.
+   The pull runs as a background job on the daemon. The CLI polls
+   `/api/models/<id>/pull/status` every 500 ms and prints a progress bar
+   until the job reaches a terminal state, then reports the final path
+   and SHA-256.
 
-8. **Done.** Links to the dashboard, OpenWebUI, and settings.
+3. **Assign the model to a slot's default** (this does not start the
+   slot):
+
+   ```sh
+   hal0 model assign qwen3-4b --slot chat
+   ```
+
+   This writes `model.default` into the slot's configuration. Start the
+   slot afterward (see [Manage slots](/docs/guides/manage-slots/)).
+
 </Steps>
 
-<Aside type="note" title="Skipping the wizard from the CLI">
-The CLI gets you to the same place without a browser:
+Other `hal0 model` commands: `register` (record an on-disk file in the
+registry), `show` (inspect metadata), and `rm` (remove a registry row).
 
-```sh
-hal0 slot load primary --model phi-3-mini-4k-instruct-q4
-```
-
-The slot manager handles the pull, the systemd unit, and the health
-probe. `hal0 status` shows the same state machine the wizard streams.
+<Aside type="tip" title="Gated or large models">
+Pulls that need a Hugging Face token read `HF_TOKEN` from the API
+environment. The easiest path is the dashboard: **Settings → Secrets →
+HuggingFace token** applies live without a restart.
 </Aside>
 
-## When the pull fails
+## When a pull fails
 
-The wizard surfaces errors inline. Common ones:
+A pull job ends in one of these states: `queued`, `running`, `completed`,
+`failed`, or `cancelled`. On `failed`, the CLI exits non-zero and prints
+the error message returned by the daemon; the registry row stays in place
+so you can retry.
 
-- **No disk space.** `/var/lib/hal0/models/` ran out mid-pull. Free
-  the space and retry — partial downloads resume.
-- **Hugging Face rate-limit.** Anonymous pulls hit a rate cap on
-  popular weights. Export `HF_TOKEN` (or set it in
-  `/etc/hal0/api.env`) and retry.
-- **License not accepted on Hugging Face.** Some gated models require
-  acceptance on the HF side before the API will serve the files. The
-  error message links out to the model page.
-
-The slot stays in `error` with details in
-`/var/lib/hal0/slots/primary/state.json` until you retry. Nothing
-hidden.
-
-## Picking something other than the default
-
-The wizard's curated list is a starting point. After it's done the
-**Models** page in the dashboard is where you live:
-
-<img
-  src="/screenshots/models-registry.png"
-  srcset="/screenshots/models-registry.png 1x, /screenshots/models-registry@2x.png 2x"
-  alt="Models registry table at /models showing rows with chat / STT / TTS / rerank capability tags, on-disk size, and the backend that owns each model."
-  width="1440"
-  height="900"
-/>
-
-Each row carries the model's capability tags, on-disk size, and the
-backend that owns it. From here you can pull more weights, assign a
-model to a slot, or hand the same job to the CLI:
-
-```sh frame="terminal"
-hal0 model list
-hal0 slot swap primary --model qwen2.5-coder-7b-instruct-q4_k_m
+```sh
+# retry — an already queued/running pull for the same id is reused,
+# not duplicated
+hal0 model pull qwen3-4b
 ```
 
-See [recommended loadouts](/docs/hardware/strix-halo/#recommended-loadouts)
-for a hardware-by-hardware breakdown of what fits where.
+The FirstRun progress pane surfaces the same failure inline with a
+**Retry** button, and you can always pull later from the dashboard's
+**Models** view. Re-issuing a pull for a `completed`/`failed`/`cancelled`
+job replaces it; a pull already `queued` or `running` returns the
+existing job handle rather than starting a second download.
 
+## Next
 
-## Next steps
-
-<CardGrid>
-  <LinkCard
-    title="Send your first chat"
-    href="/docs/getting-started/first-chat/"
-    description="OpenWebUI is already pointed at your primary slot." />
-  <LinkCard
-    title="Slot lifecycle"
-    href="/docs/slots/what-is-a-slot/"
-    description="The state machine the wizard drives." />
-  <LinkCard
-    title="API reference"
-    href="/docs/api/openai-compat/"
-    description="Hit `/v1/chat/completions` directly from any OpenAI SDK." />
-</CardGrid>
+Once a model is pulled and assigned, you're ready to
+[send your first chat](/docs/getting-started/first-chat/).
