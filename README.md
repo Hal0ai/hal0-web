@@ -57,7 +57,6 @@ public/
 ├── og-default.png          ← 1200×630 social card (sodium amber)
 └── robots.txt              ← allow-all + sitemap pointer
 NOTES.md                    ← design rationale (accent color, type stack)
-CONTENT_BRIEF.md            ← copy + perf numbers source of truth (researcher)
 ```
 
 ## URL structure
@@ -196,7 +195,9 @@ and falls back to Starlight's built-in 404 page.
 
 ## Cross-references
 
-- [CONTENT_BRIEF.md](./CONTENT_BRIEF.md) — verified copy + perf numbers.
-  Cite from here, not from the hal0 repo directly.
+- **Source of truth = the hal0 codebase** (`hal0` repo, `src/hal0`). Docs are
+  generated/maintained against it via the `hal0-docs` skill; verify claims and
+  numbers there, not from a copy doc. (`CONTENT_BRIEF.md` was retired — it had
+  drifted from the product.)
 - [NOTES.md](./NOTES.md) — design rationale (accent, type stack).
 - Upstream hal0 repo: `/home/halo/dev/hal0/` (do not edit).
