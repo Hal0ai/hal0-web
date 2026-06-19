@@ -1,0 +1,106 @@
+---
+/**
+ * /releases — human-facing release index (lean).
+ *
+ * Latest stable + latest pre-release, the install/upgrade commands, and
+ * links into /changelog and the GitHub release tags. Stable vs. pre-release
+ * is computed from the derived changelog (src/lib/changelog.js), so the
+ * headline version is always whatever actually shipped.
+ *
+ * NOT the updater manifest: machines hit releases.hal0.dev/*.json
+ * (functions/_middleware.ts). This page is for humans.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import CTA from '../components/CTA.astro';
+import rawChangelog from '../data/changelog.md?raw';
+import { parseChangelog, releaseTagUrl } from '../lib/changelog.js';
+
+const { latestStable, latestPrerelease } = parseChangelog(rawChangelog);
+
+// The current pre-release has a published GitHub release; older tags
+// (incl. the last stable) may not, so they link to the releases index.
+const RELEASES_URL = 'https://github.com/hal0ai/hal0/releases';
+
+const description =
+  'hal0 releases: the latest stable and the current pre-release line, with install and upgrade commands. hal0 is pre-1.0 — the active development line is labelled pre-release.';
+---
+
+<MarketingLayout title="Releases — hal0" description={description}>
+  <section class="mx-auto max-w-4xl px-6 pt-16 pb-8">
+    <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">downloads</p>
+    <h1 class="mt-3 text-4xl font-semibold tracking-tight text-hal0-fg md:text-5xl">Releases</h1>
+    <p class="mt-4 max-w-2xl text-pretty text-hal0-fg-muted">
+      hal0 is pre-1.0. The active development line ships as <strong class="text-hal0-fg">pre-release</strong>
+      builds; the last cut marked stable is below. Pick the channel that matches your appetite for change.
+    </p>
+  </section>
+
+  <section class="mx-auto grid max-w-4xl gap-5 px-6 md:grid-cols-2">
+    <!-- Latest pre-release (the current dev line) -->
+    {latestPrerelease && (
+      <article class="relative flex flex-col rounded-lg border border-hal0-accent/30 bg-hal0-bg-elevated p-6">
+        <div class="flex items-center gap-2">
+          <span class="rounded border border-hal0-accent/40 bg-hal0-accent/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">current dev line</span>
+        </div>
+        <h2 class="mt-3 font-mono text-2xl font-semibold text-hal0-fg">{latestPrerelease.version}</h2>
+        {latestPrerelease.date && <p class="mt-1 font-mono text-xs text-hal0-fg-dim">released {latestPrerelease.date}</p>}
+        <p class="mt-3 text-sm text-hal0-fg-muted">
+          The newest pre-release. Tracks the work documented across the site. Not GA — expect breaking changes between alphas.
+        </p>
+        <div class="mt-4 flex flex-wrap gap-4 font-mono text-xs">
+          <a class="text-hal0-accent hover:text-hal0-accent-hover" href={`/changelog#${latestPrerelease.slug}`}>what's new →</a>
+          <a class="text-hal0-fg-muted hover:text-hal0-fg" href={releaseTagUrl(latestPrerelease.version)} rel="noopener">github release ↗</a>
+        </div>
+      </article>
+    )}
+
+    <!-- Latest stable -->
+    {latestStable && (
+      <article class="relative flex flex-col rounded-lg border border-hal0-border bg-hal0-bg-elevated p-6">
+        <div class="flex items-center gap-2">
+          <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">last stable</span>
+        </div>
+        <h2 class="mt-3 font-mono text-2xl font-semibold text-hal0-fg">{latestStable.version}</h2>
+        {latestStable.date && <p class="mt-1 font-mono text-xs text-hal0-fg-dim">released {latestStable.date}</p>}
+        <p class="mt-3 text-sm text-hal0-fg-muted">
+          The most recent release cut without a pre-release tag. Older and more settled than the dev line.
+        </p>
+        <div class="mt-4 flex flex-wrap gap-4 font-mono text-xs">
+          <a class="text-hal0-accent hover:text-hal0-accent-hover" href={`/changelog#${latestStable.slug}`}>changelog →</a>
+          <a class="text-hal0-fg-muted hover:text-hal0-fg" href={RELEASES_URL} rel="noopener">all releases ↗</a>
+        </div>
+      </article>
+    )}
+  </section>
+
+  <!-- Install / upgrade -->
+  <section class="mx-auto max-w-4xl px-6 pt-12 pb-6">
+    <h2 class="text-xl font-semibold tracking-tight text-hal0-fg">Install</h2>
+    <p class="mt-2 text-sm text-hal0-fg-muted">One command on a fresh Linux x86_64 host (Python ≥3.12). NVIDIA/CUDA is not supported.</p>
+    <div class="mt-4">
+      <CodeBlock lang="sh" title="fresh install">curl -fsSL https://hal0.dev/install.sh | bash</CodeBlock>
+    </div>
+
+    <h2 class="mt-10 text-xl font-semibold tracking-tight text-hal0-fg">Upgrade &amp; rollback</h2>
+    <p class="mt-2 text-sm text-hal0-fg-muted">
+      Self-update verifies a cosign-signed tarball and swaps the <code class="rounded bg-hal0-bg-elevated px-1 py-0.5 font-mono text-xs">current</code> symlink atomically. Two channels:
+    </p>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      <CodeBlock lang="sh" title="stable channel">hal0 update --channel stable</CodeBlock>
+      <CodeBlock lang="sh" title="nightly channel">hal0 update --channel nightly</CodeBlock>
+    </div>
+    <p class="mt-3 text-sm text-hal0-fg-muted">
+      Reverts in one step: <code class="rounded bg-hal0-bg-elevated px-1 py-0.5 font-mono text-xs">hal0 update --rollback</code>.
+      See the <a class="text-hal0-accent hover:text-hal0-accent-hover" href="/docs/guides/update-and-rollback">update &amp; rollback guide</a>.
+    </p>
+  </section>
+
+  <CTA
+    title="Read the full history"
+    subtitle="Every version, newest first — breaking changes, new features, and fixes."
+    eyebrow="changelog"
+    ctaPrimary={{ href: '/changelog', label: 'full changelog →' }}
+    ctaSecondary={{ href: 'https://github.com/hal0ai/hal0/releases', label: 'all github releases ↗' }}
+  />
+</MarketingLayout>

@@ -8,12 +8,20 @@
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
+import HermesCard from '../components/HermesCard.astro';
+import rawChangelog from '../data/changelog.md?raw';
+import { parseChangelog } from '../lib/changelog.js';
 
 const canonicalUrl = 'https://hal0.dev/';
-const version = 'v0.2.0-alpha.3';
+// Derived from the changelog (synced from the product repo) — never hardcoded.
+const version = parseChangelog(rawChangelog).latest?.version ?? '';
 
+// Full copy feeds the structured-data schema (no length limit); a tight ~155-char
+// version is the page meta + OG description (search snippets cap ~160).
 const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, prewired chat UI, signed self-update. One command installs the lot.';
+  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, local image generation (ComfyUI), a bundled Hermes agent with opt-in graph memory, an MCP server, and signed self-update. One command installs the lot.';
+const metaDescription =
+  'Open-source homelab AI for AMD Strix Halo: OpenAI-compatible /v1/* API, managed slots, local image gen, agents + graph memory, signed self-update. One command.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -28,7 +36,7 @@ const softwareApplicationLd = {
   softwareVersion: version,
   codeRepository: 'https://github.com/hal0ai/hal0',
   keywords:
-    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance',
+    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance, local image generation, ComfyUI, SDXL, Flux, AI agents, Hermes agent, graph memory, Hindsight, MCP server, agent kanban, Operator Board, NPU occupancy, self-hosted AI',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: 'hal0ai', url: 'https://github.com/hal0ai' },
 };
@@ -61,7 +69,7 @@ const features = [
   },
   {
     tag: 'dashboard',
-    title: 'Vue 3 + Tailwind 4 admin UI',
+    title: 'React 18 + Tailwind 4 admin UI',
     body: 'Dark-by-default operator console. SSE-backed status and log tail. Capability cards group flat slots into embed / voice / image picks for one-click ops.',
   },
 ];
@@ -178,72 +186,96 @@ const loadoutTabs = [
   { id: 'chat',    label: 'General chat', count: 3 },
   { id: 'voice',   label: 'Voice mode',   count: 1 },
   { id: 'rag',     label: 'RAG',          count: 1 },
-  { id: 'image',   label: 'Image gen',    count: 1 },
-  { id: 'agentic', label: 'Agentic',      count: 1 },
-  { id: 'small',   label: 'Minimal',      count: 1 },
+  { id: 'image',   label: 'Image gen',    count: 3 },
+  { id: 'agentic', label: 'Agentic',      count: 2 },
+  { id: 'small',   label: 'Minimal',      count: 3 },
 ];
 
 const loadoutData: Record<string, Array<{ size: string; title: string; vram: string; slots: Array<{ k: string; v: string; d: string }> }>> = {
   coding: [
-    { size: '~5 GB · daily', title: 'Small dedicated coder', vram: '8 GB+', slots: [
-      { k: 'primary', v: 'Qwen2.5-Coder-7B-Instruct', d: 'Q4_K_M · 4.7 GB · best small dedicated coder' },
+    { size: '~22 GB · daily-pro', title: 'Your top coder, MTP-fast', vram: '28 GB UMA', slots: [
+      { k: 'primary', v: 'Qwopus3.6-27B-Coder-MTP', d: 'Q6_K · 22.4 GB · MTP head speculates on ROCm — fastest local coder on the box' },
+      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · repo-aware code search' },
     ]},
-    { size: '~19 GB · pro', title: 'MoE that reasons like 30B', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-Coder-30B-A3B', d: 'Q4_K_M · MoE 3B active · runs near 3B speeds, reasons like 30B' },
-      { k: 'embed',   v: 'nomic-embed-text-v2-moe', d: 'Q4_K_M · 140 MB · repo-aware search' },
+    { size: '~8 GB · lean', title: 'Snappy completion', vram: '10 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3-5-9b-coder-mtp-q6-k', d: 'Q6_K · 7.6 GB · MTP · fits beside chat + embed' },
+      { k: 'alt',     v: 'qwopus3-5-4b-coder-mtp-q6-k', d: 'Q6_K · 3.6 GB · low-VRAM / CPU fallback' },
     ]},
-    { size: '~47 GB · max', title: 'Qwen3-Coder-Next 80B-A3B', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'Qwen3-Coder-Next-80B-A3B', d: 'Q4_K_M · MoE 3B active · Qwen3-Coder lineup ceiling' },
-      { k: 'alt',     v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid reasoning + tool-friendly coding' },
-      { k: 'alt',     v: 'Qwen3.6-27B-A3B-MTP', d: 'Q4_K_M · 18.8 GB · MoE with MTP · fast reasoning fallback' },
+    { size: '~50 GB · max', title: 'Coder-Next ceiling', vram: '64 GB+ UMA', slots: [
+      { k: 'primary', v: 'qwen3-coder-next-q4kxl', d: 'Q4_K_XL · 49.6 GB · dedicated Qwen3-Coder-Next — the quality ceiling' },
+      { k: 'alt',     v: 'qwen3-coder-reap-25b-a3b-q5km', d: 'Q5_K_M · 17.7 GB · validated REAP prune · A3B speed, most of the quality' },
+      { k: 'alt',     v: 'qwen3-coder-next-reap-40b-a3b-q4kxl', d: 'Q4_K_XL · 28.5 GB · community 50% prune — unvalidated, some math loss' },
     ]},
   ],
   chat: [
-    { size: '~2.5 GB · snappy', title: '1M-token context, low-end OK', vram: '6 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-4B-Instruct-2507', d: 'Q4_K_M · Aug 2025 · 1M-token context' },
+    { size: '~15 GB · sweetspot', title: 'The Strix Halo daily-driver', vram: '20 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3-6-27b-v2-mtp-bf16-to-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · MTP head + FP4 footprint — a fast 27B that leaves room to spare' },
+      { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB · rides along free' },
     ]},
-    { size: '~19 GB · sweetspot', title: 'The Strix Halo daily-driver', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-30B-A3B-Instruct-2507', d: 'Q4_K_M · MoE 3B active' },
-      { k: 'alt',     v: 'gemma-3-12b-it', d: 'Q4_K_M · 6.6 GB footprint alt' },
+    { size: '~23 GB · max', title: 'Big-model reasoning at A3B speed', vram: '28 GB UMA', slots: [
+      { k: 'primary', v: 'qwen3-6-35b-a3b-halostrix-dyn-mtp-v7', d: 'Q4 · 22.6 GB · hybrid MoE 3B active · ~69 tok/s with MTP (1.4×)' },
+      { k: 'alt',     v: 'chadrock-35b-ace-saber', d: 'ROCmFP4 + MTP · 19 GB · uncensored MoE' },
+      { k: 'alt',     v: 'qwen3.6-27b-heretic-q4km', d: 'Q4_K_M · 16.9 GB · vision-capable chat' },
     ]},
-    { size: '~50 GB · headroom', title: 'All three modalities warm', vram: '96 GB UMA', slots: [
-      { k: 'primary', v: 'Llama-4-Scout-17B-16E', d: 'Q4_K_M · MoE 17B active · 10M context' },
-      { k: 'embed',   v: 'bge-m3', d: 'Q8 · 600 MB · multilingual, multi-vector' },
-      { k: 'voice',   v: 'moonshine + kokoro', d: 'all hot simultaneously on 128 GB Strix Halo' },
+    { size: '~8 GB · snappy', title: 'Low-latency, fits anywhere', vram: '10 GB UMA', slots: [
+      { k: 'primary', v: 'qwen3.5-9b-deepseek-v4-flash-mtp', d: 'Q6 · 7.6 GB · MTP flash · fits with embed + voice' },
+      { k: 'alt',     v: 'lfm2.5-8b-a1b-q6kxl', d: 'Q6 · A1B MoE · ultra-low-latency, NPU-friendly' },
     ]},
   ],
   voice: [
-    { size: '~3 GB total', title: 'Hands-free streaming', vram: '4 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-4B-Instruct-2507', d: 'Q4_K_M · 2.5 GB · low-latency reply' },
-      { k: 'stt',     v: 'Moonshine base', d: '190 MB · built for edge real-time' },
-      { k: 'tts',     v: 'Kokoro-82M v1.0', d: '330 MB · 8 languages · 54 voices' },
+    { size: '~3 GB + NPU · realtime', title: 'Hands-free, iGPU-free', vram: '4 GB UMA (+XDNA)', slots: [
+      { k: 'llm', v: 'qwen3.5-4b-q4kxl', d: 'Q4_K_XL · 2.9 GB · low-latency reply (or gemma4-it-e2b on the NPU)' },
+      { k: 'stt', v: 'whisper-v3:turbo', d: 'runs on the XDNA NPU — frees the iGPU for chat' },
+      { k: 'tts', v: 'kokoro-v1', d: '82M · 54 voices · 8 languages' },
+      { k: 'alt', v: 'vibevoice-1.5b', d: '1.5B · expressive long-form TTS' },
     ]},
   ],
   rag: [
-    { size: '~19 GB', title: 'Long-context retrieval', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-30B-A3B-Instruct-2507', d: 'Q4_K_M · 18.6 GB · synthesis' },
-      { k: 'embed',   v: 'bge-m3', d: 'Q8 · 600 MB · 8192-token context · top R@1' },
-      { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'auto-managed embed-rerank slot · /v1/rerankings' },
+    { size: '~16 GB · retrieval', title: 'Grounded synthesis, long context', vram: '22 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3-6-27b-v2-mtp-bf16-to-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · fast grounded synthesis at long context' },
+      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · strong multilingual retrieval' },
+      { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'Q4_K_M · 0.4 GB · 100+ lang cross-encoder · /v1/rerankings' },
     ]},
   ],
   image: [
-    { size: '~6.5 GB', title: 'Default img slot', vram: '12 GB+', slots: [
-      { k: 'img', v: 'sdxl-turbo', d: '6.5 GB FP16 · 4 steps, cfg ≈ 1.0 · research license' },
-      { k: 'alt', v: 'sd-1.5-pruned-emaonly', d: '4.3 GB · CreativeML Open RAIL-M' },
-      { k: 'pro', v: 'flux-schnell', d: '23.8 GB · Apache-2.0 · needs Flux workflow' },
+    { size: '~7 GB · default', title: 'Photoreal default', vram: '12 GB UMA', slots: [
+      { k: 'img', v: 'juggernaut-xl-v9-rundiffusionphoto-v2', d: 'SDXL · 7.1 GB · photoreal general-purpose checkpoint' },
+      { k: 'alt', v: 'sdxl-turbo', d: 'FP16 · 4-step · realtime previews' },
+      { k: 'alt', v: 'v1-5-pruned-emaonly-fp16', d: '2.1 GB · low-VRAM fallback' },
+    ]},
+    { size: '~17 GB · pro', title: 'Best prompt adherence', vram: '22 GB UMA', slots: [
+      { k: 'img', v: 'flux1-dev-fp8', d: 'FP8 · 17.2 GB · top prompt adherence + legible text' },
+    ]},
+    { size: '~27 GB · video', title: 'Local text/image-to-video', vram: '32 GB UMA', slots: [
+      { k: 'video',   v: 'ltx-2-19b-dev-fp8', d: 'FP8 · 27.1 GB · local video generation on the iGPU' },
+      { k: 'upscale', v: 'ltx-2-spatial-upscaler-x2', d: '2× spatial upscale pass' },
     ]},
   ],
   agentic: [
-    { size: '~42 GB', title: 'Tool-use + MCP', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid-reasoning, tuned for tool-call faithfulness' },
-      { k: 'embed',   v: 'bge-m3', d: '600 MB · retrieval-augmented routing' },
-      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Cognee-backed memory · two-tier scope' },
+    { size: '~25 GB · agentic', title: 'Tool-use + MCP at MTP speed', vram: '30 GB UMA', slots: [
+      { k: 'primary', v: 'qwen3-6-35b-a3b-halostrix-dyn-mtp-v7', d: 'Q4 · 22.6 GB · MoE A3B · strong tool-calling, MTP-fast' },
+      { k: 'alt',     v: 'hermes-4-14b-q5km', d: 'Q5_K_M · 10.5 GB · Hermes-4, tuned for tool-call faithfulness' },
+      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · retrieval-augmented routing' },
+      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Hindsight graph memory · two-tier scope' },
+    ]},
+    { size: '~11 GB · lean', title: 'Lean tool-caller', vram: '14 GB UMA', slots: [
+      { k: 'primary', v: 'hermes-4-14b-q5km', d: 'Q5_K_M · 10.5 GB · tool-call faithful, fits beside a coder' },
+      { k: 'alt',     v: 'gpt-oss:20b', d: 'MoE · strong tool-use + reasoning' },
     ]},
   ],
   small: [
-    { size: '<1 GB', title: 'Privacy-first', vram: 'CPU OK', slots: [
-      { k: 'primary', v: 'gemma-3-1b-it', d: 'Q4_K_M · 0.7 GB · text-only' },
-      { k: 'embed',   v: 'nomic-embed-text-v2-moe', d: 'Q4_K_M · 140 MB · multilingual MoE' },
+    { size: '<1 GB · minimal', title: 'Privacy-first tiny', vram: 'CPU OK', slots: [
+      { k: 'primary', v: 'qwen3.5-0.8b', d: '0.6 GB · sub-second cold start · smoke-test / lite' },
+      { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB' },
+    ]},
+    { size: '~0 iGPU · npu', title: 'NPU-only, zero iGPU', vram: 'XDNA only', slots: [
+      { k: 'llm',   v: 'gemma4-it-e2b-FLM', d: 'runs entirely on the XDNA NPU — iGPU stays free' },
+      { k: 'stt',   v: 'whisper-v3:turbo', d: 'NPU transcription' },
+      { k: 'embed', v: 'embed-gemma-300m-FLM', d: 'NPU embeddings' },
+    ]},
+    { size: '~2 GB · minimal-coder', title: 'Tiny coder', vram: '4 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3-5-4b-coder-mtp-q6-k', d: 'Q6_K · 3.6 GB · MTP autocomplete' },
+      { k: 'alt',     v: 'qwen3-zero-coder-v2-0.8b-f16', d: 'F16 · 1.6 GB · smallest coder' },
     ]},
   ],
 };
@@ -251,7 +283,7 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
 const compareCols = ['hal0', 'ollama', 'LM Studio', 'OpenAI cloud'];
 const compareRows = [
   { lbl: 'OpenAI-compatible /v1/*', cells: ['chat · embed · rerank · STT · TTS · img', 'chat · embed', 'chat · embed', 'chat · embed · STT · TTS · img'] },
-  { lbl: 'Concurrent slots', cells: ['5 systemd-managed', 'one at a time', 'one at a time', 'fully concurrent'] },
+  { lbl: 'Concurrent slots', cells: ['as memory fits', 'one at a time', 'one at a time', 'fully concurrent'] },
   { lbl: 'Slot lifecycle state machine', cells: ['typed, atomic, SSE-streamed', 'no', 'no', '—'] },
   { lbl: 'UMA-aware hardware probe', cells: ['Strix Halo · NPU · platform-aware', 'CPU / GPU only', 'CPU / GPU only', '—'] },
   { lbl: 'XDNA NPU support', cells: ['first-class via FLM', 'no', 'no', '—'] },
@@ -276,9 +308,9 @@ const themes: RoadmapTheme[] = [
     blurb: 'The /v1/* surface and the engines behind it.',
     shipped: [
       { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm / CUDA) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
-      { t: 'Image generation', d: 'POST /v1/images/generations served by a ComfyUI provider on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell with license badges.' },
-      { t: 'FLM NPU provider live', d: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1, pinned by sha256. Chat + embed surfaced in the picker only when XDNA hardware is present.' },
+      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
+      { t: 'Image generation + iGPU switchover', d: 'POST /v1/images/generations served by a ComfyUI engine; generating flips the GPU into exclusive image mode and back, so chat and image share one accelerator.' },
+      { t: 'FLM NPU provider', d: 'Self-contained NPU toolbox pinned by digest. The chat + STT + embed trio is surfaced only when XDNA hardware is present.' },
     ],
     soon: [],
     later: [
@@ -289,13 +321,11 @@ const themes: RoadmapTheme[] = [
   {
     id: 'lifecycle',
     name: 'Slot lifecycle',
-    blurb: 'Atomic transitions, real metrics, no snapshots.',
+    blurb: 'Atomic transitions, honest health, no snapshots.',
     shipped: [
       { t: 'Slot lifecycle state machine', d: 'Atomic transitions (offline → pulling → starting → warming → ready → serving), persisted and SSE-streamed.' },
-      { t: 'Capability slots overlay', d: 'Embed / Voice / Img capability cards plus an NPU backend rollup, backed by /etc/hal0/capabilities.toml.' },
-      { t: 'embed-rerank built-in slot', d: 'Auto-created on first enable: bge-reranker-v2-m3-q4_k_m on :8086 with --reranking. /v1/rerankings stays separate from chat.' },
-      { t: 'Per-slot live metrics', d: 'GET /api/slots/metrics reads docker cgroup memory + ActiveEnterTimestampMonotonic + scraped /metrics.' },
-      { t: 'Orchestrator drift reconcile', d: 'apply() reconciles capabilities.toml ↔ slots/*.toml on every call, not only on selection diff.' },
+      { t: 'Honest slot health + derived context', d: 'A slot is marked ready only once its real /health passes — never on a systemd snapshot. Context size is derived per slot, never silently inheriting the 4096 default.' },
+      { t: 'Capability slots + profiles', d: 'Embed / Voice / Image capability cards and an NPU rollup over flat slots; per-device profiles unify the launch flags, all from one Slots tab.' },
     ],
     soon: [
       { t: 'Benchmarks & presets UI', d: 'In-dashboard tok/s + latency runs, plus curated loadout presets you can flash onto a fresh install.' },
@@ -307,14 +337,11 @@ const themes: RoadmapTheme[] = [
     name: 'Install + distribution',
     blurb: 'One command. Signed. Resumable.',
     shipped: [
-      { t: 'Signed release pipeline live', d: 'releases.hal0.dev/stable.json via Cloudflare middleware proxy. A v* tag publishes the GH release; manifest reflects it in ~60s.' },
-      { t: 'Cosign-signed self-update', d: 'Atomic version swap with rollback. Stable + nightly channels, GitHub OIDC-verified release tarballs.' },
-      { t: 'Installer overhaul', d: 'ASCII banner + step counter, extracted preflight.sh, hal0 doctor, hardware cards + auto-populated slots/primary.toml, live-hello + QR.' },
-      { t: '--models-dir install flag', d: 'install.sh --models-dir=PATH (or HAL0_MODELS_DIR, or interactive tty prompt) points a fresh install at an existing model store.' },
-      { t: 'Install + version flow locked down', d: '__version__ reads from importlib.metadata. pyproject.toml is the single source of truth; installer copies the source tree into PREFIX.' },
+      { t: 'hal0 setup TUI', d: 'A terminal first-run wizard: pick a hardware-anchored tier, storage, extensions, and models, then it provisions a coherent set of slots — or run --auto for recommended defaults.' },
+      { t: 'Cosign-signed self-update', d: 'Atomic version swap with one-flag rollback. Stable + nightly channels, GitHub OIDC-verified release tarballs, manifest proxied at releases.hal0.dev.' },
+      { t: 'Extensions framework', d: 'Apps and agents (Open WebUI, ComfyUI, Hermes, Pi) packaged as auto-wired extensions: lifecycle-managed, selectable at setup.' },
     ],
     soon: [
-      { t: 'Extensions framework', d: 'Third-party apps packaged as hal0 extensions: systemd unit + dashboard tile + healthcheck. Bring-your-own-app, lifecycle-managed.' },
       { t: 'AUR PKGBUILD & Ubuntu PPA', d: 'Native distro packages on top of the install script: pacman and apt as first-class install paths.' },
     ],
     later: [],
@@ -322,16 +349,15 @@ const themes: RoadmapTheme[] = [
   {
     id: 'hardware',
     name: 'Hardware + observability',
-    blurb: 'Probe before you load. Memory bar that tells the truth.',
+    blurb: 'Probe before you load. A memory bar that tells the truth.',
     shipped: [
-      { t: 'UMA-aware probe', d: 'Detects iGPU, XDNA NPU, and unified memory pool; surfaces fit warnings inline before you load a model that won\'t fit.' },
-      { t: 'Proxmox host-pressure segment', d: 'Read-only PVEAuditor token → dashboard memory bar shows physical DIMM total plus a muted host segment for other-tenant + ZFS ARC + kernel pressure.' },
-      { t: 'KV-cache % gauge populates', d: 'Vulkan toolbox rebuilt against llama.cpp b9279; synthesises kv_cache_usage = max(n_prompt_tokens) / n_ctx, clamped at 1.0.' },
-      { t: 'Live TTFT dashboard', d: 'Per-slot time-to-first-token sampled in the dispatcher, surfaced as a sparkline-pinned HUD readout on SlotCard.' },
+      { t: 'UMA-aware probe', d: 'Detects iGPU, XDNA NPU, and the unified memory pool; surfaces fit warnings inline before you load a model that won\'t fit.' },
+      { t: 'Live GTT total + honest memory bar', d: 'The memory bar reports the live GTT total from the driver, not a stale cached probe — so the unified pool you see is the pool you have.' },
+      { t: 'NPU occupancy grid', d: 'A living per-slot occupancy view of the XDNA NPU that breathes with real activity instead of a static picker.' },
     ],
     soon: [],
     later: [
-      { t: 'Multi-host federation', d: 'A slot mesh across LAN boxes: primary on the Strix Halo, embed on the workstation, all behind one /v1/* surface.' },
+      { t: 'Multi-host federation', d: 'A slot mesh across LAN boxes: chat on the Strix Halo, embed on the workstation, all behind one /v1/* surface.' },
     ],
   },
   {
@@ -339,30 +365,25 @@ const themes: RoadmapTheme[] = [
     name: 'Agents + memory + MCP',
     blurb: 'A place for agents to live, not only to chat with.',
     shipped: [
-      { t: 'MCP tool annotations', d: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations so SDK clients can render confirmation UIs and reason about side-effects.' },
-      { t: 'Approval inbox + bell', d: 'Capital-D destructive tool calls gate through a header bell and modal inbox in the dashboard, with full CLI parity via hal0 agent approvals.' },
+      { t: 'Bundled Hermes agent', d: 'Hermes installs and bootstraps on first run — sandboxed under its own user, prewired to the local /v1 API and MCP servers, with an agent-card library in the dashboard.' },
+      { t: 'Operator Board', d: 'A hal0-skinned kanban wired to Hermes (/api/board/*), with a live agent-chat drawer and working task creation.' },
+      { t: 'Hindsight graph memory', d: 'Opt-in memory engine (HAL0_MEMORY_ENABLED). Shared by default; the X-hal0-Agent header scopes a client\'s writes to its own namespace.' },
+      { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions: an admin + memory MCP server, plus an allow-listed client that composes external MCP tools. Destructive calls gate through an approval bell + CLI.' },
     ],
-    soon: [
-      { t: 'Bundled agent app', d: 'Hermes-Agent installable from the dashboard, prewired to the local OpenAI API + MCP servers.' },
-      { t: 'Cognee-backed memory', d: 'Embedded SQLite + LanceDB + Kuzu. Shared by default; X-hal0-Private: 1 promotes a client\'s writes to its own namespace.' },
-      { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions. Compose tools across local slots and external MCP services; discover them from the dashboard.' },
-    ],
+    soon: [],
     later: [
       { t: 'ChatOps adapters', d: 'Slack and Matrix bridges as extensions, so you can talk to hal0 from the rooms you already live in.' },
     ],
   },
   {
     id: 'security',
-    name: 'Security + UX',
-    blurb: 'Off by default. Opt in when you\'re ready to expose the box.',
+    name: 'Security posture',
+    blurb: 'No bundled auth — open on the LAN by default; front it with your own proxy.',
     shipped: [
-      { t: 'Bundled OpenWebUI', d: 'Prewired chat on :3001 pointed at the local API. Zero config; the installer wires it for you.' },
-      { t: 'Caddy + auth + HTTPS + mDNS', d: 'install.sh --auth=basic brings up Caddy with basic_auth, Bearer tokens for the API, automatic HTTPS, and a best-effort Avahi service file.' },
-      { t: 'First-run wizard rewrite', d: 'Eight linear steps from password through hardware, primary model, capabilities, HF token, license, install, done. Conditional HF-token step.' },
+      { t: 'Open by default, proxy at the edge', d: 'No bundled auth or TLS (ADR-0012): the API binds 0.0.0.0:8080 for the LAN. Expose it by putting your own reverse proxy — Traefik, nginx, or a Cloudflare Tunnel — in front.' },
+      { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, and Moonshine STT + Kokoro TTS served through the capability API.' },
     ],
-    soon: [
-      { t: 'STT / TTS curated picks', d: 'v0.1.1 seeded embed/rerank with real GGUF picks. STT (moonshine) and TTS (kokoro) need a pull-layer extension because their weights aren\'t GGUF / safetensors.' },
-    ],
+    soon: [],
     later: [
       { t: 'Voice mode end-to-end', d: 'Moonshine + agent loop + Kokoro stitched into a hands-free streaming conversation, gated through the slot lifecycle.' },
     ],
@@ -389,7 +410,7 @@ const shipNowHighlights = [
   {
     tag: 'mcp',
     title: 'MCP tool annotations',
-    body: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects.',
+    body: 'All 21 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects.',
   },
   {
     tag: 'install',
@@ -401,15 +422,15 @@ const shipNowHighlights = [
 ---
 
 <MarketingLayout
-  title="hal0 — Strix Halo native AI inference platform for homelabs."
-  description={description}
+  title="hal0 — Strix Halo native AI inference, image gen & agents for homelabs."
+  description={metaDescription}
 >
   <!-- HERO -->
   <header class="hero">
     <div class="shell-wide hero-grid">
       <div>
         <div class="eyebrow">
-          <span class="blip"></span> {version} — shipping on every supported host
+          <span class="blip"></span> {version} · first beta — shipping on every supported host
         </div>
         <h1 class="h1">
           Your Strix Halo box,<br />
@@ -418,18 +439,24 @@ const shipNowHighlights = [
         </h1>
         <p class="lede">
           <strong>hal0</strong> turns a Linux box — ideally a
-          <strong>Ryzen AI Max+ 395</strong> with 128 GB of unified memory and
-          an XDNA NPU — into a polished, OpenAI-compatible inference appliance.
-          Slots, dispatcher, hardware probe, prewired chat UI, signed self-update.
-          <strong>Installer being overhauled — relaunching soon.</strong>
+          <strong>Ryzen AI Max+ 395</strong> — into a <strong>private</strong>,
+          OpenAI-compatible AI appliance: <em>one</em> <code class="mono accent-mono">/v1/*</code>
+          API across every modality, with concurrent workloads the box manages for you.
+          One command installs the lot.
         </p>
 
-        <div class="holding" id="install">
-          <span class="holding-pill">overhaul in flight</span>
-          <span class="holding-msg">
-            Big overhaul in flight.
-            <strong>Installer relaunching soon.</strong>
-          </span>
+        <div class="install" id="install">
+          <div class="install-head">
+            <div class="install-dots"><i></i><i></i><i></i></div>
+            <div class="install-title">install.sh</div>
+            <div class="install-meta">Linux x86_64 · Python ≥3.12</div>
+          </div>
+          <div class="install-body">
+            <span class="prompt">$</span>
+            <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+            <span class="caret"></span>
+            <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+          </div>
         </div>
 
         <div class="cta-row">
@@ -442,7 +469,7 @@ const shipNowHighlights = [
           <span class="tk"><span class="dot"></span> hal0-api</span>
           <span class="tk"><b>:8080</b> ready</span>
           <span class="tk-sep">·</span>
-          <span class="tk">5 slots <b>up</b></span>
+          <span class="tk">all slots <b>up</b></span>
           <span class="tk-sep">·</span>
           <span class="tk">GTT <b>9.2 / 96 GB</b></span>
           <span class="tk-sep">·</span>
@@ -454,6 +481,37 @@ const shipNowHighlights = [
     </div>
   </header>
 
+  <!-- USE CASES — outcome-led, right under the hero -->
+  <section class="usecases" id="use-cases">
+    <div class="shell-wide uc-grid">
+      <article class="uc-card">
+        <div class="uc-eye">/ local coding stack</div>
+        <h3 class="uc-title">Point your editor at your own box</h3>
+        <p class="uc-body">
+          Aim any OpenAI-compatible client at <code class="mono accent-mono">:8080/v1</code> —
+          chat, completions, and a dedicated coder slot. Your code never leaves the LAN,
+          and there's no per-token bill.
+        </p>
+      </article>
+      <article class="uc-card">
+        <div class="uc-eye">/ private knowledge &amp; RAG</div>
+        <h3 class="uc-title">Retrieval grounded on your data</h3>
+        <p class="uc-body">
+          Embeddings, reranking, and a bundled agent with opt-in graph memory and MCP
+          tools — a full RAG stack that runs on your hardware, not someone else's server.
+        </p>
+      </article>
+      <article class="uc-card">
+        <div class="uc-eye">/ voice &amp; image lab</div>
+        <h3 class="uc-title">Speech and images, one control plane</h3>
+        <p class="uc-body">
+          Transcription, text-to-speech, and local image generation behind the same API —
+          STT/TTS on the XDNA NPU, ComfyUI on the iGPU, switched cleanly so they share the box.
+        </p>
+      </article>
+    </div>
+  </section>
+
   <!-- PERF -->
   <section class="perf" id="perf">
     <div class="shell-wide">
@@ -464,14 +522,14 @@ const shipNowHighlights = [
           <div class="ctx">Strix Halo iGPU · ~9 GB GTT</div>
         </div>
         <div class="perf-cell">
-          <div class="num">&lt;200<span class="unit">ms</span></div>
-          <div class="lbl">dispatch latency</div>
-          <div class="ctx">both slots hot, single-flight</div>
+          <div class="num">1<span class="unit">call</span></div>
+          <div class="lbl">thundering herd, coalesced</div>
+          <div class="ctx">single-flight dispatch + cold-cache prefetch</div>
         </div>
         <div class="perf-cell">
-          <div class="num">5<span class="unit">slots</span></div>
-          <div class="lbl">chat · embed · stt · tts · img</div>
-          <div class="ctx">systemd-managed lifecycle</div>
+          <div class="num">6<span class="unit">workloads</span></div>
+          <div class="lbl">chat · embed · rerank · stt · tts · img</div>
+          <div class="ctx">as many slots as memory fits</div>
         </div>
         <div class="perf-cell">
           <div class="num">~10<span class="unit">s</span></div>
@@ -616,20 +674,25 @@ const shipNowHighlights = [
           <h2 class="sec-title">Curated starting points.<br />Tweak from there.</h2>
         </div>
         <p class="sec-sub">
-          Sizes are published GGUF file sizes. The slot system takes a different
-          model per slot whenever you change your mind. Picks refreshed to the
-          latest open-weight releases — Qwen3, Llama-4 Scout, Hermes-4, gemma-3,
-          Kokoro v1.
+          Sizes are published file sizes; the slot system takes a different model
+          per slot whenever you change your mind. These are tuned for Strix Halo:
+          <strong>A3B MoE</strong> models give 30–80B quality at ~3B token-gen
+          speed, and an <strong>MTP head</strong> on MTP-enabled llama.cpp delivers
+          a measured <strong>1.4–2.4× decode speedup</strong>. FP4 is what makes
+          them fit the unified pool — not what makes them fast.
         </p>
       </div>
 
-      <div class="loadout-tabs" role="tablist">
+      <div class="loadout-tabs" role="tablist" aria-label="Recommended loadouts">
         {loadoutTabs.map((t, i) => (
           <button
             class={`tab ${i === 0 ? 'active' : ''}`}
+            id={`tab-${t.id}`}
             data-tab={t.id}
             role="tab"
             aria-selected={i === 0 ? 'true' : 'false'}
+            aria-controls={`panel-${t.id}`}
+            tabindex={i === 0 ? 0 : -1}
           >
             {t.label} <span class="count">{t.count}</span>
           </button>
@@ -639,8 +702,12 @@ const shipNowHighlights = [
       {loadoutTabs.map((t, i) => (
         <div
           class={`loadouts ${i === 0 ? '' : 'is-hidden'}`}
+          id={`panel-${t.id}`}
           data-tab-panel={t.id}
           role="tabpanel"
+          aria-labelledby={`tab-${t.id}`}
+          tabindex="0"
+          hidden={i !== 0}
         >
           {(loadoutData[t.id] || []).map((c) => (
             <article class="loadout">
@@ -661,6 +728,14 @@ const shipNowHighlights = [
           ))}
         </div>
       ))}
+
+      <p class="loadout-note">
+        Model ids are real, pull-able registry ids. Considering Apache-clean
+        upgrades? <strong>Qwen-Image</strong> (beats FLUX on prompt + text
+        rendering), <strong>Qwen3-Reranker-0.6B</strong> (pairs with the Qwen3
+        embedder), and <strong>Chatterbox-Turbo</strong> (zero-shot voice
+        cloning) are easy pulls when you want them.
+      </p>
     </div>
   </section>
 
@@ -695,6 +770,87 @@ const shipNowHighlights = [
             ))}
           </div>
         ))}
+      </div>
+      <p class="cmp-note">
+        Competitor capabilities reflect each project's published docs as of June 2026
+        and move fast — treat this as a snapshot, not a live scorecard.
+      </p>
+    </div>
+  </section>
+
+  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900, dark, live hal0 instance) -->
+  <section class="section section-tight" id="console">
+    <div class="shell-wide">
+      <div class="sec-head">
+        <div>
+          <div class="sec-tag">/ the console</div>
+          <h2 class="sec-title">Chat, image gen, agents, and memory —<br /><span class="accent">one console</span>.</h2>
+        </div>
+        <p class="sec-sub">
+          Slots, models, local image generation, graph memory, an agent task board, MCP,
+          and logs — every surface in one React operator console. SSE-backed, dark by
+          default. Real screenshots from a live hal0 instance.
+        </p>
+      </div>
+
+      <figure class="shot-hero">
+        <img
+          src="/screenshots/dashboard-overview.png"
+          alt="hal0 dashboard overview — slots, throughput, and live service health"
+          width="1440"
+          height="900"
+          loading="lazy"
+          decoding="async"
+        />
+      </figure>
+
+      <div class="shot-grid">
+        <figure class="shot">
+          <img src="/screenshots/slots-inference.png" alt="Slots view — per-slot state and the typed inference lifecycle" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Slots</strong> — one engine, every workload, a typed lifecycle you can watch live.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/screenshots/image-gen-comfyui.png" alt="ComfyUI image generation with the iGPU in exclusive image mode while inference slots are paused" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Image gen on the iGPU</strong> — generating flips the accelerator into exclusive image mode; inference pauses, then resumes. One GPU, shared cleanly.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/screenshots/memory-graph.png" alt="Agent memory rendered as a navigable semantic and temporal knowledge graph" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Graph memory</strong> (opt-in) — facts become a navigable semantic + temporal graph, namespaced per agent.</figcaption>
+        </figure>
+      </div>
+
+      <p class="shot-note">
+        Plus a Hermes agent that lives on the box, an Operator Board kanban wired to it,
+        an MCP server + client, and a live XDNA NPU view — see the
+        <a href="#roadmap">roadmap</a> for everything shipped.
+      </p>
+    </div>
+  </section>
+
+  <!-- MEET HERMES — the bundled agent as the dashboard's collectible foil card -->
+  <section class="section" id="hermes">
+    <div class="shell-wide hermes-sec">
+      <div class="hermes-copy">
+        <div class="sec-tag">/ the bundled agent</div>
+        <h2 class="sec-title">An agent that<br /><span class="accent">lives on the box</span>.</h2>
+        <p class="sec-sub">
+          Hermes installs and bootstraps itself on first run — sandboxed under its own
+          user, prewired to the local <code class="mono accent-mono">/v1</code> API and your
+          MCP servers, with opt-in graph memory. Reach her from Telegram or Discord; she
+          chains tools for hours fully AFK and folds every run back into memory.
+        </p>
+        <ul class="hermes-points">
+          <li>Self-bootstraps: env probe → model wiring → MCP memory → persona.</li>
+          <li>Sandboxed <code class="mono">hal0-agent@hermes.service</code> — own user, no new privileges.</li>
+          <li>Gated tools clear an approval bell; every call is audited.</li>
+        </ul>
+        <div class="hermes-cta">
+          <a href="/docs/concepts/agents" class="btn">Agents &amp; memory →</a>
+          <span class="hermes-hint">hover to tilt · click to flip</span>
+        </div>
+      </div>
+      <div class="hermes-card-wrap">
+        <HermesCard />
       </div>
     </div>
   </section>
@@ -806,7 +962,7 @@ const shipNowHighlights = [
         <span class="mono accent-mono">※</span>
         <span>
           <strong>Exploring items are bets we believe in, not promises.</strong>{' '}
-          Scope and order will shift as v0.2 lands and we learn what people actually do with a local platform.
+          Scope and order will shift as the v0.7 beta lands and we learn what people actually do with a local platform.
           <a href="https://github.com/hal0ai/hal0/issues" class="rm-footnote-link">open an issue ↗</a>
         </span>
       </div>
@@ -816,18 +972,24 @@ const shipNowHighlights = [
   <!-- CTA -->
   <section class="cta-section">
     <div class="shell-wide cta-inner">
-      <div class="sec-tag cta-tag">/ overhaul in flight</div>
+      <div class="sec-tag cta-tag">/ get hal0</div>
       <h2 class="cta-h">Stop running models<br />from a <span class="accent">chat tab.</span></h2>
       <p class="cta-sub">
-        The installer is being rebuilt for the next release.
-        Watch the repo, or read the docs to see where it's heading.
+        One command on a fresh Linux box. It's the first beta — pre-release, but
+        it installs and runs the whole stack today.
       </p>
-      <div class="holding cta-holding">
-        <span class="holding-pill">overhaul in flight</span>
-        <span class="holding-msg">
-          Big overhaul in flight.
-          <strong>Installer relaunching soon.</strong>
-        </span>
+      <div class="install cta-holding" id="install-cta">
+        <div class="install-head">
+          <div class="install-dots"><i></i><i></i><i></i></div>
+          <div class="install-title">install.sh</div>
+          <div class="install-meta">Linux x86_64 · Python ≥3.12</div>
+        </div>
+        <div class="install-body">
+          <span class="prompt">$</span>
+          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+          <span class="caret"></span>
+          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+        </div>
       </div>
       <div class="cta-row cta-row-centered">
         <a href="/docs/getting-started/" class="btn">Read the docs →</a>
@@ -858,20 +1020,33 @@ const shipNowHighlights = [
         });
       });
 
-      // Loadout tabs
-      const tabs = document.querySelectorAll('button[data-tab]');
+      // Loadout tabs — WAI-ARIA tabs pattern: roving tabindex + arrow/Home/End.
+      const tabs = Array.from(document.querySelectorAll('button[data-tab]'));
       const panels = document.querySelectorAll('[data-tab-panel]');
-      tabs.forEach((tab) => {
-        tab.addEventListener('click', () => {
-          const id = tab.getAttribute('data-tab');
-          tabs.forEach((t) => {
-            const isActive = t === tab;
-            t.classList.toggle('active', isActive);
-            t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-          });
-          panels.forEach((p) => {
-            p.classList.toggle('is-hidden', p.getAttribute('data-tab-panel') !== id);
-          });
+      const selectTab = (tab, focus) => {
+        const id = tab.getAttribute('data-tab');
+        tabs.forEach((t) => {
+          const isActive = t === tab;
+          t.classList.toggle('active', isActive);
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          t.setAttribute('tabindex', isActive ? '0' : '-1');
+        });
+        panels.forEach((p) => {
+          const match = p.getAttribute('data-tab-panel') === id;
+          p.classList.toggle('is-hidden', !match);
+          p.hidden = !match;
+        });
+        if (focus) tab.focus();
+      };
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => selectTab(tab, false));
+        tab.addEventListener('keydown', (e) => {
+          let next = null;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = tabs[(i + 1) % tabs.length];
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = tabs[(i - 1 + tabs.length) % tabs.length];
+          else if (e.key === 'Home') next = tabs[0];
+          else if (e.key === 'End') next = tabs[tabs.length - 1];
+          if (next) { e.preventDefault(); selectTab(next, true); }
         });
       });
     })();
@@ -2057,7 +2232,9 @@ const shipNowHighlights = [
 
   @media (max-width: 1080px) {
     .hero { padding-top: 56px; }
-    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+    .hero-grid > * { min-width: 0; }
+    .h1 { font-size: clamp(2.1rem, 11vw, 3rem); }
     .sec-head { grid-template-columns: 1fr; gap: 24px; }
     .perf-grid { grid-template-columns: repeat(2, 1fr); }
     .feat-grid,
@@ -2077,5 +2254,167 @@ const shipNowHighlights = [
     .cmp-row { grid-template-columns: 1fr; }
     .cmp-row > div { border-right: none; }
     .slot-row { grid-template-columns: 90px 1fr 70px 80px 60px; gap: 10px; padding: 10px 14px; }
+  }
+
+  /* Operator-console screenshot showcase. Real 1440×900 dark captures;
+   * aspect-ratio is pinned so lazy-loaded images don't shift layout. */
+  .shot-hero {
+    margin-top: 2.5rem;
+    border: 1px solid var(--hal0-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--hal0-bg-sunken);
+    box-shadow:
+      0 30px 80px -40px var(--hal0-accent-glow),
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  }
+  .shot-hero img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1440 / 900;
+  }
+
+  .shot-grid {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .shot {
+    position: relative;
+    display: block;
+    margin: 0;
+    border: 1px solid var(--hal0-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--hal0-bg-sunken);
+    transition:
+      border-color 200ms var(--hal0-ease),
+      transform 200ms var(--hal0-ease);
+  }
+  .shot:hover {
+    border-color: var(--hal0-border-strong);
+    transform: translateY(-2px);
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1440 / 900;
+    border-bottom: 1px solid var(--hal0-border);
+  }
+  .shot-cap {
+    display: block;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+  }
+  .shot-cap strong {
+    color: var(--hal0-fg);
+    font-weight: 600;
+  }
+  .shot-note {
+    margin: 1.25rem 0 0;
+    font-size: 0.9rem;
+    color: var(--hal0-fg-muted);
+  }
+  .shot-note a {
+    color: var(--hal0-accent);
+    text-decoration: none;
+  }
+  .shot-note a:hover {
+    color: var(--hal0-accent-hover);
+    text-decoration: underline;
+  }
+  @media (max-width: 720px) {
+    .shot-grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shot { transition: none; }
+    .shot:hover { transform: none; }
+  }
+
+  /* Use-case cards (outcome-led, under the hero) */
+  .usecases { padding: 4px 0 20px; }
+  .uc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .uc-card {
+    border: 1px solid var(--hal0-border);
+    border-radius: 12px;
+    background: var(--hal0-bg-elevated);
+    padding: 22px 20px;
+    transition: border-color 200ms var(--hal0-ease), transform 200ms var(--hal0-ease);
+  }
+  .uc-card:hover { border-color: var(--hal0-border-strong); transform: translateY(-2px); }
+  .uc-eye { font-family: var(--hal0-font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--hal0-accent); }
+  .uc-title { margin: 10px 0 8px; font-size: 1.12rem; font-weight: 600; letter-spacing: -0.01em; color: var(--hal0-fg); line-height: 1.25; }
+  .uc-body { font-size: 0.92rem; line-height: 1.55; color: var(--hal0-fg-muted); }
+  @media (max-width: 900px) { .uc-grid { grid-template-columns: 1fr; } }
+
+  .cmp-note {
+    margin: 16px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--hal0-fg-dim);
+  }
+  .loadout-note {
+    margin: 22px 0 0;
+    max-width: 640px;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--hal0-fg-dim);
+  }
+  .loadout-note strong { color: var(--hal0-fg-muted); font-weight: 600; }
+
+  /* Meet Hermes — copy + the foil card */
+  .hermes-sec {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 56px;
+    align-items: center;
+  }
+  .hermes-copy { min-width: 0; }
+  .hermes-points {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .hermes-points li {
+    position: relative;
+    padding-left: 1.1rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--hal0-fg-muted);
+  }
+  .hermes-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 0.35rem;
+    height: 1px;
+    background: var(--hal0-accent);
+  }
+  .hermes-cta {
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hermes-hint {
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    color: var(--hal0-fg-dim);
+    letter-spacing: 0.04em;
+  }
+  .hermes-card-wrap { display: flex; justify-content: center; }
+  @media (max-width: 900px) {
+    .hermes-sec { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+    .hermes-card-wrap { order: -1; }
   }
 </style>

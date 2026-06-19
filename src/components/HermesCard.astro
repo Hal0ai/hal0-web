@@ -1,0 +1,301 @@
+---
+/**
+ * HermesCard — the dashboard's collectible "foil" agent card, ported to the
+ * marketing site as a no-framework component. Faithful to
+ * hal0/ui/src/dash/agents/agent-card.jsx + agent-cards.css: full-bleed
+ * portrait with holo/scan/vignette foil layers, cursor-tracked tilt, and a
+ * 3D flip (WAAPI, to dodge the rotateY matrix-singularity freeze) to the
+ * abilities/skills back. Click to flip; hover to tilt + light the foil.
+ *
+ * Inert by design here (it's a showcase of the real dashboard card) — the
+ * Logs/Persona/Restart controls are visual. Data mirrors the live Hermes card.
+ */
+const abilities = [
+  { name: 'Ghost Relay', cost: 2, pow: '40', desc: 'Summon her from any Telegram or Discord thread.' },
+  { name: 'Engram', cost: 2, pow: '60', desc: 'Folds every run back into memory — never relearns.' },
+  { name: 'Deep Run', cost: 3, pow: '90', desc: 'Chains tools for hours, fully AFK.' },
+];
+const skills = [
+  { l: 'voice · tts', key: true },
+  { l: 'speech · stt', key: true },
+  { l: 'image-gen', key: true },
+  { l: 'vision', key: true },
+  { l: 'embeddings', key: false },
+];
+const rarity = 3;
+---
+
+<div class="hermes-card" data-hermes-card>
+  <div class="fcard-tilt" data-tilt>
+    <div class="fcard-inner" data-inner>
+
+      <!-- FRONT -->
+      <div class="fc-face fc-front" data-front>
+        <div class="foilb-clip">
+          <img class="foilb-img" src="/agents/hermes.png" alt="Hermes — the bundled hal0 agent" width="1488" height="1202" loading="lazy" decoding="async" />
+          <span class="foilb-vig"></span>
+          <span class="foilb-scan"></span>
+          <span class="foilb-holo"></span>
+
+          <div class="foilb-top">
+            <div class="fc-id">
+              <div class="fc-name-row">
+                <span class="dot serving"></span>
+                <span class="fc-name">Hermes</span>
+              </div>
+              <span class="fc-model">chadrock-35b-ace-saber</span>
+            </div>
+            <div class="hv">
+              <div class="hv-ctx">
+                <div class="hv-ctxrow"><span class="hv-l">ctx</span><span class="hv-v">0<i>/164K</i></span></div>
+                <div class="hv-bar"><i style="width:2%"></i></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="foilb-bottom">
+            <div class="fc-role">remote control · self-improving · orchestration</div>
+            <div class="fc-meta">
+              <span class="fc-st"><span class="dot serving"></span>READY</span>
+              <span class="flip-hint">
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+                tap · abilities
+              </span>
+              <span class="fc-rarity" title="holo rare">
+                {[0, 1, 2, 3, 4].map((i) => <span class={'fc-star' + (i < rarity ? '' : ' off')}></span>)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BACK -->
+      <div class="fc-face fc-back" data-back>
+        <div class="fcb-h">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+          <span class="l"><b>Hermes</b> · abilities</span>
+          <span style="margin-left:auto"><span class="dot serving"></span></span>
+        </div>
+        <div class="fcb-body">
+          {abilities.map((ab) => (
+            <div class="atk">
+              <div class="atk-h">
+                <span class="atk-cost">
+                  {[0, 1, 2].map((n) => <span class={'atk-pip' + (n >= ab.cost ? ' spent' : '')}></span>)}
+                </span>
+                <span class="atk-name">{ab.name}</span>
+                <span class="atk-pow"><span class="v">{ab.pow}</span><span class="u">pwr</span></span>
+              </div>
+              <div class="atk-desc">{ab.desc}</div>
+            </div>
+          ))}
+          <div class="fcb-skills">
+            <div class="fcb-sec-l">Skills</div>
+            <div class="skill-row">
+              {skills.map((s) => <span class={'skill' + (s.key ? ' key' : '')}>{s.l}</span>)}
+            </div>
+          </div>
+        </div>
+        <div class="fcb-actions" data-stop>
+          <div class="fcb-act-row">
+            <span class="fc-act">logs</span>
+            <span class="fc-act">persona</span>
+          </div>
+          <a class="fc-restart" href="/docs/concepts/agents">Run agents →</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .hermes-card {
+    /* map the dashboard agent-card-kit tokens onto the marketing brand */
+    --jbm: var(--hal0-font-mono);
+    --geist: var(--hal0-font-body);
+    --el: var(--hal0-accent);
+    --el-glow: var(--hal0-accent-glow);
+    --fg: var(--hal0-fg);
+    --fg-2: var(--hal0-fg-muted);
+    --fg-3: var(--hal0-fg-dim);
+    --fg-4: #8a8580;
+    --fg-5: #5c5853;
+    --line: var(--hal0-border);
+    --line-strong: var(--hal0-border-strong);
+    --line-soft: color-mix(in oklab, var(--hal0-border) 65%, transparent);
+    --ok: var(--hal0-accent);
+    --bg-1: var(--hal0-bg-elevated);
+    --bg-sunken: var(--hal0-bg-sunken);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    width: 340px;
+    height: 520px;
+    max-width: 100%;
+    perspective: 1150px;
+    cursor: pointer;
+  }
+  .fcard-tilt {
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 0.22s var(--ease);
+  }
+  .fcard-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
+  .fc-face {
+    position: absolute; inset: 0; border-radius: 18px; backface-visibility: hidden;
+    background: var(--bg-1); border: 1px solid var(--line-strong);
+    display: flex; flex-direction: column; transition: opacity 0.3s var(--ease);
+    box-shadow: 0 32px 74px -30px rgba(0, 0, 0, 0.86);
+  }
+  .fc-face::before {
+    content: ''; position: absolute; top: 0; left: 12px; right: 12px; height: 1px; z-index: 5;
+    background: linear-gradient(90deg, transparent, var(--el), transparent); opacity: 0.7;
+  }
+  .fc-back { transform: rotateY(180deg); }
+  .hermes-card:hover .fc-face {
+    box-shadow: 0 38px 92px -28px rgba(0, 0, 0, 0.9), 0 0 0 1px color-mix(in oklab, var(--el) 26%, transparent);
+  }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--ok); box-shadow: 0 0 9px var(--el-glow); }
+
+  /* FRONT — full-art foil */
+  .fc-front { background: #0b0b0b; border-color: color-mix(in oklab, var(--el) 20%, var(--line-strong)); }
+  .foilb-clip { position: absolute; inset: 0; border-radius: 17px; overflow: hidden; }
+  .foilb-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 2%; display: block; }
+  .foilb-vig { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(132% 92% at 50% 24%, transparent 56%, rgba(8, 7, 4, 0.36)); }
+  .foilb-holo {
+    position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity 0.2s var(--ease);
+    background:
+      radial-gradient(220px 220px at var(--hx, 50%) var(--hy, 38%), rgba(255, 255, 255, 0.18), transparent 60%),
+      linear-gradient(115deg, transparent 38%, color-mix(in oklab, var(--el) 24%, transparent) 48%, rgba(255, 255, 255, 0.18) 50%, color-mix(in oklab, var(--el) 24%, transparent) 52%, transparent 62%);
+  }
+  .foilb-scan {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.2s var(--ease); mix-blend-mode: color-dodge;
+    background: repeating-linear-gradient(72deg, transparent 0 6px, rgba(255, 120, 180, 0.05) 6px 7px, rgba(120, 200, 255, 0.05) 7px 8px);
+  }
+  .hermes-card:hover .foilb-holo, .hermes-card:hover .foilb-scan { opacity: 0.9; }
+
+  .foilb-top {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    padding: 15px 15px 32px; background: linear-gradient(to bottom, rgba(6, 6, 6, 0.92), rgba(6, 6, 6, 0.48) 58%, transparent);
+  }
+  .foilb-bottom {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 3; display: flex; flex-direction: column; gap: 9px;
+    padding: 32px 15px 15px; background: linear-gradient(to top, rgba(5, 5, 5, 0.95), rgba(5, 5, 5, 0.52) 58%, transparent);
+  }
+  .fc-id { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .fc-name-row { display: flex; align-items: center; gap: 8px; }
+  .fc-name { font-family: var(--jbm); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; text-transform: uppercase; color: var(--fg); line-height: 1; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6); }
+  .fc-model { font-family: var(--jbm); font-size: 10.5px; color: var(--fg-2); letter-spacing: 0.02em; }
+
+  .hv { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .hv-ctx { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .hv-ctxrow { display: flex; align-items: baseline; gap: 5px; }
+  .hv-l { font-family: var(--jbm); font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
+  .hv-v { font-family: var(--jbm); font-size: 14px; font-weight: 600; color: var(--fg); font-variant-numeric: tabular-nums; line-height: 1; }
+  .hv-v i { color: var(--fg-4); font-style: normal; }
+  .hv-bar { width: 86px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+  .hv-bar i { display: block; height: 100%; background: var(--el); box-shadow: 0 0 8px var(--el-glow); border-radius: 2px; }
+
+  .fc-role { font-family: var(--jbm); font-size: 10.5px; color: var(--fg-2); letter-spacing: 0.02em; line-height: 1.4; }
+  .fc-meta { display: flex; align-items: center; gap: 9px; }
+  .fc-st { display: flex; align-items: center; gap: 6px; font-family: var(--jbm); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ok); }
+  .fc-rarity { margin-left: auto; display: flex; gap: 3px; }
+  .fc-star { width: 8px; height: 8px; transform: rotate(45deg); border-radius: 1px; background: var(--el); box-shadow: 0 0 7px var(--el-glow); }
+  .fc-star.off { background: transparent; border: 1px solid var(--fg-5); box-shadow: none; }
+  .flip-hint { display: inline-flex; align-items: center; gap: 5px; font-family: var(--jbm); font-size: 9.5px; color: var(--fg-5); letter-spacing: 0.06em; }
+
+  /* BACK */
+  .fcb-h { display: flex; align-items: center; gap: 9px; padding: 15px 16px 12px; border-bottom: 1px solid var(--line-soft); color: var(--fg-3); }
+  .fcb-h .l { font-family: var(--jbm); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fg-4); }
+  .fcb-h .l b { color: var(--el); font-weight: 600; }
+  .fcb-body { padding: 4px 16px; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .atk { padding: 11px 0; border-bottom: 1px solid var(--line-soft); }
+  .atk:last-child { border-bottom: none; }
+  .atk-h { display: flex; align-items: center; gap: 10px; }
+  .atk-cost { display: flex; gap: 3px; flex-shrink: 0; }
+  .atk-pip { width: 9px; height: 9px; transform: rotate(45deg); border-radius: 1px; background: var(--el); box-shadow: 0 0 7px var(--el-glow); }
+  .atk-pip.spent { background: transparent; border: 1px solid var(--fg-5); box-shadow: none; }
+  .atk-name { font-family: var(--jbm); font-size: 14.5px; font-weight: 600; letter-spacing: -0.02em; text-transform: uppercase; color: var(--fg); white-space: nowrap; }
+  .atk-pow { margin-left: auto; display: flex; align-items: baseline; gap: 4px; }
+  .atk-pow .v { font-family: var(--jbm); font-size: 19px; font-weight: 600; color: var(--el); font-variant-numeric: tabular-nums; line-height: 1; }
+  .atk-pow .u { font-family: var(--jbm); font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-4); }
+  .atk-desc { font-family: var(--geist); font-size: 11.5px; line-height: 1.45; color: var(--fg-3); margin-top: 6px; padding-left: 34px; }
+  .fcb-skills { padding: 12px 0 6px; margin-top: 4px; border-top: 1px solid var(--line-soft); }
+  .fcb-sec-l { font-family: var(--jbm); font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-4); margin-bottom: 9px; }
+  .skill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .skill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--jbm); font-size: 10.5px; color: var(--fg-2); background: var(--bg-sunken); border: 1px solid var(--line-soft); border-radius: 999px; padding: 5px 10px 5px 9px; }
+  .skill::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; transform: rotate(45deg); border-radius: 1px; background: var(--fg-5); }
+  .skill.key { color: var(--fg); border-color: color-mix(in oklab, var(--el) 32%, transparent); }
+  .skill.key::before { background: var(--el); box-shadow: 0 0 6px var(--el-glow); }
+
+  .fcb-actions { margin-top: auto; border-top: 1px solid var(--line-soft); padding: 11px 14px 13px; display: flex; flex-direction: column; gap: 9px; }
+  .fcb-act-row { display: flex; gap: 8px; }
+  .fc-act { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-family: var(--jbm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-2); background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; }
+  .fc-restart { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; font-family: var(--jbm); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #14110a; background: var(--el); border: none; border-radius: 9px; padding: 11px 14px; text-decoration: none; box-shadow: 0 0 0 1px color-mix(in oklab, var(--el) 40%, transparent), 0 8px 22px -10px var(--el-glow); transition: transform 0.12s var(--ease), filter 0.18s var(--ease); }
+  .fc-restart:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fcard-tilt, .fc-face { transition: none; }
+  }
+  @media (max-width: 420px) {
+    .hermes-card { width: 100%; height: auto; aspect-ratio: 340 / 520; }
+  }
+</style>
+
+<script>
+  // No-framework flip + tilt + holo, ported from the dashboard card.
+  document.querySelectorAll<HTMLElement>('[data-hermes-card]').forEach((card) => {
+    const tilt = card.querySelector<HTMLElement>('[data-tilt]');
+    const inner = card.querySelector<HTMLElement>('[data-inner]');
+    const front = card.querySelector<HTMLElement>('[data-front]');
+    const back = card.querySelector<HTMLElement>('[data-back]');
+    if (!tilt || !inner || !front || !back) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let flipped = false;
+
+    const setFaces = () => {
+      front.style.opacity = flipped ? '0' : '1';
+      back.style.opacity = flipped ? '1' : '0';
+    };
+    setFaces();
+
+    card.addEventListener('mousemove', (e) => {
+      if (reduce) return;
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      tilt.style.setProperty('--rx', ((py - 0.5) * -10).toFixed(2) + 'deg');
+      tilt.style.setProperty('--ry', ((px - 0.5) * 12).toFixed(2) + 'deg');
+      tilt.style.setProperty('--hx', (px * 100).toFixed(1) + '%');
+      tilt.style.setProperty('--hy', (py * 100).toFixed(1) + '%');
+    });
+    card.addEventListener('mouseleave', () => {
+      tilt.style.setProperty('--rx', '0deg');
+      tilt.style.setProperty('--ry', '0deg');
+    });
+
+    // Don't flip when interacting with the back's action zone.
+    card.querySelector('[data-stop]')?.addEventListener('click', (e) => e.stopPropagation());
+
+    card.addEventListener('click', () => {
+      flipped = !flipped;
+      const to = flipped ? 180 : 0;
+      const from = flipped ? 0 : 180;
+      setFaces();
+      if (reduce) { inner.style.transform = 'rotateY(' + to + 'deg)'; return; }
+      // 3-keyframe WAAPI tween through 90° — a plain CSS rotateY transition
+      // hits a matrix-interpolation singularity and freezes at t=0 in some engines.
+      const anim = inner.animate(
+        [
+          { transform: 'rotateY(' + from + 'deg)' },
+          { transform: 'rotateY(' + (from + to) / 2 + 'deg)' },
+          { transform: 'rotateY(' + to + 'deg)' },
+        ],
+        { duration: 600, easing: 'cubic-bezier(.2,.74,.2,1)', fill: 'forwards' },
+      );
+      anim.onfinish = () => { inner.style.transform = 'rotateY(' + to + 'deg)'; try { anim.cancel(); } catch {} };
+    });
+  });
+</script>

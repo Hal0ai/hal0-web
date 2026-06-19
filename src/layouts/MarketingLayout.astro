@@ -17,6 +17,13 @@
  */
 import '../styles/global.css';
 import Wordmark from '../components/Wordmark.astro';
+import rawChangelog from '../data/changelog.md?raw';
+import { parseChangelog } from '../lib/changelog.js';
+
+// Footer version is derived from the changelog, not hand-maintained — so it
+// always reflects the latest line that shipped (see scripts/sync-changelog.mjs).
+const { latest } = parseChangelog(rawChangelog);
+const footerVersion = latest?.version ?? '';
 
 // Preload the two latin web fonts that drive above-the-fold rendering —
 // without these, the FOUT swap from system fallback → real font pushes
@@ -40,6 +47,8 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
+// Social crawlers want an absolute image URL, not a root-relative path.
+const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString();
 ---
 
 <!doctype html>
@@ -66,9 +75,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={ogImage} />
+    <meta property="og:site_name" content="hal0" />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="hal0 — local AI inference for AMD Strix Halo" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image" content={ogImageUrl} />
   </head>
 
   <body class="min-h-screen bg-hal0-bg text-hal0-fg antialiased">
@@ -83,10 +96,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
           <span class="sr-only">— home</span>
         </a>
         <ul class="hidden items-center gap-7 font-mono text-sm text-hal0-fg-muted md:flex">
-          <li><a class="transition hover:text-hal0-fg" href="/#install">install</a></li>
-          <li><a class="transition hover:text-hal0-fg" href="/#hardware">hardware</a></li>
-          <li><a class="transition hover:text-hal0-fg" href="/#roadmap">roadmap</a></li>
           <li><a class="transition hover:text-hal0-fg" href="/docs/">docs</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/blog">blog</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/changelog">changelog</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/releases">releases</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/#roadmap">roadmap</a></li>
           <li>
             <a
               class="transition hover:text-hal0-fg"
@@ -95,7 +109,25 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
             >github</a>
           </li>
         </ul>
+        <button
+          id="nav-toggle"
+          class="hal0-burger md:hidden"
+          type="button"
+          aria-label="Open menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
       </nav>
+      <ul id="mobile-menu" class="hal0-mobile-menu md:hidden" hidden>
+        <li><a href="/docs/">docs</a></li>
+        <li><a href="/blog">blog</a></li>
+        <li><a href="/changelog">changelog</a></li>
+        <li><a href="/releases">releases</a></li>
+        <li><a href="/#roadmap">roadmap</a></li>
+        <li><a href="https://github.com/hal0ai/hal0" rel="noopener">github</a></li>
+      </ul>
     </header>
 
     <main>
@@ -107,14 +139,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
         <div class="flex items-center gap-3">
           <Wordmark size="text-base" />
           <span class="font-mono text-xs text-hal0-fg-dim">
-            Apache-2.0 · v0.2.0-alpha.3
+            Apache-2.0{footerVersion ? ` · ${footerVersion}` : ''}
           </span>
         </div>
         <ul class="flex flex-wrap items-center gap-6 font-mono text-xs">
           <li><a class="hover:text-hal0-fg" href="/docs/">docs</a></li>
-          <li><a class="hover:text-hal0-fg" href="/#install">install</a></li>
-          <li><a class="hover:text-hal0-fg" href="/#hardware">hardware</a></li>
-          <li><a class="hover:text-hal0-fg" href="/#roadmap">roadmap</a></li>
+          <li><a class="hover:text-hal0-fg" href="/blog">blog</a></li>
+          <li><a class="hover:text-hal0-fg" href="/changelog">changelog</a></li>
+          <li><a class="hover:text-hal0-fg" href="/releases">releases</a></li>
+          <li><a class="hover:text-hal0-fg" href="/contributing">contributing</a></li>
           <li>
             <a class="hover:text-hal0-fg" href="mailto:hello@hal0.dev">
               hello@hal0.dev
@@ -128,6 +161,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
         </ul>
       </div>
     </footer>
+
+    <!-- Screenshot lightbox (shared with the docs/blog via astro.config head). -->
+    <script is:inline src="/js/lightbox.js" defer></script>
 
     <!-- Scroll-aware navbar:
          data-tone='solid'                    → frosted bg + amber accent
@@ -155,6 +191,25 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
         sync();
         window.addEventListener('scroll', onScroll, { passive: true });
         window.addEventListener('resize', sync, { passive: true });
+      })();
+    </script>
+
+    <!-- Mobile menu toggle — tiny, no framework. -->
+    <script is:inline>
+      (() => {
+        const btn = document.getElementById('nav-toggle');
+        const menu = document.getElementById('mobile-menu');
+        if (!btn || !menu) return;
+        const setOpen = (open) => {
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          menu.hidden = !open;
+          btn.classList.toggle('open', open);
+        };
+        btn.addEventListener('click', () => setOpen(menu.hidden));
+        menu.addEventListener('click', (e) => { if (e.target.closest('a')) setOpen(false); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+        // Reset if the viewport grows back to desktop.
+        window.matchMedia('(min-width: 768px)').addEventListener('change', (m) => { if (m.matches) setOpen(false); });
       })();
     </script>
   </body>
@@ -222,4 +277,56 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
       transition: none;
     }
   }
+
+  /* ── mobile menu ── */
+  .hal0-burger {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    padding: 9px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .hal0-burger span {
+    display: block;
+    height: 1.5px;
+    width: 100%;
+    background: var(--hal0-fg-muted);
+    border-radius: 2px;
+    transition: transform 200ms var(--hal0-ease, ease), opacity 150ms ease;
+  }
+  .hal0-burger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .hal0-burger.open span:nth-child(2) { opacity: 0; }
+  .hal0-burger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  .hal0-mobile-menu {
+    list-style: none;
+    margin: 0;
+    padding: 8px 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(10, 10, 10, 0.97);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--hal0-border);
+    box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.7);
+  }
+  .hal0-mobile-menu[hidden] { display: none; }
+  .hal0-mobile-menu a {
+    display: block;
+    padding: 12px 4px;
+    font-family: var(--hal0-font-mono);
+    font-size: 0.95rem;
+    color: var(--hal0-fg-muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--hal0-border);
+  }
+  .hal0-mobile-menu li:last-child a { border-bottom: none; }
+  .hal0-mobile-menu a:hover { color: var(--hal0-fg); }
 </style>

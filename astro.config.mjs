@@ -1,12 +1,20 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightBlog from 'starlight-blog';
 import sitemap from '@astrojs/sitemap';
 import icon from 'astro-icon';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
 	site: 'https://hal0.dev',
+
+	// The docs root has no index page (Starlight autogenerates groups under
+	// /docs/<group>). Send /docs and /docs/ to the first tutorial so the
+	// long-standing nav link to /docs/ resolves instead of 404ing.
+	redirects: {
+		'/docs': '/docs/getting-started/',
+	},
 
 	integrations: [
 		// Lucide via the pre-bundled @iconify-json/lucide set. SVG sprites
@@ -15,6 +23,22 @@ export default defineConfig({
 		starlight({
 			title: 'hal0',
 			description: 'Local AI for your home. Strix Halo native.',
+			// Blog nests under the docs Starlight instance (/blog) so it inherits
+			// the dark-first brand chrome. The marketing apex is untouched.
+			plugins: [
+				starlightBlog({
+					title: 'Blog',
+					// Blog lives in the shared header nav (StarlightSiteTitle override),
+					// so suppress starlight-blog's own header link to avoid duplication.
+					navigation: 'none',
+					authors: {
+						hal0: {
+							name: 'The hal0 team',
+							url: 'https://github.com/hal0ai/hal0',
+						},
+					},
+				}),
+			],
 			logo: {
 				src: './src/assets/wordmark.svg',
 				replacesTitle: true,
@@ -76,6 +100,12 @@ export default defineConfig({
 				{
 					tag: 'meta',
 					attrs: { name: 'theme-color', content: '#0a0a0a' },
+				},
+				// Screenshot lightbox — binds /screenshots/ images on docs + blog
+				// pages (shared with the marketing layout; styles in global.css).
+				{
+					tag: 'script',
+					attrs: { src: '/js/lightbox.js', defer: true },
 				},
 			],
 		}),
