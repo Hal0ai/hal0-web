@@ -401,7 +401,7 @@ const shipNowHighlights = [
     <div class="shell-wide hero-grid">
       <div>
         <div class="eyebrow">
-          <span class="blip"></span> {version} — shipping on every supported host
+          <span class="blip"></span> {version} · first beta — shipping on every supported host
         </div>
         <h1 class="h1">
           Your Strix Halo box,<br />
@@ -411,17 +411,24 @@ const shipNowHighlights = [
         <p class="lede">
           <strong>hal0</strong> turns a Linux box — ideally a
           <strong>Ryzen AI Max+ 395</strong> with 128 GB of unified memory and
-          an XDNA NPU — into a polished, OpenAI-compatible inference appliance.
-          Slots, dispatcher, hardware probe, prewired chat UI, signed self-update.
-          <strong>Installer being overhauled — relaunching soon.</strong>
+          an XDNA NPU — into a polished, OpenAI-compatible inference appliance
+          <em>and</em> a full operations console: slots, dispatcher, local image
+          generation, a bundled agent with graph memory, and a live XDNA NPU view.
+          One command installs the lot.
         </p>
 
-        <div class="holding" id="install">
-          <span class="holding-pill">overhaul in flight</span>
-          <span class="holding-msg">
-            Big overhaul in flight.
-            <strong>Installer relaunching soon.</strong>
-          </span>
+        <div class="install" id="install">
+          <div class="install-head">
+            <div class="install-dots"><i></i><i></i><i></i></div>
+            <div class="install-title">install.sh</div>
+            <div class="install-meta">Linux x86_64 · Python ≥3.12</div>
+          </div>
+          <div class="install-body">
+            <span class="prompt">$</span>
+            <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+            <span class="caret"></span>
+            <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+          </div>
         </div>
 
         <div class="cta-row">
@@ -857,18 +864,24 @@ const shipNowHighlights = [
   <!-- CTA -->
   <section class="cta-section">
     <div class="shell-wide cta-inner">
-      <div class="sec-tag cta-tag">/ overhaul in flight</div>
+      <div class="sec-tag cta-tag">/ get hal0</div>
       <h2 class="cta-h">Stop running models<br />from a <span class="accent">chat tab.</span></h2>
       <p class="cta-sub">
-        The installer is being rebuilt for the next release.
-        Watch the repo, or read the docs to see where it's heading.
+        One command on a fresh Linux box. It's the first beta — pre-release, but
+        it installs and runs the whole stack today.
       </p>
-      <div class="holding cta-holding">
-        <span class="holding-pill">overhaul in flight</span>
-        <span class="holding-msg">
-          Big overhaul in flight.
-          <strong>Installer relaunching soon.</strong>
-        </span>
+      <div class="install cta-holding" id="install-cta">
+        <div class="install-head">
+          <div class="install-dots"><i></i><i></i><i></i></div>
+          <div class="install-title">install.sh</div>
+          <div class="install-meta">Linux x86_64 · Python ≥3.12</div>
+        </div>
+        <div class="install-body">
+          <span class="prompt">$</span>
+          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+          <span class="caret"></span>
+          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+        </div>
       </div>
       <div class="cta-row cta-row-centered">
         <a href="/docs/getting-started/" class="btn">Read the docs →</a>
