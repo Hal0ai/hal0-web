@@ -653,13 +653,16 @@ const shipNowHighlights = [
         </p>
       </div>
 
-      <div class="loadout-tabs" role="tablist">
+      <div class="loadout-tabs" role="tablist" aria-label="Recommended loadouts">
         {loadoutTabs.map((t, i) => (
           <button
             class={`tab ${i === 0 ? 'active' : ''}`}
+            id={`tab-${t.id}`}
             data-tab={t.id}
             role="tab"
             aria-selected={i === 0 ? 'true' : 'false'}
+            aria-controls={`panel-${t.id}`}
+            tabindex={i === 0 ? 0 : -1}
           >
             {t.label} <span class="count">{t.count}</span>
           </button>
@@ -669,8 +672,12 @@ const shipNowHighlights = [
       {loadoutTabs.map((t, i) => (
         <div
           class={`loadouts ${i === 0 ? '' : 'is-hidden'}`}
+          id={`panel-${t.id}`}
           data-tab-panel={t.id}
           role="tabpanel"
+          aria-labelledby={`tab-${t.id}`}
+          tabindex="0"
+          hidden={i !== 0}
         >
           {(loadoutData[t.id] || []).map((c) => (
             <article class="loadout">
@@ -983,20 +990,33 @@ const shipNowHighlights = [
         });
       });
 
-      // Loadout tabs
-      const tabs = document.querySelectorAll('button[data-tab]');
+      // Loadout tabs — WAI-ARIA tabs pattern: roving tabindex + arrow/Home/End.
+      const tabs = Array.from(document.querySelectorAll('button[data-tab]'));
       const panels = document.querySelectorAll('[data-tab-panel]');
-      tabs.forEach((tab) => {
-        tab.addEventListener('click', () => {
-          const id = tab.getAttribute('data-tab');
-          tabs.forEach((t) => {
-            const isActive = t === tab;
-            t.classList.toggle('active', isActive);
-            t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-          });
-          panels.forEach((p) => {
-            p.classList.toggle('is-hidden', p.getAttribute('data-tab-panel') !== id);
-          });
+      const selectTab = (tab, focus) => {
+        const id = tab.getAttribute('data-tab');
+        tabs.forEach((t) => {
+          const isActive = t === tab;
+          t.classList.toggle('active', isActive);
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          t.setAttribute('tabindex', isActive ? '0' : '-1');
+        });
+        panels.forEach((p) => {
+          const match = p.getAttribute('data-tab-panel') === id;
+          p.classList.toggle('is-hidden', !match);
+          p.hidden = !match;
+        });
+        if (focus) tab.focus();
+      };
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => selectTab(tab, false));
+        tab.addEventListener('keydown', (e) => {
+          let next = null;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = tabs[(i + 1) % tabs.length];
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = tabs[(i - 1 + tabs.length) % tabs.length];
+          else if (e.key === 'Home') next = tabs[0];
+          else if (e.key === 'End') next = tabs[tabs.length - 1];
+          if (next) { e.preventDefault(); selectTab(next, true); }
         });
       });
     })();
