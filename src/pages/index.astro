@@ -181,72 +181,96 @@ const loadoutTabs = [
   { id: 'chat',    label: 'General chat', count: 3 },
   { id: 'voice',   label: 'Voice mode',   count: 1 },
   { id: 'rag',     label: 'RAG',          count: 1 },
-  { id: 'image',   label: 'Image gen',    count: 1 },
-  { id: 'agentic', label: 'Agentic',      count: 1 },
-  { id: 'small',   label: 'Minimal',      count: 1 },
+  { id: 'image',   label: 'Image gen',    count: 3 },
+  { id: 'agentic', label: 'Agentic',      count: 2 },
+  { id: 'small',   label: 'Minimal',      count: 3 },
 ];
 
 const loadoutData: Record<string, Array<{ size: string; title: string; vram: string; slots: Array<{ k: string; v: string; d: string }> }>> = {
   coding: [
-    { size: '~5 GB · daily', title: 'Small dedicated coder', vram: '8 GB+', slots: [
-      { k: 'primary', v: 'Qwen2.5-Coder-7B-Instruct', d: 'Q4_K_M · 4.7 GB · best small dedicated coder' },
+    { size: '~22 GB · daily-pro', title: 'Your top coder, MTP-fast', vram: '28 GB UMA', slots: [
+      { k: 'primary', v: 'Qwopus3.6-27B-Coder-MTP', d: 'Q6_K · 22.4 GB · MTP head speculates on ROCm — fastest local coder on the box' },
+      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · repo-aware code search' },
     ]},
-    { size: '~19 GB · pro', title: 'MoE that reasons like 30B', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-Coder-30B-A3B', d: 'Q4_K_M · MoE 3B active · runs near 3B speeds, reasons like 30B' },
-      { k: 'embed',   v: 'nomic-embed-text-v2-moe', d: 'Q4_K_M · 140 MB · repo-aware search' },
+    { size: '~8 GB · lean', title: 'Snappy completion', vram: '10 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3-5-9b-coder-mtp-q6-k', d: 'Q6_K · 7.6 GB · MTP · fits beside chat + embed' },
+      { k: 'alt',     v: 'qwopus3-5-4b-coder-mtp-q6-k', d: 'Q6_K · 3.6 GB · low-VRAM / CPU fallback' },
     ]},
-    { size: '~47 GB · max', title: 'Qwen3-Coder-Next 80B-A3B', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'Qwen3-Coder-Next-80B-A3B', d: 'Q4_K_M · MoE 3B active · Qwen3-Coder lineup ceiling' },
-      { k: 'alt',     v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid reasoning + tool-friendly coding' },
-      { k: 'alt',     v: 'Qwen3.6-27B-A3B-MTP', d: 'Q4_K_M · 18.8 GB · MoE with MTP · fast reasoning fallback' },
+    { size: '~50 GB · max', title: 'Coder-Next ceiling', vram: '64 GB+ UMA', slots: [
+      { k: 'primary', v: 'qwen3-coder-next-q4kxl', d: 'Q4_K_XL · 49.6 GB · dedicated Qwen3-Coder-Next — the quality ceiling' },
+      { k: 'alt',     v: 'qwen3-coder-reap-25b-a3b-q5km', d: 'Q5_K_M · 17.7 GB · validated REAP prune · A3B speed, most of the quality' },
+      { k: 'alt',     v: 'qwen3-coder-next-reap-40b-a3b-q4kxl', d: 'Q4_K_XL · 28.5 GB · community 50% prune — unvalidated, some math loss' },
     ]},
   ],
   chat: [
-    { size: '~2.5 GB · snappy', title: '1M-token context, low-end OK', vram: '6 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-4B-Instruct-2507', d: 'Q4_K_M · Aug 2025 · 1M-token context' },
+    { size: '~15 GB · sweetspot', title: 'The Strix Halo daily-driver', vram: '20 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3.6-27b-v2-mtp-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · MTP head + FP4 footprint — a fast 27B that leaves room to spare' },
+      { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB · rides along free' },
     ]},
-    { size: '~19 GB · sweetspot', title: 'The Strix Halo daily-driver', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-30B-A3B-Instruct-2507', d: 'Q4_K_M · MoE 3B active' },
-      { k: 'alt',     v: 'gemma-3-12b-it', d: 'Q4_K_M · 6.6 GB footprint alt' },
+    { size: '~23 GB · max', title: 'Big-model reasoning at A3B speed', vram: '28 GB UMA', slots: [
+      { k: 'primary', v: 'qwen3.6-35b-a3b-halostrix-mtp', d: 'Q4 · 22.6 GB · hybrid MoE 3B active · ~69 tok/s with MTP (1.4×)' },
+      { k: 'alt',     v: 'chadrock-35b-ace-saber', d: 'ROCmFP4 + MTP · 19 GB · uncensored MoE' },
+      { k: 'alt',     v: 'qwen3.6-27b-heretic-q4km', d: 'Q4_K_M · 16.9 GB · vision-capable chat' },
     ]},
-    { size: '~50 GB · headroom', title: 'All three modalities warm', vram: '96 GB UMA', slots: [
-      { k: 'primary', v: 'Llama-4-Scout-17B-16E', d: 'Q4_K_M · MoE 17B active · 10M context' },
-      { k: 'embed',   v: 'bge-m3', d: 'Q8 · 600 MB · multilingual, multi-vector' },
-      { k: 'voice',   v: 'moonshine + kokoro', d: 'all hot simultaneously on 128 GB Strix Halo' },
+    { size: '~8 GB · snappy', title: 'Low-latency, fits anywhere', vram: '10 GB UMA', slots: [
+      { k: 'primary', v: 'qwen3.5-9b-deepseek-v4-flash-mtp', d: 'Q6 · 7.6 GB · MTP flash · fits with embed + voice' },
+      { k: 'alt',     v: 'lfm2.5-8b-a1b-q6kxl', d: 'Q6 · A1B MoE · ultra-low-latency, NPU-friendly' },
     ]},
   ],
   voice: [
-    { size: '~3 GB total', title: 'Hands-free streaming', vram: '4 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-4B-Instruct-2507', d: 'Q4_K_M · 2.5 GB · low-latency reply' },
-      { k: 'stt',     v: 'Moonshine base', d: '190 MB · built for edge real-time' },
-      { k: 'tts',     v: 'Kokoro-82M v1.0', d: '330 MB · 8 languages · 54 voices' },
+    { size: '~3 GB + NPU · realtime', title: 'Hands-free, iGPU-free', vram: '4 GB UMA (+XDNA)', slots: [
+      { k: 'llm', v: 'qwen3.5-4b-q4kxl', d: 'Q4_K_XL · 2.9 GB · low-latency reply (or gemma4-it-e2b on the NPU)' },
+      { k: 'stt', v: 'whisper-v3-turbo (FLM)', d: 'runs on the XDNA NPU — frees the iGPU for chat' },
+      { k: 'tts', v: 'kokoro-v1', d: '82M · 54 voices · 8 languages' },
+      { k: 'alt', v: 'vibevoice-1.5b', d: '1.5B · expressive long-form TTS' },
     ]},
   ],
   rag: [
-    { size: '~19 GB', title: 'Long-context retrieval', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-30B-A3B-Instruct-2507', d: 'Q4_K_M · 18.6 GB · synthesis' },
-      { k: 'embed',   v: 'bge-m3', d: 'Q8 · 600 MB · 8192-token context · top R@1' },
-      { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'auto-managed embed-rerank slot · /v1/rerankings' },
+    { size: '~16 GB · retrieval', title: 'Grounded synthesis, long context', vram: '22 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3.6-27b-v2-mtp-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · fast grounded synthesis at long context' },
+      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · strong multilingual retrieval' },
+      { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'Q4_K_M · 0.4 GB · 100+ lang cross-encoder · /v1/rerankings' },
     ]},
   ],
   image: [
-    { size: '~6.5 GB', title: 'Default img slot', vram: '12 GB+', slots: [
-      { k: 'img', v: 'sdxl-turbo', d: '6.5 GB FP16 · 4 steps, cfg ≈ 1.0 · research license' },
-      { k: 'alt', v: 'sd-1.5-pruned-emaonly', d: '4.3 GB · CreativeML Open RAIL-M' },
-      { k: 'pro', v: 'flux-schnell', d: '23.8 GB · Apache-2.0 · needs Flux workflow' },
+    { size: '~7 GB · default', title: 'Photoreal default', vram: '12 GB UMA', slots: [
+      { k: 'img', v: 'juggernaut-xl-v9', d: 'SDXL · 7.1 GB · photoreal general-purpose checkpoint' },
+      { k: 'alt', v: 'sdxl-turbo', d: 'FP16 · 4-step · realtime previews' },
+      { k: 'alt', v: 'sd-1.5-pruned-emaonly', d: '2.1 GB · low-VRAM fallback' },
+    ]},
+    { size: '~17 GB · pro', title: 'Best prompt adherence', vram: '22 GB UMA', slots: [
+      { k: 'img', v: 'flux1-dev-fp8', d: 'FP8 · 17.2 GB · top prompt adherence + legible text' },
+    ]},
+    { size: '~27 GB · video', title: 'Local text/image-to-video', vram: '32 GB UMA', slots: [
+      { k: 'video',   v: 'ltx-2-19b-dev-fp8', d: 'FP8 · 27.1 GB · local video generation on the iGPU' },
+      { k: 'upscale', v: 'ltx-2-spatial-upscaler-x2', d: '2× spatial upscale pass' },
     ]},
   ],
   agentic: [
-    { size: '~42 GB', title: 'Tool-use + MCP', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid-reasoning, tuned for tool-call faithfulness' },
-      { k: 'embed',   v: 'bge-m3', d: '600 MB · retrieval-augmented routing' },
-      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Hindsight-backed memory · two-tier scope' },
+    { size: '~25 GB · agentic', title: 'Tool-use + MCP at MTP speed', vram: '30 GB UMA', slots: [
+      { k: 'primary', v: 'qwen3.6-35b-a3b-halostrix-mtp', d: 'Q4 · 22.6 GB · MoE A3B · strong tool-calling, MTP-fast' },
+      { k: 'alt',     v: 'hermes-4-14b-q5km', d: 'Q5_K_M · 10.5 GB · Hermes-4, tuned for tool-call faithfulness' },
+      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · retrieval-augmented routing' },
+      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Hindsight graph memory · two-tier scope' },
+    ]},
+    { size: '~11 GB · lean', title: 'Lean tool-caller', vram: '14 GB UMA', slots: [
+      { k: 'primary', v: 'hermes-4-14b-q5km', d: 'Q5_K_M · 10.5 GB · tool-call faithful, fits beside a coder' },
+      { k: 'alt',     v: 'gpt-oss:20b', d: 'MoE · strong tool-use + reasoning' },
     ]},
   ],
   small: [
-    { size: '<1 GB', title: 'Privacy-first', vram: 'CPU OK', slots: [
-      { k: 'primary', v: 'gemma-3-1b-it', d: 'Q4_K_M · 0.7 GB · text-only' },
-      { k: 'embed',   v: 'nomic-embed-text-v2-moe', d: 'Q4_K_M · 140 MB · multilingual MoE' },
+    { size: '<1 GB · minimal', title: 'Privacy-first tiny', vram: 'CPU OK', slots: [
+      { k: 'primary', v: 'qwen3.5-0.8b', d: '0.6 GB · sub-second cold start · smoke-test / lite' },
+      { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB' },
+    ]},
+    { size: '~0 iGPU · npu', title: 'NPU-only, zero iGPU', vram: 'XDNA only', slots: [
+      { k: 'llm',   v: 'gemma4-it-e2b (FLM)', d: 'runs entirely on the XDNA NPU — iGPU stays free' },
+      { k: 'stt',   v: 'whisper-v3-turbo (FLM)', d: 'NPU transcription' },
+      { k: 'embed', v: 'embed-gemma-300m (FLM)', d: 'NPU embeddings' },
+    ]},
+    { size: '~2 GB · minimal-coder', title: 'Tiny coder', vram: '4 GB UMA', slots: [
+      { k: 'primary', v: 'qwopus3-5-4b-coder-mtp-q6-k', d: 'Q6_K · 3.6 GB · MTP autocomplete' },
+      { k: 'alt',     v: 'qwen3-zero-coder-v2-0.8b', d: 'F16 · 1.6 GB · smallest coder' },
     ]},
   ],
 };
@@ -615,10 +639,12 @@ const shipNowHighlights = [
           <h2 class="sec-title">Curated starting points.<br />Tweak from there.</h2>
         </div>
         <p class="sec-sub">
-          Sizes are published GGUF file sizes. The slot system takes a different
-          model per slot whenever you change your mind. Picks refreshed to the
-          latest open-weight releases — Qwen3, Llama-4 Scout, Hermes-4, gemma-3,
-          Kokoro v1.
+          Sizes are published file sizes; the slot system takes a different model
+          per slot whenever you change your mind. These are tuned for Strix Halo:
+          <strong>A3B MoE</strong> models give 30–80B quality at ~3B token-gen
+          speed, and an <strong>MTP head</strong> on MTP-enabled llama.cpp delivers
+          a measured <strong>1.4–2.4× decode speedup</strong>. FP4 is what makes
+          them fit the unified pool — not what makes them fast.
         </p>
       </div>
 
