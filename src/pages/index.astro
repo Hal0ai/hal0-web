@@ -16,8 +16,12 @@ const canonicalUrl = 'https://hal0.dev/';
 // Derived from the changelog (synced from the product repo) — never hardcoded.
 const version = parseChangelog(rawChangelog).latest?.version ?? '';
 
+// Full copy feeds the structured-data schema (no length limit); a tight ~155-char
+// version is the page meta + OG description (search snippets cap ~160).
 const description =
   'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, local image generation (ComfyUI), a bundled Hermes agent with opt-in graph memory, an MCP server, and signed self-update. One command installs the lot.';
+const metaDescription =
+  'Open-source homelab AI for AMD Strix Halo: OpenAI-compatible /v1/* API, managed slots, local image gen, agents + graph memory, signed self-update. One command.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -419,7 +423,7 @@ const shipNowHighlights = [
 
 <MarketingLayout
   title="hal0 — Strix Halo native AI inference, image gen & agents for homelabs."
-  description={description}
+  description={metaDescription}
 >
   <!-- HERO -->
   <header class="hero">
@@ -730,6 +734,10 @@ const shipNowHighlights = [
           </div>
         ))}
       </div>
+      <p class="cmp-note">
+        Competitor capabilities reflect each project's published docs as of June 2026
+        and move fast — treat this as a snapshot, not a live scorecard.
+      </p>
     </div>
   </section>
 
@@ -2276,6 +2284,12 @@ const shipNowHighlights = [
     .shot:hover { transform: none; }
   }
 
+  .cmp-note {
+    margin: 16px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--hal0-fg-dim);
+  }
   .loadout-note {
     margin: 22px 0 0;
     max-width: 640px;
