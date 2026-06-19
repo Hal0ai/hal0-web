@@ -702,6 +702,49 @@ const shipNowHighlights = [
     </div>
   </section>
 
+  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900, dark, live v0.7 beta) -->
+  <section class="section section-tight" id="console">
+    <div class="shell-wide">
+      <div class="sec-head">
+        <div>
+          <div class="sec-tag">/ the console</div>
+          <h2 class="sec-title">One dark-mode console<br />for the <span class="accent">whole stack</span>.</h2>
+        </div>
+        <p class="sec-sub">
+          Slots, models, memory, agents, MCP, image gen, logs — every surface in one
+          React operator console. SSE-backed, dark by default. Real screenshots from a
+          live v0.7 beta instance.
+        </p>
+      </div>
+
+      <figure class="shot-hero">
+        <img
+          src="/screenshots/dashboard-overview.png"
+          alt="hal0 dashboard overview — slots, throughput, and live service health"
+          width="1440"
+          height="900"
+          loading="lazy"
+          decoding="async"
+        />
+      </figure>
+
+      <div class="shot-grid">
+        <a class="shot" href="/docs/guides/manage-slots">
+          <img src="/screenshots/slots-inference.png" alt="Slots view — per-slot state and the inference engine" width="1440" height="900" loading="lazy" decoding="async" />
+          <span class="shot-cap">Slots</span>
+        </a>
+        <a class="shot" href="/docs/guides/pull-and-register-models">
+          <img src="/screenshots/models-registry.png" alt="Models registry — pulled and registered models" width="1440" height="900" loading="lazy" decoding="async" />
+          <span class="shot-cap">Models</span>
+        </a>
+        <a class="shot" href="/docs/concepts/agents">
+          <img src="/screenshots/operator-board.png" alt="Operator Board — the Hermes agent kanban" width="1440" height="900" loading="lazy" decoding="async" />
+          <span class="shot-cap">Operator Board</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
   <!-- ROADMAP -->
   <section class="section section-tight" id="roadmap">
     <div class="shell-wide">
@@ -2080,5 +2123,71 @@ const shipNowHighlights = [
     .cmp-row { grid-template-columns: 1fr; }
     .cmp-row > div { border-right: none; }
     .slot-row { grid-template-columns: 90px 1fr 70px 80px 60px; gap: 10px; padding: 10px 14px; }
+  }
+
+  /* Operator-console screenshot showcase. Real 1440×900 dark captures;
+   * aspect-ratio is pinned so lazy-loaded images don't shift layout. */
+  .shot-hero {
+    margin-top: 2.5rem;
+    border: 1px solid var(--hal0-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--hal0-bg-sunken);
+    box-shadow:
+      0 30px 80px -40px var(--hal0-accent-glow),
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  }
+  .shot-hero img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1440 / 900;
+  }
+
+  .shot-grid {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .shot {
+    position: relative;
+    display: block;
+    border: 1px solid var(--hal0-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--hal0-bg-sunken);
+    transition:
+      border-color 200ms var(--hal0-ease),
+      transform 200ms var(--hal0-ease);
+  }
+  .shot:hover {
+    border-color: var(--hal0-border-strong);
+    transform: translateY(-2px);
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1440 / 900;
+  }
+  .shot-cap {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    padding: 0.4rem 0.7rem;
+    font-family: var(--hal0-font-mono);
+    font-size: 0.7rem;
+    color: var(--hal0-fg);
+    background: rgba(10, 10, 10, 0.7);
+    border-top-right-radius: 8px;
+    backdrop-filter: blur(6px);
+  }
+  @media (max-width: 720px) {
+    .shot-grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shot { transition: none; }
+    .shot:hover { transform: none; }
   }
 </style>
