@@ -82,6 +82,9 @@
 
 html {
 	scroll-behavior: smooth;
+	/* Backstop against stray horizontal overflow on mobile. `clip` (not
+	 * `hidden`) keeps position:sticky working in the nav/sidebars. */
+	overflow-x: clip;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2182,7 +2182,9 @@ const shipNowHighlights = [
 
   @media (max-width: 1080px) {
     .hero { padding-top: 56px; }
-    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+    .hero-grid > * { min-width: 0; }
+    .h1 { font-size: clamp(2.1rem, 11vw, 3rem); }
     .sec-head { grid-template-columns: 1fr; gap: 24px; }
     .perf-grid { grid-template-columns: repeat(2, 1fr); }
     .feat-grid,
