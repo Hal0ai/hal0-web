@@ -205,11 +205,11 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
   ],
   chat: [
     { size: '~15 GB · sweetspot', title: 'The Strix Halo daily-driver', vram: '20 GB UMA', slots: [
-      { k: 'primary', v: 'qwopus3.6-27b-v2-mtp-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · MTP head + FP4 footprint — a fast 27B that leaves room to spare' },
+      { k: 'primary', v: 'qwopus3-6-27b-v2-mtp-bf16-to-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · MTP head + FP4 footprint — a fast 27B that leaves room to spare' },
       { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB · rides along free' },
     ]},
     { size: '~23 GB · max', title: 'Big-model reasoning at A3B speed', vram: '28 GB UMA', slots: [
-      { k: 'primary', v: 'qwen3.6-35b-a3b-halostrix-mtp', d: 'Q4 · 22.6 GB · hybrid MoE 3B active · ~69 tok/s with MTP (1.4×)' },
+      { k: 'primary', v: 'qwen3-6-35b-a3b-halostrix-dyn-mtp-v7', d: 'Q4 · 22.6 GB · hybrid MoE 3B active · ~69 tok/s with MTP (1.4×)' },
       { k: 'alt',     v: 'chadrock-35b-ace-saber', d: 'ROCmFP4 + MTP · 19 GB · uncensored MoE' },
       { k: 'alt',     v: 'qwen3.6-27b-heretic-q4km', d: 'Q4_K_M · 16.9 GB · vision-capable chat' },
     ]},
@@ -221,23 +221,23 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
   voice: [
     { size: '~3 GB + NPU · realtime', title: 'Hands-free, iGPU-free', vram: '4 GB UMA (+XDNA)', slots: [
       { k: 'llm', v: 'qwen3.5-4b-q4kxl', d: 'Q4_K_XL · 2.9 GB · low-latency reply (or gemma4-it-e2b on the NPU)' },
-      { k: 'stt', v: 'whisper-v3-turbo (FLM)', d: 'runs on the XDNA NPU — frees the iGPU for chat' },
+      { k: 'stt', v: 'whisper-v3:turbo', d: 'runs on the XDNA NPU — frees the iGPU for chat' },
       { k: 'tts', v: 'kokoro-v1', d: '82M · 54 voices · 8 languages' },
       { k: 'alt', v: 'vibevoice-1.5b', d: '1.5B · expressive long-form TTS' },
     ]},
   ],
   rag: [
     { size: '~16 GB · retrieval', title: 'Grounded synthesis, long context', vram: '22 GB UMA', slots: [
-      { k: 'primary', v: 'qwopus3.6-27b-v2-mtp-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · fast grounded synthesis at long context' },
+      { k: 'primary', v: 'qwopus3-6-27b-v2-mtp-bf16-to-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · fast grounded synthesis at long context' },
       { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · strong multilingual retrieval' },
       { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'Q4_K_M · 0.4 GB · 100+ lang cross-encoder · /v1/rerankings' },
     ]},
   ],
   image: [
     { size: '~7 GB · default', title: 'Photoreal default', vram: '12 GB UMA', slots: [
-      { k: 'img', v: 'juggernaut-xl-v9', d: 'SDXL · 7.1 GB · photoreal general-purpose checkpoint' },
+      { k: 'img', v: 'juggernaut-xl-v9-rundiffusionphoto-v2', d: 'SDXL · 7.1 GB · photoreal general-purpose checkpoint' },
       { k: 'alt', v: 'sdxl-turbo', d: 'FP16 · 4-step · realtime previews' },
-      { k: 'alt', v: 'sd-1.5-pruned-emaonly', d: '2.1 GB · low-VRAM fallback' },
+      { k: 'alt', v: 'v1-5-pruned-emaonly-fp16', d: '2.1 GB · low-VRAM fallback' },
     ]},
     { size: '~17 GB · pro', title: 'Best prompt adherence', vram: '22 GB UMA', slots: [
       { k: 'img', v: 'flux1-dev-fp8', d: 'FP8 · 17.2 GB · top prompt adherence + legible text' },
@@ -249,7 +249,7 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
   ],
   agentic: [
     { size: '~25 GB · agentic', title: 'Tool-use + MCP at MTP speed', vram: '30 GB UMA', slots: [
-      { k: 'primary', v: 'qwen3.6-35b-a3b-halostrix-mtp', d: 'Q4 · 22.6 GB · MoE A3B · strong tool-calling, MTP-fast' },
+      { k: 'primary', v: 'qwen3-6-35b-a3b-halostrix-dyn-mtp-v7', d: 'Q4 · 22.6 GB · MoE A3B · strong tool-calling, MTP-fast' },
       { k: 'alt',     v: 'hermes-4-14b-q5km', d: 'Q5_K_M · 10.5 GB · Hermes-4, tuned for tool-call faithfulness' },
       { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · retrieval-augmented routing' },
       { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Hindsight graph memory · two-tier scope' },
@@ -265,13 +265,13 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
       { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB' },
     ]},
     { size: '~0 iGPU · npu', title: 'NPU-only, zero iGPU', vram: 'XDNA only', slots: [
-      { k: 'llm',   v: 'gemma4-it-e2b (FLM)', d: 'runs entirely on the XDNA NPU — iGPU stays free' },
-      { k: 'stt',   v: 'whisper-v3-turbo (FLM)', d: 'NPU transcription' },
-      { k: 'embed', v: 'embed-gemma-300m (FLM)', d: 'NPU embeddings' },
+      { k: 'llm',   v: 'gemma4-it-e2b-FLM', d: 'runs entirely on the XDNA NPU — iGPU stays free' },
+      { k: 'stt',   v: 'whisper-v3:turbo', d: 'NPU transcription' },
+      { k: 'embed', v: 'embed-gemma-300m-FLM', d: 'NPU embeddings' },
     ]},
     { size: '~2 GB · minimal-coder', title: 'Tiny coder', vram: '4 GB UMA', slots: [
       { k: 'primary', v: 'qwopus3-5-4b-coder-mtp-q6-k', d: 'Q6_K · 3.6 GB · MTP autocomplete' },
-      { k: 'alt',     v: 'qwen3-zero-coder-v2-0.8b', d: 'F16 · 1.6 GB · smallest coder' },
+      { k: 'alt',     v: 'qwen3-zero-coder-v2-0.8b-f16', d: 'F16 · 1.6 GB · smallest coder' },
     ]},
   ],
 };
@@ -687,6 +687,14 @@ const shipNowHighlights = [
           ))}
         </div>
       ))}
+
+      <p class="loadout-note">
+        Model ids are real, pull-able registry ids. Considering Apache-clean
+        upgrades? <strong>Qwen-Image</strong> (beats FLUX on prompt + text
+        rendering), <strong>Qwen3-Reranker-0.6B</strong> (pairs with the Qwen3
+        embedder), and <strong>Chatterbox-Turbo</strong> (zero-shot voice
+        cloning) are easy pulls when you want them.
+      </p>
     </div>
   </section>
 
@@ -2267,6 +2275,15 @@ const shipNowHighlights = [
     .shot { transition: none; }
     .shot:hover { transform: none; }
   }
+
+  .loadout-note {
+    margin: 22px 0 0;
+    max-width: 640px;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--hal0-fg-dim);
+  }
+  .loadout-note strong { color: var(--hal0-fg-muted); font-weight: 600; }
 
   /* Meet Hermes — copy + the foil card */
   .hermes-sec {
