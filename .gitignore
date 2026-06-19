@@ -34,6 +34,11 @@ Thumbs.db
 *.log
 .cache/
 
+# Playwright MCP scratch (snapshots/screenshots from in-browser verification)
+.playwright-mcp/
+# stray capture artifacts dropped at repo root (real assets live in public/screenshots/)
+/*.png
+
 # orchestration scratch (style guides, agent notes, etc.)
 .claude/
 
