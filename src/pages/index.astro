@@ -8,6 +8,7 @@
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
+import HermesCard from '../components/HermesCard.astro';
 import rawChangelog from '../data/changelog.md?raw';
 import { parseChangelog } from '../lib/changelog.js';
 
@@ -770,6 +771,34 @@ const shipNowHighlights = [
         an MCP server + client, and a live XDNA NPU view — see the
         <a href="#roadmap">roadmap</a> for everything shipped.
       </p>
+    </div>
+  </section>
+
+  <!-- MEET HERMES — the bundled agent as the dashboard's collectible foil card -->
+  <section class="section" id="hermes">
+    <div class="shell-wide hermes-sec">
+      <div class="hermes-copy">
+        <div class="sec-tag">/ the bundled agent</div>
+        <h2 class="sec-title">An agent that<br /><span class="accent">lives on the box</span>.</h2>
+        <p class="sec-sub">
+          Hermes installs and bootstraps itself on first run — sandboxed under its own
+          user, prewired to the local <code class="mono accent-mono">/v1</code> API and your
+          MCP servers, with opt-in graph memory. Reach her from Telegram or Discord; she
+          chains tools for hours fully AFK and folds every run back into memory.
+        </p>
+        <ul class="hermes-points">
+          <li>Self-bootstraps: env probe → model wiring → MCP memory → persona.</li>
+          <li>Sandboxed <code class="mono">hal0-agent@hermes.service</code> — own user, no new privileges.</li>
+          <li>Gated tools clear an approval bell; every call is audited.</li>
+        </ul>
+        <div class="hermes-cta">
+          <a href="/docs/concepts/agents" class="btn">Agents &amp; memory →</a>
+          <span class="hermes-hint">hover to tilt · click to flip</span>
+        </div>
+      </div>
+      <div class="hermes-card-wrap">
+        <HermesCard />
+      </div>
     </div>
   </section>
 
@@ -2237,5 +2266,56 @@ const shipNowHighlights = [
   @media (prefers-reduced-motion: reduce) {
     .shot { transition: none; }
     .shot:hover { transform: none; }
+  }
+
+  /* Meet Hermes — copy + the foil card */
+  .hermes-sec {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 56px;
+    align-items: center;
+  }
+  .hermes-copy { min-width: 0; }
+  .hermes-points {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .hermes-points li {
+    position: relative;
+    padding-left: 1.1rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--hal0-fg-muted);
+  }
+  .hermes-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 0.35rem;
+    height: 1px;
+    background: var(--hal0-accent);
+  }
+  .hermes-cta {
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hermes-hint {
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    color: var(--hal0-fg-dim);
+    letter-spacing: 0.04em;
+  }
+  .hermes-card-wrap { display: flex; justify-content: center; }
+  @media (max-width: 900px) {
+    .hermes-sec { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+    .hermes-card-wrap { order: -1; }
   }
 </style>
