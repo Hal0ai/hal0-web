@@ -16,7 +16,7 @@ const canonicalUrl = 'https://hal0.dev/';
 const version = parseChangelog(rawChangelog).latest?.version ?? '';
 
 const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, prewired chat UI, signed self-update. One command installs the lot.';
+  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, local image generation (ComfyUI), a bundled Hermes agent with opt-in graph memory, an MCP server, and signed self-update. One command installs the lot.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -31,7 +31,7 @@ const softwareApplicationLd = {
   softwareVersion: version,
   codeRepository: 'https://github.com/hal0ai/hal0',
   keywords:
-    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance',
+    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance, local image generation, ComfyUI, SDXL, Flux, AI agents, Hermes agent, graph memory, Hindsight, MCP server, agent kanban, Operator Board, NPU occupancy, self-hosted AI',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: 'hal0ai', url: 'https://github.com/hal0ai' },
 };
@@ -254,7 +254,7 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
 const compareCols = ['hal0', 'ollama', 'LM Studio', 'OpenAI cloud'];
 const compareRows = [
   { lbl: 'OpenAI-compatible /v1/*', cells: ['chat · embed · rerank · STT · TTS · img', 'chat · embed', 'chat · embed', 'chat · embed · STT · TTS · img'] },
-  { lbl: 'Concurrent slots', cells: ['5 systemd-managed', 'one at a time', 'one at a time', 'fully concurrent'] },
+  { lbl: 'Concurrent slots', cells: ['as memory fits', 'one at a time', 'one at a time', 'fully concurrent'] },
   { lbl: 'Slot lifecycle state machine', cells: ['typed, atomic, SSE-streamed', 'no', 'no', '—'] },
   { lbl: 'UMA-aware hardware probe', cells: ['Strix Halo · NPU · platform-aware', 'CPU / GPU only', 'CPU / GPU only', '—'] },
   { lbl: 'XDNA NPU support', cells: ['first-class via FLM', 'no', 'no', '—'] },
@@ -381,7 +381,7 @@ const shipNowHighlights = [
   {
     tag: 'mcp',
     title: 'MCP tool annotations',
-    body: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects.',
+    body: 'All 21 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects.',
   },
   {
     tag: 'install',
@@ -393,7 +393,7 @@ const shipNowHighlights = [
 ---
 
 <MarketingLayout
-  title="hal0 — Strix Halo native AI inference platform for homelabs."
+  title="hal0 — Strix Halo native AI inference, image gen & agents for homelabs."
   description={description}
 >
   <!-- HERO -->
@@ -434,7 +434,7 @@ const shipNowHighlights = [
           <span class="tk"><span class="dot"></span> hal0-api</span>
           <span class="tk"><b>:8080</b> ready</span>
           <span class="tk-sep">·</span>
-          <span class="tk">5 slots <b>up</b></span>
+          <span class="tk">all slots <b>up</b></span>
           <span class="tk-sep">·</span>
           <span class="tk">GTT <b>9.2 / 96 GB</b></span>
           <span class="tk-sep">·</span>
@@ -456,14 +456,14 @@ const shipNowHighlights = [
           <div class="ctx">Strix Halo iGPU · ~9 GB GTT</div>
         </div>
         <div class="perf-cell">
-          <div class="num">&lt;200<span class="unit">ms</span></div>
-          <div class="lbl">dispatch latency</div>
-          <div class="ctx">both slots hot, single-flight</div>
+          <div class="num">1<span class="unit">call</span></div>
+          <div class="lbl">thundering herd, coalesced</div>
+          <div class="ctx">single-flight dispatch + cold-cache prefetch</div>
         </div>
         <div class="perf-cell">
-          <div class="num">5<span class="unit">slots</span></div>
-          <div class="lbl">chat · embed · stt · tts · img</div>
-          <div class="ctx">systemd-managed lifecycle</div>
+          <div class="num">6<span class="unit">workloads</span></div>
+          <div class="lbl">chat · embed · rerank · stt · tts · img</div>
+          <div class="ctx">as many slots as memory fits</div>
         </div>
         <div class="perf-cell">
           <div class="num">~10<span class="unit">s</span></div>
@@ -691,18 +691,18 @@ const shipNowHighlights = [
     </div>
   </section>
 
-  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900, dark, live v0.7 beta) -->
+  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900, dark, live hal0 instance) -->
   <section class="section section-tight" id="console">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
           <div class="sec-tag">/ the console</div>
-          <h2 class="sec-title">One dark-mode console<br />for the <span class="accent">whole stack</span>.</h2>
+          <h2 class="sec-title">Chat, image gen, agents, and memory —<br /><span class="accent">one console</span>.</h2>
         </div>
         <p class="sec-sub">
-          Slots, models, memory, agents, MCP, image gen, logs — every surface in one
-          React operator console. SSE-backed, dark by default. Real screenshots from a
-          live v0.7 beta instance.
+          Slots, models, local image generation, graph memory, an agent task board, MCP,
+          and logs — every surface in one React operator console. SSE-backed, dark by
+          default. Real screenshots from a live hal0 instance.
         </p>
       </div>
 
@@ -719,18 +719,24 @@ const shipNowHighlights = [
 
       <div class="shot-grid">
         <figure class="shot">
-          <img src="/screenshots/slots-inference.png" alt="Slots view — per-slot state and the inference engine" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap">Slots</figcaption>
+          <img src="/screenshots/slots-inference.png" alt="Slots view — per-slot state and the typed inference lifecycle" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Slots</strong> — one engine, every workload, a typed lifecycle you can watch live.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="/screenshots/models-registry.png" alt="Models registry — pulled and registered models" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap">Models</figcaption>
+          <img src="/screenshots/image-gen-comfyui.png" alt="ComfyUI image generation with the iGPU in exclusive image mode while inference slots are paused" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Image gen on the iGPU</strong> — generating flips the accelerator into exclusive image mode; inference pauses, then resumes. One GPU, shared cleanly.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="/screenshots/operator-board.png" alt="Operator Board — the Hermes agent kanban" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap">Operator Board</figcaption>
+          <img src="/screenshots/memory-graph.png" alt="Agent memory rendered as a navigable semantic and temporal knowledge graph" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Graph memory</strong> (opt-in) — facts become a navigable semantic + temporal graph, namespaced per agent.</figcaption>
         </figure>
       </div>
+
+      <p class="shot-note">
+        Plus a Hermes agent that lives on the box, an Operator Board kanban wired to it,
+        an MCP server + client, and a live XDNA NPU view — see the
+        <a href="#roadmap">roadmap</a> for everything shipped.
+      </p>
     </div>
   </section>
 
@@ -841,7 +847,7 @@ const shipNowHighlights = [
         <span class="mono accent-mono">※</span>
         <span>
           <strong>Exploring items are bets we believe in, not promises.</strong>{' '}
-          Scope and order will shift as v0.2 lands and we learn what people actually do with a local platform.
+          Scope and order will shift as the v0.7 beta lands and we learn what people actually do with a local platform.
           <a href="https://github.com/hal0ai/hal0/issues" class="rm-footnote-link">open an issue ↗</a>
         </span>
       </div>
@@ -2160,18 +2166,31 @@ const shipNowHighlights = [
     width: 100%;
     height: auto;
     aspect-ratio: 1440 / 900;
+    border-bottom: 1px solid var(--hal0-border);
   }
   .shot-cap {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    padding: 0.4rem 0.7rem;
-    font-family: var(--hal0-font-mono);
-    font-size: 0.7rem;
+    display: block;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+  }
+  .shot-cap strong {
     color: var(--hal0-fg);
-    background: rgba(10, 10, 10, 0.7);
-    border-top-right-radius: 8px;
-    backdrop-filter: blur(6px);
+    font-weight: 600;
+  }
+  .shot-note {
+    margin: 1.25rem 0 0;
+    font-size: 0.9rem;
+    color: var(--hal0-fg-muted);
+  }
+  .shot-note a {
+    color: var(--hal0-accent);
+    text-decoration: none;
+  }
+  .shot-note a:hover {
+    color: var(--hal0-accent-hover);
+    text-decoration: underline;
   }
   @media (max-width: 720px) {
     .shot-grid { grid-template-columns: 1fr; }
