@@ -28,7 +28,9 @@ export default defineConfig({
 			plugins: [
 				starlightBlog({
 					title: 'Blog',
-					navigation: 'header-end',
+					// Blog lives in the shared header nav (StarlightSiteTitle override),
+					// so suppress starlight-blog's own header link to avoid duplication.
+					navigation: 'none',
 					authors: {
 						hal0: {
 							name: 'The hal0 team',

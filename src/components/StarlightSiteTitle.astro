@@ -1,25 +1,57 @@
 ---
 /**
- * Override Starlight's default <img>-based SiteTitle so the wordmark
- * renders as inline SVG and inherits theme-aware colour via currentColor.
- * The amber "0" stays accented; the "hal" glyphs follow the docs nav
- * text colour (white in dark theme, near-black in light theme).
+ * Override Starlight's default SiteTitle so the docs/blog chrome carries the
+ * same site nav as the marketing apex — otherwise the Starlight section is an
+ * island. Renders the inline-SVG wordmark (theme-aware via currentColor; the
+ * amber "0" stays accented) followed by a shared nav: Docs · Blog · Changelog ·
+ * Releases. The active section is highlighted. The wordmark links home (`/`).
+ *
+ * Changelog + Releases live on the marketing side; Docs + Blog are here in
+ * Starlight — so this nav is the seam that stitches the two halves together.
+ * starlight-blog's own header link is disabled (navigation: 'none') since Blog
+ * is covered here.
  */
 import config from 'virtual:starlight/user-config';
 import Wordmark from './Wordmark.astro';
 
 const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+
+const path = Astro.url.pathname;
+const links = [
+  { label: 'Docs', href: '/docs/getting-started/', match: '/docs' },
+  { label: 'Blog', href: '/blog', match: '/blog' },
+  { label: 'Changelog', href: '/changelog', match: '/changelog' },
+  { label: 'Releases', href: '/releases', match: '/releases' },
+];
+const isActive = (m: string) => path === m || path.startsWith(m + '/');
 ---
 
-<a href={siteTitleHref} class="site-title sl-flex">
-  <Wordmark size="text-xl" />
-  <span class:list={{ 'sr-only': config.logo?.replacesTitle }} translate="no">
-    {siteTitle}
-  </span>
-</a>
+<div class="hal0-sitetitle sl-flex">
+  <a href={siteTitleHref} class="site-title sl-flex">
+    <Wordmark size="text-xl" />
+    <span class:list={{ 'sr-only': config.logo?.replacesTitle }} translate="no">
+      {siteTitle}
+    </span>
+  </a>
+
+  <nav class="hal0-docnav" aria-label="Site">
+    {links.map((l) => (
+      <a
+        href={l.href}
+        class:list={['hal0-docnav-link', { active: isActive(l.match) }]}
+        aria-current={isActive(l.match) ? 'page' : undefined}
+      >{l.label}</a>
+    ))}
+  </nav>
+</div>
 
 <style>
   @layer starlight.core {
+    .hal0-sitetitle {
+      align-items: center;
+      gap: 1.5rem;
+      min-width: 0;
+    }
     .site-title {
       align-items: center;
       gap: var(--sl-nav-gap);
@@ -28,8 +60,34 @@ const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
       white-space: nowrap;
       min-width: 0;
     }
-    span {
+    .site-title span {
       overflow: hidden;
+    }
+
+    /* Shared nav — hidden on narrow viewports (Starlight shows its mobile
+     * menu there); inline next to the brand on wider screens. */
+    .hal0-docnav {
+      display: none;
+    }
+    @media (min-width: 56rem) {
+      .hal0-docnav {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+      }
+    }
+    .hal0-docnav-link {
+      font-family: var(--sl-font-mono, monospace);
+      font-size: var(--sl-text-sm, 0.875rem);
+      color: var(--sl-color-gray-3, #9ca3af);
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+    .hal0-docnav-link:hover {
+      color: var(--sl-color-white);
+    }
+    .hal0-docnav-link.active {
+      color: var(--sl-color-text-accent, var(--hal0-accent, #ffb000));
     }
   }
 </style>
