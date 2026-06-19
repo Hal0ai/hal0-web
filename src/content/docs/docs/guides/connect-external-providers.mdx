@@ -59,7 +59,11 @@ The fields:
 
 3. **`url`** — the base URL (required, non-empty).
 
-4. **`auth_style`** — one of `bearer`, `header`, or `none`.
+4. **`auth_style`** — how the key is sent. Hand-written `upstreams.toml`
+   entries use `bearer`, `header`, or `none`. The built-in cloud presets add
+   two more, applied automatically when you pick them: `anthropic`
+   (`x-api-key` + `anthropic-version`, for Anthropic) and `google_query`
+   (`?key=` on the URL, for Google AI Studio).
 
 5. **`auth_value_env`** — the **name** of the environment variable that
    holds the secret. The key itself is never written to TOML — only the

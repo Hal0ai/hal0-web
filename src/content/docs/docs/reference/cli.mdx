@@ -75,7 +75,7 @@ hal0 podman images (prompts for a `DELETE` confirmation unless `--force` or
   `hardware.json` when omitted (defaults to `vulkan` if there is no probe).
   The slot's `device` field is derived: `vulkan→gpu-vulkan`, `rocm→gpu-rocm`,
   `cpu→cpu`.
-- `--port` / `-p` — host port; auto-assigned from the free range `8081–8200`
+- `--port` / `-p` — host port; auto-assigned from the free range `8081–8099`
   when omitted.
 - `--ctx-size` — context window in tokens (minimum `128`, default `4096`).
   Pass the model's full native context size when you want to override this
@@ -151,6 +151,7 @@ The config path honours `HAL0_HOME`; under FHS it is `/etc/hal0/hal0.toml`.
 |---|---|---|
 | `doctor` | Re-run the installer's preflight battery (systemd, python, container runtime, disk, ports). | `--plain`, `--ports "8080 3001"` |
 | `doctor toolbox-pull` | Verify each pinned toolbox image is anonymously pullable from ghcr.io. | `--json`, `--manifest` |
+| `doctor perms` | Audit ownership for the editable-checkout root-clobber regression (group-share drift). | `--fix` (repair in place; needs root) |
 
 `hal0 doctor` shells out to `installer/lib/preflight.sh` and preserves its exit
 code. `doctor toolbox-pull` exits `0` when every image is reachable (digest
@@ -211,8 +212,11 @@ sets from `$HAL0_AGENT_ID`.
 ## `hal0 migrate` — config/state migrations
 
 The `migrate` sub-app houses one-shot upgrade helpers for moving older on-disk
-state forward to the current schema. Run `hal0 migrate --help` for the
-commands available in your installed version.
+state forward to the current schema. Today it has exactly one subcommand:
+
+| Command | Purpose | Key options |
+|---|---|---|
+| `migrate model-layout` | Migrate an older model store + registry to the current canonical layout. Dry-run by default. | `--apply`, `--force`/`-f`, `--registry`, `--mount-root`, `--canonical-root` |
 
 ## Related references
 

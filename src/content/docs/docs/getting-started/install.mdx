@@ -65,8 +65,8 @@ through the Vulkan or ROCm container profiles.
 4. **Unpack and hand off** to `installer/install.sh`, which runs
    pre-flight checks, installs podman + the Python venv, builds the
    dashboard, writes config and systemd units, runs first-run setup
-   (`hal0 setup --auto --no-pull`) to seed a hardware-recommended slot
-   configuration, and starts the API.
+   (`hal0 setup --auto --no-pull --no-extensions`) to seed a
+   hardware-recommended slot configuration, and starts the API.
 
 </Steps>
 

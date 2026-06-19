@@ -163,6 +163,15 @@ Pass any subset of `--model`, `--port`, `--ctx-size`, `--provider`,
 `--hardware`. At least one is required. Changes that the container baked
 in (port, backend) take effect on the next `restart`.
 
+<Aside type="note" title="Editing raw flags in the dashboard">
+The dashboard's slot edit drawer can also set per-slot `[server] extra_args`
+(raw launch flags) — there's no CLI flag for this; it writes via
+`PUT /api/slots/{name}/config`. After changing args that the container baked
+in, the drawer surfaces a **Regenerate** action to rebuild the unit. The
+drawer's context-size field defaults to 16k in the UI; the CLI `--ctx-size`
+default remains `4096`.
+</Aside>
+
 ## Delete a slot
 
 ```sh

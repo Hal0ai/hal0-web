@@ -19,10 +19,11 @@ OpenAI-compatible `/v1/*` requests to the right slot, and serves the
 dashboard. There is no shared inference daemon to babysit.
 
 <Aside type="note" title="Current release">
-This documentation tracks **hal0 v0.5.1-alpha.1** — the container-runtime
+This documentation tracks the **hal0 v0.7.x beta** line — the container-runtime
 era, where each slot (`chat`, `embed`, `rerank`, `stt`, `tts`, `img`, `vision`,
 and `agent` — plus the NPU-conditional slots `stt-npu` and `embed-npu` when
-FastFlowLM is installed) runs in a dedicated podman container.
+FastFlowLM is installed) runs in a dedicated podman container. See the
+[changelog](/changelog) for the exact current version.
 </Aside>
 
 ## What you get
@@ -33,8 +34,9 @@ FastFlowLM is installed) runs in a dedicated podman container.
 - **Hardware-aware slots** — each capability gets its own container,
   image, flags, port, and lifecycle, sharing only the GPU through an
   arbiter.
-- **First-run bundle picker** — hardware-anchored tiers download a
-  coherent set of models in the background.
+- **First-run terminal setup** — the `hal0 setup` TUI picks a
+  hardware-anchored tier and provisions a coherent set of slots, models,
+  and extensions.
 - **Prewired chat UI** — OpenWebUI on port `3001`, zero config.
 - **Signed self-update** — cosign-verified tarballs with one-flag
   rollback.
@@ -53,7 +55,7 @@ FastFlowLM is installed) runs in a dedicated podman container.
   <LinkCard
     title="First-run setup"
     href="/docs/getting-started/setup/"
-    description="Walk through the bundle picker and provision your first slots."
+    description="Run the hal0 setup TUI to provision your first slots, models, and extensions."
   />
   <LinkCard
     title="Load your first model"

@@ -39,7 +39,7 @@ State (registry, models, slot state, memory banks) lives under
 | `device` (hardware preference) | `gpu-rocm`, `gpu-vulkan`, `cpu`, `npu` |
 | `provider` (engine label) | `llama-server`, `flm`, `moonshine`, `kokoro`, `comfyui` |
 | slot `type` (dispatch routing) | `llm`, `embedding`, `reranking`, `transcription`, `tts`, `image` |
-| seed profiles | `rocm-dnse`, `rocm-moe`, `vulkan`, `flm`, `tts`, `comfyui` |
+| seed profiles | `rocm`, `rocm-dnse`, `rocm-moe`, `vulkan`, `flm`, `tts`, `comfyui` |
 
 <Aside type="caution">
 Use `device`, not the legacy `backend` field. `backend` is deprecated: a slot
@@ -224,8 +224,9 @@ and flags, the slot supplies the model, context size, and port. When
 | `intent` | str | Human label shown in the dashboard. |
 | `quant` | str | Weight quant format shown as a chip (informational). |
 
-Seed profiles: `rocm-moe`, `rocm-dnse`, `vulkan` (GPU), `flm` (NPU), `tts` (CPU /
-Kokoro), `comfyui` (image generation). The retired slug `rocm` is transparently remapped to `rocm-moe` by the loader.
+Seed profiles: `rocm`, `rocm-moe`, `rocm-dnse`, `vulkan` (GPU), `flm` (NPU),
+`tts` (CPU / Kokoro), `comfyui` (image generation). `rocm` is the `gpu-rocm`
+default (MoE/agents, FP4, no MTP).
 
 ## Related references
 

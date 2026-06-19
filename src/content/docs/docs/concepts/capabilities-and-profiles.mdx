@@ -58,8 +58,9 @@ hal0 ships seed profiles so a fresh install is immediately usable:
 
 | Profile | Targets | Purpose |
 |---|---|---|
-| `rocm-dnse` | GPU (ROCm) | Dense models with MTP speculative decoding |
-| `rocm-moe` | GPU (ROCm) | MoE models with MTP speculative decoding |
+| `rocm` | GPU (ROCm) | MoE / agent models, FP4, no MTP (larger q8 KV) — the `gpu-rocm` default |
+| `rocm-dnse` | GPU (ROCm) | Dense models with MTP speculative decoding (q4 KV) |
+| `rocm-moe` | GPU (ROCm) | MoE models with MTP speculative decoding (q4 KV) |
 | `vulkan` | GPU (Vulkan) | Standard Vulkan path and fallback |
 | `flm` | NPU | FLM inference on the NPU |
 | `tts` | CPU | Text-to-speech (Kokoro) |
@@ -71,7 +72,7 @@ clone it under a new name and edit the copy. Each profile is also classified
 into a runtime family (llama-server, FLM, Kokoro, or ComfyUI) that determines
 which slot types it can serve.
 
-![The Profiles tab in the hal0 dashboard showing seed profile cards for rocm-dnse, rocm-moe, vulkan, flm, tts, and comfyui with bench metrics and device class chips](/screenshots/profiles-tab.png)
+![The Profiles tab in the hal0 dashboard showing seed profile cards for rocm, rocm-dnse, rocm-moe, vulkan, flm, tts, and comfyui with bench metrics and device class chips](/screenshots/profiles-tab.png)
 
 *The Profiles tab — seed profile cards with bench metrics, device class chips, and the clone affordance for creating custom profiles.*
 
@@ -108,7 +109,7 @@ migration:
 
 | Device | Default profile |
 |---|---|
-| `gpu-rocm` | `rocm-moe` |
+| `gpu-rocm` | `rocm` |
 | `gpu-vulkan` | `vulkan` |
 | `cpu` | `tts` |
 | `npu` | `flm` |
