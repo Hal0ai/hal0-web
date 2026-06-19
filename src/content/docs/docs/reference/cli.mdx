@@ -1,6 +1,6 @@
 ---
 title: hal0 CLI reference
-description: Complete reference for the hal0 command-line tool — every top-level command and sub-app (slot, model, registry, memory, config, doctor, capabilities, agent, migrate).
+description: "Complete reference for the hal0 CLI — top-level commands and every sub-app: slot, model, registry, memory, config, doctor, capabilities, agent, migrate."
 sidebar:
   order: 10
 ---
@@ -50,7 +50,8 @@ hal0 podman images (prompts for a `DELETE` confirmation unless `--force` or
 | Command | Purpose | Key options |
 |---|---|---|
 | `slot list` | List configured slots and live state. | `--json` |
-| `slot show <name>` | Full slot config + status. | `--json` |
+| `slot status <name>` | Short slot status + config-drift warning. | `--json` |
+| `slot show <name>` | Full slot config + status (Rich panel). | `--json` |
 | `slot load <name>` | Load a slot (optionally assign a model first). | `--model`/`-m` |
 | `slot unload <name>` | Unload a running slot gracefully. | — |
 | `slot restart <name>` | Restart a slot (unload then load). | — |
@@ -67,13 +68,18 @@ hal0 podman images (prompts for a `DELETE` confirmation unless `--force` or
 - `--provider` — inference engine: `llama-server` (default), `flm`,
   `moonshine`, `kokoro`. (Since v0.2 the provider is normally implied by
   `--type`; kept for legacy slot TOMLs.)
+  **Note:** `comfyui` is not a valid `--provider` value in the CLI; image
+  slots are created by passing `--type image`, which implies the comfyui
+  provider automatically.
 - `--hardware` — `vulkan` | `rocm` | `cpu`. Auto-detected from
   `hardware.json` when omitted (defaults to `vulkan` if there is no probe).
   The slot's `device` field is derived: `vulkan→gpu-vulkan`, `rocm→gpu-rocm`,
   `cpu→cpu`.
-- `--port` / `-p` — host port; auto-assigned from the free range `8081–8099`
+- `--port` / `-p` — host port; auto-assigned from the free range `8081–8200`
   when omitted.
-- `--ctx-size` — context window in tokens (default `4096`, minimum `128`).
+- `--ctx-size` — context window in tokens (minimum `128`, default `4096`).
+  Pass the model's full native context size when you want to override this
+  floor; the daemon may cap very large values to the model's trained limit.
 
 `slot swap` does two steps: a runtime hot-swap (`POST /api/slots/{name}/swap`)
 and a persist of the on-disk default (`PUT /api/install/slots/{name}/model`).

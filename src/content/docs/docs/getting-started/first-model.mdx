@@ -1,6 +1,6 @@
 ---
 title: Load your first model
-description: Pull a model from Hugging Face into hal0's registry and assign it to a slot — through the first-run picker or with the hal0 model CLI.
+description: Pull a model from Hugging Face into hal0's local registry and assign it to a slot — via the first-run bundle picker or directly with the hal0 model CLI.
 sidebar:
   order: 30
 ---
@@ -20,6 +20,10 @@ download streams and shows per-model progress. Nothing more is required —
 when a pull completes, its slot is ready to start.
 
 ## Via the CLI
+
+![Models registry](/screenshots/models-registry.png)
+
+*The Models view — registry, pull progress, and curated loadouts.*
 
 The `hal0 model` subcommand is a thin HTTP client to the API. The common
 flow is **list → pull → assign**.

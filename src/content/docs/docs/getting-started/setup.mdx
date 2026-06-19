@@ -1,6 +1,6 @@
 ---
 title: First-run setup
-description: Walk through hal0's first-run bundle picker — choose a hardware-anchored tier, set model storage, provision slots, and verify services.
+description: Walk through hal0's first-run bundle picker — choose a hardware-anchored tier, configure model storage, provision slots, and verify post-install services.
 sidebar:
   order: 20
 ---
@@ -45,8 +45,7 @@ Tiers whose minimum RAM exceeds the detected pool are greyed out with a
    start.
 
 3. **(Optional) Open Advanced** to enable the NPU trio (agent + STT/embed
-   passengers — requires an NPU) and to override the model id or backend
-   profile per slot. Blank rows keep the smart default derived from the
+   passengers — requires an NPU) and to override the model id, device (gpu-rocm | gpu-vulkan | cpu | npu), or profile per slot. Blank rows keep the smart default derived from the
    hardware probe.
 
 4. **Install.** The dashboard POSTs your choice to `/api/install/apply`,
@@ -62,6 +61,7 @@ Tiers whose minimum RAM exceeds the detected pool are greyed out with a
    wizard.
 
 </Steps>
+
 
 <Aside type="tip" title="Skip and configure manually">
 Choosing **Skip — configure manually** records the decision and drops you
