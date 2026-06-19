@@ -439,10 +439,9 @@ const shipNowHighlights = [
         </h1>
         <p class="lede">
           <strong>hal0</strong> turns a Linux box — ideally a
-          <strong>Ryzen AI Max+ 395</strong> with 128 GB of unified memory and
-          an XDNA NPU — into a polished, OpenAI-compatible inference appliance
-          <em>and</em> a full operations console: slots, dispatcher, local image
-          generation, a bundled agent with graph memory, and a live XDNA NPU view.
+          <strong>Ryzen AI Max+ 395</strong> — into a <strong>private</strong>,
+          OpenAI-compatible AI appliance: <em>one</em> <code class="mono accent-mono">/v1/*</code>
+          API across every modality, with concurrent workloads the box manages for you.
           One command installs the lot.
         </p>
 
@@ -481,6 +480,37 @@ const shipNowHighlights = [
       <LiveArtifact />
     </div>
   </header>
+
+  <!-- USE CASES — outcome-led, right under the hero -->
+  <section class="usecases" id="use-cases">
+    <div class="shell-wide uc-grid">
+      <article class="uc-card">
+        <div class="uc-eye">/ local coding stack</div>
+        <h3 class="uc-title">Point your editor at your own box</h3>
+        <p class="uc-body">
+          Aim any OpenAI-compatible client at <code class="mono accent-mono">:8080/v1</code> —
+          chat, completions, and a dedicated coder slot. Your code never leaves the LAN,
+          and there's no per-token bill.
+        </p>
+      </article>
+      <article class="uc-card">
+        <div class="uc-eye">/ private knowledge &amp; RAG</div>
+        <h3 class="uc-title">Retrieval grounded on your data</h3>
+        <p class="uc-body">
+          Embeddings, reranking, and a bundled agent with opt-in graph memory and MCP
+          tools — a full RAG stack that runs on your hardware, not someone else's server.
+        </p>
+      </article>
+      <article class="uc-card">
+        <div class="uc-eye">/ voice &amp; image lab</div>
+        <h3 class="uc-title">Speech and images, one control plane</h3>
+        <p class="uc-body">
+          Transcription, text-to-speech, and local image generation behind the same API —
+          STT/TTS on the XDNA NPU, ComfyUI on the iGPU, switched cleanly so they share the box.
+        </p>
+      </article>
+    </div>
+  </section>
 
   <!-- PERF -->
   <section class="perf" id="perf">
@@ -2305,6 +2335,22 @@ const shipNowHighlights = [
     .shot { transition: none; }
     .shot:hover { transform: none; }
   }
+
+  /* Use-case cards (outcome-led, under the hero) */
+  .usecases { padding: 4px 0 20px; }
+  .uc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .uc-card {
+    border: 1px solid var(--hal0-border);
+    border-radius: 12px;
+    background: var(--hal0-bg-elevated);
+    padding: 22px 20px;
+    transition: border-color 200ms var(--hal0-ease), transform 200ms var(--hal0-ease);
+  }
+  .uc-card:hover { border-color: var(--hal0-border-strong); transform: translateY(-2px); }
+  .uc-eye { font-family: var(--hal0-font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--hal0-accent); }
+  .uc-title { margin: 10px 0 8px; font-size: 1.12rem; font-weight: 600; letter-spacing: -0.01em; color: var(--hal0-fg); line-height: 1.25; }
+  .uc-body { font-size: 0.92rem; line-height: 1.55; color: var(--hal0-fg-muted); }
+  @media (max-width: 900px) { .uc-grid { grid-template-columns: 1fr; } }
 
   .cmp-note {
     margin: 16px 0 0;
