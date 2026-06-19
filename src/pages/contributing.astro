@@ -1,0 +1,62 @@
+---
+/**
+ * /contributing — honest, early-stage contribution stub.
+ *
+ * hal0 is pre-1.0 (beta line). The contribution process is still forming, so
+ * this points at the canonical places (repo, issues, discussions) rather than
+ * promising a polished workflow. Keep it factual.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import CTA from '../components/CTA.astro';
+
+const description =
+  'How to contribute to hal0 — an open-source, self-hosted home AI inference platform. Apache-2.0. Issues, pull requests, and where to start while the project is in beta.';
+
+const REPO = 'https://github.com/hal0ai/hal0';
+---
+
+<MarketingLayout title="Contributing — hal0" description={description}>
+  <section class="mx-auto max-w-3xl px-6 pt-16 pb-12">
+    <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">community</p>
+    <h1 class="mt-3 text-4xl font-semibold tracking-tight text-hal0-fg md:text-5xl">Contributing</h1>
+    <p class="mt-4 text-pretty text-hal0-fg-muted">
+      hal0 is open source under <a class="text-hal0-accent hover:text-hal0-accent-hover" href="https://www.apache.org/licenses/LICENSE-2.0" rel="noopener">Apache-2.0</a>
+      and developed in the open. It's pre-1.0 — the current line is a
+      <a class="text-hal0-accent hover:text-hal0-accent-hover" href="/releases">beta</a> — so the contribution
+      process is still settling. The honest state of things, below.
+    </p>
+
+    <div class="mt-10 grid gap-4 sm:grid-cols-2">
+      <a href={`${REPO}/issues`} rel="noopener" class="group rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5 transition hover:border-hal0-border-strong">
+        <h2 class="font-mono text-sm text-hal0-fg">File an issue</h2>
+        <p class="mt-2 text-sm text-hal0-fg-muted">Bugs, hardware-compat reports, and feature requests. Include your distro, Python version, and accelerator.</p>
+        <span class="mt-3 inline-block font-mono text-xs text-hal0-accent group-hover:text-hal0-accent-hover">github issues ↗</span>
+      </a>
+      <a href={`${REPO}/pulls`} rel="noopener" class="group rounded-lg border border-hal0-border bg-hal0-bg-elevated p-5 transition hover:border-hal0-border-strong">
+        <h2 class="font-mono text-sm text-hal0-fg">Open a pull request</h2>
+        <p class="mt-2 text-sm text-hal0-fg-muted">PRs are welcome. For anything non-trivial, open an issue first so we can agree on the shape before you build it.</p>
+        <span class="mt-3 inline-block font-mono text-xs text-hal0-accent group-hover:text-hal0-accent-hover">github pulls ↗</span>
+      </a>
+    </div>
+
+    <h2 class="mt-12 text-xl font-semibold tracking-tight text-hal0-fg">Where to start</h2>
+    <ul class="mt-3 space-y-2 text-sm text-hal0-fg-muted">
+      <li>Read the <a class="text-hal0-accent hover:text-hal0-accent-hover" href="/docs/concepts/architecture">architecture</a> and <a class="text-hal0-accent hover:text-hal0-accent-hover" href="/docs/concepts/slots">slots</a> concepts to understand the moving parts.</li>
+      <li>Run a local install and skim the <a class="text-hal0-accent hover:text-hal0-accent-hover" href="/changelog">changelog</a> to see what's landing.</li>
+      <li>The repo's <code class="rounded bg-hal0-bg-elevated px-1 py-0.5 font-mono text-xs">README</code> and <code class="rounded bg-hal0-bg-elevated px-1 py-0.5 font-mono text-xs">CONTRIBUTING</code> are the source of truth for build/test/PR conventions.</li>
+    </ul>
+
+    <p class="mt-10 rounded-md border border-hal0-border bg-hal0-bg-sunken p-4 text-sm text-hal0-fg-muted">
+      <strong class="text-hal0-fg">Early days.</strong> Expect rough edges in the process itself — labels,
+      templates, and review cadence are evolving. When in doubt, open an issue and ask.
+    </p>
+  </section>
+
+  <CTA
+    title="Build with us"
+    subtitle="The code, the issues, and the discussion all live on GitHub."
+    eyebrow="open source"
+    ctaPrimary={{ href: REPO, label: 'hal0ai/hal0 ↗' }}
+    ctaSecondary={{ href: '/docs/', label: 'read the docs' }}
+  />
+</MarketingLayout>

@@ -1,0 +1,157 @@
+---
+/**
+ * /changelog — human-readable release history.
+ *
+ * DERIVED, never hand-maintained: the content comes from hal0's
+ * CHANGELOG.md (synced to src/data/changelog.md by scripts/sync-changelog.mjs
+ * at build time) so it can't drift from what shipped. Rendered newest-first,
+ * grouped by version, with the source's Breaking / Added / Changed / Removed
+ * sections preserved.
+ *
+ * This is unrelated to the machine-readable updater manifest at
+ * releases.hal0.dev (functions/_middleware.ts) — do not conflate the two.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import CTA from '../components/CTA.astro';
+import rawChangelog from '../data/changelog.md?raw';
+import { parseChangelog } from '../lib/changelog.js';
+
+const { versions, latestStable, latestPrerelease } = parseChangelog(rawChangelog);
+
+// Older tags aren't all published as GitHub releases, so per-version links
+// point at the always-valid releases index rather than deep-linking a tag
+// that may 404.
+const RELEASES_URL = 'https://github.com/hal0ai/hal0/releases';
+
+// Badge palette per section kind (brand-token driven, dark-first).
+const KIND_CLASS = {
+  breaking: 'border-red-500/40 bg-red-500/10 text-red-300',
+  added: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+  changed: 'border-sky-500/40 bg-sky-500/10 text-sky-300',
+  removed: 'border-zinc-500/40 bg-zinc-500/10 text-zinc-300',
+  fixed: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+  note: 'border-hal0-border bg-hal0-bg-elevated text-hal0-fg-muted',
+};
+
+const description =
+  'Every hal0 release, newest first. Derived from the product CHANGELOG so it never drifts from what actually shipped. Breaking changes, new features, and fixes per version.';
+---
+
+<MarketingLayout title="Changelog — hal0" description={description}>
+  <section class="mx-auto max-w-3xl px-6 pt-16 pb-10">
+    <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">release history</p>
+    <h1 class="mt-3 text-4xl font-semibold tracking-tight text-hal0-fg md:text-5xl">Changelog</h1>
+    <p class="mt-4 text-pretty text-hal0-fg-muted">
+      Derived directly from the project's
+      <a class="text-hal0-accent hover:text-hal0-accent-hover" href="https://github.com/hal0ai/hal0/blob/main/CHANGELOG.md" rel="noopener">CHANGELOG.md</a>
+      — no hand-maintained second copy to drift. Newest first.
+    </p>
+
+    <div class="mt-6 flex flex-wrap gap-3 font-mono text-xs">
+      {latestStable && (
+        <a href={`#${latestStable.slug}`} class="inline-flex items-center gap-2 rounded-md border border-hal0-border bg-hal0-bg-elevated px-3 py-1.5 text-hal0-fg-muted transition hover:text-hal0-fg">
+          <span class="rounded bg-emerald-500/15 px-1.5 py-0.5 text-emerald-300">stable</span>
+          {latestStable.version}
+        </a>
+      )}
+      {latestPrerelease && (
+        <a href={`#${latestPrerelease.slug}`} class="inline-flex items-center gap-2 rounded-md border border-hal0-border bg-hal0-bg-elevated px-3 py-1.5 text-hal0-fg-muted transition hover:text-hal0-fg">
+          <span class="rounded bg-hal0-accent/15 px-1.5 py-0.5 text-hal0-accent">pre-release</span>
+          {latestPrerelease.version}
+        </a>
+      )}
+      <a href="/releases" class="inline-flex items-center rounded-md border border-hal0-border px-3 py-1.5 text-hal0-fg-muted transition hover:text-hal0-fg hover:border-hal0-border-strong">releases →</a>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 pb-20">
+    <ol class="space-y-12">
+      {versions.map((v) => (
+        <li id={v.slug} class="scroll-mt-24 border-t border-hal0-border pt-8">
+          <div class="flex flex-wrap items-baseline gap-3">
+            <h2 class="text-2xl font-semibold tracking-tight text-hal0-fg">
+              <a class="hover:text-hal0-accent" href={`#${v.slug}`}>{v.version}</a>
+            </h2>
+            {v.prerelease ? (
+              <span class="rounded border border-hal0-accent/40 bg-hal0-accent/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">pre-release</span>
+            ) : (
+              <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">stable</span>
+            )}
+            {v.date && <span class="font-mono text-xs text-hal0-fg-dim">{v.date}</span>}
+            <a class="ml-auto font-mono text-xs text-hal0-fg-dim hover:text-hal0-accent" href={RELEASES_URL} rel="noopener">on github ↗</a>
+          </div>
+
+          {v.intro && <div class="cl-prose mt-4 text-sm text-hal0-fg-muted" set:html={v.intro} />}
+
+          {v.sections.map((s) => (
+            <div class="mt-5">
+              <span class={`inline-block rounded border px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider ${KIND_CLASS[s.kind]}`}>{s.title}</span>
+              <div class="cl-prose mt-2 text-sm text-hal0-fg-muted" set:html={s.html} />
+            </div>
+          ))}
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <CTA
+    title="Install the current line"
+    subtitle="One command. Pre-release labelling is honest — see the releases page for the stable vs. next split."
+    eyebrow="get hal0"
+    ctaPrimary={{ href: '/releases', label: 'releases →' }}
+    ctaSecondary={{ href: '/docs/getting-started/install', label: 'install guide' }}
+  />
+</MarketingLayout>
+
+<style>
+  /* Style the marked-rendered changelog bodies (injected via set:html, so
+   * reached with :global under the .cl-prose wrapper). Kept tight to match
+   * the operator-tool voice — no decorative bullets. */
+  .cl-prose :global(ul) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cl-prose :global(li) {
+    position: relative;
+    padding-left: 1.1rem;
+    margin: 0.35rem 0;
+    line-height: 1.6;
+  }
+  .cl-prose :global(li)::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.65em;
+    width: 0.35rem;
+    height: 1px;
+    background: var(--hal0-accent);
+  }
+  .cl-prose :global(li > ul) {
+    margin-top: 0.25rem;
+  }
+  .cl-prose :global(p) {
+    margin: 0.5rem 0;
+    line-height: 1.6;
+  }
+  .cl-prose :global(strong) {
+    color: var(--hal0-fg);
+    font-weight: 600;
+  }
+  .cl-prose :global(a) {
+    color: var(--hal0-accent);
+    text-decoration: none;
+  }
+  .cl-prose :global(a:hover) {
+    color: var(--hal0-accent-hover);
+    text-decoration: underline;
+  }
+  .cl-prose :global(code) {
+    font-family: var(--hal0-font-mono);
+    font-size: 0.85em;
+    background: var(--hal0-bg-elevated);
+    border: 1px solid var(--hal0-border);
+    border-radius: 0.25rem;
+    padding: 0.05rem 0.3rem;
+  }
+</style>

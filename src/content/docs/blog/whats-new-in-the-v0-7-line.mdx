@@ -1,0 +1,77 @@
+---
+title: "What's new in the v0.7 line: hal0's first beta"
+date: 2026-06-19
+authors: hal0
+excerpt: >-
+  The dashboard becomes a full operations console — ComfyUI image generation,
+  an agent task board, NPU occupancy, and a unified profile-card layout — on
+  top of honest slot health. A look at v0.7.3-beta.1, the first beta cut.
+tags:
+  - release
+  - dashboard
+  - beta
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside type="caution" title="Pre-release">
+hal0 is pre-1.0. **v0.7.3-beta.1** is a *beta* — the current development line,
+not a GA release. Expect breaking changes between cuts. See the
+[releases page](/releases) for the stable-vs-next split, and the
+[full changelog](/changelog#v0.7.3-beta.1) for the complete list.
+</Aside>
+
+`v0.7.3-beta.1` is hal0's **first beta**. The headline is the dashboard: it
+graduates from a status panel into a full operations console. Everything below
+traces to the [changelog](/changelog#v0.7.3-beta.1) — no roadmap promises, just
+what landed.
+
+## The dashboard is now an ops console
+
+The inference, NPU, and ComfyUI cards are unified into one profile-card style.
+Profiles moved into the **Slots** tab under an engine-style header, the
+memory + throughput band was lifted above the tabs, and a live-journal footer
+now carries runtime and service-health groups. Slot cards came out of the
+accordion so they read at a glance.
+
+![hal0 dashboard overview](/screenshots/dashboard-overview.png)
+
+## ComfyUI image generation, first-class
+
+A full ComfyUI generation engine is wired into the platform — model store,
+capability picker, installer, and a V2 Image-Gen pane. Generation flips the GPU
+into exclusive image mode via the iGPU switchover, and an Inference-tab dot
+tracks live state so you always know what the accelerator is doing.
+
+![ComfyUI image generation pane](/screenshots/image-gen-comfyui.png)
+
+## NPU occupancy and the Operator Board
+
+The XDNA NPU gets a living occupancy grid with per-slot accents — it breathes
+with real activity instead of hiding behind a static picker. Alongside it, the
+**Operator Board** is a hal0-skinned kanban wired to the bundled Hermes agent
+(`/api/board/*`), with a live agent-chat drawer and working task creation.
+
+![Operator Board — Hermes kanban](/screenshots/operator-board.png)
+
+## Honesty under the hood
+
+The less flashy changes matter most for an operator's tool:
+
+- **Slot health is honest.** A slot is marked `ready` only once its real
+  `/health` passes — not on a systemd snapshot that lies about readiness.
+- **Per-slot context is derived**, never silently inheriting llama-server's
+  4096-token default; the edit-drawer default is 16k.
+- **Hardware reports the live GTT total**, not a stale cached probe value — so
+  the unified-memory pool you see is the pool you have.
+- Disabled-but-running slots are surfaced instead of vanishing.
+
+## Try it
+
+```sh
+curl -fsSL https://hal0.dev/install.sh | bash
+```
+
+Already running an older line? `hal0 update --channel stable` (or `nightly`),
+and `hal0 update --rollback` reverts atomically. Full notes on the
+[releases page](/releases).

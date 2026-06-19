@@ -8,9 +8,12 @@
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
+import rawChangelog from '../data/changelog.md?raw';
+import { parseChangelog } from '../lib/changelog.js';
 
 const canonicalUrl = 'https://hal0.dev/';
-const version = 'v0.2.0-alpha.3';
+// Derived from the changelog (synced from the product repo) — never hardcoded.
+const version = parseChangelog(rawChangelog).latest?.version ?? '';
 
 const description =
   'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, prewired chat UI, signed self-update. One command installs the lot.';
@@ -61,7 +64,7 @@ const features = [
   },
   {
     tag: 'dashboard',
-    title: 'Vue 3 + Tailwind 4 admin UI',
+    title: 'React 18 + Tailwind 4 admin UI',
     body: 'Dark-by-default operator console. SSE-backed status and log tail. Capability cards group flat slots into embed / voice / image picks for one-click ops.',
   },
 ];

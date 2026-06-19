@@ -17,6 +17,13 @@
  */
 import '../styles/global.css';
 import Wordmark from '../components/Wordmark.astro';
+import rawChangelog from '../data/changelog.md?raw';
+import { parseChangelog } from '../lib/changelog.js';
+
+// Footer version is derived from the changelog, not hand-maintained — so it
+// always reflects the latest line that shipped (see scripts/sync-changelog.mjs).
+const { latest } = parseChangelog(rawChangelog);
+const footerVersion = latest?.version ?? '';
 
 // Preload the two latin web fonts that drive above-the-fold rendering —
 // without these, the FOUT swap from system fallback → real font pushes
@@ -83,10 +90,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
           <span class="sr-only">— home</span>
         </a>
         <ul class="hidden items-center gap-7 font-mono text-sm text-hal0-fg-muted md:flex">
-          <li><a class="transition hover:text-hal0-fg" href="/#install">install</a></li>
-          <li><a class="transition hover:text-hal0-fg" href="/#hardware">hardware</a></li>
-          <li><a class="transition hover:text-hal0-fg" href="/#roadmap">roadmap</a></li>
           <li><a class="transition hover:text-hal0-fg" href="/docs/">docs</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/blog">blog</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/changelog">changelog</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/releases">releases</a></li>
+          <li><a class="transition hover:text-hal0-fg" href="/#roadmap">roadmap</a></li>
           <li>
             <a
               class="transition hover:text-hal0-fg"
@@ -107,14 +115,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
         <div class="flex items-center gap-3">
           <Wordmark size="text-base" />
           <span class="font-mono text-xs text-hal0-fg-dim">
-            Apache-2.0 · v0.2.0-alpha.3
+            Apache-2.0{footerVersion ? ` · ${footerVersion}` : ''}
           </span>
         </div>
         <ul class="flex flex-wrap items-center gap-6 font-mono text-xs">
           <li><a class="hover:text-hal0-fg" href="/docs/">docs</a></li>
-          <li><a class="hover:text-hal0-fg" href="/#install">install</a></li>
-          <li><a class="hover:text-hal0-fg" href="/#hardware">hardware</a></li>
-          <li><a class="hover:text-hal0-fg" href="/#roadmap">roadmap</a></li>
+          <li><a class="hover:text-hal0-fg" href="/blog">blog</a></li>
+          <li><a class="hover:text-hal0-fg" href="/changelog">changelog</a></li>
+          <li><a class="hover:text-hal0-fg" href="/releases">releases</a></li>
+          <li><a class="hover:text-hal0-fg" href="/contributing">contributing</a></li>
           <li>
             <a class="hover:text-hal0-fg" href="mailto:hello@hal0.dev">
               hello@hal0.dev
