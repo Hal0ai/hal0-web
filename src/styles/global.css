@@ -156,3 +156,67 @@ code, pre, kbd, .tabular {
 	--font-body:    'Geist Variable', 'Geist', 'Geist Fallback', system-ui, sans-serif;
 	--font-display: 'JetBrains Mono', 'JBM Fallback', ui-monospace, 'SF Mono', Menlo, monospace;
 }
+
+/* ---------- screenshot lightbox ----------
+ * Zero-dependency. The script (/js/lightbox.js) is loaded on both the
+ * marketing layout and the Starlight docs/blog, and binds any image whose
+ * src points at /screenshots/. Styling lives here so it's shared by both. */
+img[src*="/screenshots/"] {
+	cursor: zoom-in;
+}
+.hal0-lightbox {
+	position: fixed;
+	inset: 0;
+	z-index: 200;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4vmin;
+	background: rgba(5, 5, 5, 0.9);
+	-webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px);
+	opacity: 0;
+	pointer-events: none;
+	cursor: zoom-out;
+	transition: opacity 180ms var(--hal0-ease, ease);
+}
+.hal0-lightbox[data-open='true'] {
+	opacity: 1;
+	pointer-events: auto;
+}
+.hal0-lightbox img {
+	max-width: 100%;
+	max-height: 100%;
+	border-radius: 8px;
+	border: 1px solid var(--hal0-border-strong, #3a3a3a);
+	box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.85);
+	cursor: default;
+}
+.hal0-lightbox-close {
+	position: absolute;
+	top: 1rem;
+	right: 1.25rem;
+	width: 2.25rem;
+	height: 2.25rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--hal0-font-mono, monospace);
+	font-size: 1.4rem;
+	line-height: 1;
+	color: var(--hal0-fg, #f5f5f4);
+	background: rgba(10, 10, 10, 0.6);
+	border: 1px solid var(--hal0-border-strong, #3a3a3a);
+	border-radius: 999px;
+	cursor: pointer;
+	transition: border-color 150ms ease, color 150ms ease;
+}
+.hal0-lightbox-close:hover {
+	color: var(--hal0-accent, #ffb000);
+	border-color: var(--hal0-accent, #ffb000);
+}
+@media (prefers-reduced-motion: reduce) {
+	.hal0-lightbox {
+		transition: none;
+	}
+}

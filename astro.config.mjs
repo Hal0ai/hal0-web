@@ -99,6 +99,12 @@ export default defineConfig({
 					tag: 'meta',
 					attrs: { name: 'theme-color', content: '#0a0a0a' },
 				},
+				// Screenshot lightbox — binds /screenshots/ images on docs + blog
+				// pages (shared with the marketing layout; styles in global.css).
+				{
+					tag: 'script',
+					attrs: { src: '/js/lightbox.js', defer: true },
+				},
 			],
 		}),
 		sitemap(),

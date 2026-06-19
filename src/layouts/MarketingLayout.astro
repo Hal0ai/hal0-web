@@ -138,6 +138,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
       </div>
     </footer>
 
+    <!-- Screenshot lightbox (shared with the docs/blog via astro.config head). -->
+    <script is:inline src="/js/lightbox.js" defer></script>
+
     <!-- Scroll-aware navbar:
          data-tone='solid'                    → frosted bg + amber accent
          data-tone='transparent'              → bare (used at top of landing)

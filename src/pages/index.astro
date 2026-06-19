@@ -240,7 +240,7 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
     { size: '~42 GB', title: 'Tool-use + MCP', vram: '64 GB+ UMA', slots: [
       { k: 'primary', v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid-reasoning, tuned for tool-call faithfulness' },
       { k: 'embed',   v: 'bge-m3', d: '600 MB · retrieval-augmented routing' },
-      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Cognee-backed memory · two-tier scope' },
+      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Hindsight-backed memory · two-tier scope' },
     ]},
   ],
   small: [
@@ -279,9 +279,9 @@ const themes: RoadmapTheme[] = [
     blurb: 'The /v1/* surface and the engines behind it.',
     shipped: [
       { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm / CUDA) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
-      { t: 'Image generation', d: 'POST /v1/images/generations served by a ComfyUI provider on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell with license badges.' },
-      { t: 'FLM NPU provider live', d: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1, pinned by sha256. Chat + embed surfaced in the picker only when XDNA hardware is present.' },
+      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
+      { t: 'Image generation + iGPU switchover', d: 'POST /v1/images/generations served by a ComfyUI engine; generating flips the GPU into exclusive image mode and back, so chat and image share one accelerator.' },
+      { t: 'FLM NPU provider', d: 'Self-contained NPU toolbox pinned by digest. The chat + STT + embed trio is surfaced only when XDNA hardware is present.' },
     ],
     soon: [],
     later: [
@@ -292,13 +292,11 @@ const themes: RoadmapTheme[] = [
   {
     id: 'lifecycle',
     name: 'Slot lifecycle',
-    blurb: 'Atomic transitions, real metrics, no snapshots.',
+    blurb: 'Atomic transitions, honest health, no snapshots.',
     shipped: [
       { t: 'Slot lifecycle state machine', d: 'Atomic transitions (offline → pulling → starting → warming → ready → serving), persisted and SSE-streamed.' },
-      { t: 'Capability slots overlay', d: 'Embed / Voice / Img capability cards plus an NPU backend rollup, backed by /etc/hal0/capabilities.toml.' },
-      { t: 'embed-rerank built-in slot', d: 'Auto-created on first enable: bge-reranker-v2-m3-q4_k_m on :8086 with --reranking. /v1/rerankings stays separate from chat.' },
-      { t: 'Per-slot live metrics', d: 'GET /api/slots/metrics reads docker cgroup memory + ActiveEnterTimestampMonotonic + scraped /metrics.' },
-      { t: 'Orchestrator drift reconcile', d: 'apply() reconciles capabilities.toml ↔ slots/*.toml on every call, not only on selection diff.' },
+      { t: 'Honest slot health + derived context', d: 'A slot is marked ready only once its real /health passes — never on a systemd snapshot. Context size is derived per slot, never silently inheriting the 4096 default.' },
+      { t: 'Capability slots + profiles', d: 'Embed / Voice / Image capability cards and an NPU rollup over flat slots; per-device profiles unify the launch flags, all from one Slots tab.' },
     ],
     soon: [
       { t: 'Benchmarks & presets UI', d: 'In-dashboard tok/s + latency runs, plus curated loadout presets you can flash onto a fresh install.' },
@@ -310,14 +308,11 @@ const themes: RoadmapTheme[] = [
     name: 'Install + distribution',
     blurb: 'One command. Signed. Resumable.',
     shipped: [
-      { t: 'Signed release pipeline live', d: 'releases.hal0.dev/stable.json via Cloudflare middleware proxy. A v* tag publishes the GH release; manifest reflects it in ~60s.' },
-      { t: 'Cosign-signed self-update', d: 'Atomic version swap with rollback. Stable + nightly channels, GitHub OIDC-verified release tarballs.' },
-      { t: 'Installer overhaul', d: 'ASCII banner + step counter, extracted preflight.sh, hal0 doctor, hardware cards + auto-populated slots/primary.toml, live-hello + QR.' },
-      { t: '--models-dir install flag', d: 'install.sh --models-dir=PATH (or HAL0_MODELS_DIR, or interactive tty prompt) points a fresh install at an existing model store.' },
-      { t: 'Install + version flow locked down', d: '__version__ reads from importlib.metadata. pyproject.toml is the single source of truth; installer copies the source tree into PREFIX.' },
+      { t: 'hal0 setup TUI', d: 'A terminal first-run wizard: pick a hardware-anchored tier, storage, extensions, and models, then it provisions a coherent set of slots — or run --auto for recommended defaults.' },
+      { t: 'Cosign-signed self-update', d: 'Atomic version swap with one-flag rollback. Stable + nightly channels, GitHub OIDC-verified release tarballs, manifest proxied at releases.hal0.dev.' },
+      { t: 'Extensions framework', d: 'Apps and agents (Open WebUI, ComfyUI, Hermes, Pi) packaged as auto-wired extensions: lifecycle-managed, selectable at setup.' },
     ],
     soon: [
-      { t: 'Extensions framework', d: 'Third-party apps packaged as hal0 extensions: systemd unit + dashboard tile + healthcheck. Bring-your-own-app, lifecycle-managed.' },
       { t: 'AUR PKGBUILD & Ubuntu PPA', d: 'Native distro packages on top of the install script: pacman and apt as first-class install paths.' },
     ],
     later: [],
@@ -325,16 +320,15 @@ const themes: RoadmapTheme[] = [
   {
     id: 'hardware',
     name: 'Hardware + observability',
-    blurb: 'Probe before you load. Memory bar that tells the truth.',
+    blurb: 'Probe before you load. A memory bar that tells the truth.',
     shipped: [
-      { t: 'UMA-aware probe', d: 'Detects iGPU, XDNA NPU, and unified memory pool; surfaces fit warnings inline before you load a model that won\'t fit.' },
-      { t: 'Proxmox host-pressure segment', d: 'Read-only PVEAuditor token → dashboard memory bar shows physical DIMM total plus a muted host segment for other-tenant + ZFS ARC + kernel pressure.' },
-      { t: 'KV-cache % gauge populates', d: 'Vulkan toolbox rebuilt against llama.cpp b9279; synthesises kv_cache_usage = max(n_prompt_tokens) / n_ctx, clamped at 1.0.' },
-      { t: 'Live TTFT dashboard', d: 'Per-slot time-to-first-token sampled in the dispatcher, surfaced as a sparkline-pinned HUD readout on SlotCard.' },
+      { t: 'UMA-aware probe', d: 'Detects iGPU, XDNA NPU, and the unified memory pool; surfaces fit warnings inline before you load a model that won\'t fit.' },
+      { t: 'Live GTT total + honest memory bar', d: 'The memory bar reports the live GTT total from the driver, not a stale cached probe — so the unified pool you see is the pool you have.' },
+      { t: 'NPU occupancy grid', d: 'A living per-slot occupancy view of the XDNA NPU that breathes with real activity instead of a static picker.' },
     ],
     soon: [],
     later: [
-      { t: 'Multi-host federation', d: 'A slot mesh across LAN boxes: primary on the Strix Halo, embed on the workstation, all behind one /v1/* surface.' },
+      { t: 'Multi-host federation', d: 'A slot mesh across LAN boxes: chat on the Strix Halo, embed on the workstation, all behind one /v1/* surface.' },
     ],
   },
   {
@@ -342,30 +336,25 @@ const themes: RoadmapTheme[] = [
     name: 'Agents + memory + MCP',
     blurb: 'A place for agents to live, not only to chat with.',
     shipped: [
-      { t: 'MCP tool annotations', d: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations so SDK clients can render confirmation UIs and reason about side-effects.' },
-      { t: 'Approval inbox + bell', d: 'Capital-D destructive tool calls gate through a header bell and modal inbox in the dashboard, with full CLI parity via hal0 agent approvals.' },
+      { t: 'Bundled Hermes agent', d: 'Hermes installs and bootstraps on first run — sandboxed under its own user, prewired to the local /v1 API and MCP servers, with an agent-card library in the dashboard.' },
+      { t: 'Operator Board', d: 'A hal0-skinned kanban wired to Hermes (/api/board/*), with a live agent-chat drawer and working task creation.' },
+      { t: 'Hindsight graph memory', d: 'Opt-in memory engine (HAL0_MEMORY_ENABLED). Shared by default; the X-hal0-Agent header scopes a client\'s writes to its own namespace.' },
+      { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions: an admin + memory MCP server, plus an allow-listed client that composes external MCP tools. Destructive calls gate through an approval bell + CLI.' },
     ],
-    soon: [
-      { t: 'Bundled agent app', d: 'Hermes-Agent installable from the dashboard, prewired to the local OpenAI API + MCP servers.' },
-      { t: 'Cognee-backed memory', d: 'Embedded SQLite + LanceDB + Kuzu. Shared by default; X-hal0-Private: 1 promotes a client\'s writes to its own namespace.' },
-      { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions. Compose tools across local slots and external MCP services; discover them from the dashboard.' },
-    ],
+    soon: [],
     later: [
       { t: 'ChatOps adapters', d: 'Slack and Matrix bridges as extensions, so you can talk to hal0 from the rooms you already live in.' },
     ],
   },
   {
     id: 'security',
-    name: 'Security + UX',
-    blurb: 'Off by default. Opt in when you\'re ready to expose the box.',
+    name: 'Security posture',
+    blurb: 'No bundled auth — open on the LAN by default; front it with your own proxy.',
     shipped: [
-      { t: 'Bundled OpenWebUI', d: 'Prewired chat on :3001 pointed at the local API. Zero config; the installer wires it for you.' },
-      { t: 'Caddy + auth + HTTPS + mDNS', d: 'install.sh --auth=basic brings up Caddy with basic_auth, Bearer tokens for the API, automatic HTTPS, and a best-effort Avahi service file.' },
-      { t: 'First-run wizard rewrite', d: 'Eight linear steps from password through hardware, primary model, capabilities, HF token, license, install, done. Conditional HF-token step.' },
+      { t: 'Open by default, proxy at the edge', d: 'No bundled auth or TLS (ADR-0012): the API binds 0.0.0.0:8080 for the LAN. Expose it by putting your own reverse proxy — Traefik, nginx, or a Cloudflare Tunnel — in front.' },
+      { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, and Moonshine STT + Kokoro TTS served through the capability API.' },
     ],
-    soon: [
-      { t: 'STT / TTS curated picks', d: 'v0.1.1 seeded embed/rerank with real GGUF picks. STT (moonshine) and TTS (kokoro) need a pull-layer extension because their weights aren\'t GGUF / safetensors.' },
-    ],
+    soon: [],
     later: [
       { t: 'Voice mode end-to-end', d: 'Moonshine + agent loop + Kokoro stitched into a hands-free streaming conversation, gated through the slot lifecycle.' },
     ],
@@ -729,18 +718,18 @@ const shipNowHighlights = [
       </figure>
 
       <div class="shot-grid">
-        <a class="shot" href="/docs/guides/manage-slots">
+        <figure class="shot">
           <img src="/screenshots/slots-inference.png" alt="Slots view — per-slot state and the inference engine" width="1440" height="900" loading="lazy" decoding="async" />
-          <span class="shot-cap">Slots</span>
-        </a>
-        <a class="shot" href="/docs/guides/pull-and-register-models">
+          <figcaption class="shot-cap">Slots</figcaption>
+        </figure>
+        <figure class="shot">
           <img src="/screenshots/models-registry.png" alt="Models registry — pulled and registered models" width="1440" height="900" loading="lazy" decoding="async" />
-          <span class="shot-cap">Models</span>
-        </a>
-        <a class="shot" href="/docs/concepts/agents">
+          <figcaption class="shot-cap">Models</figcaption>
+        </figure>
+        <figure class="shot">
           <img src="/screenshots/operator-board.png" alt="Operator Board — the Hermes agent kanban" width="1440" height="900" loading="lazy" decoding="async" />
-          <span class="shot-cap">Operator Board</span>
-        </a>
+          <figcaption class="shot-cap">Operator Board</figcaption>
+        </figure>
       </div>
     </div>
   </section>
@@ -2153,6 +2142,7 @@ const shipNowHighlights = [
   .shot {
     position: relative;
     display: block;
+    margin: 0;
     border: 1px solid var(--hal0-border);
     border-radius: 8px;
     overflow: hidden;
