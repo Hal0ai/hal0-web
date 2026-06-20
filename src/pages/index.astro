@@ -308,7 +308,7 @@ const themes: RoadmapTheme[] = [
     blurb: 'The /v1/* surface and the engines behind it.',
     shipped: [
       { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU (chat + whisper-v3:turbo STT + embed, one process), Kokoro for TTS, ComfyUI for image generation.' },
+      { t: 'Four-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU (chat + whisper-v3:turbo STT + embed, one process), Kokoro for TTS, ComfyUI for image generation.' },
       { t: 'Image generation + iGPU switchover', d: 'POST /v1/images/generations served by a ComfyUI engine; generating flips the GPU into exclusive image mode and back, so chat and image share one accelerator.' },
       { t: 'FLM NPU provider', d: 'Self-contained NPU toolbox pinned by digest. The chat + STT + embed trio is surfaced only when XDNA hardware is present.' },
     ],
