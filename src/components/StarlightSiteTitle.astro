@@ -17,13 +17,19 @@ import Wordmark from './Wordmark.astro';
 const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 
 const path = Astro.url.pathname;
+const BENCH = '/docs/reference/model-roster-benchmark';
 const links = [
-  { label: 'Docs', href: '/docs/getting-started/', match: '/docs' },
+  // Docs matches all of /docs/* EXCEPT the Benchmarks page, which gets its
+  // own top-nav item below — otherwise both would highlight on that page.
+  { label: 'Docs', href: '/docs/getting-started/', match: '/docs', exclude: [BENCH] },
+  { label: 'Benchmarks', href: `${BENCH}/`, match: BENCH },
   { label: 'Blog', href: '/blog', match: '/blog' },
   { label: 'Changelog', href: '/changelog', match: '/changelog' },
   { label: 'Releases', href: '/releases', match: '/releases' },
 ];
-const isActive = (m: string) => path === m || path.startsWith(m + '/');
+const matches = (m: string) => path === m || path.startsWith(m + '/');
+const isActive = (l: { match: string; exclude?: string[] }) =>
+  matches(l.match) && !(l.exclude ?? []).some(matches);
 ---
 
 <div class="hal0-sitetitle sl-flex">
@@ -38,8 +44,8 @@ const isActive = (m: string) => path === m || path.startsWith(m + '/');
     {links.map((l) => (
       <a
         href={l.href}
-        class:list={['hal0-docnav-link', { active: isActive(l.match) }]}
-        aria-current={isActive(l.match) ? 'page' : undefined}
+        class:list={['hal0-docnav-link', { active: isActive(l) }]}
+        aria-current={isActive(l) ? 'page' : undefined}
       >{l.label}</a>
     ))}
   </nav>
