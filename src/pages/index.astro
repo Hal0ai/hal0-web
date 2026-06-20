@@ -398,24 +398,24 @@ const stages = [
 
 const shipNowHighlights = [
   {
-    tag: 'live metrics',
-    title: 'Live TTFT dashboard',
-    body: 'Per-slot time-to-first-token sampled in the dispatcher, surfaced as a sparkline-pinned HUD on SlotCard and aggregated fleet-wide. 60-second window; the stats row drops to KV / ACT / MEM / UP because T/S now lives on the sparkline itself.',
+    tag: 'inference',
+    title: 'Game-changing MTP models on ROCm',
+    body: 'A new rocmfp4 + draft-mtp model roster lands — 35B-A3B models running self-speculative decode at ~100 tok/s single-stream on the Strix Halo iGPU. Full head-to-head numbers on the roster benchmark.',
   },
   {
-    tag: 'kv-cache',
-    title: 'KV-cache % gauge populates',
-    body: 'Vulkan toolbox rebuilt against llama.cpp b9279. Scrape falls back to /slots when the legacy Prometheus gauge is missing — synthesises kv_cache_usage = max(n_prompt_tokens) / n_ctx, clamped at 1.0. The previously-empty cache tile finally has a number.',
+    tag: 'memory',
+    title: 'Unified Hindsight memory + graph',
+    body: 'One shared memory engine across every agent: a live knowledge graph plus background consolidation, where a smaller model combs raw facts into deduped, evidence-grounded observations — running concurrently alongside the agent and chat slots, never blocking inference.',
   },
   {
-    tag: 'mcp',
-    title: 'MCP tool annotations',
-    body: 'All 21 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects.',
+    tag: 'agents',
+    title: 'Deep Hermes integration + Kanban',
+    body: 'Hermes, the bundled agent, is wired deeper into the platform and drives a full Kanban board — lanes, task drawers, live orchestration — so long-running agent work is visible and steerable from the dashboard.',
   },
   {
-    tag: 'install',
-    title: 'Install + version flow locked down',
-    body: '__version__ reads from importlib.metadata instead of a hard-coded string. pyproject.toml is the single source of truth. installer/install.sh copies the source tree into PREFIX so editable installs work from a temp checkout under any HAL0_PREFIX.',
+    tag: 'image gen',
+    title: 'ComfyUI generation controls',
+    body: 'A first-class image slot backed by ComfyUI, with model, sampler, and step controls in the dashboard — sharing the same iGPU as chat and embeddings via the unified-memory switchover.',
   },
 ];
 
@@ -532,9 +532,10 @@ const shipNowHighlights = [
           <div class="ctx">as many slots as memory fits</div>
         </div>
         <div class="perf-cell">
-          <div class="num">~10<span class="unit">s</span></div>
-          <div class="lbl">Phi-3 Mini pull → first token</div>
-          <div class="ctx">2.39 GB · 71 tok/s · 280 ms RTT</div>
+          <div class="num">100<span class="unit">tok/s</span></div>
+          <div class="lbl">35B model · MTP speculative decode</div>
+          <div class="ctx">ace-saber 35B-A3B · 19 GB · single stream</div>
+          <a class="src" href="/docs/reference/model-roster-benchmark/">from the roster benchmark →</a>
         </div>
       </div>
     </div>
@@ -880,7 +881,7 @@ const shipNowHighlights = [
             <span class="ship-now-meta">released ~60s after tag · cosign-keyless verified · releases.hal0.dev/stable.json</span>
           </div>
           <h3 class="ship-now-headline">
-            Live dashboard metrics, locked install + version flow,<br />MCP tool annotations.
+            Game-changing MTP models, unified Hindsight memory,<br />deep Hermes + Kanban, ComfyUI controls.
           </h3>
         </div>
         <div class="ship-now-grid">
@@ -1493,6 +1494,15 @@ const shipNowHighlights = [
   .perf-cell .num .unit { color: var(--hal0-accent); font-size: 22px; margin-left: 4px; }
   .perf-cell .lbl { color: var(--hal0-fg-muted); font-size: 12px; margin-bottom: 4px; }
   .perf-cell .ctx { color: var(--hal0-fg-dim); font-size: 11px; font-family: var(--hal0-font-mono); }
+  .perf-cell .src {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--hal0-accent);
+    font-size: 11px;
+    font-family: var(--hal0-font-mono);
+    text-decoration: none;
+  }
+  .perf-cell .src:hover { text-decoration: underline; }
 
   /* Sections */
   .section { padding: 96px 0; }
