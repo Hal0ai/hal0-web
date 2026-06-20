@@ -532,9 +532,10 @@ const shipNowHighlights = [
           <div class="ctx">as many slots as memory fits</div>
         </div>
         <div class="perf-cell">
-          <div class="num">~10<span class="unit">s</span></div>
-          <div class="lbl">Phi-3 Mini pull → first token</div>
-          <div class="ctx">2.39 GB · 71 tok/s · 280 ms RTT</div>
+          <div class="num">100<span class="unit">tok/s</span></div>
+          <div class="lbl">35B model · MTP speculative decode</div>
+          <div class="ctx">ace-saber 35B-A3B · 19 GB · single stream</div>
+          <a class="src" href="/docs/reference/model-roster-benchmark/">from the roster benchmark →</a>
         </div>
       </div>
     </div>
@@ -1493,6 +1494,15 @@ const shipNowHighlights = [
   .perf-cell .num .unit { color: var(--hal0-accent); font-size: 22px; margin-left: 4px; }
   .perf-cell .lbl { color: var(--hal0-fg-muted); font-size: 12px; margin-bottom: 4px; }
   .perf-cell .ctx { color: var(--hal0-fg-dim); font-size: 11px; font-family: var(--hal0-font-mono); }
+  .perf-cell .src {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--hal0-accent);
+    font-size: 11px;
+    font-family: var(--hal0-font-mono);
+    text-decoration: none;
+  }
+  .perf-cell .src:hover { text-decoration: underline; }
 
   /* Sections */
   .section { padding: 96px 0; }
