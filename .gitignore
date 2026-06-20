@@ -52,3 +52,6 @@ graphify-out/.graphify_*
 graphify-out/.rebuild.lock
 
 graphify-out/
+
+# benchmark data source (regenerates src/data/model-roster.ts via bench/build_data.py)
+!bench/roster.log

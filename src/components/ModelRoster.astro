@@ -1,0 +1,279 @@
+---
+/**
+ * ModelRoster — the model-roster benchmark scoreboard as a native Starlight
+ * surface. Hardware/binary context cards + a sortable results table styled
+ * entirely with Starlight design tokens (--sl-color-*), so it inherits the
+ * site's light/dark themes and the hal0 amber accent for free.
+ *
+ * Data is generated, not hand-authored: src/data/model-roster.ts is emitted by
+ * bench/build_data.py from bench/roster.log. Regenerate after a sweep with
+ * `python3 bench/build_data.py`.
+ */
+import {
+  ROSTER,
+  HARDWARE,
+  BINARY,
+  ROSTER_DATE,
+  ROSTER_MEASURED,
+  ROSTER_TOTAL,
+} from '../data/model-roster.ts';
+
+// Capability glyphs (inline SVG, currentColor) — keyed to RosterRow.caps.
+const ICONS: Record<string, { label: string; svg: string }> = {
+  mtp: { label: 'MTP speculative', svg: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.7 1 3 9h3.6l-1 6 6.4-8H9.1z"/></svg>' },
+  vision: { label: 'Vision', svg: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1 8s2.6-4.6 7-4.6S15 8 15 8s-2.6 4.6-7 4.6S1 8 1 8z"/><circle cx="8" cy="8" r="1.9"/></svg>' },
+  tools: { label: 'Tool-calling', svg: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 1.6a3.4 3.4 0 0 0-3.2 4.5L1.7 11.4 4 13.7l5.3-5.4a3.4 3.4 0 0 0 4.5-3.2l-2 2-2-2z"/></svg>' },
+  coding: { label: 'Coding', svg: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 4 1.6 8 5 12"/><polyline points="11 4 14.4 8 11 12"/></svg>' },
+  reasoning: { label: 'Reasoning', svg: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.5 4.3L14 7l-4.5 1.7L8 13l-1.5-4.3L2 7l4.5-1.7z"/></svg>' },
+};
+
+const decClass = (d: number | null) =>
+  d == null ? '' : d >= 60 ? 'fast' : d >= 25 ? 'mid' : 'slow';
+const fmt = (n: number | null) => (n == null ? '' : String(n));
+const hfUrl = (r: string) => `https://huggingface.co/${r}`;
+---
+
+<div class="roster">
+  <p class="roster-meta">
+    Sequential, exclusive-GPU sweep on a single Strix Halo box ·
+    <strong>{ROSTER_MEASURED}/{ROSTER_TOTAL} models measured</strong> · {ROSTER_DATE}
+  </p>
+
+  <div class="roster-cards">
+    <section class="roster-card" aria-label="Hardware">
+      <h3>Hardware</h3>
+      <dl>
+        {HARDWARE.map((kv) => (
+          <div class="kv"><dt>{kv.label}</dt><dd>{kv.value}</dd></div>
+        ))}
+      </dl>
+    </section>
+    <section class="roster-card" aria-label="Binary and runtime">
+      <h3>Binary &amp; runtime</h3>
+      <dl>
+        {BINARY.map((kv) => (
+          <div class="kv"><dt>{kv.label}</dt><dd>{kv.value}</dd></div>
+        ))}
+      </dl>
+    </section>
+  </div>
+
+  <div class="roster-scroll">
+    <table class="roster-table">
+      <thead>
+        <tr>
+          <th data-col="text">Registry ID</th>
+          <th data-col="text">HuggingFace</th>
+          <th data-col="text">Caps</th>
+          <th data-col="text">Params</th>
+          <th data-col="num">Size GB</th>
+          <th data-col="text">KV</th>
+          <th data-col="text">Spec</th>
+          <th data-col="num" aria-sort="descending">Decode t/s</th>
+          <th data-col="num">Prefill t/s</th>
+          <th data-col="num">MTP acc%</th>
+          <th data-col="text">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {ROSTER.map((r) => (
+          <tr>
+            <td class="mono id">{r.id}</td>
+            <td class="hf">
+              {r.hfRepo
+                ? <a href={hfUrl(r.hfRepo)} target="_blank" rel="noopener">{r.hfRepo}</a>
+                : <span class="loc">local / auto-scan</span>}
+            </td>
+            <td class="caps">
+              {r.caps.length === 0 ? (
+                <span class="capnone">—</span>
+              ) : (
+                r.caps.map((k) =>
+                  ICONS[k] ? (
+                    <span class={`cap cap-${k}`} title={ICONS[k].label} set:html={ICONS[k].svg} />
+                  ) : null,
+                )
+              )}
+            </td>
+            <td class="mono dim">{r.params}</td>
+            <td class="num">{fmt(r.gb)}</td>
+            <td class="mono dim">{r.kv}</td>
+            <td class="mono spec">{r.spec}</td>
+            <td class={`num ${decClass(r.dec)}`} data-sort={r.dec ?? -1}>{fmt(r.dec)}</td>
+            <td class="num">{fmt(r.pf)}</td>
+            <td class="num">{fmt(r.acc)}</td>
+            <td class="note">{r.note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="roster-legend">
+    <span><span class="sw sw-fast"></span>≥60 t/s</span>
+    <span><span class="sw sw-mid"></span>25–60</span>
+    <span><span class="sw sw-slow"></span>&lt;25</span>
+    <span class="sep">·</span>
+    {Object.entries(ICONS).map(([k, v]) => (
+      <span class="lg"><span class={`cap cap-${k}`} set:html={v.svg} />{v.label}</span>
+    ))}
+    <span class="sep">·</span>
+    <span>Click any header to sort.</span>
+  </p>
+</div>
+
+<style>
+  .roster {
+    --rf: var(--sl-font-mono, ui-monospace, monospace);
+    --fast: #3fb950;
+    --mid: var(--sl-color-text-accent);
+    --slow: #f85149;
+    margin: 1.5rem 0;
+  }
+  :global([data-theme='light']) .roster {
+    --fast: #1a7f37;
+    --slow: #cf222e;
+  }
+  .roster-meta {
+    font-size: 0.8rem;
+    color: var(--sl-color-gray-3);
+    margin: 0 0 1rem;
+  }
+  .roster-meta strong { color: var(--sl-color-text-accent); font-weight: 600; }
+
+  /* Context cards */
+  .roster-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+  }
+  @media (max-width: 50rem) { .roster-cards { grid-template-columns: 1fr; } }
+  .roster-card {
+    background: var(--sl-color-gray-6);
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.6rem;
+    padding: 0.9rem 1.1rem;
+  }
+  .roster-card h3 {
+    font: 600 0.7rem/1 var(--rf);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sl-color-text-accent);
+    margin: 0 0 0.6rem;
+  }
+  .roster-card dl { margin: 0; }
+  .kv {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: 0.2rem 0.9rem;
+    padding: 0.32rem 0;
+    border-top: 1px solid var(--sl-color-hairline);
+    align-items: baseline;
+  }
+  .kv:first-child { border-top: 0; }
+  .kv dt { color: var(--sl-color-gray-3); font-size: 0.72rem; margin: 0; }
+  .kv dd {
+    margin: 0; font-family: var(--rf); font-size: 0.72rem;
+    color: var(--sl-color-gray-2); word-break: break-word;
+  }
+
+  /* Table */
+  .roster-scroll { overflow-x: auto; border: 1px solid var(--sl-color-hairline); border-radius: 0.6rem; }
+  .roster-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.78rem;
+    margin: 0;
+  }
+  .roster-table thead th {
+    position: sticky; top: 0;
+    background: var(--sl-color-gray-7, var(--sl-color-bg));
+    color: var(--sl-color-gray-3);
+    font: 600 0.66rem/1 var(--rf);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.6rem 0.55rem;
+    text-align: left;
+    border-bottom: 2px solid var(--sl-color-hairline-shade);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  .roster-table thead th:hover { color: var(--sl-color-text-accent); }
+  .roster-table thead th[aria-sort]::after { content: ' ▾'; color: var(--sl-color-text-accent); }
+  .roster-table tbody td {
+    padding: 0.45rem 0.55rem;
+    border-bottom: 1px solid var(--sl-color-hairline);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .roster-table tbody tr:last-child td { border-bottom: 0; }
+  .roster-table tbody tr:hover { background: color-mix(in srgb, var(--sl-color-text-accent) 7%, transparent); }
+  .mono { font-family: var(--rf); }
+  td.id { color: var(--sl-color-text-accent); font-size: 0.72rem; }
+  td.dim { color: var(--sl-color-gray-3); }
+  td.spec { font-size: 0.68rem; color: var(--sl-color-gray-3); }
+  td.hf a { color: var(--sl-color-text-accent); font-family: var(--rf); font-size: 0.72rem; text-decoration: none; }
+  td.hf a:hover { text-decoration: underline; }
+  td.hf .loc { color: var(--sl-color-gray-4); font-style: italic; font-size: 0.72rem; }
+  td.num { text-align: right; font-family: var(--rf); font-variant-numeric: tabular-nums; }
+  td.note { white-space: normal; max-width: 15rem; color: var(--sl-color-gray-3); font-size: 0.72rem; }
+  .fast { color: var(--fast); font-weight: 700; }
+  .mid { color: var(--mid); }
+  .slow { color: var(--slow); }
+
+  /* Capability glyphs */
+  .caps { white-space: nowrap; }
+  .cap { display: inline-flex; width: 1.05rem; height: 1.05rem; margin-right: 0.18rem; color: var(--sl-color-gray-2); vertical-align: middle; }
+  .cap :global(svg) { width: 100%; height: 100%; }
+  .cap-mtp { color: var(--sl-color-text-accent); }
+  .cap-vision { color: #6cb6ff; }
+  .capnone { color: var(--sl-color-gray-4); }
+
+  /* Legend */
+  .roster-legend {
+    margin: 0.9rem 0 0;
+    color: var(--sl-color-gray-3);
+    font-size: 0.72rem;
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center;
+  }
+  .roster-legend .sw { display: inline-block; width: 0.62rem; height: 0.62rem; border-radius: 2px; margin-right: 0.3rem; vertical-align: middle; }
+  .sw-fast { background: var(--fast); }
+  .sw-mid { background: var(--mid); }
+  .sw-slow { background: var(--slow); }
+  .roster-legend .lg { display: inline-flex; align-items: center; gap: 0.25rem; }
+  .roster-legend .lg .cap { width: 0.9rem; height: 0.9rem; margin: 0; }
+  .roster-legend .sep { color: var(--sl-color-gray-4); }
+</style>
+
+<script>
+  // Click-to-sort. Numeric columns use data-sort (decode) or parsed text;
+  // text columns localeCompare. Toggles asc/desc, scoped per table.
+  document.querySelectorAll<HTMLTableElement>('.roster-table').forEach((table) => {
+    const ths = Array.from(table.tHead!.rows[0].cells);
+    ths.forEach((th, i) => {
+      th.addEventListener('click', () => {
+        const body = table.tBodies[0];
+        const rows = Array.from(body.rows);
+        const numeric = th.dataset.col === 'num';
+        const asc = th.getAttribute('aria-sort') === 'ascending';
+        ths.forEach((h) => h.removeAttribute('aria-sort'));
+        th.setAttribute('aria-sort', asc ? 'descending' : 'ascending');
+        const val = (row: HTMLTableRowElement) => {
+          const cell = row.cells[i];
+          const raw = cell?.dataset.sort ?? cell?.textContent?.trim() ?? '';
+          return numeric ? parseFloat(raw) : raw;
+        };
+        rows.sort((a, b) => {
+          const x = val(a), y = val(b);
+          let r: number;
+          if (numeric) r = ((x as number) || -1) - ((y as number) || -1);
+          else r = String(x).localeCompare(String(y));
+          return asc ? r : -r;
+        });
+        rows.forEach((r) => body.appendChild(r));
+      });
+    });
+  });
+</script>
