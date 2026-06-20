@@ -90,10 +90,10 @@ const providers = [
     eps: '/v1/chat · /v1/embeddings',
   },
   {
-    prov: 'Moonshine',
-    ver: 'base',
-    hw: 'CPU only',
-    uses: 'speech-to-text',
+    prov: 'FLM / Whisper',
+    ver: 'v3 turbo',
+    hw: 'AMD XDNA NPU',
+    uses: 'speech-to-text (co-loaded with chat)',
     eps: '/v1/audio/transcriptions',
   },
   {
@@ -308,7 +308,7 @@ const themes: RoadmapTheme[] = [
     blurb: 'The /v1/* surface and the engines behind it.',
     shipped: [
       { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
+      { t: 'Four-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU (chat + whisper-v3:turbo STT + embed, one process), Kokoro for TTS, ComfyUI for image generation.' },
       { t: 'Image generation + iGPU switchover', d: 'POST /v1/images/generations served by a ComfyUI engine; generating flips the GPU into exclusive image mode and back, so chat and image share one accelerator.' },
       { t: 'FLM NPU provider', d: 'Self-contained NPU toolbox pinned by digest. The chat + STT + embed trio is surfaced only when XDNA hardware is present.' },
     ],
@@ -381,12 +381,11 @@ const themes: RoadmapTheme[] = [
     blurb: 'No bundled auth — open on the LAN by default; front it with your own proxy.',
     shipped: [
       { t: 'Open by default, proxy at the edge', d: 'No bundled auth or TLS (ADR-0012): the API binds 0.0.0.0:8080 for the LAN. Expose it by putting your own reverse proxy — Traefik, nginx, or a Cloudflare Tunnel — in front.' },
-      { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, and Moonshine STT + Kokoro TTS served through the capability API.' },
+      { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, and whisper-v3:turbo STT (NPU, via FLM) + Kokoro TTS served through the capability API.' },
+      { t: 'Hands-free voice via Open WebUI Call mode', d: 'Open WebUI\'s built-in Call mode wired to hal0\'s /v1/audio/transcriptions and /v1/audio/speech endpoints — whisper-v3:turbo for listen, Kokoro for reply. No native hal0 streaming orchestrator; the loop runs inside Open WebUI.' },
     ],
     soon: [],
-    later: [
-      { t: 'Voice mode end-to-end', d: 'Moonshine + agent loop + Kokoro stitched into a hands-free streaming conversation, gated through the slot lifecycle.' },
-    ],
+    later: [],
   },
 ];
 
