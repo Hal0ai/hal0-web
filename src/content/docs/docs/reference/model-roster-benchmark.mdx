@@ -13,6 +13,9 @@ sidebar:
 
 import { Aside } from '@astrojs/starlight/components';
 import ModelRoster from '../../../../components/ModelRoster.astro';
+import { ROSTER_DATE } from '../../../../data/model-roster.ts';
+
+export const updated = new Date(`${ROSTER_DATE}T00:00:00`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 A head-to-head benchmark of every chat and coding model in the hal0 registry,
 measured under **uniform conditions** on a single [AMD Strix Halo](/docs/reference/hardware-matrix/)
@@ -58,9 +61,8 @@ board answers "how do they compare head-to-head," not "what's each model's best
 possible config."
 </Aside>
 
-<Aside type="tip" title="Regenerating">
-The table is generated, not hand-maintained. After a new sweep, the raw results
-land in `bench/roster.log`; running `python3 bench/build_data.py` rewrites
-`src/data/model-roster.ts`, which this page renders. No prose edits needed for a
-data refresh.
+<Aside type="tip" title="Auto-generated">
+These numbers are generated automatically and refresh whenever the model roster
+is re-benchmarked on the hardware above — no figures are edited by hand. **Last
+updated {updated}.**
 </Aside>
