@@ -70,15 +70,27 @@ writes the first-run sentinel on completion.
 
 ## Hardware-anchored tiers
 
-The main-model step is anchored to four tiers; the highest that fits your
-detected memory is recommended, and tiers that exceed your pool are flagged.
+The main-model step is anchored to five bundle tiers; the highest that fits
+your detected memory is recommended, and tiers that exceed your pool are
+flagged.
 
 | Tier | Fits |
 |---|---|
-| **hal0-Lite** | smaller hosts — a tiny chat model only |
-| **hal0-Default** | mid-range — chat + embed/rerank + voice |
-| **hal0-Pro** | larger unified memory — adds a coder model + image generation |
-| **hal0-Max** | high-memory Strix Halo — adds the NPU trio |
+| **hal0-Lite** | 16 GB+ — a small chat model only |
+| **hal0-Default** | 32 GB+ — chat + embed + voice (STT/TTS) |
+| **hal0-Pro** | 64 GB+ — adds a coder model, rerank, and image generation |
+| **hal0-Max** | 100 GB+ Strix Halo — larger chat/coder models, same voice/embed/rerank/image set as Pro |
+| **LMX-Omni-52B-Halo** | 100 GB+ — AMD-curated, vendor-blessed Strix Halo bundle |
+
+The NPU trio (step 5) is offered independently of tier whenever AMD XDNA +
+FastFlowLM hardware is detected, regardless of which tier you pick.
+
+<Aside type="tip" title="GPU-less hosts">
+On a box with no detected GPU, the `cpu` device now defaults to the `cpu-llm`
+profile — a real chat-capable llama-server profile — instead of one bound to
+the Kokoro TTS engine, so a GPU-less install still gets a working primary
+chat slot.
+</Aside>
 
 ## Flags
 
