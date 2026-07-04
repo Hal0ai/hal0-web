@@ -1,0 +1,105 @@
+---
+title: "What's new in the v0.8 line: declarative config, voice, and Hermes autonomy"
+date: 2026-07-04T12:00:00
+authors: hal0
+excerpt: >-
+  Declarative Stacks replace the flag soup, voice (TTS + STT) lands
+  end-to-end on the NPU, Hermes owns its own config, and hal0-api can
+  finally drop root. A look at v0.8.2b4, the current beta line.
+tags:
+  - release
+  - stacks
+  - voice
+  - hermes
+  - beta
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside type="caution" title="Pre-release">
+hal0 is pre-1.0. **v0.8.2b4** is a *beta* — the current development line,
+not a GA release. Expect breaking changes between cuts. See the
+[releases page](/releases) for the stable-vs-next split, and the
+[full changelog](/changelog#v0.8.0-beta.1) for the complete list.
+</Aside>
+
+`v0.8.2b4` is the current beta line. The headline is **declarative
+configuration** — Stacks replace the launch-flag soup with a single source
+of truth — plus **voice** on the NPU, **Hermes autonomy**, and the
+long-awaited ability to run `hal0-api` without root. Everything below
+traces to the [changelog](/changelog#v0.8.0-beta.1) — no roadmap promises,
+just what landed.
+
+## Stacks: declarative config, finally
+
+The slot config tangle — base flags, profile overrides, per-slot
+`extra_args`, and the diverging launch commands they produce — is now a
+single `StackConfig`. A `StackApplyEngine` plans changesets, applies them
+atomically with rollback, and converges the live slot set in one pass.
+Content-hash drift detection tracks when reality diverges from intent,
+and seeded stacks (saber / forge / pi) are derived from the bench so
+you start from a known-good baseline.
+
+![Stack config editor](/screenshots/dashboard-overview.png)
+
+Flag provenance is no longer guesswork. Every slot exposes its resolved
+command at `GET /api/slots/{name}/resolved`, and the Edit drawer badges
+each flag with its source — base, profile, or `extra_args`. No more
+hunting through three files to figure out which one set `--ctx-size`.
+
+## Voice: TTS + STT on the NPU
+
+The voice stack works end-to-end. `voice_wire` is fixed, Open WebUI Call
+mode is wired through the NPU trio, and STT auto-provisions alongside the
+FLM slot. The NPU occupancy grid now carries voice activity alongside
+inference — when Call mode is active, you see it breathe.
+
+## Hermes owns its own config
+
+Hermes is no longer pinned to a hal0-rendered `config.yaml` snapshot.
+A `config-set` overlay layers hal0's keys over Hermes's self-managed
+config, so Hermes can self-migrate across versions while hal0 guarantees
+the integration keys stay right. A real upgrade path (`hal0 agent upgrade
+hermes`) replaces the old tear-down-and-pray cycle.
+
+Two systemd units now: `hal0-agent@hermes` (the core runtime, loopback
+only) and `hermes-gateway` (the messaging platform gateway — Telegram,
+Discord — on `0.0.0.0:8644`). The gateway is a first-class service with
+its own lifecycle.
+
+## hal0-api drops root (opt-in)
+
+Set `HAL0_USER=hal0` and the API runs unprivileged. A declarative
+ownership table (auditable via `hal0 doctor perms`) plus a narrow `sudo`
+seam (`hal0-slotctl`) keeps the unprivileged API in control of slot units
+and container lifecycle while the process itself can't write config it
+shouldn't. Slot containers stay rootful — the container is the sandbox
+boundary. Default `HAL0_USER=root` is unchanged, so existing installs
+don't break.
+
+## The quality-of-life layer
+
+The less flashy changes that operators live with every day:
+
+- **Capability-based fallback.** When a slot's `model.default` isn't
+  locally servable, `load()` falls back to the best registered model
+  matching the slot's capability — no more dead slots because a file
+  moved.
+- **q8_0 KV cache everywhere.** Main and MTP-draft KV caches are now
+  `q8_0` across slots — near-lossless and keeps fused FlashAttention
+  on AMD HIP.
+- **Breaking rename — `hal0/primary` → `hal0/chat`, `hal0/flm` → `hal0/npu`.**
+  Virtual model names now map 1:1 to their resolution chains. Slot-name
+  back-compat is intentionally kept.
+- **Chat-template render-validation.** A broken template can no longer
+  ship silently — every template in the catalog is validated at build time.
+
+## Try it
+
+```sh
+curl -fsSL https://hal0.dev/install.sh | bash
+```
+
+Already running an older line? `hal0 update --channel stable` (or
+`nightly`), and `hal0 update --rollback` reverts atomically. Full notes
+on the [releases page](/releases).
