@@ -30,25 +30,27 @@ src/
 ├── assets/wordmark.svg     ← header logo (JetBrains Mono "hal0")
 ├── components/             ← shared marketing components
 │   ├── Wordmark.astro
-│   ├── HeroSection.astro
-│   ├── FeatureGrid.astro / FeatureCard.astro
-│   ├── HardwareMatrix.astro
-│   ├── RoadmapColumn.astro / RoadmapCard.astro
+│   ├── StarlightSiteTitle.astro
 │   ├── CodeBlock.astro
-│   ├── ComparisonTable.astro
-│   └── CTA.astro
+│   ├── HermesCard.astro
+│   ├── ModelRoster.astro
+│   ├── CTA.astro
+│   └── landing/            ← LiveArtifact.astro, LoadoutCard.astro
 ├── content/docs/
-│   ├── docs/               ← Starlight docs (served at /docs/*)
-│   │   ├── index.mdx
+│   ├── docs/               ← Starlight docs (served at /docs/*, five sidebar groups)
 │   │   ├── getting-started/
-│   │   ├── hardware/       ← Strix Halo crown jewel page lives here
-│   │   ├── slots/
-│   │   ├── api/
+│   │   ├── concepts/       ← Strix Halo crown jewel page lives here
+│   │   ├── guides/
 │   │   ├── operate/
-│   │   └── reference/
-│   └── (other prefixes never used — keep root clear for the 404 route)
+│   │   └── reference/      ← reference/api/ nests as a collapsible subgroup
+│   └── blog/               ← starlight-blog posts (served at /blog/*)
 ├── layouts/MarketingLayout.astro
-├── pages/index.astro       ← landing page (hero + why + features + …)
+├── pages/
+│   ├── index.astro         ← landing page — hero + why + features + hardware +
+│   │                          roadmap + … as anchor sections on one page
+│   ├── changelog.astro
+│   ├── releases.astro
+│   └── contributing.astro
 └── styles/
     ├── fonts.css           ← @fontsource self-hosted bundles
     └── global.css          ← design tokens + Starlight overrides
@@ -63,20 +65,20 @@ NOTES.md                    ← design rationale (accent color, type stack)
 
 | Path                              | Owner          |
 | --------------------------------- | -------------- |
-| `/`                               | MarketingLayout — `src/pages/index.astro` (task #3) |
-| `/install`                        | MarketingLayout — task #4 |
-| `/hardware`                       | MarketingLayout — task #4 |
-| `/roadmap`                        | MarketingLayout — task #5 |
-| `/docs/`                          | Starlight — `src/content/docs/docs/index.mdx` |
-| `/docs/getting-started/*`         | Starlight — task #6 |
-| `/docs/hardware/*`                | Starlight — task #6 (incl. `/docs/hardware/strix-halo`) |
-| `/docs/slots/*`                   | Starlight — task #7 |
-| `/docs/api/*`                     | Starlight — task #7 |
-| `/docs/operate/*`                 | Starlight — task #7 |
-| `/docs/reference/*`               | Starlight — task #7 |
+| `/`                                | MarketingLayout — `src/pages/index.astro`. `/install`, `/hardware`, and `/roadmap` are anchor sections on this page, not standalone routes; `/roadmap` 302s here via `public/_redirects` for old links |
+| `/changelog`                      | MarketingLayout — `src/pages/changelog.astro`, rendered from the synced product-repo `CHANGELOG.md` |
+| `/releases`                       | MarketingLayout — `src/pages/releases.astro` |
+| `/contributing`                   | MarketingLayout — `src/pages/contributing.astro` |
+| `/docs/`                          | Starlight — redirects to `/docs/getting-started/` (the docs root has no index page) |
+| `/docs/getting-started/*`         | Starlight — "Start here" sidebar group |
+| `/docs/concepts/*`                | Starlight — "Concepts" sidebar group (incl. `/docs/concepts/strix-halo`) |
+| `/docs/guides/*`                  | Starlight — "Guides" sidebar group |
+| `/docs/operate/*`                 | Starlight — "Operate" sidebar group |
+| `/docs/reference/*`               | Starlight — "Reference" sidebar group |
+| `/blog/*`                         | starlight-blog — posts under `src/content/docs/blog/` |
 
 Marketing pages render through `MarketingLayout.astro`. Anything under
-`/docs/*` goes through Starlight's default sidebar + TOC chrome.
+`/docs/*` (including `/blog/*`) goes through Starlight's default sidebar + TOC chrome.
 
 ## Design system
 
@@ -173,8 +175,8 @@ curl -sI https://releases.hal0.dev/stable.json | grep -i cache-control
 
 ## Build state
 
-`npm run build` produces **32 static pages** (4 marketing + 27 docs +
-the 404), a sitemap (`/sitemap-index.xml`), a pagefind search index for
+`npm run build` produces **54 static pages** (4 marketing + 40 docs +
+9 blog + the 404), a sitemap (`/sitemap-index.xml`), a pagefind search index for
 docs, `robots.txt`, and a default OG image. Lighthouse scores ≥95
 across performance / accessibility / best-practices / SEO on the five
 key pages (verified 2026-05).
@@ -196,8 +198,10 @@ and falls back to Starlight's built-in 404 page.
 ## Cross-references
 
 - **Source of truth = the hal0 codebase** (`hal0` repo, `src/hal0`). Docs are
-  generated/maintained against it via the `hal0-docs` skill; verify claims and
-  numbers there, not from a copy doc. (`CONTENT_BRIEF.md` was retired — it had
-  drifted from the product.)
+  maintained against it directly; verify claims and numbers there, not from a
+  copy doc. (`CONTENT_BRIEF.md` was retired — it had drifted from the
+  product.) `src/content/docs/docs/**` mirrors one-way into `Hal0ai/hal0:docs/**`
+  on every `master` push via `.github/workflows/mirror-docs.yml` — edit docs
+  here, never in the product repo.
 - [NOTES.md](./NOTES.md) — design rationale (accent, type stack).
 - Upstream hal0 repo: `/home/halo/dev/hal0/` (do not edit).
