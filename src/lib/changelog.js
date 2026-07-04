@@ -60,8 +60,14 @@ function sectionKind(title) {
 // e.g. "v0.5.1-alpha.1" or "v0.2.0". Return true for pre-release.
 // ─────────────────────────────────────────────────────────────────────────
 export function isPrerelease(version) {
-  // TODO(you): return true when `version` is a pre-release tag.
-  return /-(alpha|beta|rc|pre|dev)\b/i.test(version);
+  // Hyphenated word-form tags: v0.8.1-beta.2, v0.8.0-beta.3, v0.5.1-alpha.1, …
+  if (/-(alpha|beta|rc|pre|dev)\b/i.test(version)) return true;
+  // PEP 440 compact pre-release segments with no separator before the next
+  // release: v0.8.4b1, v0.8.3b1, v0.8.2b4 (a=alpha, b=beta, rc=release
+  // candidate). Anchored at the end so a plain release number like "v0.2.0"
+  // never matches.
+  if (/\d(?:a|b|rc)\d*$/i.test(version)) return true;
+  return false;
 }
 
 /** Parse the raw changelog markdown into structured version blocks. */
@@ -77,36 +83,43 @@ export function parseChangelog(raw) {
     .map((b) => b.trim())
     .filter(Boolean);
 
-  const versions = blocks.map((block) => {
-    const lines = block.split('\n');
-    const header = lines.shift() ?? '';
-    // ## [v0.5.1-alpha.1] — 2026-06-15
-    const m = header.match(/^##\s*\[([^\]]+)\]\s*(?:[—–-]\s*(.+))?$/);
-    const version = m?.[1]?.trim() ?? header.replace(/^##\s*/, '').trim();
-    const date = m?.[2]?.trim() ?? null;
+  const versions = blocks
+    // Drop the "## [Unreleased]" scaffolding header some CHANGELOG.md commits
+    // carry above the newest tag. It isn't a shipped version — if it were
+    // kept, it'd sort first (newest position) and, having no -alpha/-beta/-rc
+    // suffix, would default to `stable`, hijacking both `latest` and
+    // `latestStable` away from the real newest release.
+    .filter((block) => !/^##\s*\[unreleased\]\s*$/im.test(block.split('\n')[0] ?? ''))
+    .map((block) => {
+      const lines = block.split('\n');
+      const header = lines.shift() ?? '';
+      // ## [v0.5.1-alpha.1] — 2026-06-15
+      const m = header.match(/^##\s*\[([^\]]+)\]\s*(?:[—–-]\s*(.+))?$/);
+      const version = m?.[1]?.trim() ?? header.replace(/^##\s*/, '').trim();
+      const date = m?.[2]?.trim() ?? null;
 
-    const rest = lines.join('\n');
-    const introMd = rest.split(/\n### /)[0].trim();
-    const sectionChunks = rest.split(/\n### /).slice(1);
+      const rest = lines.join('\n');
+      const introMd = rest.split(/\n### /)[0].trim();
+      const sectionChunks = rest.split(/\n### /).slice(1);
 
-    const sections = sectionChunks.map((chunk) => {
-      const nl = chunk.indexOf('\n');
-      const title = (nl === -1 ? chunk : chunk.slice(0, nl)).trim();
-      const sbody = nl === -1 ? '' : chunk.slice(nl + 1).trim();
-      return { title, kind: sectionKind(title), html: marked.parse(sbody) };
+      const sections = sectionChunks.map((chunk) => {
+        const nl = chunk.indexOf('\n');
+        const title = (nl === -1 ? chunk : chunk.slice(0, nl)).trim();
+        const sbody = nl === -1 ? '' : chunk.slice(nl + 1).trim();
+        return { title, kind: sectionKind(title), html: marked.parse(sbody) };
+      });
+
+      const pre = isPrerelease(version);
+      return {
+        version,
+        slug: version.replace(/[^a-z0-9.-]/gi, '-').toLowerCase(),
+        date,
+        prerelease: pre,
+        stable: !pre,
+        intro: introMd ? marked.parse(introMd) : '',
+        sections,
+      };
     });
-
-    const pre = isPrerelease(version);
-    return {
-      version,
-      slug: version.replace(/[^a-z0-9.-]/gi, '-').toLowerCase(),
-      date,
-      prerelease: pre,
-      stable: !pre,
-      intro: introMd ? marked.parse(introMd) : '',
-      sections,
-    };
-  });
 
   const latestStable = versions.find((v) => v.stable) ?? null;
   const latestPrerelease = versions.find((v) => v.prerelease) ?? null;

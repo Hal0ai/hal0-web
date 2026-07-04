@@ -19,9 +19,9 @@ const version = parseChangelog(rawChangelog).latest?.version ?? '';
 // Full copy feeds the structured-data schema (no length limit); a tight ~155-char
 // version is the page meta + OG description (search snippets cap ~160).
 const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, local image generation (ComfyUI), a bundled Hermes agent with opt-in graph memory, an MCP server, and signed self-update. One command installs the lot.';
+  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, declarative Stacks, systemd-managed slots, GPU voice (Qwen3-TTS) and NPU speech-to-text, local image generation (ComfyUI), a bundled Hermes agent with audited graph memory, an MCP server, and signed self-update. One command installs the lot.';
 const metaDescription =
-  'Open-source homelab AI for AMD Strix Halo: OpenAI-compatible /v1/* API, managed slots, local image gen, agents + graph memory, signed self-update. One command.';
+  'Open-source homelab AI for AMD Strix Halo: declarative Stacks, OpenAI-compatible /v1/* API, GPU voice, local image gen, agents + audited graph memory, signed self-update.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -36,7 +36,7 @@ const softwareApplicationLd = {
   softwareVersion: version,
   codeRepository: 'https://github.com/hal0ai/hal0',
   keywords:
-    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance, local image generation, ComfyUI, SDXL, Flux, AI agents, Hermes agent, graph memory, Hindsight, MCP server, agent kanban, Operator Board, NPU occupancy, self-hosted AI',
+    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance, declarative Stacks, local image generation, ComfyUI, SDXL, Flux, GPU voice, Qwen3-TTS, whisper-v3, AI agents, Hermes agent, graph memory, Hindsight, audit trail, MCP server, agent kanban, Operator Board, NPU occupancy, self-hosted AI',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: 'hal0ai', url: 'https://github.com/hal0ai' },
 };
@@ -68,9 +68,9 @@ const features = [
     body: 'hal0 update --channel stable|nightly. Verified tarballs swap a /usr/lib/hal0/current symlink. --rollback reverts atomically. Stable + nightly channels.',
   },
   {
-    tag: 'dashboard',
-    title: 'React 18 + Tailwind 4 admin UI',
-    body: 'Dark-by-default operator console. SSE-backed status and log tail. Capability cards group flat slots into embed / voice / image picks for one-click ops.',
+    tag: 'stacks',
+    title: 'Declarative Stacks',
+    body: 'Plan a slot/model layout into a change set, apply it atomically with rollback, and converge the live slots against it — content-hash drift detection, plus export/import via a checksummed .hal0stack.json envelope.',
   },
 ];
 
@@ -97,10 +97,10 @@ const providers = [
     eps: '/v1/audio/transcriptions',
   },
   {
-    prov: 'Kokoro',
-    ver: '82M',
-    hw: 'CPU · Vulkan',
-    uses: 'text-to-speech · 54 voices',
+    prov: 'Kokoro / Qwen3-TTS',
+    ver: '82M · GPU',
+    hw: 'CPU (Kokoro) · ROCm (Qwen3-TTS)',
+    uses: 'text-to-speech · one-switch CPU⇄GPU swap',
     eps: '/v1/audio/speech',
   },
   {
@@ -150,12 +150,12 @@ const tiers = [
     cls: 'supported',
     tag: 'supported',
     name: 'AMD Radeon RX 7000',
-    spec: '16–24 GB discrete · Vulkan today, ROCm in build queue',
+    spec: '16–24 GB discrete · ROCm or Vulkan container profiles',
     stats: [
       { v: '24', u: 'GB', l: '7900 XTX VRAM' },
-      { v: 'Vulkan', u: '', l: 'now · ROCm soon' },
+      { v: 'ROCm', u: '', l: '· Vulkan' },
     ],
-    note: 'Discrete AMD path. ROCm toolbox image is on the build list — Vulkan path works today for chat + embed.',
+    note: 'Discrete AMD path, same hal0-slot@<name> lifecycle as Strix Halo — both ROCm and Vulkan container profiles run today.',
   },
   {
     cls: 'supported',
@@ -308,7 +308,7 @@ const themes: RoadmapTheme[] = [
     blurb: 'The /v1/* surface and the engines behind it.',
     shipped: [
       { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Four-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU (chat + whisper-v3:turbo STT + embed, one process), Kokoro for TTS, ComfyUI for image generation.' },
+      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU (chat + whisper-v3:turbo STT + embed, one process), Kokoro (CPU) or Qwen3-TTS (GPU) behind a one-switch tts slot, ComfyUI for image generation.' },
       { t: 'Image generation + iGPU switchover', d: 'POST /v1/images/generations served by a ComfyUI engine; generating flips the GPU into exclusive image mode and back, so chat and image share one accelerator.' },
       { t: 'FLM NPU provider', d: 'Self-contained NPU toolbox pinned by digest. The chat + STT + embed trio is surfaced only when XDNA hardware is present.' },
     ],
@@ -367,7 +367,7 @@ const themes: RoadmapTheme[] = [
     shipped: [
       { t: 'Bundled Hermes agent', d: 'Hermes installs and bootstraps on first run — sandboxed under its own user, prewired to the local /v1 API and MCP servers, with an agent-card library in the dashboard.' },
       { t: 'Operator Board', d: 'A hal0-skinned kanban wired to Hermes (/api/board/*), with a live agent-chat drawer and working task creation.' },
-      { t: 'Hindsight graph memory', d: 'Opt-in memory engine (HAL0_MEMORY_ENABLED). Shared by default; the X-hal0-Agent header scopes a client\'s writes to its own namespace.' },
+      { t: 'Hindsight graph memory', d: 'Opt-in memory engine (HAL0_MEMORY_ENABLED). Shared by default; the X-hal0-Agent header scopes a client\'s writes to its own namespace. Every destructive op — bank delete, memory/document/directive wipes — now records a durable, attributable audit row.' },
       { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions: an admin + memory MCP server, plus an allow-listed client that composes external MCP tools. Destructive calls gate through an approval bell + CLI.' },
     ],
     soon: [],
@@ -381,7 +381,7 @@ const themes: RoadmapTheme[] = [
     blurb: 'No bundled auth — open on the LAN by default; front it with your own proxy.',
     shipped: [
       { t: 'Open by default, proxy at the edge', d: 'No bundled auth or TLS (ADR-0012): the API binds 0.0.0.0:8080 for the LAN. Expose it by putting your own reverse proxy — Traefik, nginx, or a Cloudflare Tunnel — in front.' },
-      { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, and whisper-v3:turbo STT (NPU, via FLM) + Kokoro TTS served through the capability API.' },
+      { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, whisper-v3:turbo STT (NPU, via FLM), and a one-switch Kokoro (CPU) ⇄ Qwen3-TTS (GPU) TTS engine served through the capability API.' },
       { t: 'Hands-free voice via Open WebUI Call mode', d: 'Open WebUI\'s built-in Call mode wired to hal0\'s /v1/audio/transcriptions and /v1/audio/speech endpoints — whisper-v3:turbo for listen, Kokoro for reply. No native hal0 streaming orchestrator; the loop runs inside Open WebUI.' },
     ],
     soon: [],
@@ -391,30 +391,30 @@ const themes: RoadmapTheme[] = [
 
 const stages = [
   { id: 'shipped', label: 'shipped',    sub: 'running on your box today' },
-  { id: 'soon',    label: 'in flight',  sub: 'next release cuts' },
+  { id: 'soon',    label: 'in flight',  sub: 'targeting v0.9' },
   { id: 'later',   label: 'exploring',  sub: 'bets, not promises' },
 ];
 
 const shipNowHighlights = [
   {
-    tag: 'inference',
-    title: 'Game-changing MTP models on ROCm',
-    body: 'A new rocmfp4 + draft-mtp model roster lands — 35B-A3B models running self-speculative decode at ~100 tok/s single-stream on the Strix Halo iGPU. Full head-to-head numbers on the roster benchmark.',
+    tag: 'config',
+    title: 'Stacks — declarative config SSOT',
+    body: 'A StackConfig plans into a change set, applies atomically with rollback, and converges the live slot set against it. Content-hash drift detection, an active-stack pointer, and export/import via a checksummed .hal0stack.json envelope.',
+  },
+  {
+    tag: 'voice',
+    title: 'GPU voice: Qwen3-TTS + NPU STT',
+    body: 'A voice.tts switch swaps the tts slot between Kokoro (CPU, 54 voices) and Qwen3-TTS (GPU) with no reconfiguration, while whisper-v3:turbo handles transcription on the XDNA NPU alongside chat + embed.',
   },
   {
     tag: 'memory',
-    title: 'Unified Hindsight memory + graph',
-    body: 'One shared memory engine across every agent: a live knowledge graph plus background consolidation, where a smaller model combs raw facts into deduped, evidence-grounded observations — running concurrently alongside the agent and chat slots, never blocking inference.',
+    title: 'Hindsight memory, now audited',
+    body: 'Every destructive memory op — bank delete, memory/config/document/directive/operation/mental-model deletes — now records a durable, attributable audit row, and the cognition consoles validate the upstream response shape instead of failing silently.',
   },
   {
-    tag: 'agents',
-    title: 'Deep Hermes integration + Kanban',
-    body: 'Hermes, the bundled agent, is wired deeper into the platform and drives a full Kanban board — lanes, task drawers, live orchestration — so long-running agent work is visible and steerable from the dashboard.',
-  },
-  {
-    tag: 'image gen',
-    title: 'ComfyUI generation controls',
-    body: 'A first-class image slot backed by ComfyUI, with model, sampler, and step controls in the dashboard — sharing the same iGPU as chat and embeddings via the unified-memory switchover.',
+    tag: 'reliability',
+    title: '72-finding platform-review remediation',
+    body: 'A large reliability pass: honest disable-a-capability semantics, resumable pulls, disk-space preflight, cross-process file locks, and Power/Thermal + per-slot throughput cards on the dashboard by default.',
   },
 ];
 
@@ -429,7 +429,7 @@ const shipNowHighlights = [
     <div class="shell-wide hero-grid">
       <div>
         <div class="eyebrow">
-          <span class="blip"></span> {version} · first beta — shipping on every supported host
+          <span class="blip"></span> {version} shipping now · v0.9 in development
         </div>
         <h1 class="h1">
           Your Strix Halo box,<br />
@@ -505,7 +505,8 @@ const shipNowHighlights = [
         <h3 class="uc-title">Speech and images, one control plane</h3>
         <p class="uc-body">
           Transcription, text-to-speech, and local image generation behind the same API —
-          STT/TTS on the XDNA NPU, ComfyUI on the iGPU, switched cleanly so they share the box.
+          STT on the XDNA NPU, TTS switchable between Kokoro (CPU) and Qwen3-TTS (GPU),
+          ComfyUI on the iGPU, switched cleanly so they share the box.
         </p>
       </article>
     </div>
@@ -878,9 +879,10 @@ const shipNowHighlights = [
             <span class="ship-now-pulse"><span class="dot"></span> shipping now</span>
             <span class="ship-now-ver">{version}</span>
             <span class="ship-now-meta">released ~60s after tag · cosign-keyless verified · releases.hal0.dev/stable.json</span>
+            <span class="ship-now-next">v0.9 in development →</span>
           </div>
           <h3 class="ship-now-headline">
-            Game-changing MTP models, unified Hindsight memory,<br />deep Hermes + Kanban, ComfyUI controls.
+            Declarative Stacks, GPU voice, and audited agent memory —<br />the v0.9 line is next.
           </h3>
         </div>
         <div class="ship-now-grid">
@@ -962,7 +964,7 @@ const shipNowHighlights = [
         <span class="mono accent-mono">※</span>
         <span>
           <strong>Exploring items are bets we believe in, not promises.</strong>{' '}
-          Scope and order will shift as the v0.7 beta lands and we learn what people actually do with a local platform.
+          Scope and order will shift release to release — v0.9 is next — as we learn what people actually do with a local platform.
           <a href="https://github.com/hal0ai/hal0/issues" class="rm-footnote-link">open an issue ↗</a>
         </span>
       </div>
@@ -975,8 +977,8 @@ const shipNowHighlights = [
       <div class="sec-tag cta-tag">/ get hal0</div>
       <h2 class="cta-h">Stop running models<br />from a <span class="accent">chat tab.</span></h2>
       <p class="cta-sub">
-        One command on a fresh Linux box. It's the first beta — pre-release, but
-        it installs and runs the whole stack today.
+        One command on a fresh Linux box. hal0 is pre-1.0 and moving fast — v0.9 is
+        next — but it installs and runs the whole stack today.
       </p>
       <div class="install cta-holding" id="install-cta">
         <div class="install-head">
@@ -1932,6 +1934,15 @@ const shipNowHighlights = [
     background: var(--hal0-bg);
   }
   .ship-now-meta { color: var(--hal0-fg-dim); font-size: 11px; }
+  .ship-now-next {
+    margin-left: auto;
+    color: var(--hal0-fg-dim);
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px dashed var(--hal0-border-strong);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
   .ship-now-headline {
     font-family: var(--hal0-font-mono);
     font-weight: 500;

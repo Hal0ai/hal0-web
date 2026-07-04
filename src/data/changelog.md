@@ -8,7 +8,458 @@ v0.2) may carry breaking changes; patch releases inside a minor line
 
 Tags older than v0.2.0 ship release notes inside the GitHub release
 page; this CHANGELOG starts at v0.2.0 (the Lemonade migration cut).
-For ADR-level architecture context see `docs/internal/adr/`.
+ADR-level architecture decisions are kept internal (the `docs/internal/`
+tree is gitignored, #638) and referenced by number throughout the code.
+
+## [Unreleased]
+
+## [v0.8.4b1] — 2026-07-04
+
+A **models, logs & memory** follow-up to v0.8.3b1. Models can now carry a
+preferred runtime profile that loads with them, image-gen/ComfyUI models get
+their own properly-tagged surface, the slot context window finally persists
+across reloads, the logs/events system is unified, and the memory subsystem
+gains a destructive-op audit trail plus console shape guards. **Safe upgrade
+from v0.8.3b1 — no breaking changes; all additions are additive.**
+
+### Added
+- **Model preferred profile.** A registry model can declare `defaults.profile`
+  — the runtime profile it wants loaded with it. A slot adopts it on create
+  (when it has no explicit profile) and on **every model swap**, gated on
+  device/type compatibility (an incompatible preference is ignored and the slot
+  keeps its device-default profile; slot hardware is never flipped to satisfy a
+  model). Surfaced as a **Preferred profile** selector in the model recipe
+  editor.
+- **ComfyUI / image-gen model surface.** The Models view gains a **Models |
+  Image/ComfyUI** segmented toggle; image-gen models are grouped by their
+  models-tree category (checkpoints/loras/vae/upscale_models/…) and kept out of
+  the dispatcher list. ComfyUI models are correctly tagged `image`/`comfyui` at
+  every registration path, and `/api/models` self-heals rows an older pull
+  mis-tagged by deriving the ComfyUI category from the on-disk path (no
+  migration needed).
+- **Memory: audit trail for destructive ops (#1024).** Every destructive
+  `/api/memory/*` op — bank delete, and memories/config/document/directive/
+  operation/mental-model deletes, plus the namespace `POST /api/memory/delete`
+  — now records a durable audit row (actor + target + truthful outcome) via the
+  shared `record_action` facility, so a memory wipe is attributable after the
+  fact. Complements the bank-DELETE `?confirm=` guard shipped in #1028.
+- **Memory: response-shape guard on the cognition consoles (#1026).** The
+  recall/reflect/directives passthroughs now validate the load-bearing envelope
+  key (`results`/`text`/`items`); upstream Hindsight shape drift surfaces as a
+  loud `memory.engine_shape` 502 instead of a silently-blank console panel. The
+  two colliding `recall` contracts (namespace `{items}` vs bank `{results}`) are
+  now documented at both call sites.
+
+### Changed
+- **Unified logs/events.** Restores per-slot model-load logs, real source/slot
+  attribution, and a channel selector across the logs/events surface.
+- **Memory Overview UI.** The graph-extraction gate now sits beside a shrunk
+  "memories retained" spark in the top row; card headings share one unified
+  "eyebrow" style; dropped the stray `ADR-0023` label from the extraction title.
+
+### Fixed
+- **Persistent slot context.** The slot edit drawer seeds the context field
+  from the persisted `[model].context_size` (not the live runtime metric or a
+  hardcoded 16384) and only writes `ctx_size` when it actually changed, so an
+  unrelated save no longer clobbers the stored context window with 16k on a cold
+  reload or swap.
+- **Don't surface invisible models.** FLM tags advertised by the composite
+  upstream before their weights are pulled are dropped from the catalog (the
+  dedicated probe still surfaces the genuinely installed ones); freshly-pulled
+  ComfyUI checkpoints are no longer mis-filed as chat models.
+- **Memory tab functional; bank delete guarded (#1028).** The Memory tab renders
+  its graph status/slot UI and consolidate/list actions correctly, and a bank
+  `DELETE` now requires an explicit `?confirm=` guard.
+- **Stack edit drawer (#1023).** Slot cards render as labeled multi-line
+  entries and the escaped toggle-knob glyph is fixed.
+- **Board: Hermes kanban task-detail drawer (#1014).** The task-detail envelope
+  from Hermes is unwrapped so the board drawer renders instead of showing empty.
+- **Installer: cosign optional for the one-line install.** The bootstrap no
+  longer hard-requires `cosign`, so the one-line installer runs on hosts without
+  it (signature verification still applies where `cosign` is present).
+
+## [v0.8.3b1] — 2026-07-04
+
+A large **reliability and UI-completeness** release. The headline is a
+72-finding platform-review remediation delivered as eight verified waves
+(each finding regression-tested and gated by CI + Playwright), landing
+alongside earlier staged fixes. It retires several silent-failure bugs,
+adds cross-process safety and pull resumability, makes every
+backend-supported value editable in the slot/model/profile drawers, and
+surfaces live telemetry on the dashboard. **Safe upgrade from v0.8.2b4 —
+no breaking changes; all config/UI additions are additive.**
+
+The most user-visible behaviour changes: the dashboard now shows Power &
+Thermal (live GPU clock/temp/power) and Per-Slot Throughput cards **by
+default**; disabling a capability now genuinely stops it serving; and the
+`bge` reranker is now classified and routed as a reranker.
+
+### Added
+- **Dashboard live telemetry, on by default.** The Power & Thermal card
+  (GPU clock MHz, temp, power) and the Per-Slot Throughput card are now
+  default-on, and the Utilization card shows a live clock/temp caption.
+  (#1019)
+- **Edit-drawer completeness.** The model editor now exposes
+  `capabilities`, `backends`, `rope_freq_base`, `mmproj`, and
+  `hf_repo`/`hf_filename`; slots gain a per-slot `vision` toggle and NPU
+  `asr`/`embed` modality toggles — all fields the API already accepted but
+  no drawer surfaced. (#1020)
+- **Settings.** An opt-in anonymous telemetry toggle and the image-gen
+  defaults (`default_size`, `default_steps`, `idle_restore_minutes`). (#1021)
+- **Interrupted pulls resume** via HTTP `Range` (with `If-Range`) instead
+  of re-downloading from zero; the on-disk prefix is re-hashed so the final
+  SHA-256 stays exact. (#1017)
+- **Disk-space preflight** before multi-GB pulls fails fast with a
+  structured `model.insufficient_disk` error instead of filling the disk.
+  (#1013)
+- **Host-memory-pressure LRU eviction** of idle slots. (#1003)
+
+### Changed
+- **Retired duplicated logic** that had silently drifted: one
+  device→profile derivation, one filename→capability classifier, one
+  dispatchable-state predicate, and one slot-projection reconcile. (#1015)
+- **Rebuilt the dash editing drawers** on a shared `FormDrawer` + `useForm`
+  with an unsaved-changes dirty guard, one `compatibleModels` filter, a
+  focus trap and real `<label>` wiring (a11y), plus honest, confirmed
+  destructive actions (styled type-to-confirm deletes; no more "Pause"
+  that silently cancels; real "fits in memory" check). (#1016, #1018)
+- **Cross-process safety:** advisory file locks around registry and
+  capabilities writes; parent-directory `fsync` after atomic writes. (#1017)
+- **Housekeeping:** startup GC of stale pull-job snapshots and orphaned
+  `.part` partials. (#1017)
+- Extracted the capability-resolution heuristics out of `dispatcher/router.py`.
+  (#1017)
+
+### Fixed
+- **Disabling a capability now sticks.** The disable is written through to
+  the slot config, so a later request can no longer wake a "disabled" slot
+  and serve from it. (#1011)
+- **The NPU trio is advertised on podman-only hosts** — the picker probed
+  `docker` and never offered it on the reference platform. (#1011)
+- **GPU-less installs get a chat-capable primary slot** instead of one
+  bound to the Kokoro TTS engine (`cpu` now defaults to `cpu-llm`). (#1011)
+- **Idle-evicted embed/rerank/tts slots wake on request** instead of
+  404'ing until a manual load. (#1011)
+- **The `bge` reranker is classified as a reranker** (was mislabeled
+  `chat`) and is routable as one. (#1015)
+- **Installer/bundle pulls survive an api restart** — status/stream polls
+  no longer 404 mid-install. (#1012)
+- **A completed pull is no longer reported "failed"** after a restart. (#1012)
+- **The GpuArbiter drain no longer unloads a slot under an in-flight
+  request** (image-mode switch race). (#1012)
+- **Slots are no longer advertised READY on a health-probe timeout.** (#1012)
+- **Write-time validation:** a second `default=true` slot of a type is
+  refused at save; `create()` no longer clobbers an existing custom slot;
+  stack apply flags unresolved profile/model refs and reports **degraded**
+  (not "clean") when slots fail to load. (#1013, #1018)
+- **The model editor no longer silently wipes unshown launcher defaults on
+  Save**, and the ComfyUI image-profile control no longer corrupts
+  `device_class` on edit. (#1020)
+- **Chat requests with mis-positioned or stacked `role='system'` messages
+  no longer 500 the Qwen3.6-35B-A3B upstream.** The OpenAI-compat
+  normaliser now collapses every system entry into one and hoists it to
+  position 0 (matching the OpenAI/Anthropic convention), so a stale
+  mid-array system message from the SPA/Open WebUI/LibreChat — or two
+  deliberately-stacked system blocks — no longer trips the Qwen3 Jinja
+  template's `System message must be at the beginning`. No-system payloads
+  skip the copy. (#992)
+- Additional staged fixes from the assessment sweep: dead-port guard for
+  container slots (#1001), `events.gap` on subscriber-queue overflow
+  (#1000), non-retryable `SlotLoadFailed` for ERROR slots (#999), bounded
+  httpx pool + tighter read timeout (#998), cold-slot 404 ordering (#996),
+  container slots entering SERVING and bumping `last_used_at` (#995),
+  installer port reachability when Docker is co-installed (#990), updater
+  rollback re-pip (#994), an in-memory PgVector write warning (#1008),
+  additive seed-profile merge (#1007), durable pull-job persistence (#1006),
+  canonical slot fields on npu/load + install model-update (#1009), and the
+  yellow-halo favicon restore (#991).
+
+## [v0.8.2b4] — 2026-06-30
+
+Documentation and installer hygiene — no runtime behaviour change. This
+release re-baselines the engineering docs to the current v0.8.x reality
+(container runtime, Hindsight memory, agent/utility roles) and fixes a
+handful of installer drift bugs surfaced by a codebase assessment sweep.
+Safe upgrade from v0.8.2b3.
+
+### Changed
+- **Docs re-baselined to v0.8.x.** Swept the Lemonade→container-runtime and
+  Cognee→Hindsight terminology out of `AGENTS.md`, `ARCHITECTURE.md`,
+  `CONTEXT.md`, `PLAN.md`, and `README.md`; corrected the Hermes provisioner
+  to its real 15-phase pipeline; refreshed version/status lines; and rewrote the
+  (largely fictional) `hal0-service-management` codebase-map reference against
+  the current `src/hal0/` tree. Marked the shipped Stacks and voice-stack
+  superpowers plans as completed.
+- **Dead ADR links fixed.** Tracked docs no longer link into the gitignored
+  `docs/internal/adr/` tree (#638); surviving decisions are inlined and ADRs are
+  referenced by number. (In-code citation sweep tracked in #984.)
+
+### Fixed
+- **qwen3tts migration script aligned with the `tts`-slot model.** The
+  standalone-to-slot migration script's Guard 1 checked a non-existent
+  `qwen3tts` slot (always 404) and Guard 3 checked a removed kokoro `:8084`
+  fallback; both are corrected to the deployed design where Qwen3-TTS serves
+  from the canonical `tts` slot via `voice.tts`. (#979)
+- **`uninstall.sh` now removes all three sudoers grants.** It only removed
+  `hal0-benchctl`, leaking `hal0-agentenv` and `hal0-comfyui` behind on uninstall.
+- **Hermes private memory bank seeded under its canonical name.** `install.sh`
+  seeded `private__hermes-agent`, which the server (which derives the bank from the
+  agent-id via `PRIVATE_PREFIX="private:"`) never matches — corrected to
+  `private:hermes` so the pre-seeded retain-mission/dispositions actually apply.
+- **Dropped the obsolete Lemonade boot-contention comment** from
+  `installer/comfyui/scripts/comfy-up.sh`.
+
+## [v0.8.2b3] — 2026-06-29
+
+GPU text-to-speech lands: Qwen3-TTS now runs as a hal0-native slot with a
+one-switch swap between the Kokoro (CPU) and Qwen3-TTS (GPU) engines, plus a
+GPU benchmark harness and dashboard polish. Safe upgrade from v0.8.2b2.
+
+### Added
+- **GPU Qwen3-TTS as a hal0-native slot.** New `Qwen3TTSProvider` serves
+  Qwen3-TTS from the `tts` slot, with a `voice.tts` capability switch that swaps
+  the engine between Kokoro (CPU) and Qwen3-TTS (GPU) without reconfiguring the
+  slot. (#972, #976) The toolbox image builds + pushes to ghcr.io and its digest
+  is pinned in `manifest.json`. (#975, #977) Ships a standalone-to-slot migration
+  runbook + guarded script. (#974)
+- **GPU benchmark harness.** A GPU benchmarking toolbox with the `hal0-benchctl`
+  seam and accompanying agent skills. (#967) Dashboard gains an iGPU usage gauge
+  and a prefill TTFT readout. (#968) Topbar adds Kanban / Agent-Chat launchers, a
+  global agent chat, and an Archived lane. (#966)
+
+### Fixed
+- **Dispatcher injects upstream auth headers for remote providers**, so requests
+  routed to authenticated remote upstreams carry their credentials. (#973)
+- **UI builds land reliably on deploy** (no-cache index + install to the served
+  `dist`). (#969)
+
+### Docs
+- Benchmarking toolbox UI/feature handoff. (#971)
+
+## [v0.8.2b2] — 2026-06-24
+
+Two fixes on the 0.8.2 beta line — profile MTP tuning now actually takes
+effect, and stacks can pull their referenced models. Safe upgrade from
+v0.8.2b1.
+
+### Fixed
+- **Explicit profile spec flags win over the MTP bundle.** `resolve_profile_flags`
+  appended `MTP_FLAG_BUNDLE` after a profile's own flags, so the bundle's
+  spec-draft defaults (`--spec-draft-type-k q8_0`, `--spec-draft-p-min 0.0`)
+  silently clobbered any `--spec-draft-*` a profile pinned — there was no way to
+  tune the MTP draft through a profile. The bundle is now merged as defaults that
+  the profile's explicit flags override (gap-filled only). (#963)
+- **Absent stack models can be pulled.** Custom GGUF builds referenced by the
+  seed stacks (saber, pi-agent, qwopus coders, halostrix, gemma, …) were
+  auto-scanned with empty `hf_repo`/`hf_filename`, so on stack import/apply they
+  classified "unresolvable" with no download URL. Registered their public HF
+  coordinates (jcbtc/ + Jackrong/ + unsloth/ repos) in the curated catalogue;
+  `embed_references` falls back to curated on export; and a new
+  `backfill_coordless()` repairs existing coord-less registry rows on rescan. (#964)
+
+### Changed
+- **CI**: cancel superseded PR runs (never `main`); PRs test Python 3.12 only while
+  `main` runs 3.12/3.13/3.14 (3.14 non-blocking); least-privilege workflow
+  permissions; Node 20 → 22. (#898)
+
+## [v0.8.2b1] — 2026-06-23
+
+Profiles gain the same portable export/import/sharing model stacks already have.
+Safe upgrade from v0.8.1-beta.2.
+
+### Added
+- **Portable profile export/import.** A profile can now be exported to a
+  self-contained, checksummed `.hal0profile.json` envelope and imported on another
+  host — the same file-based sharing model stacks use. The envelope carries the
+  profile template plus a sha256 content checksum and an independent
+  `schema_version`; no secrets or host paths are serialized. New routes
+  `GET /api/profiles/{name}`, `POST /api/profiles/{name}/export`, and
+  `POST /api/profiles/import` (dry-run reports checksum validity + name collision;
+  commit creates under a chosen name, `409 profiles.exists` on a duplicate). New
+  MCP tools mirror the `stack_*` set: `profile_list` / `profile_status` /
+  `profile_export` (autonomous read) and `profile_import` / `profile_delete`
+  (gated). The dashboard adds an Export button to every profile card and an Import
+  dialog (file → dry-run preview → commit). (#962)
+
+## [v0.8.1-beta.2] — 2026-06-23
+
+Bugfix on the 0.8.1 beta line — restores fleet auto-update. Safe upgrade from
+v0.8.1-beta.1.
+
+### Fixed
+- **Updater version comparison uses PEP 440.** `hal0 update` compared versions with
+  a digit-tuple parser that split on `.` and stripped non-digits per segment, so the
+  pip-normalised installed beta `0.8.0b3` parsed to `(0, 8, 3)` and the tag-form
+  manifest `0.8.1-beta.1` to `(0, 8, 1, 1)` — `(0,8,1,1) > (0,8,3)` is false, so
+  every box on a `0.8.0bN` beta saw the new release as "not newer" and `hal0 update`
+  reported nothing to apply (the installed beta number was misread as the patch
+  component). The comparator now uses `packaging.version.Version` in both the updater
+  and the API route, falling back to the digit-tuple only for non-PEP-440 nightly
+  tags (whose timestamp ordering still relies on it). (#957)
+
+## [v0.8.1-beta.1] — 2026-06-23
+
+Installer/privilege simplification + Hermes durable memory on by default. The
+hal0-api privilege seams (hardened unprivileged mode, the slot privilege seam)
+are gone, and a fresh `hal0 agent bootstrap hermes` now provisions a working
+durable-memory provider out of the box.
+
+### Added
+- **Hermes durable memory enabled by default.** Provisioning now ships a working
+  `hal0-memory` provider and sets `memory.provider=hal0-memory`, so Hermes gets
+  cross-session recall with no manual config. Two banks — `private:hermes`
+  (default) and `shared` (cross-agent) — backed by hal0's Hindsight engine via
+  the hal0-api REST front door; reads union both banks. The provider exposes
+  `hal0_memory_{search,recall,add}` (with `shared=true` to write the shared
+  bank) and auto-injects recalled context each turn. (#955)
+
+### Changed
+- **Hermes agent identity is `hermes`** (was `hermes-agent`), matching the
+  `hal0 agent` registry. The agent-id is the single source for the
+  `X-hal0-Agent` MCP headers, the persona memory namespace, and the prelude. (#955)
+- **Memory plugin install path fixed.** The plugin is copied to
+  `$HERMES_HOME/plugins/hal0-memory/` (a direct child of `plugins/`, which the
+  Hermes loader actually scans) instead of the nested `plugins/memory/…` that
+  never loaded. (#955)
+
+### Removed
+- **Hardened (unprivileged hal0-api) mode removed**; hal0-api runs as root.
+  Dropped live-hello; fixed ready-summary IPs. (#953)
+- **Dormant slot privilege seam removed** (`hal0-slotctl` + euid routing). (#954)
+
+### Breaking
+- **Hermes memory namespace renamed `private:hermes-agent` → `private:hermes`.**
+  Existing `private:hermes-agent` data is not auto-migrated; reprovisioned agents
+  start recalling from `private:hermes` + `shared`. (#955)
+
+## [v0.8.0-beta.3] — 2026-06-23
+
+Canonical LLM roles + Hindsight-native memory extraction
+([ADR-0023](docs/internal/adr/0023-canonical-llm-roles-agent-utility.md)). The two
+canonical LLM roles are now **`agent`** (the capable default + fallback anchor,
+replacing `chat`) and **`utility`** (the cheap helper, now seeded on every
+install). `chat` and `primary` are retired as slot/role names.
+
+### Changed
+- **Canonical roles are `agent` + `utility`.** `agent` replaces `chat` as the
+  default/anchor everywhere (seeded slots, dispatch rule-9 fallback, the default
+  pin set, `_configured_primary`). `utility` joins `SEEDED_SLOTS` so a fresh box
+  never silently falls back to a heavy model for cheap extraction.
+- **Generalized virtual addressing.** Any enabled `type=llm` slot `X` is now
+  addressable as `hal0/X` (chain `(X, agent)`); the advertised canonical virtuals
+  are `hal0/agent`, `hal0/utility`, `hal0/npu`.
+- **Memory graph extraction is operator-selectable and actually wired.**
+  `[memory.graph].extraction_slot` names the local llm slot Hindsight uses for
+  graph extraction; hal0 propagates it to `hindsight-api` via a systemd drop-in
+  (`HINDSIGHT_API_LLM_MODEL=hal0/<slot>`) + restart. `hal0 memory graph enable`
+  takes `--slot <name>` (validated against the live enabled-llm-slot set).
+- **Cognee fully removed.** The Cognee engine + wrapper are deleted; Hindsight is
+  the platform engine (with a PgVector boot-degrade fallback). `MemoryRecord`
+  survives as an alias of `MemoryItem`.
+
+### Breaking
+- **`hal0/chat` is no longer advertised.** Clients pinned to `hal0/chat` (Hermes,
+  OpenWebUI, any custom consumer) must repoint to **`hal0/agent`**.
+  Hermes `model.default` is now `hal0/agent`.
+- **`memory.graph.route` / `memory.graph.upstream` removed**, replaced by
+  **`memory.graph.extraction_slot`** (default `"utility"`). Old `route`/`upstream`
+  keys in `hal0.toml` are silently dropped on load (no hard-fail on upgrade). The
+  `hal0 memory graph enable --route/--provider/--model` options are gone — use
+  `--slot`.
+- **`primary` is no longer a slot alias.** `SLOT_ALIASES` is `{"agent-hermes": "agent"}`.
+
+## [v0.8.0-beta.2] — 2026-06-22
+
+Bugfix release on the 0.8.0 beta line. No behaviour changes beyond the two
+fixes below — a safe upgrade from v0.8.0-beta.1. First release to carry #948.
+
+### Fixed
+- **Operator Board live updates restored.** The board's events-WS proxy
+  (`/api/board/events`) resolved its upstream Hermes session token from the
+  `HERMES_SESSION_TOKEN` env var only, while the REST path harvests the
+  rotating per-process token from the dashboard HTML. With no env pin (the
+  default), the WS connected upstream with no token, Hermes rejected the
+  upgrade (403), and the browser socket died with 1011 — so tasks created in
+  Hermes loaded on refresh but never pushed live to the board. The WS bridge
+  now shares the REST client's token resolution (env-pin → HTML-harvest →
+  rotation cache) and re-harvests + retries once on connect failure. (#949)
+- **Hermes privileged env seam.** A privileged env-write seam lets the
+  unprivileged provisioner write `root:root` `.env` files, so Hermes agent
+  config provisioning works under the dropped-root `hal0-api`. (#948)
+
+## [v0.8.0-beta.1] — 2026-06-21
+
+First beta of the 0.8.0 line — the model-config, Hermes, and permissions
+overhaul. Configuration becomes a declarative single source of truth
+(**Stacks** + single-source launch argv), Hermes consolidates onto its own
+config ownership, and `hal0-api` can finally drop root. Voice (TTS + STT)
+lands end-to-end. One behaviour change to be aware of: the `hal0/primary`
+and `hal0/flm` virtual aliases are gone — see **Changed**.
+
+### Added
+- **Stacks — declarative config SSOT.** A `StackConfig` schema plus a
+  `StackApplyEngine` that `plan()`s a Stack into a ChangeSet, `apply_config()`s
+  it as an atomic commit with rollback, and `converge()`s the live slot set
+  (primary-slot load/swap/skip + capability-child routing through the
+  orchestrator). Content-hash drift detection and an active-stack pointer,
+  export/import via a checksummed `.hal0stack.json` envelope, snapshot of live
+  config into a Stack, and a `StacksCatalog` CRUD with seed guards. Seed stacks
+  (saber / forge / pi) derived from the roster bench.
+  (#921, #923, #925, #926)
+- **Voice stack — TTS + STT.** Brought up and verified end-to-end: `voice_wire`
+  fixed, Open WebUI Call mode wired, and the NPU-trio facade auto-provisions
+  STT. (#924, #928)
+- **Single-source slot argv (overhaul stream A).** A resolver dedups the launch
+  flag soup down to a last-wins canonical command; per-flag provenance is
+  exposed at `GET /api/slots/{name}/resolved`, and the slot Edit drawer renders
+  the resolved command with per-flag source badges (base / profile /
+  extra_args). (#929, #930, #931, #932)
+- **Capability-based slot fallback.** When a slot's `model.default` isn't
+  locally servable (registered-but-no-file, or pulled-away), `load()` falls back
+  to the best locally-registered model matching the slot's capability —
+  excluding diffusion / image / video models and preferring name-similarity to
+  the configured id. (#940, #942)
+- **Hardened permissions — run `hal0-api` unprivileged (opt-in).** Set
+  `HAL0_USER=hal0` and the installer drops the API off root: a declarative
+  ownership table (audited read-only by `hal0 doctor perms`), a narrow
+  privileged seam (`hal0-slotctl` + a no-wildcard sudoers grant) so the
+  unprivileged API can still write per-slot units and drive `hal0-slot@*`, and
+  a codified flip (run-as drop-in + recursive chown of config + state, pruning
+  `agents/` + `secrets/` + the models dir). Slot containers stay rootful — the
+  container remains the sandbox boundary. Default `HAL0_USER=root` is
+  byte-for-byte unchanged. (#929, #943, #944, #945)
+- **Hermes owns its own config.** The runtime is unpinned with a real upgrade
+  path, and a config-set overlay replaces the whole-file `config.yaml` render —
+  Hermes owns and self-migrates its config while hal0 layers only its keys.
+  (#934, #938)
+- **Chat-template render-validation.** The template catalog is render-validated
+  so a broken template can no longer ship silently. (#917)
+
+### Changed
+- **Breaking — `hal0/primary` and `hal0/flm` virtual aliases removed.** Virtual
+  model names now map 1:1 to their resolution chains; `hal0/primary` no longer
+  resolves (use `hal0/chat`) and `hal0/flm` is gone (use `hal0/npu`). Slot-name
+  back-compat is intentionally kept, and the Hermes overlay now emits
+  `model.default: hal0/chat`. (#939)
+- **q8_0 KV cache, universally.** Main and MTP-draft KV caches are now `q8_0`
+  across slots — near-lossless and keeps fused FlashAttention on AMD HIP. (#933)
+- **Profiles** lift bench-tuned MTP config into `rocm-moe` / `rocm-dnse`. (#922)
+- **Open WebUI** disables PersistentConfig so the env prewire wins the chat
+  connection. (#927)
+- Docs mirrored from hal0-web.
+
+### Fixed
+- **Installer** — `setup --storage-dir` is passed as a separate argv token so
+  fresh `--models-dir` installs seed slots correctly (#946); the hardened-perms
+  flip chowns config + state recursively so a root→hal0 upgrade doesn't strand
+  root-owned state subdirs (#945); `hermes gateway install` runs
+  non-interactively and skips `enable` when the unit is absent (#941); a
+  lemonade-team PPA is added so the FLM/NPU `.deb` resolves on a fresh Ubuntu
+  box (#937); the registry scans the effective store / pull_root rather than
+  only declared roots (#935).
+- **Hermes gateway** marks its `EnvironmentFile` optional (`-`) so fresh
+  installs don't crash-loop on a missing secrets vault. (#936)
+- **Dependencies** — bump vulnerable deps flagged by Dependabot. (#919)
 
 ## [v0.7.3-beta.2] — 2026-06-19
 

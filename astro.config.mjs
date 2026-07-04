@@ -76,6 +76,10 @@ export default defineConfig({
 					items: [{ autogenerate: { directory: 'docs/guides' } }],
 				},
 				{
+					label: 'Operate',
+					items: [{ autogenerate: { directory: 'docs/operate' } }],
+				},
+				{
 					label: 'Reference',
 					items: [{ autogenerate: { directory: 'docs/reference' } }],
 				},

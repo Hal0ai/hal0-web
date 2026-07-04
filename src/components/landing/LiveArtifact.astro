@@ -9,12 +9,12 @@
  * artifact and the operator UI feel like the same product.
  */
 const slots = [
-  { name: 'primary',      state: 'serving', model: 'Qwen3-30B-A3B-Instruct-2507-Q4_K_M', baseToks: 142, port: 8081 },
-  { name: 'embed',        state: 'serving', model: 'nomic-embed-text-v2-moe-Q4_K_M',     baseToks: 116, port: 8082 },
-  { name: 'embed-rerank', state: 'ready',   model: 'bge-reranker-v2-m3-q4_k_m',          baseToks: 0,   port: 8086 },
-  { name: 'stt',          state: 'idle',    model: 'whisper-v3:turbo (NPU)',             baseToks: 0,   port: 8083 },
-  { name: 'tts',          state: 'idle',    model: 'kokoro-82M-v1.0',                    baseToks: 0,   port: 8084 },
-  { name: 'img',          state: 'ready',   model: 'sdxl-turbo',                         baseToks: 0,   port: 8085 },
+  { name: 'agent',   state: 'serving', model: 'Qwen3-30B-A3B-Instruct-2507-Q4_K_M', baseToks: 142, port: 8081 },
+  { name: 'embed',   state: 'serving', model: 'nomic-embed-text-v2-moe-Q4_K_M',     baseToks: 116, port: 8082 },
+  { name: 'rerank',  state: 'ready',   model: 'bge-reranker-v2-m3-q4_k_m',          baseToks: 0,   port: 8086 },
+  { name: 'stt',     state: 'idle',    model: 'whisper-v3:turbo (NPU)',             baseToks: 0,   port: 8083 },
+  { name: 'tts',     state: 'idle',    model: 'kokoro-82M-v1.0',                    baseToks: 0,   port: 8084 },
+  { name: 'img',     state: 'ready',   model: 'sdxl-turbo',                         baseToks: 0,   port: 8085 },
 ];
 ---
 
@@ -59,7 +59,7 @@ const slots = [
         <i class="d" style="width: 4%"></i>
       </div>
       <div class="mem-legend">
-        <span><i class="sw a"></i>primary 6.5G</span>
+        <span><i class="sw a"></i>agent 6.5G</span>
         <span><i class="sw b"></i>embed 2.3G</span>
         <span><i class="sw c"></i>rerank 0.4G</span>
         <span><i class="sw d"></i>kernel + ZFS ARC 3.8G</span>

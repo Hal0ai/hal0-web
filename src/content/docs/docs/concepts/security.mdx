@@ -92,6 +92,21 @@ This is a host/origin gate, not authentication — it stops a browser on another
 site from rebinding DNS to reach your loopback MCP server. Real access control
 still belongs at your reverse proxy.
 
+## Agent chat: origin allowlist + session cookie
+
+The agent-chat WebSocket routes carry a second, narrower gate on top of the
+MCP allowlist above: every WS upgrade is checked against an **origin
+allowlist** (`HAL0_ALLOWED_ORIGINS`, comma-separated; the default covers
+`http://hal0.local`, `http://localhost:5173`, and `http://127.0.0.1:8080`),
+and an **HMAC-SHA256 session cookie** (`hal0_session`, `HttpOnly`,
+`SameSite=Lax`) is minted on first `GET /agents/` and verified on every
+WebSocket upgrade after that. The signing secret lives at
+`/var/lib/hal0/agents/secret.bin` (mode `0600`), generated on first use and
+never leaves the hal0 service user. This closes off drive-by sites
+WebSocket-ing into the chat proxy from a browser that already has a session
+open elsewhere — it is not a general-purpose auth system, and caller identity
+still flows on `X-hal0-Agent` underneath it.
+
 ## Agent identity and gated actions
 
 hal0's agent and memory surfaces don't use bearer tokens for identity. Instead,
@@ -126,6 +141,7 @@ approval queue fit together.
 ## Where to go next
 
 <CardGrid>
+  <LinkCard title="Securing hal0" href="/docs/operate/auth" description="The reverse-proxy-at-edge pattern, worked example, and what hal0 provides on its own." />
   <LinkCard title="Architecture" href="/docs/concepts/architecture" description="How the open API, slots, and dispatcher fit together." />
   <LinkCard title="Agents" href="/docs/concepts/agents" description="Personas, tool gating, and the approval queue." />
   <LinkCard title="Memory" href="/docs/concepts/memory" description="The opt-in memory subsystem." />
