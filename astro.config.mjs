@@ -51,6 +51,11 @@ export default defineConfig({
 					label: 'GitHub',
 					href: 'https://github.com/hal0ai/hal0',
 				},
+				{
+					icon: 'discord',
+					label: 'Discord',
+					href: 'https://discord.gg/7M4y6dcUyq',
+				},
 			],
 			// Dark-first; the toggle still lives in the top bar.
 			defaultLocale: 'root',
