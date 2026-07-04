@@ -6,3 +6,7 @@
 # don't reliably fire for same-project subdomain rewrites.
 #
 # Add path-based redirects here as needed.
+
+# hal0 README + older links point at hal0.dev/roadmap; the roadmap
+# lives as a landing-page section, not a standalone page.
+/roadmap  /#roadmap  302
