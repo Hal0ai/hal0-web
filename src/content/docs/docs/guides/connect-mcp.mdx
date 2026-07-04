@@ -17,10 +17,16 @@ servers, mounted on the API as Streamable-HTTP sub-apps:
   server.
 
 <Aside type="caution">
-hal0 has **no built-in network auth** (ADR-0012). The MCP mounts are
-reachable to anything that can reach the API. Run hal0 on a trusted LAN
-or behind your own reverse proxy — do not expose `/mcp/*` to the
-internet.
+hal0 has **no built-in network auth by default** (ADR-0012). Without
+`--auth=basic`, the MCP mounts are reachable to anything that can reach
+the API. Run hal0 on a trusted LAN or behind your own reverse proxy —
+do not expose `/mcp/*` to the internet.
+
+When `--auth=basic` is active, the MCP mounts sit behind the same Caddy
+instance as the rest of the API — they inherit Caddy's TLS and basic_auth
+gating automatically. The host and origin allowlists below still apply
+at the MCP transport layer, but the outer auth gate is already handled.
+See [Security](/docs/concepts/security) for the two deployment postures.
 </Aside>
 
 ## Connect
