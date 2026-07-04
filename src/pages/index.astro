@@ -97,10 +97,10 @@ const providers = [
     eps: '/v1/audio/transcriptions',
   },
   {
-    prov: 'Kokoro',
-    ver: '82M',
-    hw: 'CPU · Vulkan',
-    uses: 'text-to-speech · 54 voices',
+    prov: 'Qwen3-TTS',
+    ver: 'latest',
+    hw: 'ROCm',
+    uses: 'text-to-speech · voice cloning',
     eps: '/v1/audio/speech',
   },
   {
@@ -226,7 +226,7 @@ const loadoutData: Record<string, Array<{ size: string; title: string; vram: str
     { size: '~3 GB + NPU · realtime', title: 'Hands-free, iGPU-free', vram: '4 GB UMA (+XDNA)', slots: [
       { k: 'llm', v: 'qwen3.5-4b-q4kxl', d: 'Q4_K_XL · 2.9 GB · low-latency reply (or gemma4-it-e2b on the NPU)' },
       { k: 'stt', v: 'whisper-v3:turbo', d: 'runs on the XDNA NPU — frees the iGPU for chat' },
-      { k: 'tts', v: 'kokoro-v1', d: '82M · 54 voices · 8 languages' },
+      { k: 'tts', v: 'qwen3-tts', d: 'ROCm · natural speech · voice cloning' },
       { k: 'alt', v: 'vibevoice-1.5b', d: '1.5B · expressive long-form TTS' },
     ]},
   ],
