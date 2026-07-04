@@ -380,7 +380,7 @@ const themes: RoadmapTheme[] = [
     name: 'Security posture',
     blurb: 'Auth is opt-in at install time. Off by default for trusted-LAN use.',
     shipped: [
-      { t: 'Opt-in auth at install', d: '--auth=basic brings up Caddy with basic_auth, bearer tokens for the API, automatic HTTPS (internal CA for .local, Let\\'s Encrypt for real domains), and a best-effort Avahi service file. Zero certbot.' },
+      { t: 'Opt-in auth at install', d: '--auth=basic brings up Caddy with basic_auth, bearer tokens for the API, automatic HTTPS (internal CA for .local, Let\u2019s Encrypt for real domains), and a best-effort Avahi service file. Zero certbot.' },
       { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, and whisper-v3:turbo STT (NPU, via FLM) + Qwen3-TTS (ROCm) served through the capability API.' },
       { t: 'Hands-free voice via Open WebUI Call mode', d: 'Open WebUI\'s built-in Call mode wired to hal0\'s /v1/audio/transcriptions and /v1/audio/speech endpoints — whisper-v3:turbo for listen, Qwen3-TTS for reply. No native hal0 streaming orchestrator; the loop runs inside Open WebUI.' },
     ],

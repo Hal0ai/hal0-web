@@ -12,8 +12,9 @@ hal0 exposes two voice directions through OpenAI-compatible endpoints:
 - **Speech-to-text** (`POST /v1/audio/transcriptions`) — `whisper-v3:turbo` served by
   FastFlowLM (FLM) on the XDNA NPU, co-loaded with the chat model in one FLM process
   (the "NPU trio": chat + STT + embed).
-- **Text-to-speech** (`POST /v1/audio/speech`) — Kokoro-82M ONNX container on CPU,
-  54 voices, MP3 by default (default voice: `af_heart`).
+- **Text-to-speech** (`POST /v1/audio/speech`) — two backends:
+  - **Qwen3-TTS** (ROCm, GPU): natural speech with voice cloning. Default on Strix Halo.
+  - **Kokoro-82M** (CPU, ONNX): lightweight, 54 voices, MP3 by default (default voice: `af_heart`). Runs without GPU.
 
 Both are children of the **`voice`** capability: `voice.stt` maps to the
 `stt` slot and `voice.tts` maps to the `tts` slot.
@@ -34,6 +35,15 @@ curl -X POST http://localhost:8080/api/capabilities/voice/stt \
 ```
 
 </TabItem>
+<TabItem label="Text-to-speech (GPU, ROCm — Qwen3-TTS)">
+
+```sh
+curl -X POST http://localhost:8080/api/capabilities/voice/tts \
+  -H 'Content-Type: application/json' \
+  -d '{"enabled": true, "backend": "rocm", "provider": "qwen3-tts"}'
+```
+
+</TabItem>
 <TabItem label="Text-to-speech (CPU, Kokoro)">
 
 ```sh
@@ -49,7 +59,9 @@ The response is `{ "ok": true, "selection": { ...current selection... } }`.
 
 <Aside type="note">
 STT runs on the XDNA NPU via the FLM container — not on CPU. There is no CPU
-whisper.cpp backend in hal0. Kokoro TTS runs on CPU (ONNX). Neither uses ROCm.
+whisper.cpp backend in hal0. TTS has two options: Qwen3-TTS on ROCm (GPU, voice
+cloning, default on Strix Halo) and Kokoro-82M on CPU (ONNX, lightweight, 54
+voices). Neither STT backend uses ROCm.
 </Aside>
 
 ### How the NPU STT path works
@@ -96,10 +108,10 @@ As with transcription, `model` is required — a missing or empty `model`
 returns **400** (`request.missing_model`).
 
 <Aside type="note">
-Kokoro weights are operator-staged on the configured model store. The Kokoro
-toolbox is a containerized server managed by hal0 as a podman slot — no manual
-container management needed. It implements `POST /v1/audio/speech`,
-`GET /v1/models`, and `GET /health`.
+TTS weights are operator-staged on the configured model store. Both Qwen3-TTS
+(ROCm) and Kokoro (CPU) run as containerized servers managed by hal0 as podman
+slots — no manual container management needed. Each implements `POST
+/v1/audio/speech`, `GET /v1/models`, and `GET /health`.
 </Aside>
 
 ## See also

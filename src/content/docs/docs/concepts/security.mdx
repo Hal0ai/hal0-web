@@ -15,10 +15,11 @@ open to anything that can reach that port — the right posture for a
 trusted home LAN.
 
 <Aside type="caution">
-Do not expose hal0-api directly to the public internet. It has no auth gate —
-anyone who can reach the port can load models, run inference, drive agents, and
-read activity. Keep it on a trusted network, and put a reverse proxy in front of
-it for anything beyond a single trusted LAN.
+**Without `--auth=basic`**, do not expose hal0-api directly to the public
+internet — anyone who can reach the port can load models, run inference, drive
+agents, and read activity. Keep it on a trusted network, or install with
+`hal0 install --auth=basic` to enable Caddy with basic_auth, bearer tokens, and
+automatic HTTPS.
 </Aside>
 
 ## Why auth is opt-in
