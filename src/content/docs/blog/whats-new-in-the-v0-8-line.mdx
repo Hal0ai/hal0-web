@@ -1,0 +1,176 @@
+---
+title: "What's new in the v0.8 line: Stacks, canonical roles, and voice end-to-end"
+date: 2026-07-04T12:00:00
+authors: hal0
+excerpt: >-
+  Config becomes a declarative single source of truth with Stacks, agent/utility
+  replace chat/primary as the canonical roles, voice ships end-to-end behind one
+  engine switch, and a 72-finding reliability sweep lands resumable pulls, disk
+  preflight, and live dashboard telemetry. A look at the v0.8 beta line through
+  v0.8.4b1.
+tags:
+  - release
+  - stacks
+  - voice
+  - beta
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside type="caution" title="Pre-release">
+hal0 is pre-1.0. **v0.8.4b1** is a *beta* — the current development line, not a
+GA release. Expect breaking changes between cuts. See the
+[releases page](/releases) for the stable-vs-next split, and the
+[full changelog](/changelog#v0.8.4b1) for the complete list.
+</Aside>
+
+The v0.8 line runs from `v0.8.0-beta.1` (2026-06-21) through `v0.8.4b1`
+(2026-07-04) — eleven cuts. The throughline is *config as a single source of
+truth*: Stacks, canonical roles, portable profiles, and a resolved-argv
+endpoint all collapse "what is this slot actually running" down to one
+answer instead of several that could disagree. Everything below traces to the
+[changelog](/changelog#v0.8.0-beta.1) — no roadmap promises, just what shipped.
+
+## Stacks: declarative config as the SSOT
+
+`v0.8.0-beta.1` introduces **Stacks** — a `StackConfig` schema plus a
+`StackApplyEngine` that `plan()`s a Stack into a ChangeSet, `apply_config()`s
+it as an atomic commit with rollback, and `converge()`s the live slot set
+(primary-slot load/swap/skip plus capability-child routing through the
+orchestrator). Stacks carry content-hash drift detection and an active-stack
+pointer, export/import through a checksummed `.hal0stack.json` envelope, and a
+snapshot path that captures your live config back into a Stack. Three seed
+stacks — saber, forge, pi — ship derived from the roster bench. Later fixes in
+`v0.8.2b2` and `v0.8.3b1` round this out: absent stack models can now be
+pulled (curated HF coordinates were registered for the seed-stack GGUF
+builds), and `apply` flags unresolved profile/model refs and reports
+**degraded** rather than a false "clean" when a slot fails to load.
+
+Alongside Stacks, `v0.8.0-beta.1` also single-sources **slot launch argv**: a
+resolver dedups the flag soup into a last-wins canonical command, and
+per-flag provenance is exposed at `GET /api/slots/{name}/resolved` — the
+[slot](/docs/concepts/slots) edit drawer renders the resolved command with
+source badges (base / profile / extra_args) so you can see exactly which
+layer set which flag.
+
+## Canonical roles: `agent` and `utility` replace `chat` and `primary`
+
+`v0.8.0-beta.3` establishes two canonical LLM roles: **`agent`** (the capable
+default and dispatch fallback anchor, replacing `chat`) and **`utility`** (a
+cheap helper now seeded on every install, so extraction work no longer
+silently falls back to a heavy model). Any enabled `type=llm` slot is
+addressable as `hal0/<slot>`, and the advertised canonical virtuals are
+`hal0/agent`, `hal0/utility`, `hal0/npu`.
+
+<Aside type="danger" title="Breaking">
+**`hal0/chat` is no longer advertised.** Anything pinned to it — Hermes,
+Open WebUI, custom clients — must repoint to **`hal0/agent`**; Hermes'
+`model.default` is updated automatically. `primary` is also gone as a slot
+alias, and `memory.graph.route`/`memory.graph.upstream` are replaced by
+`memory.graph.extraction_slot` (old keys are dropped silently, not
+hard-failed). See the [changelog](/changelog#v0.8.0-beta.3) for the full list.
+</Aside>
+
+This work also finishes removing Cognee: Hindsight is now the only memory
+engine, with a PgVector boot-degrade fallback.
+
+## Voice, end-to-end
+
+`v0.8.0-beta.1` brings up the [voice stack](/docs/guides/voice-stt-tts) for
+real — `voice_wire` fixed, Open WebUI Call mode wired, and the NPU-trio facade
+auto-provisioning STT. `v0.8.2b3` completes the picture on the synthesis side:
+a new `Qwen3TTSProvider` serves Qwen3-TTS from the canonical `tts` slot, and
+the `voice.tts` capability is a single switch that swaps the engine between
+Kokoro-82M (CPU) and Qwen3-TTS (GPU) — no separate slot to configure, no
+reconfiguration step. That release also ships a GPU benchmark harness
+(`hal0-benchctl`) and a standalone-to-slot migration runbook for anyone
+running an older Qwen3-TTS setup outside of hal0.
+
+## Portable profiles
+
+`v0.8.2b1` gives [profiles](/docs/reference/providers-profiles-devices) the
+same sharing model Stacks already had: export to a self-contained, checksummed
+`.hal0profile.json` envelope and import it on another host. New routes
+(`GET /api/profiles/{name}`, `POST /api/profiles/{name}/export`,
+`POST /api/profiles/import`) and matching MCP tools (`profile_export` is
+autonomous; `profile_import`/`profile_delete` are gated) mirror the `stack_*`
+set. The dashboard adds an Export button to every profile card and an
+Import dialog with a dry-run preview before commit.
+
+## v0.8.3b1: the 72-finding reliability sweep
+
+`v0.8.3b1` is a large reliability and completeness release — a 72-finding
+platform review remediated in eight verified waves, each regression-tested
+and gated by CI + Playwright. The user-visible defaults change too: the
+dashboard now shows **Power & Thermal** (live GPU clock/temp/power) and
+**Per-Slot Throughput** cards by default, disabling a capability actually
+stops it serving, and the `bge` reranker is finally classified and routed as
+a reranker instead of `chat`.
+
+Underneath:
+
+- **Interrupted pulls resume** via HTTP `Range`/`If-Range` instead of
+  restarting from zero, with the on-disk prefix re-hashed so the final
+  SHA-256 stays exact.
+- **Disk-space preflight** fails fast with a structured
+  `model.insufficient_disk` error before a multi-GB pull can fill the disk.
+- **Host-memory-pressure LRU eviction** unloads idle slots under pressure.
+- **Cross-process safety** — advisory file locks around registry and
+  capability writes, plus parent-directory `fsync` after atomic writes.
+- Every backend-supported field the API already accepted (`capabilities`,
+  `backends`, `rope_freq_base`, `mmproj`, `hf_repo`/`hf_filename`, per-slot
+  `vision`, NPU `asr`/`embed`) is now exposed in the edit drawers.
+
+## v0.8.4b1: models, logs, and memory
+
+The current cut, `v0.8.4b1`, is a safe, additive follow-up. A registry model
+can now declare a **preferred runtime profile** (`defaults.profile`) that a
+slot adopts on create and on every model swap, gated on device/type
+compatibility. The Models view gets a dedicated **Image/ComfyUI** toggle, and
+image-gen models are correctly tagged and grouped by their on-disk category.
+The slot edit drawer's context field finally seeds from the *persisted*
+`context_size` instead of the live runtime metric or a hardcoded 16k, so a
+cold reload or model swap no longer clobbers your configured context window.
+Logs and events are unified into one surface with real source/slot
+attribution, and [memory](/docs/concepts/memory) gains a durable audit trail
+for every destructive op — bank, memory, config, document, directive,
+operation, and mental-model deletes are now attributable after the fact —
+plus a response-shape guard so upstream drift surfaces as a loud error
+instead of a silently blank console panel.
+
+## Hermes durable memory, on by default
+
+`v0.8.1-beta.1` makes cross-session recall a zero-config default: a fresh
+`hal0 agent bootstrap hermes` now provisions a working `hal0-memory`
+provider automatically, backed by two banks — `private:hermes` (default) and
+`shared` (cross-agent) — through hal0's Hindsight engine. The agent gets
+`hal0_memory_{search,recall,add}` tools and auto-injects recalled context each
+turn with no manual config.
+
+<Aside type="danger" title="Breaking">
+The Hermes memory namespace is renamed **`private:hermes-agent` →
+`private:hermes`**. Existing `private:hermes-agent` data is not
+auto-migrated; a reprovisioned agent starts fresh against `private:hermes` +
+`shared`. See the [changelog](/changelog#v0.8.1-beta.1).
+</Aside>
+
+## Next: v0.9
+
+The v0.8 beta line has been an unusually long run of consolidation — Stacks,
+canonical roles, voice, portable profiles, and a 72-finding reliability
+sweep, capped by `v0.8.2b4`'s docs re-baseline against that current reality.
+**v0.9 is coming soon**, and its job is to take everything landed across
+these betas and stabilize it into the next line. Watch the
+[changelog](/changelog) and [releases page](/releases) for the cut when it
+ships.
+
+## Try it
+
+```sh
+curl -fsSL https://hal0.dev/install.sh | bash
+```
+
+Already running an older line? `hal0 update --channel stable` (or
+`nightly`), and `hal0 update --rollback` reverts atomically. Full notes on
+the [releases page](/releases) and the
+[update and rollback guide](/docs/guides/update-and-rollback).
