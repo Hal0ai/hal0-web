@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hal0 — First-Run Guide</title>
+<style>
+  :root {
+    --bg:        #0f1115;
+    --panel:     #171a21;
+    --panel-2:   #1d212b;
+    --line:      #2a2f3a;
+    --line-soft: #232833;
+    --ink:       #e7ebf3;
+    --ink-dim:   #9aa4b6;
+    --ink-faint: #6b7488;
+    --accent:    #6ea8fe;   /* models  */
+    --violet:    #b48ef2;   /* profiles */
+    --teal:      #3fd0c9;   /* slots   */
+    --amber:     #f5b756;   /* capabilities */
+    --green:     #56d364;
+    --red:       #f2777a;
+    --code-bg:   #10131a;
+    --radius:    14px;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    max-width: 1180px; margin: 0 auto; gap: 40px;
+    padding: 0 28px;
+  }
+
+  /* ---------- Sidebar ---------- */
+  aside {
+    position: sticky; top: 0; align-self: start;
+    height: 100vh; overflow-y: auto;
+    padding: 34px 0; font-size: 14px;
+  }
+  aside .brand {
+    font-weight: 700; font-size: 20px; letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 9px; margin-bottom: 4px;
+  }
+  aside .brand .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #8fc0ff, var(--accent));
+    box-shadow: 0 0 14px var(--accent);
+  }
+  aside .tag { color: var(--ink-faint); font-size: 12px; margin: 0 0 22px 20px; }
+  aside nav a {
+    display: block; color: var(--ink-dim); padding: 6px 14px;
+    border-left: 2px solid transparent; margin-left: 1px;
+  }
+  aside nav a:hover { color: var(--ink); text-decoration: none; }
+  aside nav a.stage { font-weight: 600; color: var(--ink); }
+  aside nav a .n {
+    display: inline-block; width: 20px; color: var(--ink-faint);
+    font-family: var(--mono); font-size: 12px;
+  }
+
+  /* ---------- Main ---------- */
+  main { padding: 46px 0 120px; min-width: 0; }
+
+  header.hero { margin-bottom: 46px; }
+  header.hero h1 {
+    font-size: 42px; line-height: 1.1; letter-spacing: -1.2px;
+    margin: 0 0 12px; font-weight: 800;
+  }
+  header.hero h1 .grad {
+    background: linear-gradient(90deg, var(--accent), var(--teal));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header.hero p.lede { font-size: 18px; color: var(--ink-dim); max-width: 60ch; margin: 0; }
+  .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  .pill {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-dim);
+    background: var(--panel); border: 1px solid var(--line);
+    padding: 5px 11px; border-radius: 999px;
+  }
+  .pill b { color: var(--teal); font-weight: 600; }
+
+  section { margin: 0 0 60px; scroll-margin-top: 20px; }
+  h2 {
+    font-size: 15px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--ink-faint); font-weight: 700; margin: 0 0 6px;
+  }
+  h3 { font-size: 27px; letter-spacing: -0.5px; margin: 0 0 18px; font-weight: 700; }
+  p { color: var(--ink-dim); }
+  p strong, li strong { color: var(--ink); font-weight: 600; }
+
+  .stage-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 16px; }
+  .stage-num {
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    color: var(--bg); background: var(--teal);
+    width: 30px; height: 30px; border-radius: 8px;
+    display: grid; place-items: center; flex: none;
+    align-self: center;
+  }
+  .stage-head h3 { margin: 0; }
+
+  /* ---------- Cards / panels ---------- */
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px 24px; margin: 18px 0;
+  }
+  .note {
+    border-left: 3px solid var(--accent);
+    background: linear-gradient(90deg, rgba(110,168,254,.09), transparent 60%);
+    padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 18px 0;
+    color: var(--ink-dim); font-size: 15px;
+  }
+  .note.warn { border-color: var(--amber); background: linear-gradient(90deg, rgba(245,183,86,.1), transparent 60%); }
+  .note.ok   { border-color: var(--green); background: linear-gradient(90deg, rgba(86,211,100,.1), transparent 60%); }
+  .note b { color: var(--ink); }
+
+  .done { display: flex; align-items: center; gap: 9px; color: var(--green); font-size: 15px; margin-top: 14px; }
+  .done svg { flex: none; }
+
+  /* ---------- Code ---------- */
+  .term {
+    background: var(--code-bg); border: 1px solid var(--line);
+    border-radius: 12px; margin: 16px 0; overflow: hidden;
+  }
+  .term .bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line-soft);
+    background: #0c0e13;
+  }
+  .term .bar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .term .bar .r { background: #ff5f57; } .term .bar .y { background: #febc2e; } .term .bar .g { background: #28c840; }
+  .term .bar span { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+  .term pre {
+    margin: 0; padding: 16px 18px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.7; color: var(--ink);
+  }
+  .term pre .p { color: var(--teal); }      /* prompt */
+  .term pre .c { color: var(--ink-faint); } /* comment */
+  .term pre .f { color: var(--violet); }    /* flag */
+  .term pre .s { color: var(--amber); }     /* string/value */
+  code.inline {
+    font-family: var(--mono); font-size: 0.88em;
+    background: var(--panel-2); border: 1px solid var(--line-soft);
+    padding: 1.5px 6px; border-radius: 6px; color: var(--teal);
+  }
+
+  /* ---------- Tables ---------- */
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line-soft); }
+  th { color: var(--ink-faint); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
+  td { color: var(--ink-dim); vertical-align: top; }
+  td code, th code { font-family: var(--mono); font-size: 13px; color: var(--teal); }
+  tbody tr:hover { background: var(--panel); }
+
+  /* ---------- The Shape diagram ---------- */
+  .stack { display: flex; flex-direction: column; gap: 0; margin: 8px 0 4px; }
+  .layer {
+    position: relative; border: 1px solid var(--line);
+    background: var(--panel); border-radius: 12px; padding: 16px 20px;
+    display: grid; grid-template-columns: 46px 150px 1fr; align-items: center; gap: 18px;
+  }
+  .layer + .connector { height: 26px; display: grid; place-items: center; }
+  .layer + .connector svg { color: var(--ink-faint); }
+  .layer .lnum {
+    font-family: var(--mono); font-weight: 700; font-size: 15px;
+    width: 46px; height: 46px; border-radius: 11px; display: grid; place-items: center;
+    color: var(--bg);
+  }
+  .layer .ltitle { font-weight: 700; font-size: 17px; color: var(--ink); }
+  .layer .lsub { font-size: 13px; color: var(--ink-faint); font-family: var(--mono); }
+  .layer .lchips { display: flex; gap: 7px; flex-wrap: wrap; }
+  .layer .lchips b {
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    padding: 4px 10px; border-radius: 7px; color: var(--ink);
+    background: var(--panel-2); border: 1px solid var(--line);
+  }
+  .layer.models       { border-color: rgba(110,168,254,.4); }
+  .layer.models .lnum  { background: var(--accent); }
+  .layer.profiles     { border-color: rgba(180,142,242,.4); }
+  .layer.profiles .lnum{ background: var(--violet); }
+  .layer.slots        { border-color: rgba(63,208,201,.4); }
+  .layer.slots .lnum   { background: var(--teal); }
+  .layer.caps         { border-color: rgba(245,183,86,.45); }
+  .layer.caps .lnum    { background: var(--amber); }
+  .layer.api {
+    grid-template-columns: 1fr; text-align: center; justify-items: center;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border-color: var(--line);
+  }
+  .layer.api .ltitle { font-size: 16px; }
+  .layer.api .lsub { margin-top: 2px; }
+
+  .readnote { font-size: 14px; color: var(--ink-faint); text-align: center; margin-top: 14px; font-style: italic; }
+  .readnote b { color: var(--teal); font-style: normal; }
+
+  /* ---------- Slot state machine ---------- */
+  .fsm {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+    gap: 6px; margin: 8px 0;
+  }
+  .state {
+    font-family: var(--mono); font-size: 13.5px; font-weight: 600;
+    padding: 12px 18px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--ink); position: relative;
+  }
+  .state.off  { color: var(--ink-faint); }
+  .state.load { color: var(--amber); border-color: rgba(245,183,86,.4); }
+  .state.serve{ color: var(--green); border-color: rgba(86,211,100,.45); box-shadow: 0 0 22px rgba(86,211,100,.12); }
+  .arrow { display: flex; flex-direction: column; align-items: center; color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
+  .arrow .cmd { color: var(--teal); }
+  .arrow svg { display: block; }
+
+  /* ---------- Flow ribbon ---------- */
+  .flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 10px 0; }
+  .flow .step {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 12px; text-align: center; position: relative;
+  }
+  .flow .step .k { font-family: var(--mono); font-size: 11px; color: var(--teal); }
+  .flow .step .cmd { font-family: var(--mono); font-size: 12px; color: var(--ink); margin: 6px 0 4px; word-break: break-word; }
+  .flow .step .d { font-size: 12px; color: var(--ink-faint); }
+  .flow .step:not(:last-child)::after {
+    content: "→"; position: absolute; right: -9px; top: 50%; transform: translateY(-50%);
+    color: var(--ink-faint); font-size: 14px; z-index: 2;
+  }
+
+  ul.clean { padding-left: 20px; }
+  ul.clean li { color: var(--ink-dim); margin: 6px 0; }
+
+  footer {
+    border-top: 1px solid var(--line-soft); margin-top: 40px; padding-top: 22px;
+    color: var(--ink-faint); font-size: 13px;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; padding: 24px 0 0; }
+    aside nav { display: none; }
+    .layer { grid-template-columns: 40px 1fr; }
+    .layer .lchips { grid-column: 1 / -1; }
+    .flow { grid-template-columns: 1fr 1fr; }
+    .flow .step:not(:last-child)::after { display: none; }
+    header.hero h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="brand"><span class="dot"></span> hal0</div>
+    <div class="tag">first-run guide · v0.9.2</div>
+    <nav>
+      <a href="#shape" class="stage"><span class="n">◆</span>The shape</a>
+      <a href="#s0" class="stage"><span class="n">0</span>Install &amp; setup</a>
+      <a href="#s1" class="stage"><span class="n">1</span>Add models</a>
+      <a href="#s2" class="stage"><span class="n">2</span>Profiles</a>
+      <a href="#s3" class="stage"><span class="n">3</span>Create a slot</a>
+      <a href="#s4" class="stage"><span class="n">4</span>Bring online</a>
+      <a href="#s5" class="stage"><span class="n">5</span>Capabilities</a>
+      <a href="#glance" class="stage"><span class="n">✓</span>At a glance</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <header class="hero">
+      <h1>From a fresh box to a<br><span class="grad">model answering requests</span></h1>
+      <p class="lede">hal0 is a home AI inference platform. This guide walks the five stages in order — install, add models, define how they run, spin up a worker, and put it online.</p>
+      <div class="pillrow">
+        <span class="pill">platform <b>hal0 · Strix Halo native</b></span>
+        <span class="pill">api <b>:8080</b></span>
+        <span class="pill">every command is real &amp; verified</span>
+      </div>
+    </header>
+
+    <!-- THE SHAPE -->
+    <section id="shape">
+      <h2>Mental model</h2>
+      <h3>The shape of hal0</h3>
+      <p>hal0 is four layers stacked bottom-up. Each one feeds the layer above it. Hold this picture in your head and every command below makes sense.</p>
+
+      <div class="card">
+        <div class="stack">
+
+          <!-- API top -->
+          <div class="layer api">
+            <div>
+              <div class="ltitle">hal0 API &nbsp;·&nbsp; the front door</div>
+              <div class="lsub">:8080/v1 — apps, Hermes &amp; tools talk here</div>
+            </div>
+          </div>
+          <div class="connector"><svg width="16" height="26" viewBox="0 0 16 26"><path d="M8 26 V4 M8 4 l-4 5 M8 4 l4 5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg></div>
+
+          <!-- Capabilities -->
+          <div class="layer caps">
+            <div class="lnum">4</div>
+            <div>
+              <div class="ltitle">Capabilities</div>
+              <div class="lsub">roles → slots</div>
+            </div>
+            <div class="lchips">
+              <b>agent</b><b>utility</b><b>voice.tts</b><b>img</b><b>embed</b><b>rerank</b>
+            </div>
+          </div>
+          <div class="connector"><svg width="16" height="26" viewBox="0 0 16 26"><path d="M8 26 V4 M8 4 l-4 5 M8 4 l4 5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg></div>
+
+          <!-- Slots -->
+          <div class="layer slots">
+            <div class="lnum">3</div>
+            <div>
+              <div class="ltitle">Slots</div>
+              <div class="lsub">running workers · ports</div>
+            </div>
+            <div class="lchips">
+              <b>agent&nbsp;:8082</b><b>utility&nbsp;:8081</b><b>tts&nbsp;:8084</b><b>embed&nbsp;:8089</b>
+            </div>
+          </div>
+          <div class="connector"><svg width="16" height="26" viewBox="0 0 16 26"><path d="M8 26 V4 M8 4 l-4 5 M8 4 l4 5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg></div>
+
+          <!-- Profiles -->
+          <div class="layer profiles">
+            <div class="lnum">2</div>
+            <div>
+              <div class="ltitle">Profiles</div>
+              <div class="lsub">how to run it</div>
+            </div>
+            <div class="lchips">
+              <b>saber-fpx</b><b>vkfpx-moe</b><b>fastcontext</b>
+            </div>
+          </div>
+          <div class="connector"><svg width="16" height="26" viewBox="0 0 16 26"><path d="M8 26 V4 M8 4 l-4 5 M8 4 l4 5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg></div>
+
+          <!-- Models -->
+          <div class="layer models">
+            <div class="lnum">1</div>
+            <div>
+              <div class="ltitle">Models</div>
+              <div class="lsub">the weights on disk</div>
+            </div>
+            <div class="lchips">
+              <b>qwen3-4b</b><b>gemma4</b><b>whisper-v3</b>
+            </div>
+          </div>
+
+        </div>
+        <p class="readnote">Read bottom-up: a <b>Model</b> is run by a <b>Profile</b> inside a <b>Slot</b>, and a <b>Capability</b> points a role at that slot.</p>
+      </div>
+
+      <table>
+        <thead><tr><th>Layer</th><th>What it is</th><th>You manage it with</th></tr></thead>
+        <tbody>
+          <tr><td><strong style="color:var(--accent)">Model</strong></td><td>Downloaded weights in the local registry</td><td><code>hal0 model …</code></td></tr>
+          <tr><td><strong style="color:var(--violet)">Profile</strong></td><td>Launch preset: container image + engine flags + backend</td><td><code>/etc/hal0/profiles.toml</code></td></tr>
+          <tr><td><strong style="color:var(--teal)">Slot</strong></td><td>A named, running inference worker on a port</td><td><code>hal0 slot …</code></td></tr>
+          <tr><td><strong style="color:var(--amber)">Capability</strong></td><td>A role (<code>agent</code>, <code>tts</code>…) wired to a slot</td><td><code>hal0 capabilities</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- STAGE 0 -->
+    <section id="s0">
+      <div class="stage-head"><div class="stage-num">0</div><h3>Install &amp; first-run setup</h3></div>
+      <p>The setup wizard detects your hardware, tunes sensible defaults, seeds starter slots, and (optionally) pulls starter models.</p>
+
+      <div class="flow" style="grid-template-columns:repeat(4,1fr)">
+        <div class="step"><div class="k">install</div><div class="cmd">hal0 --version</div><div class="d">one time</div></div>
+        <div class="step"><div class="k">preflight</div><div class="cmd">hal0 doctor</div><div class="d">GPU · ports · disk</div></div>
+        <div class="step"><div class="k">wizard</div><div class="cmd">hal0 setup</div><div class="d">tune defaults</div></div>
+        <div class="step"><div class="k">verify</div><div class="cmd">hal0 status</div><div class="d">API on :8080</div></div>
+      </div>
+
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
+<pre><span class="p">$</span> hal0 --version              <span class="c"># → hal0 0.9.2</span>
+<span class="p">$</span> hal0 doctor                 <span class="c"># re-run installer preflight checks</span>
+<span class="p">$</span> hal0 setup                  <span class="c"># interactive first-run wizard</span>
+
+<span class="c"># prefer hands-off? recommended defaults, no prompts:</span>
+<span class="p">$</span> hal0 setup <span class="f">--auto</span>              <span class="c"># full auto, downloads starter models</span>
+<span class="p">$</span> hal0 setup <span class="f">--auto --no-pull</span>    <span class="c"># seed slots only, pull models later</span>
+
+<span class="p">$</span> hal0 status                 <span class="c"># confirm the daemon is alive</span></pre>
+      </div>
+
+      <div class="note"><b>💡 Fast path:</b> <code class="inline">hal0 setup --auto</code> gives you a working system in one step. The stages below are what setup does under the hood — do them manually when you want to add your <em>own</em> models and slots.</div>
+    </section>
+
+    <!-- STAGE 1 -->
+    <section id="s1">
+      <div class="stage-head"><div class="stage-num">1</div><h3>Add your first models</h3></div>
+      <p>Pull a curated model by its alias. Downloads run as a background job on the daemon with a live progress bar.</p>
+
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
+<pre><span class="p">$</span> hal0 model pull <span class="s">qwen3-4b</span>        <span class="c"># download from Hugging Face</span>
+<span class="p">$</span> hal0 model list                 <span class="c"># what you have + what you can pull</span>
+<span class="p">$</span> hal0 model show <span class="s">qwen3-4b</span>        <span class="c"># inspect metadata</span>
+
+<span class="c"># already have weights on disk? register instead of downloading:</span>
+<span class="p">$</span> hal0 model register <span class="s">/mnt/ai-models/MyModel/model.gguf</span></pre>
+      </div>
+
+      <div class="done">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 9.2l2.5 2.5L13 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span><b style="color:var(--green)">Done when</b> — <code class="inline">hal0 model list</code> shows your model in the local registry.</span>
+      </div>
+    </section>
+
+    <!-- STAGE 2 -->
+    <section id="s2">
+      <div class="stage-head"><div class="stage-num">2</div><h3>Create &amp; assign profiles</h3></div>
+      <p>A <strong>profile</strong> is the “how to run it” recipe — container image, engine flags, backend (<code class="inline">vulkan</code>/<code class="inline">rocm</code>/<code class="inline">cpu</code>), and whether MTP speculative decoding is on. Profiles are shared: any slot can name the same one.</p>
+
+      <!-- profile → slot visual -->
+      <div class="card" style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:20px;">
+        <div style="border:1px solid rgba(180,142,242,.4); border-radius:12px; padding:16px 18px; background:var(--panel-2);">
+          <div style="font-family:var(--mono); font-size:13px; color:var(--violet); font-weight:700; margin-bottom:10px;">profile · saber-fpx</div>
+          <div style="font-family:var(--mono); font-size:12.5px; line-height:1.9; color:var(--ink-dim);">
+            image&nbsp;&nbsp;= <span style="color:var(--ink)">…:rocmfpx</span><br>
+            backend = <span style="color:var(--teal)">vulkan</span><br>
+            flags&nbsp;&nbsp;= <span style="color:var(--ink)">-fa on -ngl 999 …</span><br>
+            mtp&nbsp;&nbsp;&nbsp;&nbsp;= <span style="color:var(--green)">true</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; color:var(--ink-faint); font-family:var(--mono); font-size:11px;">
+          <span>named by</span>
+          <svg width="52" height="16" viewBox="0 0 52 16"><path d="M0 8 H46 M46 8 l-6 -4 M46 8 l-6 4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+        </div>
+        <div style="border:1px solid rgba(63,208,201,.4); border-radius:12px; padding:16px 18px; background:var(--panel-2);">
+          <div style="font-family:var(--mono); font-size:13px; color:var(--teal); font-weight:700; margin-bottom:10px;">slot · utility</div>
+          <div style="font-family:var(--mono); font-size:12.5px; line-height:1.9; color:var(--ink-dim);">
+            "profile"&nbsp;: <span style="color:var(--violet)">"vkfpx-moe"</span><br>
+            "model"&nbsp;&nbsp;&nbsp;: <span style="color:var(--ink)">"qwen-…-35b"</span><br>
+            "port"&nbsp;&nbsp;&nbsp;&nbsp;: <span style="color:var(--amber)">8081</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
+<pre><span class="c"># 1) list existing profiles — a seed one often already fits</span>
+<span class="p">$</span> curl -s <span class="s">http://127.0.0.1:8080/api/profiles</span> | jq <span class="s">'.[].name'</span>
+
+<span class="c"># 2) create a custom profile by editing config, then reload</span>
+<span class="p">$</span> hal0 config edit            <span class="c"># add a [profile.my-profile] block</span>
+<span class="p">$</span> hal0 config validate        <span class="c"># check before applying</span>
+<span class="p">$</span> hal0 config reload          <span class="c"># daemon re-reads the TOMLs</span></pre>
+      </div>
+
+      <div class="note">Copy an existing block like <code class="inline">[profile.saber-fpx]</code> and tweak <code class="inline">flags</code>/<code class="inline">backend</code> rather than writing one from scratch. A slot references a profile by name via its <code class="inline">"profile"</code> field.</div>
+
+      <div class="done">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 9.2l2.5 2.5L13 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span><b style="color:var(--green)">Done when</b> — your profile appears in <code class="inline">/api/profiles</code> and <code class="inline">hal0 config validate</code> passes.</span>
+      </div>
+    </section>
+
+    <!-- STAGE 3 -->
+    <section id="s3">
+      <div class="stage-head"><div class="stage-num">3</div><h3>Create your first slot</h3></div>
+      <p>A <strong>slot</strong> is a named worker bound to a port, a type, a backend, and a model. Creating it writes config; it stays <code class="inline">offline</code> until you load it.</p>
+
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
+<pre><span class="p">$</span> hal0 slot create <span class="s">primary</span> \
+    <span class="f">--type</span> <span class="s">llm</span> \
+    <span class="f">--model</span> <span class="s">qwen3-4b</span> \
+    <span class="f">--hardware</span> <span class="s">vulkan</span> \
+    <span class="f">--ctx-size</span> <span class="s">8192</span>
+
+<span class="c"># other slot types work the same way</span>
+<span class="p">$</span> hal0 slot create <span class="s">embed</span> <span class="f">--type</span> <span class="s">embedding</span> <span class="f">-m</span> <span class="s">qwen3-embedding-0-6b-q8-0</span>
+<span class="p">$</span> hal0 slot create <span class="s">stt</span>   <span class="f">--type</span> <span class="s">transcription</span> <span class="f">-m</span> <span class="s">whisper-v3:turbo</span></pre>
+      </div>
+
+      <table>
+        <thead><tr><th>Flag</th><th>Meaning</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>--type</code></td><td><code>llm</code> · <code>embedding</code> · <code>reranking</code> · <code>transcription</code> · <code>tts</code> · <code>image</code></td><td><code>llm</code></td></tr>
+          <tr><td><code>--model</code> / <code>-m</code></td><td>Model ref to assign <strong>(required)</strong></td><td>—</td></tr>
+          <tr><td><code>--hardware</code></td><td><code>vulkan</code> · <code>rocm</code> · <code>cpu</code></td><td>auto-detected</td></tr>
+          <tr><td><code>--port</code> / <code>-p</code></td><td>TCP port</td><td>auto, 8081–8099</td></tr>
+          <tr><td><code>--ctx-size</code></td><td>Context window</td><td>4096</td></tr>
+        </tbody>
+      </table>
+
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash — re-point a slot later</span></div>
+<pre><span class="p">$</span> hal0 model assign <span class="s">qwen3-4b</span> <span class="f">--slot</span> <span class="s">primary</span>   <span class="c"># set default, no reload</span>
+<span class="p">$</span> hal0 slot edit <span class="s">primary</span> <span class="f">--ctx-size</span> <span class="s">16384</span>       <span class="c"># tweak config fields</span></pre>
+      </div>
+
+      <div class="done">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 9.2l2.5 2.5L13 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span><b style="color:var(--green)">Done when</b> — <code class="inline">hal0 slot list</code> shows your slot (reads <code class="inline">offline</code> until loaded).</span>
+      </div>
+    </section>
+
+    <!-- STAGE 4 -->
+    <section id="s4">
+      <div class="stage-head"><div class="stage-num">4</div><h3>Bring slots online</h3></div>
+      <p>Loading starts the engine and occupies the port. Here’s the slot lifecycle:</p>
+
+      <div class="card">
+        <div class="fsm">
+          <div class="state off">offline</div>
+          <div class="arrow">
+            <span class="cmd">slot load</span>
+            <svg width="46" height="14" viewBox="0 0 46 14"><path d="M0 7 H40 M40 7 l-6 -4 M40 7 l-6 4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+          </div>
+          <div class="state load">loading</div>
+          <div class="arrow">
+            <svg width="46" height="14" viewBox="0 0 46 14"><path d="M0 7 H40 M40 7 l-6 -4 M40 7 l-6 4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+            <span>ready</span>
+          </div>
+          <div class="state serve">serving ✓</div>
+          <div class="arrow">
+            <span class="cmd">slot unload</span>
+            <svg width="46" height="14" viewBox="0 0 46 14"><path d="M46 7 H6 M6 7 l6 -4 M6 7 l6 4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+          </div>
+          <div class="state off">offline</div>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
+<pre><span class="p">$</span> hal0 slot load <span class="s">primary</span>            <span class="c"># start the engine</span>
+<span class="p">$</span> hal0 slot list                   <span class="c"># state: offline → serving</span>
+<span class="p">$</span> hal0 slot status <span class="s">primary</span>          <span class="c"># includes config-drift warnings</span>
+<span class="p">$</span> hal0 slot logs <span class="f">-f</span> <span class="s">primary</span>         <span class="c"># follow startup logs live</span>
+
+<span class="c"># everyday controls</span>
+<span class="p">$</span> hal0 slot swap <span class="s">primary</span> <span class="f">-m</span> <span class="s">qwen3-8b</span>  <span class="c"># change model, survives restart</span>
+<span class="p">$</span> hal0 slot restart <span class="s">primary</span>         <span class="c"># unload then load</span>
+<span class="p">$</span> hal0 slot unload <span class="s">primary</span>          <span class="c"># free the GPU / port</span></pre>
+      </div>
+
+      <div class="note warn"><b>⚠️ Single-GPU boxes (Strix Halo):</b> the iGPU is time-shared across slots — loading several heavy slots at once contends for memory bandwidth. Load what you need; unload what you don’t.</div>
+
+      <div class="done">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 9.2l2.5 2.5L13 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span><b style="color:var(--green)">Done when</b> — <code class="inline">hal0 slot list</code> shows <code class="inline">serving</code> and logs report the model loaded.</span>
+      </div>
+    </section>
+
+    <!-- STAGE 5 -->
+    <section id="s5">
+      <div class="stage-head"><div class="stage-num">5</div><h3>Wire a capability <span style="font-size:16px;color:var(--ink-faint);font-weight:500">— optional but recommended</span></h3></div>
+      <p>Slots are plumbing; <strong>capabilities</strong> are the roles apps actually ask for. Mapping <code class="inline">agent → your slot</code> means requests to the <code class="inline">hal0/agent</code> role route there — no app needs to know the port.</p>
+
+      <div class="card" style="display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(245,183,86,.12);border:1px solid rgba(245,183,86,.4);color:var(--amber);">role · agent</span>
+          <svg width="40" height="14" viewBox="0 0 40 14"><path d="M0 7 H34 M34 7 l-6 -4 M34 7 l-6 4" stroke="var(--ink-faint)" stroke-width="1.4" fill="none"/></svg>
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(63,208,201,.12);border:1px solid rgba(63,208,201,.4);color:var(--teal);">slot · primary</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(245,183,86,.12);border:1px solid rgba(245,183,86,.4);color:var(--amber);">role · voice.tts</span>
+          <svg width="40" height="14" viewBox="0 0 40 14"><path d="M0 7 H34 M34 7 l-6 -4 M34 7 l-6 4" stroke="var(--ink-faint)" stroke-width="1.4" fill="none"/></svg>
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(63,208,201,.12);border:1px solid rgba(63,208,201,.4);color:var(--teal);">slot · tts</span>
+        </div>
+      </div>
+
+      <p>Roles live in <code class="inline">/etc/hal0/capabilities.toml</code> — <code class="inline">agent</code>, <code class="inline">utility</code>, <code class="inline">embed</code>, <code class="inline">rerank</code>, <code class="inline">voice.tts</code>, <code class="inline">img</code>, <code class="inline">vision</code>. Assign via the dashboard picker, or repair/validate selections on the CLI:</p>
+
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
+<pre><span class="p">$</span> hal0 capabilities migrate <span class="f">--dry-run</span>   <span class="c"># preview changes</span>
+<span class="p">$</span> hal0 capabilities migrate             <span class="c"># snap selections to legal slots</span></pre>
+      </div>
+    </section>
+
+    <!-- AT A GLANCE -->
+    <section id="glance">
+      <h2>Recap</h2>
+      <h3>The whole flow at a glance</h3>
+
+      <div class="flow">
+        <div class="step"><div class="k">Stage 0</div><div class="cmd">hal0 setup</div><div class="d">install &amp; first run</div></div>
+        <div class="step"><div class="k">Stage 1</div><div class="cmd">model pull</div><div class="d">add weights</div></div>
+        <div class="step"><div class="k">Stage 2</div><div class="cmd">profiles.toml</div><div class="d">how to run it</div></div>
+        <div class="step"><div class="k">Stage 3</div><div class="cmd">slot create</div><div class="d">define worker</div></div>
+        <div class="step"><div class="k">Stage 4</div><div class="cmd">slot load</div><div class="d">bring online</div></div>
+        <div class="step"><div class="k">Stage 5</div><div class="cmd">capabilities</div><div class="d">wire a role</div></div>
+      </div>
+
+      <div class="card">
+        <p style="margin-top:0;color:var(--ink)"><strong>Quick verify at the end</strong></p>
+        <div class="term" style="margin-bottom:0;">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
+<pre><span class="p">$</span> hal0 status                              <span class="c"># system + slot summary</span>
+<span class="p">$</span> hal0 slot list                           <span class="c"># everything serving?</span>
+<span class="p">$</span> curl -s <span class="s">http://127.0.0.1:8080/v1/models</span>   <span class="c"># models the API advertises</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      hal0 first-run guide · <b>hal0.dev</b> · commands verified against the <code class="inline">hal0</code> CLI (v0.9.2). See the <a href="/docs/">full docs</a> for deeper reference.
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>
