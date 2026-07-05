@@ -13,6 +13,227 @@ tree is gitignored, #638) and referenced by number throughout the code.
 
 ## [Unreleased]
 
+### Added
+
+- **`FAMILY_DEFAULTS` — per-model-family launcher-flag overrides.** A new
+  resolution layer between a profile's generic flags and a slot's own
+  `[model].defaults`, keyed on model family (matched from the id/filename).
+  Applied automatically at slot resolution (launch + preview parity) and
+  collapsed by `normalize_argv` last-wins, so a family override beats the
+  profile but a per-slot `[server].extra_args` still beats the family. First
+  tenant: **gemma → `-ctk f16 -ctv f16 --cache-reuse 0`** — any gemma model on
+  any q8 profile is pinned back to f16 KV (gemma iSWA regresses on quantized KV:
+  measured -28.5% pp on RADV / -10% tg on rocm, plus SWA+cache-reuse bugs
+  #21468/#21749). This fixes the live gemma-on-`rocm-dnse` regression and makes
+  adopting Vulkan q8 KV safe as a follow-up.
+
+### Changed
+
+- **Seed profiles: bench-driven flag re-tune (Strix Halo matrix, 2026-07-04).**
+  `rocm-moe` micro-batch `-ub 2048` → `-ub 1024` (+30% prompt-processing on
+  Qwen3.6-35B-A3B-MTP: 1165 vs 895 t/s pp2048, consistent across all `-b`;
+  token-gen flat ~47). `vulkan` `-ub 512` → `-ub 256` (+5.4% pp; the reported
+  1024 sweet spot measured *worse*). Dropped `--threads-batch 32` and
+  `--poll 100 --poll-batch 1` from the rocm chat profiles (measured within noise
+  at full offload — simpler flags win ties). Added explicit `-ngl 999` to all
+  GPU LLM profiles (GTT/unified free-mem autodetect is unreliable) and `--jinja`
+  to all LLM profiles. Decode throughput is unchanged (all wins are prefill), so
+  `PROFILE_BENCH` hero numbers stand. MTP draft depth measured `n-max 4` optimal
+  (+23% decode vs n-max 2 on dense MTP) — seeded default kept.
+- **Vulkan seed adopts symmetric q8 KV** (`-ctk q8_0 -ctv q8_0`): +45% pp at 32k
+  depth on qwen (168 vs 116 t/s) and halves KV memory. It is the mirror image on
+  gemma (gemma-4-12B @32k: q8 costs -28.5% pp on RADV), so the vulkan profile is
+  no longer intrinsically gemma-safe — it relies on `FAMILY_DEFAULTS["gemma"]`
+  pinning gemma slots back to f16 KV. (The upstream "~10x pp cliff" did NOT
+  reproduce on this fork.)
+
+## [v0.8.5b2] — 2026-07-04
+
+Hotfix over v0.8.5b1, closing the three findings from the first live
+update+verification pass on Strix Halo hardware (CT105): stale `mtp = true`
+overrides crashing slots on re-render, slot units not re-rendering on update,
+and the gateway missing `POST /v1/rerank`. **Safe upgrade from v0.8.5b1** —
+the one migration (crash-only MTP override defuse) touches exactly the slot
+configs that could not have loaded anyway, with a loud per-slot log.
+
+### Added
+- **Slot units re-render automatically on update.** A slot's systemd unit
+  bakes the launch argv at load time, so updating hal0 changed the code that
+  WOULD render but not the file that DID — `systemctl restart`, crash
+  restarts, and reboots kept running pre-update flags until an operator did a
+  hal0-level slot restart (field finding). The updater (post venv-reinstall,
+  via a fresh interpreter so the NEW code renders) and `install.sh` now
+  rewrite every existing unit through current code plus one `daemon-reload` —
+  running services are never bounced; fresh argv applies on each slot's next
+  start from any path. Per-slot failures log and skip. The dashboard drift
+  indicator still covers the "process running old argv until next restart"
+  window.
+
+### Fixed
+- **Gateway now serves `POST /v1/rerank`.** The dispatcher's capability path
+  map already resolved `/rerank` to the rerank slot, but the gateway only
+  registered `/v1/rerankings` — so clients using llama-server's / Jina-style
+  `/v1/rerank` got 405 and had to hit the slot port directly (field finding).
+  `/v1/rerank` is now an alias of `/v1/rerankings` through the same dispatch
+  path.
+- **Crash-only `mtp = true` overrides are defused automatically.** A forced
+  MTP override pointing at a model with no MTP heads crashes llama-server at
+  load once the slot's unit re-renders under the v0.8.5b1 MTP separation
+  (field-confirmed: pre-separation `mtp = true` debris on a headless MoE
+  model). Two mechanisms now clear exactly that combination: an updater
+  migration over the slot TOMLs (`updater.mtp_force_on_cleared` log; force-off,
+  eligible force-on, and unresolvable models untouched) and a swap-path guard
+  (swapping onto an ineligible model drops a forced `true` → AUTO, so the
+  staleness can't regenerate). The false-negative escape hatch — forcing MTP
+  on for an untagged-but-capable model — is preserved.
+
+## [v0.8.5b1] — 2026-07-04
+
+Everything landed on `main` since the v0.8.4b1 cut. The headlines: hal0
+generalizes beyond the Strix Halo iGPU (experimental CUDA + multi-GPU
+pinning), companion services get one management surface (registry +
+`/api/services` + mDNS + dashboard page), the settings-completeness plan
+finishes (phases 3–5 + an Advanced section with full `hal0.toml` parity),
+and seed profiles go virtual with dedicated embed/rerank lanes and a
+proper model×profile×slot MTP decision (#1045). **Safe upgrade from
+v0.8.4b1** — the one on-disk migration (virtual-seed prune) backs up
+`profiles.toml` first and rescues divergent operator content to `-custom`
+names; note the MTP auto behaviour below if you run untagged local MTP
+builds.
+
+> **Upgrade note — re-render slot units after updating.** A container
+> slot's systemd unit bakes the launch argv at load time, so after an
+> update the running slots (and their unit files) still carry the
+> PRE-update flags. A bare `systemctl restart hal0-slot@<name>` re-runs
+> the stale ExecStart — restart slots **through hal0** (dashboard restart,
+> or unload→load) so the unit re-renders through the new code. The
+> dashboard's resolved-command drift indicator shows which slots are
+> stale. Automatic unit re-rendering on update (without bouncing serving)
+> is planned as the follow-up.
+>
+> **Upgrade note — stale `mtp = true` slot overrides crash on re-render.**
+> An explicit `mtp = true` in a slot TOML is honored literally (it is the
+> escape hatch for MTP-capable models the eligibility heuristics miss). If
+> a stale override — typically left behind by the old binary MTP pill or a
+> pre-#1045 stack apply, surviving a later model swap — points at a model
+> with NO MTP layers, llama-server exits at load ("context type MTP
+> requested but model doesn't contain MTP layers") once the unit
+> re-renders. Fix: set the slot's MTP to Auto (`{"mtp": null}`) or Off in
+> the drawer and restart. An updater migration that clears provably-stale
+> force-ons (with a loud log) ships in the follow-up.
+
+### Added
+- **GPU generalization — experimental CUDA + multi-GPU.** A dedicated
+  `cuda` seed profile (upstream `llama.cpp:server-cuda` image, preferred
+  by the installer when NVIDIA CDI is present, Vulkan fallback otherwise)
+  and per-slot `gpu_index` pinning for multi-GPU hosts. Ships alongside
+  dead-path retirement and **multi-file pulls** (a model's mmproj/vision
+  sidecars download with the main GGUF in one job).
+- **Unified companion-service management (#1037).** A code-level service
+  registry (Open WebUI, ComfyUI, Hermes, Hindsight, n8n), `GET
+  /api/services` + allow-listed lifecycle actions, **mDNS advertisement**
+  of addon services (`hal0-addon-<id>.service` files, avahi inotify
+  pickup, `HAL0_HOSTNAME` precedence), and a dashboard **Services** page
+  (cards, logs drawer, ComfyUI queue drawer, fail-soft probes).
+- **Settings completeness, phases 3–5.** TTS request defaults
+  (`default_voice` / `default_speed` / `default_response_format`) seeded
+  into `/v1/audio/speech` plus a live voice list proxied from the `tts`
+  slot (#1038); a Settings **NPU** section (#1040); ComfyUI
+  `idle_restore_minutes` hot-reload (no API restart) and a workflow
+  listing endpoint + dynamic strip (#1043).
+- **Advanced settings section.** Full `hal0.toml` parity in the dashboard
+  (every config key editable, grouped, with descriptions), a memory-graph
+  panel, and an API restart button; an AWS secret-pair preset and a
+  reload-config-from-disk button; previously-inert config keys wired
+  through, and the memory schema aligned to the Hindsight era.
+- **Dedicated `embed` and `rerank` seed profiles (#1045).** GPU llama-server
+  templates that bake in the serving flags (`--embedding` / `--reranking`,
+  `-ub 8192` so a full input fits one physical batch) so an embedding or
+  reranking slot no longer hand-wires them in `extra_args`. On a `gpu-rocm`
+  box, embed/rerank capabilities derive onto these lanes automatically
+  (install path and picker/apply fit path both updated); Vulkan/CPU boxes
+  keep falling back to the `vulkan` / `cpu-llm` profile until
+  backend-specific variants ship.
+- **Profile bench matrix tooling (#1045).** `installer/bench/profile-matrix.sh`
+  scripts the seed-profile re-tune matrix as `hal0-benchctl` seam sweeps, and
+  `installer/bench/server_ab.py` measures the server-level levers llama-bench
+  can't see — MTP draft depth (with acceptance %), `--cache-reuse` on a
+  shared-prefix trace, poll, and embed/rerank endpoint sanity — via hal0-api
+  as the unprivileged user, always restoring the slot's original config.
+  Supersedes the ad-hoc `/root/bench_mtp.py`; an on-box runbook ships at
+  `handoffs/bench-profile-matrix-local-session-2026-07-04.md`.
+- **Catalog UX finish (#1042).** Sort / tag-filter / quant chip wiring in
+  the Models view, and a chat-template pick at pull time.
+- **Canonical device/backend taxonomy.** One enum source at `GET
+  /api/meta/enums` (ETag/cache-friendly), consumed by the dashboard —
+  plus stacks fixes and dialog guards that rode the same change.
+
+### Changed
+- **Seed profiles are now virtual (#1045).** The built-in profile catalog
+  (`SEED_PROFILES`) is overlaid from code on every load and never persisted to
+  `/etc/hal0/profiles.toml`. Previously the installer materialised every seed
+  inline and the loader only injected *missing* seeds, so a re-tuned seed (new
+  flags, a bumped toolbox image) never reached an existing install. Now the code
+  definition always wins: `load_profiles_config` overlays seeds over any on-disk
+  copy, `save_profiles_config` strips seeds before writing, and the updater's
+  `ensure_seed_profiles()` prunes any materialised seeds left by an older
+  install (self-heal on upgrade). Seed profiles remain immutable — clone to
+  customise. Operator (non-seed) profiles are untouched. **Data-safe
+  migration**: the pre-prune file is backed up once
+  (`profiles.toml.pre-virtual-seeds.bak`) and any seed-named entry whose
+  content differs from the code seed (a hand-edited seed table, or an operator
+  profile whose name only became a seed in this release, e.g. `embed`) is
+  rescued to `<name>-custom` instead of deleted, with a loud log.
+- **MTP is now a model × profile × slot decision (#1045).** Model
+  eligibility (`mtp` registry tag or name marker) × profile opt-in
+  (`profile.mtp` now means "enable for eligible models", not "append the
+  bundle regardless") × a tri-state per-slot override (Auto/On/Off, Auto
+  = profile opts in AND model eligible). A non-MTP model on an MTP
+  profile no longer launches with dead `--spec-draft-*` flags, and the
+  draft device tracks the profile backend (ROCm/Vulkan/CUDA) instead of
+  hardcoded ROCm. The slot drawer swaps the binary MTP pill for the
+  tri-state control with a live "Auto · active/inactive" hint; stack
+  editor rows default to Auto, and an Auto row now clears a forced
+  override on apply (the config write layer treats an explicit `null` as
+  delete-key — TOML has no null — which is also what makes "back to
+  Auto" work from the dashboard instead of 500ing). **Behaviour note:**
+  an MTP-capable model that carries neither the registry `mtp` tag nor an
+  MTP name marker stops speculating under Auto after this upgrade — tag
+  the model or force the slot On; the launch log says
+  `mtp.auto_off_model_ineligible` when this bites.
+
+### Fixed
+- **MTP auto-off breadcrumb is launch-gated.** The
+  `mtp.auto_off_model_ineligible` hint lives inside the shared launch/preview
+  scalar resolver, so it fired on every dashboard `GET /api/slots` poll
+  (~0.4/s per client, forever) for any AUTO slot pairing an MTP profile with a
+  non-MTP model. It now logs only on a real container launch; preview/status
+  renders stay silent, and launch/preview argv parity is unchanged.
+- **Upstream-advertised models are clearly identified as remote (#1035)**,
+  not local, across the dashboard model surfaces.
+- **Operator Board (#1032).** Hermes-contract repairs, honest UI state,
+  and platform-assistant chat.
+- **Slot pipeline hardening.** API boundary validation, backend-switch
+  completion, manager guards, and guarded stack writes; a single argv
+  assembler with model-defaults wiring and provider fixes; normalizer
+  bug, dead-code removal, and a11y quick wins in the slot drawers.
+- **Settings polish.** Truthful apply plan, safe engine picker, secret
+  descriptions, rollback behaviour, and palette ghosts.
+
+### Docs
+- README re-baselined to v0.8.4b1 + full accuracy pass (#1044, #1046):
+  canonical `agent`/`utility` seeded slots, real backend-profile and
+  hardware-tier tables (experimental CUDA row), removed the
+  no-longer-shipped `HAL0_USER` unprivileged mode, added the **Discord**
+  invite (header + Contributing).
+- hal0.dev docs mirror refreshed (#1044): new `operate/services` page,
+  `operate/auth` rewritten to the real ADR-0012 reverse-proxy model (the
+  fictional `--auth=basic` / managed-Caddy docs from 3e056de removed
+  site-wide), plus the full v0.8.x feature-doc sweep.
+- Handoffs: platform reliability/config/UI review (#1010), ONNX / Strix
+  Halo NPU research and integration plan (#1034), llama.cpp seed-profile
+  evaluation + consolidation proposal (#1041).
+
 ## [v0.8.4b1] — 2026-07-04
 
 A **models, logs & memory** follow-up to v0.8.3b1. Models can now carry a
