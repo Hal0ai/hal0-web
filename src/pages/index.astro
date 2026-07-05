@@ -779,7 +779,7 @@ const shipNowHighlights = [
     </div>
   </section>
 
-  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900, dark, live hal0 instance) -->
+  <!-- OPERATOR CONSOLE — real dashboard screenshots (dark, live hal0 instance): Overview hero + two rows of surface close-ups -->
   <section class="section section-tight" id="console">
     <div class="shell-wide">
       <div class="sec-head">
@@ -797,9 +797,9 @@ const shipNowHighlights = [
       <figure class="shot-hero">
         <img
           src="/screenshots/dashboard-overview.png"
-          alt="hal0 dashboard overview — slots, throughput, and live service health"
-          width="1440"
-          height="900"
+          alt="hal0 Overview dashboard — telemetry header, unified-memory bar, live throughput, GPU/CPU/NPU utilization, and per-slot health"
+          width="1819"
+          height="1075"
           loading="lazy"
           decoding="async"
         />
@@ -815,8 +815,23 @@ const shipNowHighlights = [
           <figcaption class="shot-cap"><strong>Image gen on the iGPU</strong> — generating flips the accelerator into exclusive image mode; inference pauses, then resumes. One GPU, shared cleanly.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="/screenshots/memory-graph.png" alt="Agent memory rendered as a navigable semantic and temporal knowledge graph" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Graph memory</strong> (opt-in) — facts become a navigable semantic + temporal graph, namespaced per agent.</figcaption>
+          <img src="/screenshots/mem-all.png" alt="Agent memory overview — per-agent banks with world, experience, and observation fact counts" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Agent memory</strong> (opt-in) — namespaced banks per agent: world, experience, and observation facts, with graph extraction.</figcaption>
+        </figure>
+      </div>
+
+      <div class="shot-grid">
+        <figure class="shot">
+          <img src="/screenshots/mem-graph.png" alt="Lensed memory graph — every fact and its semantic and temporal edges across an agent's whole bank" width="1796" height="1173" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Lensed graph</strong> — every fact with its semantic + temporal edges, the whole bank at once.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/screenshots/mem-ego.png" alt="Ego view of the memory graph — re-centred on one fact, walking the timeline through its local neighbourhood" width="1796" height="1173" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Ego view</strong> — re-center on any fact and walk the timeline through its local neighbourhood.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/screenshots/mem-struct.png" alt="Structured lens — memories grouped into semantic clusters, causal chains, and a co-occurrence matrix" width="1796" height="1173" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Structured lens</strong> — memories grouped into semantic clusters, causal chains, and co-occurrence.</figcaption>
         </figure>
       </div>
 
@@ -2276,8 +2291,9 @@ const shipNowHighlights = [
     .slot-row { grid-template-columns: 90px 1fr 70px 80px 60px; gap: 10px; padding: 10px 14px; }
   }
 
-  /* Operator-console screenshot showcase. Real 1440×900 dark captures;
-   * aspect-ratio is pinned so lazy-loaded images don't shift layout. */
+  /* Operator-console screenshot showcase. Real dark captures; aspect-ratio
+   * is pinned per-figure so lazy-loaded images don't shift layout, and
+   * object-fit: cover keeps mixed capture sizes from distorting. */
   .shot-hero {
     margin-top: 2.5rem;
     border: 1px solid var(--hal0-border);
@@ -2292,7 +2308,8 @@ const shipNowHighlights = [
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 1440 / 900;
+    aspect-ratio: 1819 / 1075;
+    object-fit: cover;
   }
 
   .shot-grid {
@@ -2300,6 +2317,9 @@ const shipNowHighlights = [
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
+  }
+  .shot-grid + .shot-grid {
+    margin-top: 1rem;
   }
   .shot {
     position: relative;
@@ -2322,6 +2342,8 @@ const shipNowHighlights = [
     width: 100%;
     height: auto;
     aspect-ratio: 1440 / 900;
+    object-fit: cover;
+    object-position: top center;
     border-bottom: 1px solid var(--hal0-border);
   }
   .shot-cap {
