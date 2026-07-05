@@ -279,6 +279,8 @@ const themes: RoadmapTheme[] = [
       { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm / CUDA) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
       { t: 'Image generation', d: 'POST /v1/images/generations served by a ComfyUI provider on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell with license badges.' },
       { t: 'FLM NPU provider live', d: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1, pinned by sha256. Chat + embed surfaced in the picker only when XDNA hardware is present.' },
+      { t: 'GPU generalization', d: 'Experimental CUDA seed profile (Vulkan fallback) and per-slot gpu_index pinning for multi-GPU hosts, beside the Strix Halo ROCm defaults.' },
+      { t: 'Voice end-to-end', d: 'NPU / Moonshine STT plus Kokoro or GPU Qwen3-TTS stitched through the slot lifecycle; /v1/audio/transcriptions and /v1/audio/speech are live.' },
     ],
     soon: [],
     later: [
@@ -296,6 +298,8 @@ const themes: RoadmapTheme[] = [
       { t: 'embed-rerank built-in slot', d: 'Auto-created on first enable: bge-reranker-v2-m3-q4_k_m on :8086 with --reranking. /v1/rerankings stays separate from chat.' },
       { t: 'Per-slot live metrics', d: 'GET /api/slots/metrics reads docker cgroup memory + ActiveEnterTimestampMonotonic + scraped /metrics.' },
       { t: 'Orchestrator drift reconcile', d: 'apply() reconciles capabilities.toml ↔ slots/*.toml on every call, not only on selection diff.' },
+      { t: 'Stacks — declarative loadouts', d: 'Apply a whole model/slot layout atomically from one declarative file; profiles share the same portable export/import envelope.' },
+      { t: 'Virtual seed profiles + tri-state MTP', d: 'Code-defined seed profiles (self-healing on upgrade) with dedicated embed/rerank lanes; MTP is a model×profile×slot Auto/On/Off decision.' },
     ],
     soon: [
       { t: 'Benchmarks & presets UI', d: 'In-dashboard tok/s + latency runs, plus curated loadout presets you can flash onto a fresh install.' },
@@ -312,6 +316,7 @@ const themes: RoadmapTheme[] = [
       { t: 'Installer overhaul', d: 'ASCII banner + step counter, extracted preflight.sh, hal0 doctor, hardware cards + auto-populated slots/primary.toml, live-hello + QR.' },
       { t: '--models-dir install flag', d: 'install.sh --models-dir=PATH (or HAL0_MODELS_DIR, or interactive tty prompt) points a fresh install at an existing model store.' },
       { t: 'Install + version flow locked down', d: '__version__ reads from importlib.metadata. pyproject.toml is the single source of truth; installer copies the source tree into PREFIX.' },
+      { t: 'Companion services + Services page', d: 'Open WebUI, ComfyUI, Hermes, Hindsight, and n8n managed from a dashboard Services page with mDNS discovery and allow-listed lifecycle actions.' },
     ],
     soon: [
       { t: 'Extensions framework', d: 'Third-party apps packaged as hal0 extensions: systemd unit + dashboard tile + healthcheck. Bring-your-own-app, lifecycle-managed.' },
@@ -328,6 +333,7 @@ const themes: RoadmapTheme[] = [
       { t: 'Proxmox host-pressure segment', d: 'Read-only PVEAuditor token → dashboard memory bar shows physical DIMM total plus a muted host segment for other-tenant + ZFS ARC + kernel pressure.' },
       { t: 'KV-cache % gauge populates', d: 'Vulkan toolbox rebuilt against llama.cpp b9279; synthesises kv_cache_usage = max(n_prompt_tokens) / n_ctx, clamped at 1.0.' },
       { t: 'Live TTFT dashboard', d: 'Per-slot time-to-first-token sampled in the dispatcher, surfaced as a sparkline-pinned HUD readout on SlotCard.' },
+      { t: 'Dashboard redesign + telemetry header', d: 'Fixed-band layout with a unified-memory hero and a combined throughput / GPU / CPU / NPU-occupancy card, all from live probes.' },
     ],
     soon: [],
     later: [
@@ -341,12 +347,11 @@ const themes: RoadmapTheme[] = [
     shipped: [
       { t: 'MCP tool annotations', d: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations so SDK clients can render confirmation UIs and reason about side-effects.' },
       { t: 'Approval inbox + bell', d: 'Capital-D destructive tool calls gate through a header bell and modal inbox in the dashboard, with full CLI parity via hal0 agent approvals.' },
+      { t: 'Bundled Hermes agent', d: 'Hermes-Agent installable from the dashboard, prewired to the local OpenAI API + MCP servers, with its own private memory bank.' },
+      { t: 'Hindsight memory engine', d: 'Embedded memory with vector recall and native graph extraction; shared by default, with private per-agent banks. (Replaces the earlier Cognee plan.)' },
+      { t: 'Two-way MCP + hal0 mcp CLI', d: 'hal0 hosts admin + memory MCP servers and reaches external ones; manage, install, and browse servers from the CLI and dashboard.' },
     ],
-    soon: [
-      { t: 'Bundled agent app', d: 'Hermes-Agent installable from the dashboard, prewired to the local OpenAI API + MCP servers.' },
-      { t: 'Cognee-backed memory', d: 'Embedded SQLite + LanceDB + Kuzu. Shared by default; X-hal0-Private: 1 promotes a client\'s writes to its own namespace.' },
-      { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions. Compose tools across local slots and external MCP services; discover them from the dashboard.' },
-    ],
+    soon: [],
     later: [
       { t: 'ChatOps adapters', d: 'Slack and Matrix bridges as extensions, so you can talk to hal0 from the rooms you already live in.' },
     ],
@@ -359,13 +364,10 @@ const themes: RoadmapTheme[] = [
       { t: 'Bundled OpenWebUI', d: 'Prewired chat on :3001 pointed at the local API. Zero config; the installer wires it for you.' },
       { t: 'Caddy + auth + HTTPS + mDNS', d: 'install.sh --auth=basic brings up Caddy with basic_auth, Bearer tokens for the API, automatic HTTPS, and a best-effort Avahi service file.' },
       { t: 'First-run wizard rewrite', d: 'Eight linear steps from password through hardware, primary model, capabilities, HF token, license, install, done. Conditional HF-token step.' },
+      { t: 'Full-parity settings + Advanced', d: 'Every hal0.toml key editable from the dashboard, grouped with descriptions, plus a configurable slot publish host for LAN exposure.' },
     ],
-    soon: [
-      { t: 'STT / TTS curated picks', d: 'v0.1.1 seeded embed/rerank with real GGUF picks. STT (moonshine) and TTS (kokoro) need a pull-layer extension because their weights aren\'t GGUF / safetensors.' },
-    ],
-    later: [
-      { t: 'Voice mode end-to-end', d: 'Moonshine + agent loop + Kokoro stitched into a hands-free streaming conversation, gated through the slot lifecycle.' },
-    ],
+    soon: [],
+    later: [],
   },
 ];
 
