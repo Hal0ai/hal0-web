@@ -4,26 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>hal0 — First-Run Guide</title>
+<meta name="description" content="From a fresh hal0 install to a model answering requests — a visual, step-by-step first-run guide covering the dashboard UI and the CLI: models, profiles, slots, and capabilities.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
   :root {
-    --bg:        #0f1115;
-    --panel:     #171a21;
-    --panel-2:   #1d212b;
-    --line:      #2a2f3a;
-    --line-soft: #232833;
-    --ink:       #e7ebf3;
-    --ink-dim:   #9aa4b6;
-    --ink-faint: #6b7488;
-    --accent:    #6ea8fe;   /* models  */
-    --violet:    #b48ef2;   /* profiles */
-    --teal:      #3fd0c9;   /* slots   */
-    --amber:     #f5b756;   /* capabilities */
-    --green:     #56d364;
-    --red:       #f2777a;
-    --code-bg:   #10131a;
+    /* hal0 brand — near-black surfaces + a single sodium-amber accent */
+    --bg:        #0a0a0a;
+    --panel:     #141414;   /* elevated */
+    --panel-2:   #1c1b18;
+    --sunken:    #050505;
+    --line:      #262626;
+    --line-soft: #1d1d1d;
+    --line-strong: #3a3a3a;
+    --ink:       #f5f5f4;
+    --ink-dim:   #c8c2bd;
+    --ink-faint: #a3a09c;
+
+    --accent:       #ffb000;             /* sodium amber */
+    --accent-2:     #ffc533;             /* hover / light */
+    --accent-muted: #7a5500;
+    --accent-glow:  rgba(255,176,0,.18);
+
+    /* legacy hue slots all resolve to the one amber accent (monochrome brand) */
+    --violet:    #ffb000;
+    --teal:      #ffb000;
+    --amber:     #ffb000;
+    --green:     #ffb000;
+    --red:       #e5675c;
+
+    --code-bg:   #050505;
     --radius:    14px;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'JetBrains Mono', 'JBM Fallback', ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+    --sans: 'Geist Variable', 'Geist', 'Geist Fallback', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
 
   * { box-sizing: border-box; }
@@ -35,6 +47,8 @@
   }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+  ::selection { background: var(--accent-glow); color: var(--ink); }
 
   .layout {
     display: grid;
@@ -50,13 +64,14 @@
     padding: 34px 0; font-size: 14px;
   }
   aside .brand {
-    font-weight: 700; font-size: 20px; letter-spacing: -0.3px;
+    font-weight: 700; font-size: 21px; letter-spacing: -0.3px;
+    font-family: var(--mono);
     display: flex; align-items: center; gap: 9px; margin-bottom: 4px;
   }
   aside .brand .dot {
     width: 11px; height: 11px; border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #8fc0ff, var(--accent));
-    box-shadow: 0 0 14px var(--accent);
+    background: radial-gradient(circle at 30% 30%, #ffd98a, var(--accent));
+    box-shadow: 0 0 14px var(--accent-glow);
   }
   aside .tag { color: var(--ink-faint); font-size: 12px; margin: 0 0 22px 20px; }
   aside nav a {
@@ -75,11 +90,11 @@
 
   header.hero { margin-bottom: 46px; }
   header.hero h1 {
-    font-size: 42px; line-height: 1.1; letter-spacing: -1.2px;
-    margin: 0 0 12px; font-weight: 800;
+    font-family: var(--mono); font-size: 40px; line-height: 1.12; letter-spacing: -1.6px;
+    margin: 0 0 12px; font-weight: 700;
   }
   header.hero h1 .grad {
-    background: linear-gradient(90deg, var(--accent), var(--teal));
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   header.hero p.lede { font-size: 18px; color: var(--ink-dim); max-width: 60ch; margin: 0; }
@@ -96,7 +111,7 @@
     font-size: 15px; text-transform: uppercase; letter-spacing: 1.5px;
     color: var(--ink-faint); font-weight: 700; margin: 0 0 6px;
   }
-  h3 { font-size: 27px; letter-spacing: -0.5px; margin: 0 0 18px; font-weight: 700; }
+  h3 { font-family: var(--mono); font-size: 25px; letter-spacing: -0.8px; margin: 0 0 18px; font-weight: 700; }
   p { color: var(--ink-dim); }
   p strong, li strong { color: var(--ink); font-weight: 600; }
 
@@ -117,12 +132,12 @@
   }
   .note {
     border-left: 3px solid var(--accent);
-    background: linear-gradient(90deg, rgba(110,168,254,.09), transparent 60%);
+    background: linear-gradient(90deg, rgba(255,176,0,.07), transparent 60%);
     padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 18px 0;
     color: var(--ink-dim); font-size: 15px;
   }
-  .note.warn { border-color: var(--amber); background: linear-gradient(90deg, rgba(245,183,86,.1), transparent 60%); }
-  .note.ok   { border-color: var(--green); background: linear-gradient(90deg, rgba(86,211,100,.1), transparent 60%); }
+  .note.warn { border-color: var(--amber); background: linear-gradient(90deg, rgba(255,176,0,.11), transparent 60%); }
+  .note.ok   { border-color: var(--green); background: linear-gradient(90deg, rgba(255,176,0,.06), transparent 60%); }
   .note b { color: var(--ink); }
 
   .done { display: flex; align-items: center; gap: 9px; color: var(--green); font-size: 15px; margin-top: 14px; }
@@ -185,13 +200,13 @@
     padding: 4px 10px; border-radius: 7px; color: var(--ink);
     background: var(--panel-2); border: 1px solid var(--line);
   }
-  .layer.models       { border-color: rgba(110,168,254,.4); }
+  .layer.models       { border-color: var(--line-strong); }
   .layer.models .lnum  { background: var(--accent); }
-  .layer.profiles     { border-color: rgba(180,142,242,.4); }
+  .layer.profiles     { border-color: var(--line-strong); }
   .layer.profiles .lnum{ background: var(--violet); }
-  .layer.slots        { border-color: rgba(63,208,201,.4); }
+  .layer.slots        { border-color: var(--line-strong); }
   .layer.slots .lnum   { background: var(--teal); }
-  .layer.caps         { border-color: rgba(245,183,86,.45); }
+  .layer.caps         { border-color: var(--line-strong); }
   .layer.caps .lnum    { background: var(--amber); }
   .layer.api {
     grid-template-columns: 1fr; text-align: center; justify-items: center;
@@ -215,8 +230,8 @@
     background: var(--panel-2); color: var(--ink); position: relative;
   }
   .state.off  { color: var(--ink-faint); }
-  .state.load { color: var(--amber); border-color: rgba(245,183,86,.4); }
-  .state.serve{ color: var(--green); border-color: rgba(86,211,100,.45); box-shadow: 0 0 22px rgba(86,211,100,.12); }
+  .state.load { color: var(--amber); border-color: rgba(255,176,0,.35); }
+  .state.serve{ color: var(--green); border-color: rgba(255,176,0,.5); box-shadow: 0 0 22px var(--accent-glow); }
   .arrow { display: flex; flex-direction: column; align-items: center; color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
   .arrow .cmd { color: var(--teal); }
   .arrow svg { display: block; }
@@ -252,6 +267,69 @@
     .flow { grid-template-columns: 1fr 1fr; }
     .flow .step:not(:last-child)::after { display: none; }
     header.hero h1 { font-size: 32px; }
+    .ways { grid-template-columns: 1fr !important; }
+  }
+
+  /* ---------- Two ways to set up ---------- */
+  .ways { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 8px; }
+  .way {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px 22px; display: block; color: inherit; transition: border-color .15s, transform .15s;
+  }
+  .way:hover { border-color: var(--teal); text-decoration: none; transform: translateY(-2px); }
+  .way .badge {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .8px; color: var(--bg);
+    padding: 4px 10px; border-radius: 7px; margin-bottom: 12px;
+  }
+  .way.ui  .badge { background: var(--teal); }
+  .way.cli .badge { background: var(--violet); }
+  .way h4 { margin: 0 0 6px; font-size: 19px; color: var(--ink); letter-spacing: -0.3px; }
+  .way p { margin: 0; font-size: 14px; color: var(--ink-dim); }
+  .way .go { margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--teal); }
+
+  /* ---------- Screenshot frames ---------- */
+  figure.shot { margin: 22px 0; }
+  figure.shot .frame {
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    background: var(--panel); box-shadow: 0 18px 40px -20px rgba(0,0,0,.7);
+  }
+  figure.shot .chrome {
+    display: flex; align-items: center; gap: 7px; padding: 9px 13px;
+    background: #0c0e13; border-bottom: 1px solid var(--line-soft);
+  }
+  figure.shot .chrome i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  figure.shot .chrome .r { background: #ff5f57; } figure.shot .chrome .y { background: #febc2e; } figure.shot .chrome .g { background: #28c840; }
+  figure.shot .chrome .url {
+    margin-left: 10px; font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+    background: var(--panel-2); border: 1px solid var(--line-soft); border-radius: 6px;
+    padding: 3px 12px; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  figure.shot img { display: block; width: 100%; height: auto; }
+  figure.shot figcaption { margin-top: 10px; font-size: 13px; color: var(--ink-faint); text-align: center; }
+  figure.shot figcaption b { color: var(--ink-dim); font-weight: 600; }
+
+  /* ---------- Numbered UI steps ---------- */
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: s; position: relative; padding: 4px 0 20px 46px; color: var(--ink-dim);
+    border-left: 2px solid var(--line-soft); margin-left: 15px;
+  }
+  ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: -16px; top: 0;
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--teal);
+  }
+  ol.steps > li b, ol.steps > li strong { color: var(--ink); }
+  ol.steps .sub { display: block; font-size: 13.5px; margin-top: 3px; }
+
+  .section-lead { font-size: 17px; color: var(--ink-dim); max-width: 64ch; }
+  .kbd {
+    font-family: var(--mono); font-size: 12px; background: var(--panel-2);
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px;
+    padding: 1px 7px; color: var(--ink);
   }
 </style>
 </head>
@@ -264,12 +342,14 @@
     <div class="tag">first-run guide · v0.9.2</div>
     <nav>
       <a href="#shape" class="stage"><span class="n">◆</span>The shape</a>
-      <a href="#s0" class="stage"><span class="n">0</span>Install &amp; setup</a>
-      <a href="#s1" class="stage"><span class="n">1</span>Add models</a>
-      <a href="#s2" class="stage"><span class="n">2</span>Profiles</a>
-      <a href="#s3" class="stage"><span class="n">3</span>Create a slot</a>
-      <a href="#s4" class="stage"><span class="n">4</span>Bring online</a>
-      <a href="#s5" class="stage"><span class="n">5</span>Capabilities</a>
+      <a href="#ui" class="stage"><span class="n">▸</span>Set up in the UI</a>
+      <a href="#ui-open"><span class="n"></span>Open the dashboard</a>
+      <a href="#ui-picker"><span class="n"></span>First-run picker</a>
+      <a href="#ui-models"><span class="n"></span>Models</a>
+      <a href="#ui-profiles"><span class="n"></span>Profiles</a>
+      <a href="#ui-slots"><span class="n"></span>Slots &amp; lifecycle</a>
+      <a href="#ui-caps"><span class="n"></span>Capabilities</a>
+      <a href="#cli" class="stage"><span class="n">▸</span>The same, on the CLI</a>
       <a href="#glance" class="stage"><span class="n">✓</span>At a glance</a>
     </nav>
   </aside>
@@ -278,7 +358,7 @@
   <main>
     <header class="hero">
       <h1>From a fresh box to a<br><span class="grad">model answering requests</span></h1>
-      <p class="lede">hal0 is a home AI inference platform. This guide walks the five stages in order — install, add models, define how they run, spin up a worker, and put it online.</p>
+      <p class="lede">hal0 is a home AI inference platform. This guide takes you from a fresh install to a model answering requests — the guided way through the dashboard, or the same flow on the command line.</p>
       <div class="pillrow">
         <span class="pill">platform <b>hal0 · Strix Halo native</b></span>
         <span class="pill">api <b>:8080</b></span>
@@ -370,6 +450,225 @@
       </table>
     </section>
 
+    <!-- TWO WAYS -->
+    <section id="ways" style="margin-bottom:44px;">
+      <h2>Two ways to set up</h2>
+      <h3>Point &amp; click, or type</h3>
+      <p class="section-lead">The dashboard gives you a guided, visual setup — the recommended path for a first install. Every step also has a one-line CLI equivalent if you’d rather stay in the terminal. Both talk to the same API, so they never disagree.</p>
+      <div class="ways">
+        <a class="way ui" href="#ui">
+          <span class="badge">◱ recommended</span>
+          <h4>Set up in the dashboard</h4>
+          <p>Open <code class="inline">localhost:8080</code>, let the first-run picker provision a coherent model stack for your hardware, then manage models, slots &amp; capabilities from tabs.</p>
+          <div class="go">Walk the UI →</div>
+        </a>
+        <a class="way cli" href="#cli">
+          <span class="badge">⌘ terminal</span>
+          <h4>The same, on the CLI</h4>
+          <p>Five commands — <code class="inline">setup → model pull → slot create → slot load</code> — for scripted or headless hosts. The CLI is a thin client over the same API.</p>
+          <div class="go">Jump to the CLI →</div>
+        </a>
+      </div>
+    </section>
+
+    <!-- ================= UI WALKTHROUGH ================= -->
+    <section id="ui">
+      <h2>The guided path</h2>
+      <h3>Set up in the dashboard</h3>
+      <p class="section-lead">Once hal0 is installed, everything below happens in your browser at <span class="kbd">http://localhost:8080</span> — the control plane <code class="inline">hal0-api</code> serves the dashboard on the same port as the API.</p>
+    </section>
+
+    <!-- UI · open -->
+    <section id="ui-open">
+      <div class="stage-head"><div class="stage-num" style="background:var(--teal)">1</div><h3>Open the dashboard</h3></div>
+      <p>Point a browser on your LAN at the host on port <strong>8080</strong>. You’ll land on the overview: slot status, live hardware metrics, and quick actions. This is home base for every step that follows.</p>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080</span></div>
+          <img src="/screenshots/dashboard-overview.png" srcset="/screenshots/dashboard-overview.png 1x, /screenshots/dashboard-overview@2x.png 2x" alt="The hal0 dashboard overview — slot status cards, hardware metrics, and quick actions" loading="lazy">
+        </div>
+        <figcaption><b>The dashboard overview</b> — slot status, hardware metrics, and quick actions, all on port 8080.</figcaption>
+      </figure>
+
+      <div class="note"><b>💡 Tip:</b> press <span class="kbd">⌘ K</span> / <span class="kbd">Ctrl K</span> anywhere to open the command palette and jump to any tab, slot, or action by name.</div>
+    </section>
+
+    <!-- UI · first-run picker -->
+    <section id="ui-picker">
+      <div class="stage-head"><div class="stage-num" style="background:var(--teal)">2</div><h3>Run the first-run picker</h3></div>
+      <p>On a brand-new install the dashboard routes you into <strong>FirstRun</strong> — a guided picker that provisions a coherent set of slots for your hardware. hal0 ships with <em>no</em> default model stack by design, so this is where your stack is born. It detects your RAM, GPU, and NPU and offers hardware-anchored tiers:</p>
+
+      <table>
+        <thead><tr><th>Tier</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td><strong>hal0-Lite</strong></td><td>Smaller hosts — a tiny chat model only</td></tr>
+          <tr><td><strong>hal0-Default</strong></td><td>Mid-range — chat + embed/rerank + voice</td></tr>
+          <tr><td><strong>hal0-Pro</strong></td><td>Larger unified memory — adds a coder model + image generation</td></tr>
+          <tr><td><strong>hal0-Max</strong></td><td>High-memory Strix Halo — adds the NPU trio</td></tr>
+          <tr><td><strong>LMX-Omni-52B-Halo</strong></td><td>AMD-curated kit for ≥ 100 GB unified Strix Halo</td></tr>
+        </tbody>
+      </table>
+
+      <ol class="steps">
+        <li><b>Pick a tier.</b> The highest one that fits your detected memory is marked <em>recommended</em> and pre-selected; tiers that need more RAM than you have are greyed out with a “needs ≥ N GB” tag.</li>
+        <li><b>Choose model storage.</b> Set the directory every slot reads and writes model files to. FirstRun probes candidate paths and offers them as one-click chips.</li>
+        <li><b>(Optional) Open Advanced.</b> Enable the NPU trio, or override the model, device (<code class="inline">gpu-rocm</code> · <code class="inline">gpu-vulkan</code> · <code class="inline">cpu</code> · <code class="inline">npu</code>), or profile per slot. Leave rows blank to keep the smart default.</li>
+        <li><b>Install.</b> hal0 creates each slot container in the <code class="inline">offline</code> state and kicks off background model pulls. A progress pane reattaches to every download stream so you can watch them land.</li>
+        <li><b>Verify services &amp; open the dashboard.</b> The final step checks OpenWebUI and the Hermes agent, with one-click repair for anything down. Clicking <b>Open dashboard</b> marks first-run complete.</li>
+      </ol>
+
+      <div class="note ok"><b>Prefer to configure it yourself?</b> Choose <b>Skip — configure manually</b> to drop straight into the dashboard, then add models, slots, and capabilities by hand using the steps below.</div>
+    </section>
+
+    <!-- UI · models -->
+    <section id="ui-models">
+      <div class="stage-head"><div class="stage-num" style="background:var(--accent)">3</div><h3>Add models — the Models tab</h3></div>
+      <p>Models live in a local <strong>registry</strong> — the single source of truth for Hugging Face coordinates, digests, and filenames. The <strong>Models</strong> tab is where you populate it: search Hugging Face, pull curated aliases, and watch progress badges.</p>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080/models</span></div>
+          <img src="/screenshots/models-registry.png" srcset="/screenshots/models-registry.png 1x, /screenshots/models-registry@2x.png 2x" alt="The Models registry view showing installed and available models with pull-status badges" loading="lazy">
+        </div>
+        <figcaption><b>The Models view</b> — registry, live pull progress, and curated loadouts.</figcaption>
+      </figure>
+
+      <ol class="steps">
+        <li><b>Browse or search.</b> Use the curated catalogue, or search Hugging Face directly from the tab to find a model and its pullable GGUF variants.</li>
+        <li><b>Pull.</b> Click <b>Pull</b> on a model. The download runs in the background with a live progress bar; the row shows a status badge (<code class="inline">queued → running → completed</code>).</li>
+        <li><b>Register on-disk weights</b> <span class="sub">— already have a GGUF on the host? Register it into the registry without re-downloading.</span></li>
+        <li><b>Assign to a slot.</b> A completed model can be set as a slot’s default from here or from the Slots tab (next step).</li>
+      </ol>
+
+      <div class="note"><b>Gated or private models?</b> Add a token under <b>Settings → Secrets → HuggingFace token</b> — it applies live, no restart.</div>
+    </section>
+
+    <!-- UI · profiles -->
+    <section id="ui-profiles">
+      <div class="stage-head"><div class="stage-num" style="background:var(--violet)">4</div><h3>Profiles — the how-to-run recipes</h3></div>
+      <p>A <strong>profile</strong> is a reusable runtime template: the container image, bench-tuned launch flags, and an MTP (speculative-decoding) toggle. Many slots can share one tuned profile. The <strong>Profiles</strong> tab shows the seed profiles that ship with hal0:</p>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080/profiles</span></div>
+          <img src="/screenshots/profiles-tab.png" alt="The Profiles tab showing seed profile cards for rocm-dnse, rocm-moe, vulkan, flm, tts, and comfyui with bench metrics and device-class chips" loading="lazy">
+        </div>
+        <figcaption><b>The Profiles tab</b> — seed cards (<code class="inline">rocm-dnse · rocm-moe · vulkan · flm · tts · comfyui</code>) with bench metrics, device-class chips, and a clone affordance.</figcaption>
+      </figure>
+
+      <ol class="steps">
+        <li><b>Read the seed cards.</b> Each shows its target device, runtime family, and reference throughput. These cover a fresh install out of the box.</li>
+        <li><b>Seeds are immutable.</b> To customise one, click <b>Clone</b>, give it a new name, and edit the copy’s flags.</li>
+        <li><b>Tune MTP.</b> A profile’s speculative-decoding bundle is a single toggle; any slot can override it with its own <b>Auto / On / Off</b> control.</li>
+      </ol>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080/slots · MTP control</span></div>
+          <img src="/screenshots/mtp-control.png" srcset="/screenshots/mtp-control.png 1x, /screenshots/mtp-control@2x.png 2x" alt="The per-slot MTP control with Auto, On, and Off states and an explanation line" loading="lazy">
+        </div>
+        <figcaption><b>Per-slot MTP</b> — <em>Auto</em> follows the model and profile, or force it On/Off; the reason line explains the current state.</figcaption>
+      </figure>
+    </section>
+
+    <!-- UI · slots -->
+    <section id="ui-slots">
+      <div class="stage-head"><div class="stage-num" style="background:var(--teal)">5</div><h3>Slots &amp; lifecycle — the Slots tab</h3></div>
+      <p>A <strong>slot</strong> is one running inference endpoint: a model, a device, a profile, and a port. The <strong>Slots</strong> tab lists every slot with a live state badge, its model, device, and port.</p>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080/slots</span></div>
+          <img src="/screenshots/slots-inference.png" srcset="/screenshots/slots-inference.png 1x, /screenshots/slots-inference@2x.png 2x" alt="The Slots view listing configured slots with state badges, model names, device, and port" loading="lazy">
+        </div>
+        <figcaption><b>The Slots view</b> — live state, assigned model, device, and port for every slot.</figcaption>
+      </figure>
+
+      <ol class="steps">
+        <li><b>Create a slot.</b> Click <b>New slot</b> and fill the picker: name, type (<code class="inline">llm · embedding · reranking · transcription · tts · image</code>), model, device, and context size. hal0 derives a coherent default profile from the device.</li>
+        <li><b>Open a slot</b> for its detail panel — live status alongside the persisted config — to edit the model, port, or context size.</li>
+        <li><b>Drive it</b> with <b>Load · Restart · Unload</b> right from the card or detail panel.</li>
+      </ol>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080/slots/chat</span></div>
+          <img src="/screenshots/slot-detail.png" alt="A slot detail panel showing live state, model, port, and the on-disk TOML config" loading="lazy">
+        </div>
+        <figcaption><b>The slot detail panel</b> — live status and the on-disk config together, with load / restart / unload controls.</figcaption>
+      </figure>
+
+      <p>Loading a slot walks it through the lifecycle state machine. The Slots view animates each transition:</p>
+
+      <div class="card">
+        <div class="fsm" style="font-size:12px;">
+          <div class="state off">offline</div>
+          <div class="arrow"><svg width="30" height="12" viewBox="0 0 30 12"><path d="M0 6 H24 M24 6 l-5 -3 M24 6 l-5 3" stroke="currentColor" stroke-width="1.3" fill="none"/></svg></div>
+          <div class="state" style="color:var(--accent);border-color:rgba(255,176,0,.35)">pulling</div>
+          <div class="arrow"><svg width="30" height="12" viewBox="0 0 30 12"><path d="M0 6 H24 M24 6 l-5 -3 M24 6 l-5 3" stroke="currentColor" stroke-width="1.3" fill="none"/></svg></div>
+          <div class="state load">starting</div>
+          <div class="arrow"><svg width="30" height="12" viewBox="0 0 30 12"><path d="M0 6 H24 M24 6 l-5 -3 M24 6 l-5 3" stroke="currentColor" stroke-width="1.3" fill="none"/></svg></div>
+          <div class="state load">warming</div>
+          <div class="arrow"><svg width="30" height="12" viewBox="0 0 30 12"><path d="M0 6 H24 M24 6 l-5 -3 M24 6 l-5 3" stroke="currentColor" stroke-width="1.3" fill="none"/></svg></div>
+          <div class="state serve">ready → serving ✓</div>
+        </div>
+        <p class="readnote" style="margin-top:16px;">Idle slots drop to <b>idle</b> and free the GPU; a failed launch shows <b>error</b> with the reason inline.</p>
+      </div>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">hal0 · slot lifecycle</span></div>
+          <img src="/screenshots/slots-lifecycle.png" srcset="/screenshots/slots-lifecycle.png 1x, /screenshots/slots-lifecycle@2x.png 2x" alt="A visual diagram of the slot lifecycle state machine with transitions between offline, pulling, starting, warming, ready, serving, idle, unloading, and error" loading="lazy">
+        </div>
+        <figcaption><b>The full slot lifecycle</b> as the dashboard models it.</figcaption>
+      </figure>
+
+      <div class="note warn"><b>⚠️ Single-GPU boxes (Strix Halo):</b> slots share one iGPU through an arbiter. Load what you need and unload the rest — the Unified Memory bar shows how much headroom is left.</div>
+    </section>
+
+    <!-- UI · capabilities -->
+    <section id="ui-caps">
+      <div class="stage-head"><div class="stage-num" style="background:var(--amber)">6</div><h3>Capabilities — wire roles to slots</h3></div>
+      <p>Capabilities are the operator-friendly overlay: instead of hand-configuring each slot, you pick a <strong>capability</strong> and its child, and hal0 reconciles the real slot for you. Toggling one on loads its slot; off unloads it.</p>
+
+      <figure class="shot">
+        <div class="frame">
+          <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080/capabilities</span></div>
+          <img src="/screenshots/capability-slots.png" srcset="/screenshots/capability-slots.png 1x, /screenshots/capability-slots@2x.png 2x" alt="The Capabilities view showing capability cards for embed, voice, image, and vision wired to their underlying slots" loading="lazy">
+        </div>
+        <figcaption><b>The Capabilities view</b> — each card maps a role to an underlying slot, with model and backend pickers.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Capability</th><th>Children → underlying slot</th></tr></thead>
+        <tbody>
+          <tr><td><code>embed</code></td><td><code>embed</code> → embed · <code>rerank</code> → embed-rerank</td></tr>
+          <tr><td><code>voice</code></td><td><code>stt</code> → stt · <code>tts</code> → tts</td></tr>
+          <tr><td><code>img</code></td><td><code>img</code> → img</td></tr>
+          <tr><td><code>vision</code></td><td><code>vision</code> → vision</td></tr>
+        </tbody>
+      </table>
+
+      <ol class="steps">
+        <li><b>Toggle a capability on</b> and pick its child’s model and backend from the card.</li>
+        <li><b>Apply.</b> hal0 writes <code class="inline">capabilities.toml</code> and the affected slot config together — atomically, so they can never drift — then drives the slot lifecycle for you.</li>
+        <li><b>Chat is different.</b> It’s not a capability overlay — the chat slot is configured directly in the Slots tab.</li>
+      </ol>
+
+      <div class="done">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 9.2l2.5 2.5L13 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span><b style="color:var(--green)">You’re live.</b> Point any OpenAI SDK at <code class="inline">http://localhost:8080/v1</code>, or open the prewired chat UI (OpenWebUI) on port <b>3001</b>.</span>
+      </div>
+    </section>
+
+    <!-- ================= CLI SECTION HEADER ================= -->
+    <section id="cli" style="margin-bottom:20px;">
+      <h2>The terminal path</h2>
+      <h3>The same flow, on the CLI</h3>
+      <p class="section-lead">Every dashboard action has a one-line equivalent. The <code class="inline">hal0</code> CLI is a thin client over the same API on port 8080, so the CLI and dashboard always agree — ideal for scripted or headless hosts. Here are the five stages.</p>
+    </section>
+
     <!-- STAGE 0 -->
     <section id="s0">
       <div class="stage-head"><div class="stage-num">0</div><h3>Install &amp; first-run setup</h3></div>
@@ -426,7 +725,7 @@
 
       <!-- profile → slot visual -->
       <div class="card" style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:20px;">
-        <div style="border:1px solid rgba(180,142,242,.4); border-radius:12px; padding:16px 18px; background:var(--panel-2);">
+        <div style="border:1px solid rgba(255,176,0,.32); border-radius:12px; padding:16px 18px; background:var(--panel-2);">
           <div style="font-family:var(--mono); font-size:13px; color:var(--violet); font-weight:700; margin-bottom:10px;">profile · saber-fpx</div>
           <div style="font-family:var(--mono); font-size:12.5px; line-height:1.9; color:var(--ink-dim);">
             image&nbsp;&nbsp;= <span style="color:var(--ink)">…:rocmfpx</span><br>
@@ -439,7 +738,7 @@
           <span>named by</span>
           <svg width="52" height="16" viewBox="0 0 52 16"><path d="M0 8 H46 M46 8 l-6 -4 M46 8 l-6 4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
         </div>
-        <div style="border:1px solid rgba(63,208,201,.4); border-radius:12px; padding:16px 18px; background:var(--panel-2);">
+        <div style="border:1px solid rgba(255,176,0,.32); border-radius:12px; padding:16px 18px; background:var(--panel-2);">
           <div style="font-family:var(--mono); font-size:13px; color:var(--teal); font-weight:700; margin-bottom:10px;">slot · utility</div>
           <div style="font-family:var(--mono); font-size:12.5px; line-height:1.9; color:var(--ink-dim);">
             "profile"&nbsp;: <span style="color:var(--violet)">"vkfpx-moe"</span><br>
@@ -563,14 +862,14 @@
 
       <div class="card" style="display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
         <div style="display:flex; align-items:center; gap:12px;">
-          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(245,183,86,.12);border:1px solid rgba(245,183,86,.4);color:var(--amber);">role · agent</span>
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(255,176,0,.12);border:1px solid rgba(255,176,0,.32);color:var(--amber);">role · agent</span>
           <svg width="40" height="14" viewBox="0 0 40 14"><path d="M0 7 H34 M34 7 l-6 -4 M34 7 l-6 4" stroke="var(--ink-faint)" stroke-width="1.4" fill="none"/></svg>
-          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(63,208,201,.12);border:1px solid rgba(63,208,201,.4);color:var(--teal);">slot · primary</span>
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(255,176,0,.12);border:1px solid rgba(255,176,0,.32);color:var(--teal);">slot · primary</span>
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
-          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(245,183,86,.12);border:1px solid rgba(245,183,86,.4);color:var(--amber);">role · voice.tts</span>
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(255,176,0,.12);border:1px solid rgba(255,176,0,.32);color:var(--amber);">role · voice.tts</span>
           <svg width="40" height="14" viewBox="0 0 40 14"><path d="M0 7 H34 M34 7 l-6 -4 M34 7 l-6 4" stroke="var(--ink-faint)" stroke-width="1.4" fill="none"/></svg>
-          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(63,208,201,.12);border:1px solid rgba(63,208,201,.4);color:var(--teal);">slot · tts</span>
+          <span style="font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:9px;background:rgba(255,176,0,.12);border:1px solid rgba(255,176,0,.32);color:var(--teal);">slot · tts</span>
         </div>
       </div>
 
