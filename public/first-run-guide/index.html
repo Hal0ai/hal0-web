@@ -344,8 +344,7 @@
       <a href="#shape" class="stage"><span class="n">◆</span>The shape</a>
       <a href="#ui" class="stage"><span class="n">▸</span>Set up in the UI</a>
       <a href="#ui-open"><span class="n"></span>Open the dashboard</a>
-      <a href="#ui-picker"><span class="n"></span>First-run picker</a>
-      <a href="#ui-models"><span class="n"></span>Models</a>
+      <a href="#ui-models"><span class="n"></span>Add models</a>
       <a href="#ui-profiles"><span class="n"></span>Profiles</a>
       <a href="#ui-slots"><span class="n"></span>Slots &amp; lifecycle</a>
       <a href="#ui-caps"><span class="n"></span>Capabilities</a>
@@ -459,7 +458,7 @@
         <a class="way ui" href="#ui">
           <span class="badge">◱ recommended</span>
           <h4>Set up in the dashboard</h4>
-          <p>Open <code class="inline">localhost:8080</code>, let the first-run picker provision a coherent model stack for your hardware, then manage models, slots &amp; capabilities from tabs.</p>
+          <p>Open <code class="inline">localhost:8080</code>, then add your models and wire up slots &amp; capabilities from the dashboard tabs — point &amp; click, no config files.</p>
           <div class="go">Walk the UI →</div>
         </a>
         <a class="way cli" href="#cli">
@@ -494,37 +493,10 @@
       <div class="note"><b>💡 Tip:</b> press <span class="kbd">⌘ K</span> / <span class="kbd">Ctrl K</span> anywhere to open the command palette and jump to any tab, slot, or action by name.</div>
     </section>
 
-    <!-- UI · first-run picker -->
-    <section id="ui-picker">
-      <div class="stage-head"><div class="stage-num" style="background:var(--teal)">2</div><h3>Run the first-run picker</h3></div>
-      <p>On a brand-new install the dashboard routes you into <strong>FirstRun</strong> — a guided picker that provisions a coherent set of slots for your hardware. hal0 ships with <em>no</em> default model stack by design, so this is where your stack is born. It detects your RAM, GPU, and NPU and offers hardware-anchored tiers:</p>
-
-      <table>
-        <thead><tr><th>Tier</th><th>Best for</th></tr></thead>
-        <tbody>
-          <tr><td><strong>hal0-Lite</strong></td><td>Smaller hosts — a tiny chat model only</td></tr>
-          <tr><td><strong>hal0-Default</strong></td><td>Mid-range — chat + embed/rerank + voice</td></tr>
-          <tr><td><strong>hal0-Pro</strong></td><td>Larger unified memory — adds a coder model + image generation</td></tr>
-          <tr><td><strong>hal0-Max</strong></td><td>High-memory Strix Halo — adds the NPU trio</td></tr>
-          <tr><td><strong>LMX-Omni-52B-Halo</strong></td><td>AMD-curated kit for ≥ 100 GB unified Strix Halo</td></tr>
-        </tbody>
-      </table>
-
-      <ol class="steps">
-        <li><b>Pick a tier.</b> The highest one that fits your detected memory is marked <em>recommended</em> and pre-selected; tiers that need more RAM than you have are greyed out with a “needs ≥ N GB” tag.</li>
-        <li><b>Choose model storage.</b> Set the directory every slot reads and writes model files to. FirstRun probes candidate paths and offers them as one-click chips.</li>
-        <li><b>(Optional) Open Advanced.</b> Enable the NPU trio, or override the model, device (<code class="inline">gpu-rocm</code> · <code class="inline">gpu-vulkan</code> · <code class="inline">cpu</code> · <code class="inline">npu</code>), or profile per slot. Leave rows blank to keep the smart default.</li>
-        <li><b>Install.</b> hal0 creates each slot container in the <code class="inline">offline</code> state and kicks off background model pulls. A progress pane reattaches to every download stream so you can watch them land.</li>
-        <li><b>Verify services &amp; open the dashboard.</b> The final step checks OpenWebUI and the Hermes agent, with one-click repair for anything down. Clicking <b>Open dashboard</b> marks first-run complete.</li>
-      </ol>
-
-      <div class="note ok"><b>Prefer to configure it yourself?</b> Choose <b>Skip — configure manually</b> to drop straight into the dashboard, then add models, slots, and capabilities by hand using the steps below.</div>
-    </section>
-
     <!-- UI · models -->
     <section id="ui-models">
-      <div class="stage-head"><div class="stage-num" style="background:var(--accent)">3</div><h3>Add models — the Models tab</h3></div>
-      <p>Models live in a local <strong>registry</strong> — the single source of truth for Hugging Face coordinates, digests, and filenames. The <strong>Models</strong> tab is where you populate it: search Hugging Face, pull curated aliases, and watch progress badges.</p>
+      <div class="stage-head"><div class="stage-num" style="background:var(--accent)">2</div><h3>Add your models — the Models tab</h3></div>
+      <p>hal0 ships with <strong>no models by design</strong> — you add exactly what you want. Models live in a local <strong>registry</strong>: the single source of truth for Hugging Face coordinates, digests, and filenames. The <strong>Models</strong> tab is where you populate it — search Hugging Face, pull curated aliases, and watch progress badges. This is your first stop after opening the dashboard.</p>
 
       <figure class="shot">
         <div class="frame">
@@ -546,7 +518,7 @@
 
     <!-- UI · profiles -->
     <section id="ui-profiles">
-      <div class="stage-head"><div class="stage-num" style="background:var(--violet)">4</div><h3>Profiles — the how-to-run recipes</h3></div>
+      <div class="stage-head"><div class="stage-num" style="background:var(--violet)">3</div><h3>Profiles — the how-to-run recipes</h3></div>
       <p>A <strong>profile</strong> is a reusable runtime template: the container image, bench-tuned launch flags, and an MTP (speculative-decoding) toggle. Many slots can share one tuned profile. The <strong>Profiles</strong> tab shows the seed profiles that ship with hal0:</p>
 
       <figure class="shot">
@@ -574,7 +546,7 @@
 
     <!-- UI · slots -->
     <section id="ui-slots">
-      <div class="stage-head"><div class="stage-num" style="background:var(--teal)">5</div><h3>Slots &amp; lifecycle — the Slots tab</h3></div>
+      <div class="stage-head"><div class="stage-num" style="background:var(--teal)">4</div><h3>Slots &amp; lifecycle — the Slots tab</h3></div>
       <p>A <strong>slot</strong> is one running inference endpoint: a model, a device, a profile, and a port. The <strong>Slots</strong> tab lists every slot with a live state badge, its model, device, and port.</p>
 
       <figure class="shot">
@@ -629,7 +601,7 @@
 
     <!-- UI · capabilities -->
     <section id="ui-caps">
-      <div class="stage-head"><div class="stage-num" style="background:var(--amber)">6</div><h3>Capabilities — wire roles to slots</h3></div>
+      <div class="stage-head"><div class="stage-num" style="background:var(--amber)">5</div><h3>Capabilities — wire roles to slots</h3></div>
       <p>Capabilities are the operator-friendly overlay: instead of hand-configuring each slot, you pick a <strong>capability</strong> and its child, and hal0 reconciles the real slot for you. Toggling one on loads its slot; off unloads it.</p>
 
       <figure class="shot">
@@ -671,13 +643,13 @@
 
     <!-- STAGE 0 -->
     <section id="s0">
-      <div class="stage-head"><div class="stage-num">0</div><h3>Install &amp; first-run setup</h3></div>
-      <p>The setup wizard detects your hardware, tunes sensible defaults, seeds starter slots, and (optionally) pulls starter models.</p>
+      <div class="stage-head"><div class="stage-num">0</div><h3>Install &amp; bring up the API</h3></div>
+      <p>Get the control plane running and verify the host is ready. hal0 ships with <strong>no models by design</strong> — you add your own next, in Stage&nbsp;1.</p>
 
       <div class="flow" style="grid-template-columns:repeat(4,1fr)">
         <div class="step"><div class="k">install</div><div class="cmd">hal0 --version</div><div class="d">one time</div></div>
         <div class="step"><div class="k">preflight</div><div class="cmd">hal0 doctor</div><div class="d">GPU · ports · disk</div></div>
-        <div class="step"><div class="k">wizard</div><div class="cmd">hal0 setup</div><div class="d">tune defaults</div></div>
+        <div class="step"><div class="k">seed slots</div><div class="cmd">hal0 setup</div><div class="d">hardware + slots</div></div>
         <div class="step"><div class="k">verify</div><div class="cmd">hal0 status</div><div class="d">API on :8080</div></div>
       </div>
 
@@ -685,16 +657,11 @@
         <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
 <pre><span class="p">$</span> hal0 --version              <span class="c"># → hal0 0.9.2</span>
 <span class="p">$</span> hal0 doctor                 <span class="c"># re-run installer preflight checks</span>
-<span class="p">$</span> hal0 setup                  <span class="c"># interactive first-run wizard</span>
-
-<span class="c"># prefer hands-off? recommended defaults, no prompts:</span>
-<span class="p">$</span> hal0 setup <span class="f">--auto</span>              <span class="c"># full auto, downloads starter models</span>
-<span class="p">$</span> hal0 setup <span class="f">--auto --no-pull</span>    <span class="c"># seed slots only, pull models later</span>
-
-<span class="p">$</span> hal0 status                 <span class="c"># confirm the daemon is alive</span></pre>
+<span class="p">$</span> hal0 setup                  <span class="c"># detect hardware, seed slots, tune defaults</span>
+<span class="p">$</span> hal0 status                 <span class="c"># confirm the daemon is alive on :8080</span></pre>
       </div>
 
-      <div class="note"><b>💡 Fast path:</b> <code class="inline">hal0 setup --auto</code> gives you a working system in one step. The stages below are what setup does under the hood — do them manually when you want to add your <em>own</em> models and slots.</div>
+      <div class="note"><b>💡 No bundle picker:</b> setup gets the API and empty slots ready — it does not choose a model stack for you. Add exactly the models you want in the next stage.</div>
     </section>
 
     <!-- STAGE 1 -->
