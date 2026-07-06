@@ -604,6 +604,8 @@
       <div class="stage-head"><div class="stage-num" style="background:var(--amber)">5</div><h3>Capabilities — wire roles to slots</h3></div>
       <p>Capabilities are the operator-friendly overlay: instead of hand-configuring each slot, you pick a <strong>capability</strong> and its child, and hal0 reconciles the real slot for you. Toggling one on loads its slot; off unloads it.</p>
 
+      <div class="note"><b>💡 Setup gets you here.</b> <code class="inline">hal0 setup</code> scaffolds these capability slots (and NPU slots) for you — the <em>structure</em> is wired (device, profile, port), with the <strong>model left unset</strong>. It never picks a model for you: run interactively, setup walks each capability and lets you choose a fitting model, scaffold it empty, or skip. So you often land here with the slots already in place — you just assign each one a model.</div>
+
       <figure class="shot">
         <div class="frame">
           <div class="chrome"><i class="r"></i><i class="y"></i><i class="g"></i><span class="url">http://localhost:8080/capabilities</span></div>
