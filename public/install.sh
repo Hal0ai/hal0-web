@@ -18,18 +18,23 @@
 #   sudo bash install.sh
 #
 # Env overrides:
-#   HAL0_RELEASES_URL          full URL to a hal0.releases.v1 manifest
-#                              (default: GitHub Releases /latest/download/stable.json)
-#   HAL0_CHANNEL               channel name when using the default URL (default: stable)
-#   HAL0_UPDATE_SKIP_COSIGN=1  skip cosign verify (only honored when cosign
-#                              isn't installed; emits a loud warning)
-#   HAL0_BOOTSTRAP_KEEP_TMP=1  don't delete the work directory on exit
-#                              (debugging the unpacked tree)
+#   HAL0_RELEASES_URL           full URL to a hal0.releases.v1 manifest
+#                               (default: GitHub Releases /latest/download/stable.json)
+#   HAL0_CHANNEL                channel name when using the default URL (default: stable)
+#   HAL0_INSTALL_REQUIRE_COSIGN=1
+#                               fail the install if cosign is not present
+#                               (restores the old hard requirement for
+#                               security-conscious / enterprise installs)
+#   HAL0_BOOTSTRAP_KEEP_TMP=1   don't delete the work directory on exit
+#                               (debugging the unpacked tree)
 #
-# This script is the trust boundary for the one-line install — it never
-# executes anything from the manifest or the tarball until cosign (or
-# the documented skip) has verified the signature against the workflow
-# OIDC identity in the manifest.
+# This script is the trust boundary for the one-line install. The tarball's
+# sha256 is ALWAYS checked against the manifest digest (fatal on mismatch)
+# before anything is executed. cosign then verifies the publisher signature
+# against the workflow OIDC identity — but cosign is no longer a hard
+# install-time dependency: if the binary is absent, the install proceeds on
+# the sha256 check alone with a loud warning (opt back into strict mode with
+# HAL0_INSTALL_REQUIRE_COSIGN=1). See docs/internal/release-manifest.md.
 #
 # Schema reference: docs/internal/release-manifest.md (hal0.releases.v1).
 
@@ -94,6 +99,18 @@ except json.JSONDecodeError as e:
 "
 }
 
+# Like parse_manifest_field but prints nothing (rather than dying) when the
+# field is absent — used for the transition-window bundle_url/sig_url/
+# cert_url fields, which are mutually optional (see cosign_verify below).
+parse_manifest_field_optional() {
+    local file="$1" field="$2"
+    python3 -c "
+import json
+v = json.load(open('${file}')).get('${field}')
+print(v if v is not None else '')
+"
+}
+
 # ── tarball fetch + sha256 verify ─────────────────────────────────────────
 fetch_and_hash_check() {
     local url="$1" expected_digest="$2" out="$3"
@@ -121,28 +138,55 @@ fetch_sidecar() {
 }
 
 cosign_verify() {
-    local tarball="$1" sig="$2" cert="$3" identity="$4" issuer="$5"
+    # bundle may be empty — in that case sig and cert must both be set (the
+    # transition-window fallback for manifests without bundle_url). See main().
+    local tarball="$1" bundle="$2" sig="$3" cert="$4" identity="$5" issuer="$6"
 
     if ! command -v cosign >/dev/null 2>&1; then
-        if [[ "${HAL0_UPDATE_SKIP_COSIGN:-0}" == "1" ]]; then
-            warn "cosign not installed AND HAL0_UPDATE_SKIP_COSIGN=1 — skipping signature verify"
-            warn "this is only safe if you trust the network path to ${HAL0_RELEASES_URL}"
-            return 0
+        if [[ "${HAL0_INSTALL_REQUIRE_COSIGN:-0}" == "1" ]]; then
+            die "cosign is required (HAL0_INSTALL_REQUIRE_COSIGN=1) but not installed.
+   install it from https://docs.sigstore.dev/cosign/installation/"
         fi
-        die "cosign is required to verify the release signature.
-   install it from https://docs.sigstore.dev/cosign/installation/, or
-   re-run with HAL0_UPDATE_SKIP_COSIGN=1 to bypass (NOT recommended)"
+        # cosign is not a hard dependency: the tarball's sha256 was already
+        # verified against the manifest digest (fetch_and_hash_check, fatal on
+        # mismatch), so integrity relative to the manifest holds. What we lose
+        # by skipping is proof that the tarball was built by hal0's signing
+        # workflow rather than substituted upstream of the manifest — hence the
+        # loud warning. Install cosign, or set HAL0_INSTALL_REQUIRE_COSIGN=1, to
+        # keep that guarantee.
+        warn "cosign not installed — skipping publisher signature verification"
+        warn "  the tarball sha256 was verified against the manifest, but its"
+        warn "  cosign/OIDC signature was NOT checked."
+        warn "  for full supply-chain verification install cosign:"
+        warn "    ${_C_DIM}https://docs.sigstore.dev/cosign/installation/${_C_RST}"
+        return 0
     fi
 
     info "verifying signature with cosign keyless OIDC"
     info "  identity-regex: ${_C_DIM}${identity}${_C_RST}"
     info "  issuer:         ${_C_DIM}${issuer}${_C_RST}"
-    # cosign 3.x requires the Fulcio-issued cert via --certificate
-    # alongside the .sig; --certificate-identity-regexp is checked
-    # against the cert's SAN.
+
+    local -a verify_args
+    if [[ -n "${bundle}" ]]; then
+        # Keyless verification uses a Sigstore bundle. The bundle carries the
+        # Fulcio cert, the signature, AND the Rekor Signed Entry Timestamp
+        # (SET) — the trusted timestamp that lets verify-blob succeed after
+        # the short-lived (~10 min) signing cert has expired, which is
+        # always the case by the time a user runs the installer.
+        # --certificate-identity-regexp is matched against the cert SAN
+        # carried in the bundle. (A detached .sig + .crt had no SET and
+        # failed on every client — #1159.)
+        verify_args=(--bundle "${bundle}")
+    else
+        # Transition-window fallback: manifest had no bundle_url (older
+        # release, or a manifest generated before #1159 shipped). This path
+        # inherits the known post-expiry failure the bundle fixes — kept
+        # only so manifests without bundle_url still attempt verification
+        # instead of erroring outright.
+        verify_args=(--signature "${sig}" --certificate "${cert}")
+    fi
     if ! cosign verify-blob \
-            --signature "${sig}" \
-            --certificate "${cert}" \
+            "${verify_args[@]}" \
             --certificate-identity-regexp "${identity}" \
             --certificate-oidc-issuer "${issuer}" \
             "${tarball}" >/dev/null 2>&1; then
@@ -167,24 +211,38 @@ main() {
     local manifest="${work}/manifest.json"
     fetch_manifest "${manifest}"
 
-    local version url sig_url cert_url digest identity issuer
+    local version url bundle_url sig_url cert_url digest identity issuer
     version="$(parse_manifest_field "${manifest}" version)"
     url="$(parse_manifest_field "${manifest}" url)"
-    sig_url="$(parse_manifest_field "${manifest}" sig_url)"
-    cert_url="$(parse_manifest_field "${manifest}" cert_url)"
+    bundle_url="$(parse_manifest_field_optional "${manifest}" bundle_url)"
+    sig_url="$(parse_manifest_field_optional "${manifest}" sig_url)"
+    cert_url="$(parse_manifest_field_optional "${manifest}" cert_url)"
     digest="$(parse_manifest_field "${manifest}" digest_sha256)"
     identity="$(parse_manifest_field "${manifest}" signer_identity)"
     issuer="$(parse_manifest_field "${manifest}" signer_issuer)"
 
+    if [[ -z "${bundle_url}" && ( -z "${sig_url}" || -z "${cert_url}" ) ]]; then
+        die "manifest has no usable signing scheme (need bundle_url, or both sig_url and cert_url)"
+    fi
+
     info "release: ${_C_BLD}hal0 v${version}${_C_RST} (${HAL0_CHANNEL})"
 
     local tarball="${work}/hal0-${version}.tar.gz"
-    local sig="${tarball}.sig"
-    local cert="${tarball}.crt"
     fetch_and_hash_check "${url}" "${digest}" "${tarball}"
-    fetch_sidecar "signature" "${sig_url}" "${sig}"
-    fetch_sidecar "certificate" "${cert_url}" "${cert}"
-    cosign_verify "${tarball}" "${sig}" "${cert}" "${identity}" "${issuer}"
+
+    # Prefer the Sigstore bundle (survives cert expiry, #1159); fall back to
+    # the transition-window sig_url/cert_url pair when bundle_url is absent.
+    local bundle="" sig="" cert=""
+    if [[ -n "${bundle_url}" ]]; then
+        bundle="${tarball}.bundle"
+        fetch_sidecar "signature bundle" "${bundle_url}" "${bundle}"
+    else
+        sig="${tarball}.sig"
+        cert="${tarball}.crt"
+        fetch_sidecar "signature" "${sig_url}" "${sig}"
+        fetch_sidecar "certificate" "${cert_url}" "${cert}"
+    fi
+    cosign_verify "${tarball}" "${bundle}" "${sig}" "${cert}" "${identity}" "${issuer}"
 
     info "extracting tarball"
     tar -xzf "${tarball}" -C "${work}"
