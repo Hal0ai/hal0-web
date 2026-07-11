@@ -10,10 +10,10 @@ import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
 
 const canonicalUrl = 'https://hal0.dev/';
-const version = 'v0.9.0';
+const version = 'v0.9.7';
 
 const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, prewired chat UI, signed self-update. One command installs the lot.';
+  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, systemd-managed slots, prewired chat UI, in-dashboard benchmarks, signed self-update. One command installs the lot.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -40,6 +40,16 @@ const features = [
     body: 'chat · completions · embeddings · rerank · transcriptions · speech · images · models. Drop-in for any OpenAI SDK — point your client at :8080/v1 and go.',
   },
   {
+    tag: 'benchmarks',
+    title: 'In-dashboard benchmarks',
+    body: 'hal0-bench in-tree: roster, runs, evals, and a run queue. One-click benchmark runs with per-model tok/s + latency history, all from the dashboard. Weekly scheduled runs keep the public roster honest.',
+  },
+  {
+    tag: 'runner',
+    title: 'Custom llama.cpp runner',
+    body: 'We ship the latest llama.cpp branch features in our own ghcr.io/hal0ai/hal0-rocmfpx image — TurboQuant (turbo3/turbo4), ROCmFPX quantization, native FP6, and MTP spec decode on both Vulkan and ROCm. One image for the whole GPU stack.',
+  },
+  {
     tag: 'lifecycle',
     title: 'Typed slot state machine',
     body: 'offline → pulling → starting → warming → ready → serving ↔ idle → unloading. Atomic transitions, persisted to state.json, streamed over SSE.',
@@ -60,6 +70,11 @@ const features = [
     body: 'hal0 update --channel stable|nightly. Verified tarballs swap a /usr/lib/hal0/current symlink. --rollback reverts atomically. Stable + nightly channels.',
   },
   {
+    tag: 'agents',
+    title: 'Bundled agents + hal0-brain',
+    body: 'Hermes agent with private memory, pi-coder for code tasks, and hal0-brain — a steward agent that knows the platform and helps you manage slots, models, and benchmarks from the dashboard chat.',
+  },
+  {
     tag: 'dashboard',
     title: 'Vue 3 + Tailwind 4 admin UI',
     body: 'Dark-by-default operator console. SSE-backed status and log tail. Capability cards group flat slots into embed / voice / image picks for one-click ops.',
@@ -69,30 +84,30 @@ const features = [
 const providers = [
   {
     prov: 'llama.cpp',
-    ver: 'b9279',
+    ver: 'b9279+',
     hw: 'Vulkan (default) · ROCm · CUDA',
     uses: 'chat · embed · rerank · vision',
     eps: '/v1/chat · /v1/embeddings · /v1/rerankings',
   },
   {
-    prov: 'FLM',
-    ver: 'v1',
-    hw: 'AMD XDNA NPU (opt-in)',
-    uses: 'chat · embed (ASR multiplex)',
-    eps: '/v1/chat · /v1/embeddings',
-  },
-  {
-    prov: 'Moonshine',
-    ver: 'base',
-    hw: 'CPU only',
-    uses: 'speech-to-text',
-    eps: '/v1/audio/transcriptions',
+    prov: 'FLM (NPU trio)',
+    ver: 'v0.9.44',
+    hw: 'AMD XDNA NPU',
+    uses: 'chat · embed · STT (concurrent)',
+    eps: '/v1/chat · /v1/embeddings · /v1/audio/transcriptions',
   },
   {
     prov: 'Kokoro',
     ver: '82M',
     hw: 'CPU · Vulkan',
     uses: 'text-to-speech · 54 voices',
+    eps: '/v1/audio/speech',
+  },
+  {
+    prov: 'Qwen3-TTS',
+    ver: 'v1',
+    hw: 'ROCm',
+    uses: 'text-to-speech · custom voice cloning',
     eps: '/v1/audio/speech',
   },
   {
@@ -175,91 +190,96 @@ const tiers = [
 
 const loadoutTabs = [
   { id: 'coding',  label: 'Coding',       count: 3 },
-  { id: 'chat',    label: 'General chat', count: 3 },
+  { id: 'chat',    label: 'Agent / tool-use', count: 3 },
   { id: 'voice',   label: 'Voice mode',   count: 1 },
   { id: 'rag',     label: 'RAG',          count: 1 },
   { id: 'image',   label: 'Image gen',    count: 1 },
-  { id: 'agentic', label: 'Agentic',      count: 1 },
+  { id: 'agentic', label: 'Platform agent', count: 1 },
   { id: 'small',   label: 'Minimal',      count: 1 },
 ];
 
 const loadoutData: Record<string, Array<{ size: string; title: string; vram: string; slots: Array<{ k: string; v: string; d: string }> }>> = {
   coding: [
-    { size: '~5 GB · daily', title: 'Small dedicated coder', vram: '8 GB+', slots: [
-      { k: 'primary', v: 'Qwen2.5-Coder-7B-Instruct', d: 'Q4_K_M · 4.7 GB · best small dedicated coder' },
+    { size: '~3.6 GB · snappy', title: 'Small dedicated coder', vram: '8 GB+', slots: [
+      { k: 'primary', v: 'Qwopus3.5-4B-Coder-MTP', d: 'Q6_K · 3.6 GB · Qwen3.5 + Opus reasoning, MTP' },
     ]},
-    { size: '~19 GB · pro', title: 'MoE that reasons like 30B', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-Coder-30B-A3B', d: 'Q4_K_M · MoE 3B active · runs near 3B speeds, reasons like 30B' },
-      { k: 'embed',   v: 'nomic-embed-text-v2-moe', d: 'Q4_K_M · 140 MB · repo-aware search' },
+    { size: '~14.8 GB · daily', title: 'Workhorse 27B coder', vram: '24 GB+', slots: [
+      { k: 'primary', v: 'CHADROCK3.6-27B-Coder-MTP', d: 'ROCmFP4 · 14.8 GB · agent/coder, 262K ctx, vision with mmproj' },
+      { k: 'alt',     v: 'Qwopus3.6-27B-Coder-MTP', d: 'Q6_K · 22.4 GB · Opus reasoning, MTP' },
     ]},
-    { size: '~47 GB · max', title: 'Qwen3-Coder-Next 80B-A3B', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'Qwen3-Coder-Next-80B-A3B', d: 'Q4_K_M · MoE 3B active · Qwen3-Coder lineup ceiling' },
-      { k: 'alt',     v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid reasoning + tool-friendly coding' },
-      { k: 'alt',     v: 'Qwen3.6-27B-A3B-MTP', d: 'Q4_K_M · 18.8 GB · MoE with MTP · fast reasoning fallback' },
+    { size: '~31.4 GB · max', title: 'Ace Saber MoE 35B', vram: '64 GB+ UMA', slots: [
+      { k: 'primary', v: 'CHADROCK-35B-Ace-Saber', d: 'ROCmFPX MoEQuality 7.07BPW · 31.4 GB · best agent/coder' },
+      { k: 'alt',     v: 'CHADROCK3.6-35B-A3B-Coder', d: 'ROCmFPX MoEQuality 7.08BPW · 31.4 GB · coder variant' },
+      { k: 'alt',     v: 'Qwen3.6-CROWN-35B-A3B', d: 'MTP v7 · 22.6 GB · ROCmFP4 dynamic' },
     ]},
   ],
   chat: [
-    { size: '~2.5 GB · snappy', title: '1M-token context, low-end OK', vram: '6 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-4B-Instruct-2507', d: 'Q4_K_M · Aug 2025 · 1M-token context' },
+    { size: '~1.1 GB · snappy', title: 'TurboQuant FPX, tiny footprint', vram: '2 GB+', slots: [
+      { k: 'primary', v: 'Hal0-BRAINTRAIN-1B-FPX8-AGENT', d: 'FPX8 agent · 1.1 GB · 131K ctx' },
+      { k: 'embed',   v: 'Qwen3-Embedding-0.6B', d: 'Q8_0 · 639 MB' },
     ]},
-    { size: '~19 GB · sweetspot', title: 'The Strix Halo daily-driver', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-30B-A3B-Instruct-2507', d: 'Q4_K_M · MoE 3B active' },
-      { k: 'alt',     v: 'gemma-3-12b-it', d: 'Q4_K_M · 6.6 GB footprint alt' },
+    { size: '~7.4 GB · daily', title: 'The Strix Halo daily-driver', vram: '16 GB+', slots: [
+      { k: 'primary', v: 'gemma4-agentic-fable5-v2', d: 'Q4_K_M · 7.4 GB · tool-use tuned' },
+      { k: 'alt',     v: 'Qwen3.5-9B-DeepSeek-V4-Flash', d: 'Q6_K · 7.6 GB · MTP, DeepSeek reasoning' },
+      { k: 'npu',     v: 'FLM trio: qwen3:4b + whisper + embed', d: 'XDNA2 NPU · concurrent chat+STT+embed' },
     ]},
-    { size: '~50 GB · headroom', title: 'All three modalities warm', vram: '96 GB UMA', slots: [
-      { k: 'primary', v: 'Llama-4-Scout-17B-16E', d: 'Q4_K_M · MoE 17B active · 10M context' },
-      { k: 'embed',   v: 'bge-m3', d: 'Q8 · 600 MB · multilingual, multi-vector' },
-      { k: 'voice',   v: 'moonshine + kokoro', d: 'all hot simultaneously on 128 GB Strix Halo' },
+    { size: '~42 GB · headroom', title: 'All three modalities warm on 128 GB', vram: '96 GB UMA', slots: [
+      { k: 'primary', v: 'CHADROCK-35B-Ace-Saber', d: 'ROCmFPX MoEQuality · 160 tok/s' },
+      { k: 'agent',   v: 'CHADROCK-35B + hal0-brain (Ornith 9B)', d: 'platform steward + Ace Saber fallback' },
+      { k: 'embed',   v: 'nomic-embed-text v1.5', d: 'Q8_0 · 274 MB · multilingual' },
     ]},
   ],
   voice: [
-    { size: '~3 GB total', title: 'Hands-free streaming', vram: '4 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-4B-Instruct-2507', d: 'Q4_K_M · 2.5 GB · low-latency reply' },
-      { k: 'stt',     v: 'Moonshine base', d: '190 MB · built for edge real-time' },
-      { k: 'tts',     v: 'Kokoro-82M v1.0', d: '330 MB · 8 languages · 54 voices' },
+    { size: '~4 GB total', title: 'NPU STT + GPU TTS', vram: '8 GB+', slots: [
+      { k: 'primary', v: 'gemma4-agentic-fable5-v2', d: 'Q4_K_M · 7.4 GB · fast reply' },
+      { k: 'stt',     v: 'FLM Whisper v3 turbo', d: 'XDNA2 NPU · whisper-v3:turbo' },
+      { k: 'tts',     v: 'Qwen3-TTS + Kokoro-82M', d: 'GPU voice cloning + CPU light' },
     ]},
   ],
   rag: [
-    { size: '~19 GB', title: 'Long-context retrieval', vram: '24 GB+', slots: [
-      { k: 'primary', v: 'Qwen3-30B-A3B-Instruct-2507', d: 'Q4_K_M · 18.6 GB · synthesis' },
-      { k: 'embed',   v: 'bge-m3', d: 'Q8 · 600 MB · 8192-token context · top R@1' },
-      { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'auto-managed embed-rerank slot · /v1/rerankings' },
+    { size: '~20 GB', title: 'Long-context retrieval', vram: '32 GB+', slots: [
+      { k: 'primary', v: 'CHADROCK3.6-27B-Coder-MTP', d: 'ROCmFP4 · 14.8 GB · 262K context · synthesis' },
+      { k: 'embed',   v: 'nomic-embed-text v1.5', d: 'Q8_0 · 274 MB · top R@1' },
+      { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'Q4_K_M · 438 MB · /v1/rerankings' },
     ]},
   ],
   image: [
-    { size: '~6.5 GB', title: 'Default img slot', vram: '12 GB+', slots: [
-      { k: 'img', v: 'sdxl-turbo', d: '6.5 GB FP16 · 4 steps, cfg ≈ 1.0 · research license' },
-      { k: 'alt', v: 'sd-1.5-pruned-emaonly', d: '4.3 GB · CreativeML Open RAIL-M' },
-      { k: 'pro', v: 'flux-schnell', d: '23.8 GB · Apache-2.0 · needs Flux workflow' },
+    { size: 'varies', title: 'ComfyUI on ROCm', vram: '12 GB+', slots: [
+      { k: 'img', v: 'SDXL Turbo / SD 1.5 / Flux Schnell', d: 'ComfyUI :8188 · ROCm backend' },
+      { k: 'alt', v: 'Juggernaut XL v9', d: '7.1 GB · photorealistic' },
+      { k: 'pro', v: 'LTX 2 19B (video)', d: '27 GB fp8 · video generation' },
     ]},
   ],
   agentic: [
-    { size: '~42 GB', title: 'Tool-use + MCP', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'Hermes-4-70B', d: 'Q4_K_M · hybrid-reasoning, tuned for tool-call faithfulness' },
-      { k: 'embed',   v: 'bge-m3', d: '600 MB · retrieval-augmented routing' },
-      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Cognee-backed memory · two-tier scope' },
+    { size: '~32 GB', title: 'Platform steward + Ace Saber', vram: '64 GB+ UMA', slots: [
+      { k: 'brain',   v: 'Ornith-1.0-9b (hal0-brain)', d: 'ROCmFPX STRIX_LEAN · platform steward · dashboard agent' },
+      { k: 'primary', v: 'CHADROCK-35B-Ace-Saber', d: 'ROCmFPX MoEQuality · 31.4 GB · heavy tool-use fallback' },
+      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Hindsight-backed memory · two-tier scope' },
     ]},
   ],
   small: [
-    { size: '<1 GB', title: 'Privacy-first', vram: 'CPU OK', slots: [
-      { k: 'primary', v: 'gemma-3-1b-it', d: 'Q4_K_M · 0.7 GB · text-only' },
-      { k: 'embed',   v: 'nomic-embed-text-v2-moe', d: 'Q4_K_M · 140 MB · multilingual MoE' },
+    { size: '<1 GB', title: 'Privacy-first, CPU OK', vram: '2 GB+', slots: [
+      { k: 'primary', v: 'Hal0-BRAINTRAIN-1B-STRIX_LEAN', d: 'ROCmFPX · 611 MB · FPX6/FPX8 variants available' },
+      { k: 'embed',   v: 'nomic-embed-text v1.5', d: 'Q8_0 · 274 MB · multilingual' },
     ]},
   ],
 };
 
-const compareCols = ['hal0', 'ollama', 'LM Studio', 'OpenAI cloud'];
+const compareCols = ['hal0', 'ollama', 'Lemonade', 'LM Studio'];
 const compareRows = [
   { lbl: 'OpenAI-compatible /v1/*', cells: ['chat · embed · rerank · STT · TTS · img', 'chat · embed', 'chat · embed', 'chat · embed · STT · TTS · img'] },
-  { lbl: 'Concurrent slots', cells: ['5 systemd-managed', 'one at a time', 'one at a time', 'fully concurrent'] },
-  { lbl: 'Slot lifecycle state machine', cells: ['typed, atomic, SSE-streamed', 'no', 'no', '—'] },
-  { lbl: 'UMA-aware hardware probe', cells: ['Strix Halo · NPU · platform-aware', 'CPU / GPU only', 'CPU / GPU only', '—'] },
-  { lbl: 'XDNA NPU support', cells: ['first-class via FLM', 'no', 'no', '—'] },
-  { lbl: 'Dispatcher with upstreams', cells: ['OpenRouter · Anthropic · OpenAI · custom', 'no', 'no', '—'] },
-  { lbl: 'Cosign-signed updates', cells: ['keyless OIDC + rollback', 'no', 'auto-update', '—'] },
-  { lbl: 'Headless / Linux-first', cells: ['systemd-required, headless', 'cross-platform', 'GUI required', 'cloud'] },
-  { lbl: 'Your data, your hardware', cells: ['yes', 'yes', 'yes', 'no'] },
-  { lbl: 'Cost per million tokens', cells: ['$0 + electricity', '$0 + electricity', '$0 + electricity', '$0.50 – $60'] },
+  { lbl: 'Concurrent slots', cells: ['12 systemd-managed', 'one at a time', 'one at a time', 'one at a time'] },
+  { lbl: 'Slot lifecycle state machine', cells: ['typed, atomic, SSE-streamed', 'no', 'no', 'no'] },
+  { lbl: 'UMA-aware hardware probe', cells: ['Strix Halo · NPU · platform-aware', 'CPU / GPU only', 'CPU / GPU only', 'CPU / GPU only'] },
+  { lbl: 'XDNA NPU support', cells: ['first-class via FLM trio', 'no', 'no', 'no'] },
+  { lbl: 'Dispatcher with upstreams', cells: ['OpenRouter · Anthropic · OpenAI · custom', 'no', 'no', 'no'] },
+  { lbl: 'In-dashboard benchmarks', cells: ['roster · runs · evals · queue', 'no', 'no', 'no'] },
+  { lbl: 'Bundled agents + MCP', cells: ['Hermes · pi-coder · hal0-brain', 'no', 'no', 'no'] },
+  { lbl: 'HF model auto-update', cells: ['per-row indicator + Update all', 'manual pull', 'manual pull', 'manual pull'] },
+  { lbl: 'Cosign-signed updates', cells: ['keyless OIDC + rollback', 'no', 'no', 'auto-update'] },
+  { lbl: 'Headless / Linux-first', cells: ['systemd-required, headless', 'cross-platform', 'yes', 'GUI required'] },
+  { lbl: 'Your data, your hardware', cells: ['yes', 'yes', 'yes', 'yes'] },
+  { lbl: 'Cost per million tokens', cells: ['$0 + electricity', '$0 + electricity', '$0 + electricity', '$0 + electricity'] },
 ];
 
 interface RoadmapItem { t: string; d: string; }
@@ -276,11 +296,12 @@ const themes: RoadmapTheme[] = [
     blurb: 'The /v1/* surface and the engines behind it.',
     shipped: [
       { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Five-provider stack', d: 'llama.cpp (Vulkan / ROCm / CUDA) for chat and embed, FLM for the XDNA NPU, Moonshine for STT, Kokoro for TTS, ComfyUI for image generation.' },
+      { t: 'Six-provider stack', d: 'llama.cpp (Vulkan / ROCm / CUDA) for chat/embed/rerank, FLM trio for the XDNA NPU (chat + embed + STT concurrent), Kokoro for TTS, Qwen3-TTS for GPU voice cloning, ComfyUI for image generation.' },
       { t: 'Image generation', d: 'POST /v1/images/generations served by a ComfyUI provider on ROCm. Curated SDXL Turbo / SD 1.5 / Flux Schnell with license badges.' },
-      { t: 'FLM NPU provider live', d: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v1, pinned by sha256. Chat + embed surfaced in the picker only when XDNA hardware is present.' },
+      { t: 'FLM NPU trio live', d: 'Self-contained ghcr.io/hal0ai/hal0-toolbox-flm:v0.9.44. Chat + embed + STT concurrent on XDNA2 — all three modalities from one NPU slot, toggled from the dashboard.' },
+      { t: 'ROCmFPX / TurboQuant', d: 'New unified ghcr.io/hal0ai/hal0-rocmfpx:c077206 image with TurboQuant turbo3/turbo4 quantization, FP6, and MTP spec decode on Vulkan and ROCm.' },
       { t: 'GPU generalization', d: 'Experimental CUDA seed profile (Vulkan fallback) and per-slot gpu_index pinning for multi-GPU hosts, beside the Strix Halo ROCm defaults.' },
-      { t: 'Voice end-to-end', d: 'NPU / Moonshine STT plus Kokoro or GPU Qwen3-TTS stitched through the slot lifecycle; /v1/audio/transcriptions and /v1/audio/speech are live.' },
+      { t: 'Voice end-to-end', d: 'FLM NPU STT (Whisper v3 turbo) + Kokoro or GPU Qwen3-TTS stitched through the slot lifecycle; /v1/audio/transcriptions and /v1/audio/speech are live.' },
     ],
     soon: [],
     later: [
@@ -295,15 +316,14 @@ const themes: RoadmapTheme[] = [
     shipped: [
       { t: 'Slot lifecycle state machine', d: 'Atomic transitions (offline → pulling → starting → warming → ready → serving), persisted and SSE-streamed.' },
       { t: 'Capability slots overlay', d: 'Embed / Voice / Img capability cards plus an NPU backend rollup, backed by /etc/hal0/capabilities.toml.' },
-      { t: 'embed-rerank built-in slot', d: 'Auto-created on first enable: bge-reranker-v2-m3-q4_k_m on :8086 with --reranking. /v1/rerankings stays separate from chat.' },
+      { t: 'embed-rerank built-in slot', d: 'Auto-created on first enable: bge-reranker-v2-m3-q4_k_m on :8083 with --reranking. /v1/rerankings stays separate from chat.' },
       { t: 'Per-slot live metrics', d: 'GET /api/slots/metrics reads docker cgroup memory + ActiveEnterTimestampMonotonic + scraped /metrics.' },
       { t: 'Orchestrator drift reconcile', d: 'apply() reconciles capabilities.toml ↔ slots/*.toml on every call, not only on selection diff.' },
       { t: 'Stacks — declarative loadouts', d: 'Apply a whole model/slot layout atomically from one declarative file; profiles share the same portable export/import envelope.' },
       { t: 'Virtual seed profiles + tri-state MTP', d: 'Code-defined seed profiles (self-healing on upgrade) with dedicated embed/rerank lanes; MTP is a model×profile×slot Auto/On/Off decision.' },
+      { t: 'In-dashboard benchmarks', d: 'hal0-bench in-tree: roster, runs, evals, run queue. One-click bench runs from the dashboard; weekly scheduled runs with tok/s + latency history.' },
     ],
-    soon: [
-      { t: 'Benchmarks & presets UI', d: 'In-dashboard tok/s + latency runs, plus curated loadout presets you can flash onto a fresh install.' },
-    ],
+    soon: [],
     later: [],
   },
   {
@@ -347,8 +367,9 @@ const themes: RoadmapTheme[] = [
     shipped: [
       { t: 'MCP tool annotations', d: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations so SDK clients can render confirmation UIs and reason about side-effects.' },
       { t: 'Approval inbox + bell', d: 'Capital-D destructive tool calls gate through a header bell and modal inbox in the dashboard, with full CLI parity via hal0 agent approvals.' },
-      { t: 'Bundled Hermes agent', d: 'Hermes-Agent installable from the dashboard, prewired to the local OpenAI API + MCP servers, with its own private memory bank.' },
-      { t: 'Hindsight memory engine', d: 'Embedded memory with vector recall and native graph extraction; shared by default, with private per-agent banks. (Replaces the earlier Cognee plan.)' },
+      { t: 'Bundled agents (Hermes, pi-coder, hal0-brain)', d: 'Three agents prewired to the local OpenAI API + MCP servers: Hermes for tool-use, pi-coder for code, and hal0-brain for platform stewardship from the dashboard chat.' },
+      { t: 'HF model auto-update', d: 'Per-row update indicator detects when installed HF models have newer bytes upstream. One-click "Update all (N)" re-pulls in-place — no relocation.' },
+      { t: 'Hindsight memory engine', d: 'Embedded memory with vector recall and native graph extraction; shared by default, with private per-agent banks.' },
       { t: 'Two-way MCP + hal0 mcp CLI', d: 'hal0 hosts admin + memory MCP servers and reaches external ones; manage, install, and browse servers from the CLI and dashboard.' },
     ],
     soon: [],
@@ -379,24 +400,29 @@ const stages = [
 
 const shipNowHighlights = [
   {
-    tag: 'live metrics',
-    title: 'Live TTFT dashboard',
-    body: 'Per-slot time-to-first-token sampled in the dispatcher, surfaced as a sparkline-pinned HUD on SlotCard and aggregated fleet-wide. 60-second window; the stats row drops to KV / ACT / MEM / UP because T/S now lives on the sparkline itself.',
+    tag: 'benchmarks',
+    title: 'In-dashboard benchmarks',
+    body: 'hal0-bench is now in-tree: a full benchmark engine with roster, runs, evals, and a run queue. One-click bench runs from the dashboard. Weekly scheduled runs with per-model tok/s + latency history. The public model roster is kept honest by automated regression detection.',
   },
   {
-    tag: 'kv-cache',
-    title: 'KV-cache % gauge populates',
-    body: 'Vulkan toolbox rebuilt against llama.cpp b9279. Scrape falls back to /slots when the legacy Prometheus gauge is missing — synthesises kv_cache_usage = max(n_prompt_tokens) / n_ctx, clamped at 1.0. The previously-empty cache tile finally has a number.',
+    tag: 'flm-trio',
+    title: 'FLM NPU trio — chat + embed + STT',
+    body: 'One NPU slot now runs chat, embeddings, and speech-to-text concurrently. Chat/ASR/Embed toggles drive the running FLM serve process. Real FastFlowLM v0.9.44 image with full model catalogue. A modality-aware readiness gate promotes each lane independently.',
   },
   {
-    tag: 'mcp',
-    title: 'MCP tool annotations',
-    body: 'All 22 admin tools and 4 standalone memory tools ship with MCP hint annotations (readOnly, destructive, idempotent, openWorld) so SDK clients can render confirmation UIs and reason about side-effects.',
+    tag: 'brain',
+    title: 'hal0-brain agent in the dashboard',
+    body: 'A third seeded agent persona that stewards the platform from the dashboard chat slide-out. Its own memory namespace, hal0-heavy system prompt (slot lifecycle, model setup, benchmarking), and the dedicated brain slot. Agent-chat renders thinking blocks, markdown, and tool-call cards.',
   },
   {
-    tag: 'install',
-    title: 'Install + version flow locked down',
-    body: '__version__ reads from importlib.metadata instead of a hard-coded string. pyproject.toml is the single source of truth. installer/install.sh copies the source tree into PREFIX so editable installs work from a temp checkout under any HAL0_PREFIX.',
+    tag: 'hf-update',
+    title: 'HF model auto-update detection',
+    body: 'Per-row update indicator detects when installed HF models have newer bytes upstream (stored metadata.sha256 vs the current LFS oid). One-click "Update all (N)" re-pulls in-place via dest_override — no relocation, even for pre-layout and ComfyUI-subdir installs.',
+  },
+  {
+    tag: 'turboquant',
+    title: 'ROCmFPX c077206 — TurboQuant + FP6 + MTP',
+    body: 'New unified llama.cpp image: TurboQuant turbo3/turbo4 quantization formats, native FP6, and MTP spec decode on both Vulkan and ROCm. One image replaces the old multi-tag ROCmFPX family. Slot-level image overrides let advanced users pin custom toolboxes.',
   },
 ];
 
@@ -423,32 +449,38 @@ const shipNowHighlights = [
           <strong>Ryzen AI Max+ 395</strong> with 128 GB of unified memory and
           an XDNA NPU — into a polished, OpenAI-compatible inference appliance.
           Slots, dispatcher, hardware probe, prewired chat UI, signed self-update.
-          <strong>Installer being overhauled — relaunching soon.</strong>
+          Benchmarks, agentic tool-use, and multi-modal inference — one box.
         </p>
 
-        <div class="holding" id="install">
-          <span class="holding-pill">overhaul in flight</span>
-          <span class="holding-msg">
-            Big overhaul in flight.
-            <strong>Installer relaunching soon.</strong>
-          </span>
+        <div class="install" id="install">
+          <div class="install-head">
+            <div class="install-dots"><i></i><i></i><i></i></div>
+            <div class="install-title">terminal</div>
+            <div class="install-meta">bash</div>
+          </div>
+          <div class="install-body">
+            <span class="prompt">$</span>
+            <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+            <span class="caret"></span>
+            <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+          </div>
         </div>
 
         <div class="cta-row">
           <a href="/docs/getting-started/" class="btn">Read the docs →</a>
           <a href="https://github.com/hal0ai/hal0" rel="noopener" class="btn ghost">★ Star on GitHub</a>
-          <span class="cta-meta">Apache-2.0 · Linux + systemd</span>
+          <span class="cta-meta">Apache-2.0 · Linux + systemd · Strix Halo native</span>
         </div>
 
         <div class="ticker">
           <span class="tk"><span class="dot"></span> hal0-api</span>
           <span class="tk"><b>:8080</b> ready</span>
           <span class="tk-sep">·</span>
-          <span class="tk">5 slots <b>up</b></span>
+          <span class="tk">12 slots <b>managed</b></span>
           <span class="tk-sep">·</span>
-          <span class="tk">GTT <b>9.2 / 96 GB</b></span>
+          <span class="tk">UMA <b>102 GB</b></span>
           <span class="tk-sep">·</span>
-          <span class="tk">probe <b>strix-halo</b></span>
+          <span class="tk">NPU <b>XDNA2</b> live</span>
         </div>
       </div>
 
@@ -461,9 +493,9 @@ const shipNowHighlights = [
     <div class="shell-wide">
       <div class="perf-grid">
         <div class="perf-cell">
-          <div class="num">258<span class="unit">tok/s</span></div>
-          <div class="lbl">primary + embed concurrent</div>
-          <div class="ctx">Strix Halo iGPU · ~9 GB GTT</div>
+          <div class="num">160<span class="unit">tok/s</span></div>
+          <div class="lbl">CHADROCK 35B Ace Saber</div>
+          <div class="ctx">Vulkan · MoEQuality 7.07BPW · MTP</div>
         </div>
         <div class="perf-cell">
           <div class="num">&lt;200<span class="unit">ms</span></div>
@@ -471,14 +503,34 @@ const shipNowHighlights = [
           <div class="ctx">both slots hot, single-flight</div>
         </div>
         <div class="perf-cell">
-          <div class="num">5<span class="unit">slots</span></div>
-          <div class="lbl">chat · embed · stt · tts · img</div>
+          <div class="num">12+<span class="unit">slots</span></div>
+          <div class="lbl">chat · embed · stt · tts · img · rerank · code · brain</div>
           <div class="ctx">systemd-managed lifecycle</div>
         </div>
         <div class="perf-cell">
           <div class="num">~10<span class="unit">s</span></div>
-          <div class="lbl">Phi-3 Mini pull → first token</div>
-          <div class="ctx">2.39 GB · 71 tok/s · 280 ms RTT</div>
+          <div class="lbl">Qwen3 4B pull → first chat</div>
+          <div class="ctx">2.4 GB · 71 tok/s · 280 ms TTFT</div>
+        </div>
+        <div class="perf-cell">
+          <div class="num">258<span class="unit">tok/s</span></div>
+          <div class="lbl">primary + embed concurrent</div>
+          <div class="ctx">Strix Halo iGPU · ~9 GB GTT</div>
+        </div>
+        <div class="perf-cell">
+          <div class="num">63<span class="unit">tok/s</span></div>
+          <div class="lbl">Qwen-AgentWorld 35B A3B</div>
+          <div class="ctx">Q4_0 ROCMFP4 · MoE 3B active</div>
+        </div>
+        <div class="perf-cell">
+          <div class="num">~10<span class="unit">s</span></div>
+          <div class="lbl">SDXL pull → first image</div>
+          <div class="ctx">ComfyUI · 6.9 GB · 25 steps</div>
+        </div>
+        <div class="perf-cell">
+          <div class="num">99<span class="unit">tok/s</span></div>
+          <div class="lbl">MiniCPM5-1B</div>
+          <div class="ctx">2.2 GB · ROCm · greedy decode</div>
         </div>
       </div>
     </div>
@@ -495,8 +547,8 @@ const shipNowHighlights = [
         <p class="sec-sub">
           Every workload is a real systemd-managed slot with a typed lifecycle.
           The API surface covers chat <em>and</em> embed <em>and</em> rerank
-          <em> and</em> STT <em>and</em> TTS <em>and</em> image gen. The dashboard
-          is for operating the box — not for chatting with it.
+          <em>and</em> STT <em>and</em> TTS <em>and</em> image gen. The dashboard
+          is for operating the box — benchmarks, model management, agent chat.
         </p>
       </div>
 
@@ -544,12 +596,13 @@ const shipNowHighlights = [
       <div class="sec-head">
         <div>
           <div class="sec-tag">/ provider stack</div>
-          <h2 class="sec-title">Five providers,<br />one /v1/* surface.</h2>
+          <h2 class="sec-title">Six providers,<br />one /v1/* surface.</h2>
         </div>
         <p class="sec-sub">
           Each provider is stateless — <code class="mono accent-mono">build_env() / start_cmd() / health() / infer()</code>.
           No global state, no shared connection pool. The picker only advertises
-          a backend the slot can actually honour on your hardware.
+          a backend the slot can actually honour on your hardware. FLM runs chat,
+          embeddings, and STT concurrently on the XDNA NPU.
         </p>
       </div>
 
@@ -818,18 +871,23 @@ const shipNowHighlights = [
   <!-- CTA -->
   <section class="cta-section">
     <div class="shell-wide cta-inner">
-      <div class="sec-tag cta-tag">/ overhaul in flight</div>
-      <h2 class="cta-h">Stop running models<br />from a <span class="accent">chat tab.</span></h2>
+      <div class="sec-tag cta-tag">/ get started</div>
+      <h2 class="cta-h">Your Strix Halo box<br />is a <span class="accent">data center.</span><br />Run it like one.</h2>
       <p class="cta-sub">
-        The installer is being rebuilt for the next release.
-        Watch the repo, or read the docs to see where it's heading.
+        One command. Open-source. Runs on your hardware.
       </p>
-      <div class="holding cta-holding">
-        <span class="holding-pill">overhaul in flight</span>
-        <span class="holding-msg">
-          Big overhaul in flight.
-          <strong>Installer relaunching soon.</strong>
-        </span>
+      <div class="install cta-install">
+        <div class="install-head">
+          <div class="install-dots"><i></i><i></i><i></i></div>
+          <div class="install-title">terminal</div>
+          <div class="install-meta">bash</div>
+        </div>
+        <div class="install-body">
+          <span class="prompt">$</span>
+          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+          <span class="caret"></span>
+          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+        </div>
       </div>
       <div class="cta-row cta-row-centered">
         <a href="/docs/getting-started/" class="btn">Read the docs →</a>
@@ -1092,6 +1150,7 @@ const shipNowHighlights = [
 
   .cta-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .cta-row-centered { justify-content: center; }
+  .cta-install { max-width: 640px; margin: 0 auto 28px; }
   .cta-meta {
     font-family: var(--hal0-font-mono);
     font-size: 11px;
@@ -1307,6 +1366,7 @@ const shipNowHighlights = [
     padding: 32px;
     border-right: 1px solid var(--hal0-border);
   }
+  .perf-cell:nth-child(n+5) { border-top: 1px solid var(--hal0-border); background: var(--hal0-bg); }
   .perf-cell .num {
     font-family: var(--hal0-font-mono);
     font-size: 44px;
