@@ -97,6 +97,12 @@ deprecated `pull_root` (default `/var/lib/hal0/models`). Point `store` at your
 fast disk / network mount to align pulls and slot bind-mounts on one path.
 </Aside>
 
+### `[memory]` — memory subsystem toggle (v0.9.8+)
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | bool | `true` | Master toggle for the entire memory subsystem (Hindsight engine, `/mcp/memory`, `/api/memory/*`, dashboard Memory tab). Replaces the old `HAL0_MEMORY_ENABLED` env var (removed). Requires `hal0-api` restart to flip. |
+
 ### `[memory.graph]` — graph extraction (ADR-0014)
 
 | Key | Type | Default | Notes |

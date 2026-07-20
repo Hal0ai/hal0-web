@@ -1,32 +1,38 @@
 ---
 title: Enable memory
-description: hal0's memory subsystem is opt-in. Enable it with HAL0_MEMORY_ENABLED=1, then control graph extraction with hal0 memory graph and migrate any legacy store.
+description: hal0's memory subsystem is enabled by default via [memory].enabled in hal0.toml. Control graph extraction with hal0 memory graph and migrate any legacy store.
 sidebar:
   order: 50
 ---
 
 import { Steps, Aside, Tabs, TabItem, Code } from '@astrojs/starlight/components';
 
-hal0's memory subsystem is **off by default**. When enabled it gives
+hal0's memory subsystem is **enabled by default** in v0.9.8. It gives
 agents a persistent recall store (Hindsight by default) plus an optional
-knowledge-graph extraction layer. Enabling it is a single environment
-flag — no code change, no reinstall.
+knowledge-graph extraction layer. The toggle is a single config setting —
+no environment variable, no reinstall.
 
 <Aside type="note">
-Memory ships disabled so behaviour is identical on fresh and upgraded
-installs. Every downstream caller — the admin MCP tools, the
+Memory ships enabled (`[memory].enabled = true`) so behaviour is identical on
+fresh and upgraded installs. Every downstream caller — the admin MCP tools, the
 `/api/memory/*` routes, the agent memory provider — degrades to a no-op or
-`503` when memory is off, so flipping the flag is the whole toggle.
+`503` when memory is off, so flipping the setting is the whole toggle.
 </Aside>
 
 ## Turn it on
 
+In v0.9.8, memory is enabled by default. If you previously disabled it with
+`HAL0_MEMORY_ENABLED=0`, you can re-enable it by setting `[memory].enabled =
+true` in `hal0.toml`:
+
 <Steps>
 
-1. **Set the flag.** Add `HAL0_MEMORY_ENABLED=1` to `/etc/hal0/api.env`:
+1. **Edit the config.** Open `/etc/hal0/hal0.toml` and ensure the memory
+   section is present and enabled:
 
-   ```sh
-   echo 'HAL0_MEMORY_ENABLED=1' | sudo tee -a /etc/hal0/api.env
+   ```toml
+   [memory]
+   enabled = true
    ```
 
 2. **Restart the API** so `create_app` constructs the memory provider:
@@ -35,19 +41,31 @@ installs. Every downstream caller — the admin MCP tools, the
    sudo systemctl restart hal0-api
    ```
 
-3. **Confirm it's wired.** The graph status endpoint now responds with
+3. **Confirm it's wired.** The memory status endpoint now responds with
    real state instead of degrading:
 
    ```sh
-   hal0 memory graph status
+   hal0 memory status
    ```
 
 </Steps>
 
-When the flag is set, hal0 builds the memory provider from your config.
+When the setting is enabled, hal0 builds the memory provider from your config.
 The default engine is **Hindsight**; if the Hindsight service is
 unreachable at startup, hal0 logs a warning and degrades to a local
 pgvector-backed provider rather than failing startup.
+
+## Turn it off
+
+To disable memory entirely:
+
+```toml
+[memory]
+enabled = false
+```
+
+Then restart `hal0-api`. All memory surfaces (REST, MCP, dashboard, agent)
+will degrade to no-ops.
 
 ## The graph-extraction gate
 
@@ -121,4 +139,4 @@ Passing `--no-dry-run` exits with a "not yet implemented" error.
 - [Run agents](/docs/guides/run-agents) — agents are the main consumer of
   the memory store.
 - [Connect external providers](/docs/guides/connect-external-providers) —
-  set up the upstream you route graph extraction through.
+  wire the upstream you route graph extraction through.

@@ -1,44 +1,52 @@
 ---
 title: Run agents
-description: Install and manage the bundled Hermes agent with the hal0 agent CLI — provisioning, personas, gated-action approvals, and per-persona spending budgets.
+description: Install and manage bundled agents (Hermes, Turnstone, OpenCode, Pi-coder) with the hal0 agent CLI — provisioning, personas, gated-action approvals, and per-persona spending budgets.
 sidebar:
   order: 60
 ---
 
 import { Steps, Aside, Tabs, TabItem, Code } from '@astrojs/starlight/components';
 
-hal0 can run a **bundled agent** — Hermes — provisioned into a
-hal0-managed virtualenv and driven through the `hal0 agent` CLI. The agent
-gets a persona (system prompt + tool gating), an approvals queue for
+hal0 can run **bundled agents** — Hermes, Turnstone, OpenCode, and Pi-coder —
+provisioned into hal0-managed environments and driven through the `hal0 agent`
+CLI. Agents get a persona (system prompt + tool gating), an approvals queue for
 gated/destructive actions, and an optional per-persona spending budget.
 
 ![The dashboard Agents view — the agent library as collectible cards; Hermes is live and streaming its endpoint health, with Pi and Qwen on the roadmap](/screenshots/agents-overview.png)
 
 <Aside type="note">
-Only one bundled agent is active at a time (single-pick). `hal0 agent`
-lifecycle commands are thin clients over the API; provisioning Hermes runs
-locally in the foreground because the venv build can't fit in one HTTP
-request.
+Hermes and Turnstone coexist (they run on distinct ports). All other agent
+pairs participate in single-pick: only one is active at a time. `hal0 agent`
+lifecycle commands are thin clients over the API; provisioning runs locally
+in the foreground because the venv/binary build can't fit in one HTTP request.
 </Aside>
 
-## Install Hermes
+## Install agents
+
+### Hermes
 
 ```sh
 sudo hal0 agent install hermes
 ```
 
-Installing Hermes runs a three-step foreground pipeline:
+Installing Hermes runs a five-step foreground pipeline:
 
 <Steps>
 
-1. **Toolchain** — ensures `python3` (≥3.11), the venv stdlib, `pip`, and
+1. **Single-pick** — refuses (or, with `--switch`, uninstalls) a different
+   incumbent bundled agent BEFORE any provisioning side effect.
+
+2. **Toolchain** — ensures `python3` (≥3.11), the venv stdlib, `pip`, and
    `pipx` via the distro helper. Idempotent.
 
-2. **Provision** — creates the managed venv under
+3. **Provision** — creates the managed venv under
    `/var/lib/hal0/venvs/hermes`, pip-installs `hermes-agent`, installs the
    `hermes` shim, and registers the agent.
 
-3. **Enable** — `systemctl enable --now hal0-agent@hermes` so the agent
+4. **MCP wiring** — wires `hal0-admin` and `hal0-memory` MCP servers into
+   the agent's config.
+
+5. **Enable** — `systemctl enable --now hal0-agent@hermes` so the agent
    runs and survives reboot.
 
 </Steps>
@@ -48,8 +56,44 @@ then chowns the provisioned trees to the `hal0` user (the shared agent runtime
 user). If you run it as a normal user it aborts cleanly up front with a `sudo`
 hint rather than crashing mid-build.
 
+### Turnstone
+
+```sh
+sudo hal0 agent install turnstone
+```
+
+Turnstone is a native Go binary install. It pins its Go binary, renders
+`config.toml` + MCP/model/memory wiring, and runs `turnstone-server` on
+loopback `:9129`. Turnstone coexists with Hermes — single-pick only clears
+incumbents that can't coexist with it.
+
+### OpenCode
+
+```sh
+sudo hal0 agent install opencode
+```
+
+OpenCode is a lightweight coding agent: a track-latest npm CLI plus a single
+JSON config. It wires hal0 as an `@ai-sdk/openai-compatible` provider plus the
+hindsight-backed `hal0-memory` MCP mount.
+
+### Pi-coder
+
+```sh
+sudo hal0 agent install pi-coder
+```
+
+Pi-coder is a coding agent with a managed venv. It participates in single-pick
+with all agents except Turnstone.
+
+## Swap agents
+
 Pass `--switch` to atomically uninstall whatever agent is currently
-installed before installing this one.
+installed before installing this one:
+
+```sh
+sudo hal0 agent install hermes --switch
+```
 
 ## Manage the lifecycle
 
@@ -108,7 +152,7 @@ hal0 agent personas activate <id>        # switch active + nudge a hot-reload
 ```
 
 Activating writes the `active.txt` pointer atomically and best-effort
-nudges a running Hermes to hot-reload. If Hermes isn't running, the next
+nudges a running agent to hot-reload. If the agent isn't running, the next
 restart picks up the new active persona. To author your own, copy
 `personas show` output, change the persona id, and save it under the
 persona store.

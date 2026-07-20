@@ -22,6 +22,22 @@ port. The container runtime defaults to podman; the unit uses `--replace` so a
 restart never trips over a stale container name, and publishes its port on
 `127.0.0.1` only.
 
+### ROCmFPX as the universal GPU default
+
+Since v0.9.8, every AMD GPU slot (both `rocm` and `vulkan` lanes) uses the
+**ROCmFPX** container image (`ghcr.io/hal0ai/hal0-rocmfpx:c077206`) as its
+default. This unified runner serves chat, `--embedding`, and `--reranking`
+workloads from a single image, eliminating the previous per-backend image
+split. CUDA lanes still use the upstream llama.cpp CUDA image; CPU-only lanes
+use the lean Vulkan toolbox (llama-server runs CPU-only when no GPU devices
+are passed).
+
+<Aside type="note">
+The image is deterministic and probe-free — no hardware read on the hot render
+path. The slug no longer repeats the backend; the `backend` field carries the
+ROCm/Vulkan choice, and the card chip renders the backend as colour.
+</Aside>
+
 The **`SlotManager`** owns this. It renders the unit, starts and stops it,
 tracks state, and registers the running container as an internal upstream so the
 dispatcher can forward to it. A slot is configured by a small TOML file that
@@ -77,6 +93,16 @@ For a streamed response, the slot stays `serving` until the stream drains. A
 background idle monitor demotes a quiet `ready` slot to `idle` after its idle
 timeout (300 seconds by default), so the dashboard can distinguish "warm and
 working" from "warm but quiet."
+
+### Auto-recovery: the WARMING staleness watchdog
+
+A slot that stays in `warming` indefinitely (e.g. a wedged FLM NPU anchor whose
+model server never converges) would otherwise 503 every downstream consumer.
+Since v0.9.8, the `SlotManager` runs a **WARMING staleness watchdog**: if a slot
+has been `warming` longer than 900 seconds (15 minutes), the manager treats it
+as wedged and auto-recovers it (unload → load). This bound sits well above the
+legitimate cold-load ceiling (180 seconds per health-wait attempt) so a
+slow-but-healthy load is never demoted.
 
 ## Single-flight dispatch
 

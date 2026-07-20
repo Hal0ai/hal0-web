@@ -1,45 +1,66 @@
 ---
 title: Agents
-description: "hal0's agent model: Hermes runs as a sandboxed systemd service, shaped by personas that gate its tools, with an approval queue and per-persona spending budgets."
+description: "hal0's agent model: multiple bundled agents (Hermes, Turnstone, OpenCode, Pi-coder) with coexistence rules, personas, approval queues, and per-persona spending budgets."
 sidebar:
   order: 60
 ---
 
 import { Aside, Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-hal0 doesn't build its own agent runtime — it **bundles** one. The bundled agent
-is **Hermes**, and hal0's job is to run it safely: as a sandboxed service, shaped
-by a persona that controls what it can do, with a human in the loop for risky
-actions and a spending cap for paid calls. The pieces below are how hal0 turns a
-general-purpose agent into a governed component of your platform.
+hal0 doesn't build its own agent runtime — it **bundles** one. Today hal0 ships
+four bundled agents: **Hermes**, **Turnstone**, **OpenCode**, and **Pi-coder**.
+hal0's job is to run them safely: as sandboxed services, shaped by personas that
+control what they can do, with a human in the loop for risky actions and a
+spending cap for paid calls.
 
-## Hermes, the bundled agent
+## The bundled agents
 
-Hermes is the agent hal0 ships and provisions today. The agent subsystem is
-single-pick: **only one agent is active at a time**, and installing a second one
-requires an explicit switch, which atomically tears down the existing agent
-before installing the new one. That invariant keeps the platform's behaviour
-unambiguous — there's always exactly one agent answering.
+| Agent | Role | Port | Coexists with Hermes? |
+|-------|------|------|-----------------------|
+| **Hermes** | General-purpose AI assistant with kanban, memory, and tool use. | `:9119` | Yes (with Turnstone) |
+| **Turnstone** | Self-hosted Go agent-orchestration platform. | `:9129` | Yes (with Hermes) |
+| **OpenCode** | Lightweight coding agent (npm CLI + JSON config). | `:9118` | No |
+| **Pi-coder** | Coding agent with managed venv. | `:9117` | No |
 
-The agent runs as a systemd template unit, `hal0-agent@<id>.service` (so Hermes
-is `hal0-agent@hermes`). It runs as the unprivileged **`hal0`** system user the
-installer creates, under a tight sandbox: no new privileges, a read-only system
-with only hal0's own directories writable, a private temp dir, and a watchdog.
-Crucially, the agent's secret files stay root-owned and unreadable to the `hal0`
-user, so the agent can't read its own credential store even though it can write
-to hal0's data paths.
-
-The agent process binds to **loopback only** (`127.0.0.1:9119`). The browser
-never talks to it directly — hal0-api proxies the chat connection, enforcing an
-origin allowlist and a session cookie on every WebSocket upgrade, and carrying
-the embed token in an `Authorization` header rather than a URL. The agent
-reaches hal0's own inference and admin surfaces through environment hal0 writes
-for it (the API URL and the admin/memory MCP URLs).
+Hermes and Turnstone **coexist** — they run on distinct ports, each with its own
+service unit, and neither displaces the other. All other agent pairs participate
+in **single-pick**: only one is active at a time, and installing a second one
+requires an explicit `--switch`, which atomically tears down the existing agent
+before installing the new one.
 
 <Aside type="note">
 "Bundle, don't build" is the explicit design stance. hal0 governs and wires the
 agent; it doesn't reimplement one.
 </Aside>
+
+### Hermes, the general-purpose agent
+
+Hermes is the agent hal0 ships and provisions by default. It runs as a systemd
+template unit, `hal0-agent@hermes.service`, as the unprivileged **`hal0`** system
+user, under a tight sandbox: no new privileges, a read-only system with only
+hal0's own directories writable, a private temp dir, and a watchdog.
+
+The agent process binds to **loopback only** (`127.0.0.1:9119`). The browser
+never talks to it directly — hal0-api proxies the chat connection, enforcing an
+origin allowlist and a session cookie on every WebSocket upgrade. The agent
+reaches hal0's own inference and admin surfaces through environment hal0 writes
+for it (the API URL and the admin/memory MCP URLs).
+
+### Turnstone, the orchestration agent
+
+Turnstone is a self-hosted Go agent-orchestration platform that coexists with
+Hermes. It consumes the hal0-api `/v1` gateway as its model backend, mounts
+hal0-memory + hal0-admin over MCP, seeds a persona + Honcho namespace, and runs
+`turnstone-server` on loopback `:9129` under the `hal0-agent@` template unit.
+Native Go binary install with a SQLite DB.
+
+### OpenCode, the lightweight coding agent
+
+OpenCode is a lighter-weight coding agent: a track-latest npm CLI plus a single
+JSON config. It wires hal0 as an `@ai-sdk/openai-compatible` provider
+(`HAL0_API_URL/v1`, `hal0/*` slot virtuals, default `hal0/agent`) plus the
+hindsight-backed `hal0-memory` MCP mount. `HAL0_API_URL` is honoured so a
+remote install points at hal0 over the LAN.
 
 ## Personas: the agent's character and limits
 

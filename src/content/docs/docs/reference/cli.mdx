@@ -1,6 +1,6 @@
 ---
 title: hal0 CLI reference
-description: "Complete reference for the hal0 CLI — top-level commands and every sub-app: slot, model, registry, memory, config, doctor, capabilities, agent, migrate."
+description: "Complete reference for the hal0 CLI — top-level commands and every sub-app: slot, model, registry, memory, config, doctor, capabilities, agent, upstream, mcp, migrate."
 sidebar:
   order: 10
 ---
@@ -117,19 +117,35 @@ and per-slot TOMLs are **not** migrated (v0.1.x → v0.2 is a clean break).
 
 | Command | Purpose | Key options |
 |---|---|---|
+| `memory status` | Show whether the memory subsystem is enabled and live. | `--json` |
+| `memory enable` | Turn the memory subsystem on (sets `[memory].enabled = true`). | — |
+| `memory disable` | Turn the memory subsystem off (sets `[memory].enabled = false`). | — |
 | `memory graph status` | Show graph-extraction state (enabled, route, counters). | `--json` |
 | `memory graph enable` | Turn graph extraction on. | `--route {upstream\|primary\|agent}`, `--provider`, `--model`, `--json` |
 | `memory graph disable` | Turn graph extraction off (cancels any in-flight build). | `--json` |
+| `memory bank list` | List Hindsight banks. | `--json` |
+| `memory bank create <id>` | Create a Hindsight bank. | — |
+| `memory bank delete <id>` | Delete a Hindsight bank. | `--force`/`-f` |
+| `memory ops list` | List memory operations (retention, recall, etc.). | `--json` |
+| `memory mm list` | List mental models. | `--json` |
+| `memory recall <query>` | Run a recall query against the active provider. | `--max-tokens` |
 | `memory migrate` | Migrate a legacy Cognee store to Hindsight banks (dry-run only). | `--dry-run` (default on), `--cognee-dir`, `--json` |
+
+`memory enable`/`disable` replace the old `HAL0_MEMORY_ENABLED` env var
+(removed in v0.9.8) — the whole subsystem (Hindsight engine, `/mcp/memory`,
+`/api/memory/*`, the dashboard's Agent → Memory tab) is gated by
+`[memory].enabled` in `hal0.toml`, defaulting to `true`. The provider is
+built once at `create_app()`, so flipping it needs a `hal0-api` restart.
 
 `memory graph enable --route upstream` requires `--provider` and `--model`.
 `memory migrate` reports the plan without writing; apply/write mode is not yet
 implemented.
 
 <Aside type="caution">
-The memory subsystem is opt-in. Graph extraction defaults **off** (ADR-0014):
-small local models flake on structured-output prompts, which would leave the
-graph view empty. See [Enable memory](/docs/guides/enable-memory).
+The memory subsystem defaults **on** in v0.9.8 (via `[memory].enabled = true`).
+Graph extraction still defaults **off** (ADR-0014): small local models flake
+on structured-output prompts, which would leave the graph view empty. See
+[Enable memory](/docs/guides/enable-memory).
 </Aside>
 
 ## `hal0 config` — configuration
@@ -172,6 +188,7 @@ left the catalog are cleared. Idempotent.
 | Command | Purpose | Key options |
 |---|---|---|
 | `agent install <name>` | Install a bundled agent (`hermes` provisions a managed venv in the foreground). | `--switch` |
+| `agent install <name> --switch` | Atomically swap to a new agent (uninstalls the incumbent first). | `--switch` (required) |
 | `agent uninstall <name>` | Uninstall a bundled agent. | `--keep-memory` |
 | `agent list` | List installed bundled agents. | `--json` |
 | `agent peers` | List discoverable agent identity cards from the `agents` memory dataset. | — |
@@ -207,6 +224,24 @@ There is no `rotate-token` subcommand. The daemon has no built-in auth
 (ADR-0012); agent identity flows through the `X-hal0-Agent` header the wrapper
 sets from `$HAL0_AGENT_ID`.
 </Aside>
+
+## `hal0 upstream` — remote LLM providers
+
+| Command | Purpose | Key options |
+|---|---|---|
+| `upstream list` | List configured upstream providers. | `--json` |
+| `upstream show <name>` | Show detail for one upstream provider. | `--json` |
+| `upstream create <name>` | Register a new upstream provider. | `--url`, `--api-key`, `--catalog` |
+| `upstream update <name>` | Update an upstream provider's settings. | `--url`, `--api-key`, `--enabled`, `--model-filters` |
+| `upstream delete <name>` | Remove an upstream provider. | `--force`/`-f` |
+| `upstream test <name>` | Probe an upstream's reachability and auth status. | — |
+| `upstream credentials set <name>` | Write credentials for an upstream provider. | `--api-key` (chains create + set) |
+| `upstream advertise <name> <state>` | Toggle `/v1/models` catalog visibility (`on` / `off`). | — |
+
+`upstream advertise` flips the `advertise_models` flag live (no `hal0-api`
+restart). Advertising controls catalog visibility only — dispatch/routing to
+the upstream by explicit id is unaffected. The change takes effect on the next
+`/v1/models` request.
 
 ## `hal0 mcp` — MCP servers
 
