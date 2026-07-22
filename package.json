@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/sync-changelog.mjs && astro dev",
     "start": "astro dev",
+    "test": "node --experimental-strip-types --test functions/_middleware.test.ts",
     "prebuild": "node scripts/sync-changelog.mjs",
     "build": "astro build",
     "preview": "astro preview",

@@ -98,86 +98,131 @@ See [`NOTES.md`](./NOTES.md) for the full rationale.
 ```sh
 npm install            # install deps
 npm run dev            # dev server at http://localhost:4321
-npm run astro check    # type check (must be 0 errors / 0 warnings)
+npm test               # Node built-in middleware contract tests
+npm run astro -- check # Astro/TypeScript diagnostics
 npm run build          # static site → ./dist/
 npm run preview        # serve ./dist/ for smoke-testing
 ```
 
-## Deploy
+## Hosting surfaces
 
-The marketing site + docs ship to **Vercel** on every push to `master`.
-Apex `hal0.dev` is wired through Vercel; previews come up on
-`hal0-web-*.vercel.app`.
+The marketing site and docs are built as an Astro static site. The release
+resolver in `functions/_middleware.ts` is a Cloudflare Pages Function intended
+for the separate `releases.hal0.dev` machine hostname. These are distinct
+hosting responsibilities. Hosting account, project, DNS, and deployment
+ownership are external configuration and are not established by this repository.
 
-```sh
-vercel --prod          # ad-hoc prod ship (CI handles the normal path)
-```
+A release-resolver deployment is not ready merely because the Function builds.
+Its Cloudflare environment must provide the `RELEASE_POINTERS` KV namespace
+binding described below. Do not deploy or change that binding as part of normal
+source preparation.
 
 ## Release manifest hosting (`releases.hal0.dev`)
 
-The hal0 self-updater (`src/hal0/updater/updater.py`) fetches per-channel
-release manifests from:
+The installer and updater use these machine endpoints:
 
-```
-https://releases.hal0.dev/{stable|nightly}.json
-```
-
-Schema: `hal0.releases.v1` — see
-[`hal0/docs/release-manifest.md`](https://github.com/hal0ai/hal0/blob/main/docs/release-manifest.md)
-for the full field reference. The schema's `cert_url` field is
-**required** — cosign 3.x keyless `verify-blob` needs `--certificate`,
-so the manifest carries the URL to the `.crt` artifact alongside
-`url` (tarball) and `sig_url` (signature).
-
-### How it works (as of v0.1.0-alpha.1, 2026-05-21)
-
-`releases.hal0.dev` is **fully operational** and serves the live
-manifest. The subdomain lives on a small Cloudflare Pages project
-whose middleware proxies the canonical asset off the latest GitHub
-Release on `hal0ai/hal0`:
-
-1. Tag `vX.Y.Z` on `hal0ai/hal0` triggers `.github/workflows/release.yml`.
-2. The workflow builds `hal0-X.Y.Z.tar.gz`, computes its sha256, signs
-   it with cosign keyless against the GH Actions OIDC identity, and
-   uploads tarball + `.sig` + `.crt` to the GH Release alongside the
-   generated `stable.json` (manifest schema `hal0.releases.v1`).
-3. The CF Pages middleware on `releases.hal0.dev` fetches
-   `stable.json` from the latest GH Release and serves it with a short
-   cache (~60s). A `v*` tag propagates end-to-end within about a
-   minute — **no hal0-web deploy required**.
-4. Updater clients verify the tarball with `cosign verify-blob
-   --certificate <cert_url> --signature <sig_url> …` against the
-   `signer_identity` regex in the manifest.
-
-Updater clients should point at `https://releases.hal0.dev/stable.json`
-(or `…/nightly.json`). The old GitHub-direct URL form is not used; the
-canonical asset name is `stable.json`, not `latest.json`.
-
-### Static fallback in this repo
-
-```
-public/releases/
-├── stable.json      ← static backstop (not the primary source)
-└── nightly.json     ← static backstop (not the primary source)
+```text
+https://releases.hal0.dev/stable.json
+https://releases.hal0.dev/stable.json.bundle
+https://releases.hal0.dev/preview.json
+https://releases.hal0.dev/preview.json.bundle
+https://releases.hal0.dev/nightly.json
+https://releases.hal0.dev/nightly.json.bundle
 ```
 
-`public/` is copied verbatim into `dist/` by Astro, so the files also
-land at `https://hal0.dev/releases/{stable,nightly}.json`. They're
-kept as a backstop and as a schema example; the live manifest is
-whatever the CF Pages middleware on `releases.hal0.dev` returns.
+Only exact `GET` and `HEAD` requests for those paths are machine routes. They
+never fall back to static files or marketing HTML. Unsupported methods return
+405. Missing channels return JSON 404; resolver/configuration and upstream
+failures return JSON 502 or 503. All error responses are `no-store`.
 
-### Verify
+The served JSON uses schema `hal0.releases.v1`. Its exact sibling
+`.json.bundle` authenticates the manifest bytes. The mirrored
+[`public/install.sh`](public/install.sh) therefore requires both `jq` and
+Cosign support for signed bundles before it can trust or parse a manifest.
+`public/install.sh` is source preparation only: changing it does not deploy the
+installer.
 
-```sh
-curl -s https://releases.hal0.dev/stable.json | jq .
-curl -sI https://releases.hal0.dev/stable.json | grep -i cache-control
+### Explicit KV pointer contract
+
+The Function has no automatic "latest" or recent-release discovery. It reads
+exactly one key, `release-pointers.v1`, from the Cloudflare KV namespace bound
+as `RELEASE_POINTERS`. The document is strict: no unknown top-level, channel,
+or record fields are accepted.
+
+```text
+{
+  "_schema": "hal0.release-pointers.v1",
+  "generation": <positive-integer>,
+  "channels": {
+    "stable":  { "tag": "<exact-final-tag>",   "mode": "paired" },
+    "preview": { "tag": "<exact-final-or-alpha-beta-rc-tag>", "mode": "paired" },
+    "nightly": { "tag": "<exact-nightly-tag>", "mode": "paired" }
+  }
+}
 ```
+
+Channels may be omitted to freeze them closed. Tags are immutable GitHub tags:
+`stable` accepts only `vX.Y.Z`; `preview` accepts that final form or
+`vX.Y.Z-alpha.N`, `-beta.N`, or `-rc.N`; `nightly` accepts
+`vX.Y.Z-nightly.YYYYMMDDhhmmss`. The resolver requests only
+`repos/Hal0ai/hal0/releases/tags/<exact-tag>`, rejects drafts and tag
+mismatches, and never lists releases or calls a `latest` endpoint.
+
+In `paired` mode, `<channel>.json` and `<channel>.json.bundle` must both exist
+on that same release before either is served. Downloads use each asset's GitHub
+API URL, preserve the response as an `ArrayBuffer`, and include source, tag,
+channel, and pointer-generation headers. If `GITHUB_TOKEN` is configured, it is
+sent to both GitHub API calls; use only a token suitable for public-repository
+read access.
+
+`legacy-json` exists only to freeze an already-served stable or nightly JSON
+pointer during migration. It is forbidden for preview, and its bundle endpoint
+returns an explicit JSON 404. **Never use `legacy-json` for a new pointer
+advancement.** Once a channel has a remotely authorized signed pair, all later
+advancements use `paired`.
+
+### Two-phase advancement runbook
+
+Pointer publication is an explicit final authorization step, not an automatic
+consequence of a tag, GitHub Release, package upload, web commit, or deploy.
+For each advancement:
+
+1. **Prepare immutable artifacts.** Produce the exact channel manifest and its
+   signed sibling bundle on one non-draft GitHub Release at the intended tag.
+2. **Authorize remotely.** Verify the GitHub tag/release identity, both exact
+   assets and their bytes/signature. For stable and preview releases, also
+   verify the intended distribution exists on PyPI and is installable under
+   release policy. Nightly has no PyPI publication gate.
+3. **Prepare the next document.** Start from the currently read KV document,
+   change only authorized channel records, select `paired`, and increase
+   `generation` monotonically. A final release may point both stable and
+   preview at the same exact final tag, but each channel's signed asset pair
+   must exist on that release.
+4. **Advance atomically.** After review, write the complete document to the one
+   fixed KV key. Do not edit partial per-channel keys. This KV mutation is an
+   operator action outside source changes and outside this repository's local
+   test/build workflow.
+5. **Verify without auto-repair.** Check GET and HEAD status, byte identity,
+   content type, channel/tag/generation headers, and signed-bundle verification.
+   On failure, stop and repair or restore an explicitly reviewed complete
+   document; never scan for or silently promote a newer release.
+
+For the one-time migration, first capture ("freeze") any intentionally retained
+stable/nightly exact tags into reviewed `legacy-json` records. It is valid to
+omit a channel instead, which makes it fail closed. Do not invent a preview
+placeholder, store a pointer document in this repository, or infer a tag from
+checked-in static manifests. Migrate a frozen legacy record to `paired` only
+after the remote authorization gates above pass.
+
+The files under `public/releases/` are non-operational schema examples available
+on the marketing site's `/releases/` path. They are not resolver fallback or KV
+pointer values and must not be used as evidence that a machine channel advanced.
 
 ## Build state
 
-`npm run build` produces **54 static pages** (4 marketing + 40 docs +
-9 blog + the 404), a sitemap (`/sitemap-index.xml`), a pagefind search index for
-docs, `robots.txt`, and a default OG image. Lighthouse scores ≥95
+`npm run build` currently produces **57 static pages** across marketing, docs,
+blog, and the 404, plus a sitemap (`/sitemap-index.xml`), a pagefind search index
+for docs, `robots.txt`, and a default OG image. Lighthouse scores ≥95
 across performance / accessibility / best-practices / SEO on the five
 key pages (verified 2026-05).
 

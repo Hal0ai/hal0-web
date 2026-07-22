@@ -41,6 +41,8 @@ Thumbs.db
 
 # orchestration scratch (style guides, agent notes, etc.)
 .claude/
+.pi/
+.pi-subagents/
 
 # Serena MCP cache
 .serena/
