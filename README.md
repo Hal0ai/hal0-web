@@ -98,10 +98,23 @@ See [`NOTES.md`](./NOTES.md) for the full rationale.
 ```sh
 npm install            # install deps
 npm run dev            # dev server at http://localhost:4321
-npm run astro check    # type check (must be 0 errors / 0 warnings)
+npm test               # behavioural tests for functions/_middleware.ts
+npm run astro check    # type check
 npm run build          # static site → ./dist/
 npm run preview        # serve ./dist/ for smoke-testing
 ```
+
+`npm test` uses Node's built-in runner and type stripping — no dev
+dependencies, no build step. It covers `functions/_middleware.ts`, which
+decides which GitHub Release a hardened client's manifest *and* its
+signature bundle come from; the same-release pairing rule it pins is a
+security invariant, not a style preference. See
+[Release manifest hosting](#release-manifest-hosting-releaseshal0dev).
+
+`astro check` currently reports **5 pre-existing errors** (2 in
+`src/content.config.ts` from starlight-blog's Zod `SchemaContext`, 3 implicit
+`any` in `src/pages/changelog.astro`). They are unrelated to the middleware;
+treat 5 as the baseline and anything above it as yours.
 
 ## Deploy
 
