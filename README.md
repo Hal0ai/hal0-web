@@ -115,43 +115,75 @@ vercel --prod          # ad-hoc prod ship (CI handles the normal path)
 
 ## Release manifest hosting (`releases.hal0.dev`)
 
-The hal0 self-updater (`src/hal0/updater/updater.py`) fetches per-channel
-release manifests from:
+The hal0 self-updater (`src/hal0/updater/updater.py`) and the one-line
+installer (`installer/bootstrap.sh`) fetch per-channel release manifests —
+**and the sibling Sigstore bundle that authenticates each one** — from:
 
 ```
-https://releases.hal0.dev/{stable|nightly}.json
+https://releases.hal0.dev/{stable|preview|nightly}.json
+https://releases.hal0.dev/{stable|preview|nightly}.json.bundle
 ```
+
+Both halves of the pair are mandatory. Hardened clients cosign-verify the
+exact manifest bytes against the bundle, using a client-pinned release
+workflow OIDC identity, *before* parsing a single artifact URL out of the
+manifest. A manifest served without its bundle is not consumable — the
+client refuses it rather than trusting unauthenticated URLs.
 
 Schema: `hal0.releases.v1` — see
-[`hal0/docs/release-manifest.md`](https://github.com/hal0ai/hal0/blob/main/docs/release-manifest.md)
-for the full field reference. The schema's `cert_url` field is
-**required** — cosign 3.x keyless `verify-blob` needs `--certificate`,
-so the manifest carries the URL to the `.crt` artifact alongside
-`url` (tarball) and `sig_url` (signature).
+[`hal0/docs/internal/release-manifest.md`](https://github.com/hal0ai/hal0/blob/main/docs/internal/release-manifest.md)
+for the full field reference. The trust-carrying fields are `bundle_url`
+(Sigstore bundle for the tarball), `digest_sha256`, `signer_identity`, and
+`signer_issuer`. `sig_url`/`cert_url` are still emitted but are no longer
+the verification path: the bundle embeds the Fulcio certificate, the
+signature, and the Rekor inclusion proof + SET, so `cosign verify-blob
+--bundle` keeps working after the short-lived cert expires.
 
-### How it works (as of v0.1.0-alpha.1, 2026-05-21)
+### Channels
 
-`releases.hal0.dev` is **fully operational** and serves the live
-manifest. The subdomain lives on a small Cloudflare Pages project
-whose middleware proxies the canonical asset off the latest GitHub
-Release on `hal0ai/hal0`:
+Which manifests a tag publishes is decided by hal0's
+`src/hal0/release/policy.py` (`manifest_targets`), not by this repo:
+
+| tag | manifests published |
+|---|---|
+| `v1.2.3` (final) | `stable.json`, `preview.json` |
+| `v1.2.3-alpha.2` / `-beta.N` / `-rc.N` | `preview.json` |
+| `v1.2.3-nightly.YYYYMMDD` | `nightly.json` |
+
+So `preview` tracks the newest of (latest prerelease, latest final) — a
+final tag lands on both channels — and `stable` only ever moves on a final
+tag. `release.yml` uploads `<channel>.json` **and** `<channel>.json.bundle`
+as a pair for every target.
+
+### How it works
+
+The subdomain lives on a small Cloudflare Pages project whose middleware
+(`functions/_middleware.ts`) proxies the canonical assets off the newest
+GitHub Release on `hal0ai/hal0` that carries them:
 
 1. Tag `vX.Y.Z` on `hal0ai/hal0` triggers `.github/workflows/release.yml`.
-2. The workflow builds `hal0-X.Y.Z.tar.gz`, computes its sha256, signs
-   it with cosign keyless against the GH Actions OIDC identity, and
-   uploads tarball + `.sig` + `.crt` to the GH Release alongside the
-   generated `stable.json` (manifest schema `hal0.releases.v1`).
-3. The CF Pages middleware on `releases.hal0.dev` fetches
-   `stable.json` from the latest GH Release and serves it with a short
-   cache (~60s). A `v*` tag propagates end-to-end within about a
-   minute — **no hal0-web deploy required**.
-4. Updater clients verify the tarball with `cosign verify-blob
-   --certificate <cert_url> --signature <sig_url> …` against the
-   `signer_identity` regex in the manifest.
+2. The workflow builds `hal0-X.Y.Z.tar.gz`, computes its sha256, cosign
+   keyless-signs it against the GH Actions OIDC identity, generates each
+   target channel manifest, signs each manifest into a sibling `.bundle`,
+   self-verifies both, and uploads the lot as Release assets.
+3. The middleware on `releases.hal0.dev` resolves
+   `/<channel>.json[.bundle]` from the newest non-draft release carrying
+   `<channel>.json` and serves it with a short cache (~60s). A `v*` tag
+   propagates end-to-end within about a minute — **no hal0-web deploy
+   required**.
+4. Clients verify the manifest against its bundle, then verify the tarball
+   digest and publisher signature again as defence in depth.
 
-Updater clients should point at `https://releases.hal0.dev/stable.json`
-(or `…/nightly.json`). The old GitHub-direct URL form is not used; the
-canonical asset name is `stable.json`, not `latest.json`.
+Release selection is always driven by the **manifest** asset, never the
+bundle, so a `.json` and a `.json.bundle` request resolve to the same
+release even if a new tag lands between a client's two fetches. If the
+selected release carries the manifest but not its bundle, the bundle
+request fails closed (`x-hal0-proxy-failed: no-sibling:…`) rather than
+pairing a manifest with an older release's signature.
+
+Response headers worth probing: `x-hal0-source: github-release/<tag>`,
+`x-hal0-channel`, `x-hal0-artifact: manifest|bundle`, and on any
+fallthrough `x-hal0-proxy-failed: <reason>`.
 
 ### Static fallback in this repo
 
@@ -166,11 +198,76 @@ land at `https://hal0.dev/releases/{stable,nightly}.json`. They're
 kept as a backstop and as a schema example; the live manifest is
 whatever the CF Pages middleware on `releases.hal0.dev` returns.
 
+There is deliberately **no static backstop for `.bundle`** — a placeholder
+signature cannot verify, and a client that fetched one would read the
+failure as tampering rather than as "not published yet". A bundle that
+can't be proxied is an annotated 404.
+
 ### Verify
 
 ```sh
-curl -s https://releases.hal0.dev/stable.json | jq .
-curl -sI https://releases.hal0.dev/stable.json | grep -i cache-control
+# manifest + its bundle must BOTH be 200 for a channel to be operational
+for c in stable preview nightly; do
+  for f in "$c.json" "$c.json.bundle"; do
+    printf '%-24s %s\n' "$f" \
+      "$(curl -so /dev/null -w '%{http_code}' "https://releases.hal0.dev/$f")"
+  done
+done
+
+curl -sI https://releases.hal0.dev/stable.json | grep -iE 'cache-control|x-hal0'
+
+# end-to-end: authenticate the manifest exactly as a client does
+curl -fsSLO https://releases.hal0.dev/preview.json
+curl -fsSLO https://releases.hal0.dev/preview.json.bundle
+cosign verify-blob --bundle preview.json.bundle \
+  --certificate-identity-regexp '^https://github\.com/(Hal0ai|hal0ai)/hal0/\.github/workflows/release\.yml@refs/tags/v\d+\.\d+\.\d+(-(alpha|beta|rc)\.(0|[1-9]\d*))?$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  preview.json
+```
+
+(That identity regex is the `preview` admission pattern from
+`installer/bootstrap.sh`; `stable` and `nightly` pin narrower ones. Keep the
+copies in lockstep with bootstrap.sh and `updater.py` — they are the trust
+root, not documentation.)
+
+A channel only becomes operational once a tag has published *both* halves,
+in the current manifest schema. Two things can hold a channel back, and
+neither is fixable in this repo:
+
+- **No bundle.** Releases cut before manifest-bundle signing carry
+  `<channel>.json` with no `.bundle`. The serving layer cannot synthesise a
+  missing signature, so `.bundle` stays 404 until the next tag.
+- **Pre-hardening manifest fields.** The client's strict policy pass
+  requires `release_kind` and `prerelease_stage`, and requires
+  `signer_identity` to equal the exact per-release identity it derives
+  itself. Manifests generated before those fields existed are rejected even
+  when perfectly signed.
+
+As of 2026-07-27 that means `stable` is **not** operational end-to-end: the
+newest release carrying `stable.json` is `v0.9.8`, which has no
+`stable.json.bundle` and whose manifest predates `release_kind`. `preview`
+(from `v1.0.0-alpha.2`) satisfies both conditions. Both clear on the next
+final tag cut by the current `release.yml`.
+
+## One-line installer (`hal0.dev/install.sh`)
+
+`public/install.sh` is a **byte-identical mirror** of
+[`hal0:installer/bootstrap.sh`](https://github.com/hal0ai/hal0/blob/main/installer/bootstrap.sh)
+— that file is the audited original and the trust boundary for
+`curl https://hal0.dev/install.sh | bash`. Never hand-edit the copy here:
+copy the canonical file over it wholesale, in the same PR as the hal0-side
+change.
+
+hal0's `Bootstrap parity (daily)` workflow
+(`.github/workflows/bootstrap-parity.yml` →
+`scripts/check-bootstrap-parity.sh`) fetches the live URL daily and does a
+plain `diff -u` against the in-tree original: exit 0 in sync, 1 drift,
+2 operational error. There is no normalisation, so a single byte of drift
+fails it. Preview a sync locally from a hal0 checkout with:
+
+```sh
+HAL0_INSTALL_URL="file:///path/to/hal0-web/public/install.sh" \
+  bash scripts/check-bootstrap-parity.sh
 ```
 
 ## Build state
