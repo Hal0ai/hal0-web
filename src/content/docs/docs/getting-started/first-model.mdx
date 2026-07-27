@@ -11,6 +11,16 @@ Models in hal0 live in a local registry, the single source of truth for
 Hugging Face coordinates, SHA-256 digests, and curated filenames. You can
 populate it through the `hal0 setup` TUI or directly from the CLI.
 
+<Aside type="tip" title="Where the pull lands">
+Downloads write to `[models].store` in `hal0.toml` — the single directory
+the pull engine writes to and slot containers bind-mount. It's empty by
+default and falls back to the legacy `pull_root` (`/var/lib/hal0/models`)
+until you set it explicitly with `hal0 setup --storage-dir <path>`
+(first-run setup) or `hal0 model store <path>` (any time). See
+[Paths and files](/docs/reference/paths-and-files/) for the full
+resolution order.
+</Aside>
+
 ## Via `hal0 setup`
 
 If you ran [first-run setup](/docs/getting-started/setup/) and picked models

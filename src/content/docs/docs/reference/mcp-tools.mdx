@@ -42,6 +42,12 @@ calls degrade to a no-op / unavailable surface.
 | `memory_list`   | autonomous-read   | Paginated walk → `{items, next_cursor}`.                                    |
 | `memory_delete` | conditional       | Remove by id(s) → `{deleted}`. **Autonomous** for one id; **gated** for >1. |
 
+The `memory_delete` arity gate applies on **both** mounts — `/mcp/memory` and
+`/mcp/admin` evaluate the same rule and enqueue on the same approval queue, so
+a bulk delete lands in one operator inbox no matter which server the agent is
+connected to. A `/mcp/memory` server built without an approval queue refuses
+bulk deletes outright rather than running them ungated.
+
 Notable arguments:
 
 - `dataset` defaults to `shared`; private-mode callers promote to
