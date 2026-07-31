@@ -187,11 +187,27 @@ mention it, flag it as a prototype.
 
 ## MCP server management REST API
 
-`GET/POST/PATCH/DELETE /api/mcp/*` manages *installed 3rd-party MCP server
-registrations* for the dashboard — this is distinct from the tool-calling protocol
-surface above. See [REST API index](/docs/reference/api/rest-api/#mcp) for the
-endpoint list. Tool invocation only happens over the actual MCP protocol at
-`/mcp/admin` and `/mcp/memory`; the REST surface cannot invoke a tool.
+Router: `src/hal0/api/routes/mcp.py`, mounted at `/api/mcp`. This manages *installed
+3rd-party MCP server registrations* for the dashboard — distinct from the tool-calling
+protocol surface above. Tool invocation only happens over the actual MCP protocol at
+`/mcp/admin` and `/mcp/memory`; this REST surface cannot invoke a tool.
+
+| Method | Path | Request | Response |
+|---|---|---|---|
+| GET | `/api/mcp/servers` | — | `{servers: [...], count}` — bundled servers introspected live via `list_tools()`/`list_resources()`/`list_prompts()`; installed non-bundled servers come from the registry with `state="stopped"` (no supervisor yet). |
+| GET | `/api/mcp/clients` | — | `{clients: [{id, name, role, host, since, connected_to}], count}` — derived from the audit log. |
+| GET | `/api/mcp/catalog` | — | `{items: [...], categories}` — static installable-MCP catalog (puppeteer, sqlite, gdrive, slack, ...). |
+| GET | `/api/mcp/stream` | — | SSE stream of `mcp.tool.*` events (audit-log tail, polled every 2s). |
+| GET | `/api/mcp/{server_id}/logs` | query `limit` (1-500, default 100) | `{server, events: [...], count}`. |
+| GET | `/api/mcp/resolve` | query `url` (1-2048 chars) | A `ResolvedManifest`: `{id, name, description, spec, transport, tools, resources, prompts, env_required, source_kind, source_url?, author, verified}`. Supports `oci://`, `npm:`/`npx:`, `uvx:`/`uv:`, `git+https://`, and generic `https://.../manifest.json` specs, with an SSRF guard blocking loopback/private/link-local/CGNAT targets. |
+| POST | `/api/mcp/install` | `{"url": "..."}` or `{"manifest": {...}}` | 201 `{installed: <InstalledServer>}`; 409 on a bundled-id collision or already-installed. |
+| DELETE | `/api/mcp/{server_id}` | — | `{uninstalled: server_id}`; 409 `mcp.bundled` if `server_id` is a bundled server. |
+| PATCH | `/api/mcp/{server_id}/config` | `{"env"?: {str: str}, "enabled"?: bool}` | `{server: <InstalledServer>}`; 409 if bundled. |
+| POST | `/api/mcp/{server_id}/{action}` | — | **501 stub** (`McpNotImplemented`, code `mcp.supervisor_unavailable`) — start/stop/restart are not implemented yet. |
+
+`InstalledServer` fields (as used, not fully enumerated in this pass): `id, name,
+description, spec, transport, tools, resources, prompts, env, enabled, source_url,
+author, verified, installed_at`.
 
 ## hal0 as an MCP client
 
