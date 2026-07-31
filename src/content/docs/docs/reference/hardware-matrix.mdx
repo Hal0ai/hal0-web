@@ -1,0 +1,89 @@
+---
+title: Hardware matrix reference
+description: "How hal0 probes hardware, the canonical device taxonomy, and the backend-selection decision tree — verified against src/hal0/hardware and src/hal0/model_meta in the v1.0 tree."
+sidebar:
+  order: 50
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside type="note">
+hal0 does not hard-block installs below a minimum spec. Backend selection degrades
+gracefully to CPU and the smallest curated model rather than refusing to install.
+There is no single "minimum RAM/VRAM" gate — see the decision tree below.
+</Aside>
+
+## Hardware probe
+
+`HardwareProbe.probe()` (`hal0.hardware.probe`) writes a snapshot to
+`/etc/hal0/hardware.json` on install, on `hal0 config hardware --refresh` (formerly
+`hal0 probe`), and from the dashboard's re-probe button. All probing is
+subprocess/sysfs-based and never raises.
+
+| Signal | Source |
+|---|---|
+| CPU model/cores/threads | `/proc/cpuinfo`, with an ARM fallback chain (Hardware/Model/CPU part fields), last-resort `platform.machine()`. |
+| RAM total/available | `/proc/meminfo` (`MemTotal`/`MemAvailable`). |
+| GPU (AMD) | DRM sysfs scan of `/sys/class/drm/card*/device/mem_info_vram_total`. |
+| Hostname | `/proc/sys/kernel/hostname`. |
+
+The result is validated against the `HardwareInfo` schema — see
+[Config schema → hardware.json](/docs/reference/config-schema/#hardwarejson) for the
+full field list, including `unified_memory_mb` (the true UMA pool — use this, not
+`ram_mb + vram_mb`, on unified-memory systems like Strix Halo) and `platform`
+(`strix-halo`, `wsl2`, `proxmox-kvm`, `kvm`, `lxc`, `bare-metal-*`, `unknown`).
+
+## Canonical device taxonomy
+
+`hal0.model_meta` is the single source of truth for device ids (previously duplicated
+across 5 call sites, now unified). `DEFAULT_DEVICE = "gpu-rocm"`.
+
+| Device id | Label | Recommended | Default profile | Notes |
+|---|---|---|---|---|
+| `gpu-rocm` | GPU (ROCm) | ✅ | `chat` | Best throughput on Strix Halo — the recommended default. |
+| `gpu-vulkan` | GPU (Vulkan) | — | `chat` | Runs anywhere Mesa Vulkan does; slower than ROCm on Strix Halo — fallback. |
+| `gpu-cuda` | GPU (CUDA) | — | `chat` | NVIDIA GPUs via llama.cpp CUDA — experimental on hal0. |
+| `cpu` | CPU | — | `cpu-chat` | Always available, slow but correct. |
+| `npu` | NPU (FLM) | — | `flm` | AMD XDNA NPU via FastFlowLM — chat/embed/ASR trio on one process. |
+
+`VALID_DEVICES` is the frozenset of these 5 ids. A legacy v0.1 `backend` enum
+(`rocm|vulkan|cuda|cpu|flm|moonshine|kokoro`) is deprecated and round-trips for one
+release; `map_backend_to_device()` maps unknown legacy values to `"cpu"` as a safe
+fallback rather than crashing config load.
+
+## Backend-selection decision tree
+
+`hardware.recommend._backend_for()` — this is the actual logic the installer and
+dashboard use to pick a device for a new slot, given a probed `HardwareInfo`:
+
+1. **AMD**, unified memory ≥ 32 GB, and `vram_mb <= 4096` → **Vulkan** ("AMD UMA /
+   Strix Halo class" — small dedicated VRAM number is a UMA signal, not a real cap).
+2. **AMD**, `compute_capable` (rocm-smi reachable) → **ROCm**.
+3. **AMD**, no ROCm → **Vulkan** (Mesa).
+4. **NVIDIA**, NVIDIA Container Toolkit present (`nvidia-ctk` on `PATH` or a CDI spec
+   under `/etc/cdi`/`/var/run/cdi`) → **CUDA**.
+5. **NVIDIA**, no CDI → **Vulkan** fallback.
+6. **Intel iGPU** / unknown-but-`vulkan_capable` → **Vulkan**.
+7. **No GPU detected** → **CPU** ("no GPU detected — CPU inference only, slow but
+   correct").
+
+VRAM budget (`_vram_budget_gb()`): AMD UMA → half of the unified pool; discrete GPU →
+`vram_mb`; CPU-only → half of `ram_available_mb`.
+
+## Platform support
+
+`HardwareInfo.platform` enumerates every platform hal0 recognizes during probing:
+`strix-halo`, `wsl2`, `proxmox-kvm`, `kvm`, `lxc`, `bare-metal-amd-gpu`,
+`bare-metal-nvidia-gpu`, `bare-metal-intel-igpu`, `bare-metal-cpu-only`, `unknown`.
+
+For install-target-specific setup (Proxmox LXC, WSL2, bare-metal Ubuntu), see the
+Getting Started guides — this page covers only the hardware-detection and
+backend-selection logic, not per-platform install steps.
+
+## See also
+
+- [Providers, profiles & devices](/docs/reference/providers-profiles-devices/) — how a
+  device selection flows into a slot's `device` field and a profile's (now inert)
+  `device_class`/`backend` hints.
+- [Model roster & benchmarks](/docs/reference/model-roster-benchmark/) — how hardware
+  tier drives the curated primary-slot model recommendation.

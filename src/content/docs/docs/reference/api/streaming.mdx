@@ -1,0 +1,58 @@
+---
+title: Streaming reference
+description: "How hal0 forwards streaming (SSE) responses — verified against src/hal0/dispatcher/router.py and src/hal0/api/routes/v1.py in the v1.0 tree."
+sidebar:
+  order: 20
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`stream: true` in a `/v1/chat/completions` (or other dispatched) request body triggers
+hal0's streaming forward path in the dispatcher (`hal0.dispatcher.router`).
+
+## Behavior
+
+- The upstream connection is opened **eagerly** (`httpx.AsyncClient.send(req, stream=True)`)
+  specifically so a connect failure surfaces as a clean `502 UpstreamUnavailable`
+  rather than failing partway through an already-started response generator.
+- The client response is a Starlette `StreamingResponse` whose body iterator does a
+  **raw byte passthrough** — `async for chunk in resp.aiter_raw(): yield chunk`. hal0
+  does **not** parse or re-emit SSE events itself; the OpenAI-standard
+  `data: {...}\n\n` ... `data: [DONE]\n\n` framing and the `text/event-stream`
+  content-type come from whatever upstream is serving the slot (llama-server, FLM, or
+  a remote provider), copied through verbatim.
+- Status code and `content-type` on the client response are copied verbatim from the
+  upstream response.
+
+## Timeouts
+
+<Aside type="caution">
+`[dispatcher].direct_read_timeout_s` (default `300.0`, range `30.0-600.0` — see
+[Config schema](/docs/reference/config-schema/#dispatcher)) governs the
+**non-streaming** forward path only. Once a stream is open, this timeout does not
+apply — only the underlying HTTP client's `connect` (5.0s), `write` (10.0s), and
+`pool` (5.0s) timeouts constrain the streaming path's connection setup. There is no
+separate configurable read timeout once bytes start flowing.
+</Aside>
+
+## Slot state during a stream
+
+A slot dispatching a streaming request is held in the `SERVING` state until the client
+has fully drained the stream, not just until the first byte is sent — released via a
+wrapped async generator. See [Slot lifecycle](/docs/reference/slot-lifecycle/) for the
+full state machine.
+
+## Observability piggybacked on the stream
+
+hal0 wraps the streaming byte iterator purely for metrics — this does not alter what's
+sent to the client:
+
+- **Approximate token count**: counts `"delta":` substring occurrences per chunk, fed
+  into a per-slot tokens/sec gauge (`GET /api/slots/metrics`).
+- **Time-to-first-token (TTFT)**: recorded at the first chunk containing a `"delta":`
+  marker, deliberately skipping llama-server's initial role-only chunk — stored in a
+  per-slot TTFT event deque.
+
+Non-streaming responses get an analogous hook that pulls `usage.completion_tokens`
+(and, for FLM/NPU responses, the hal0-specific `usage.decoding_speed_tps` /
+`usage.kv_token_occupancy_rate_percentage` fields) out of the JSON body.

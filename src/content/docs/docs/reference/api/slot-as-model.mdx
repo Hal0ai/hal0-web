@@ -1,0 +1,69 @@
+---
+title: Addressing a slot as a model
+description: "How to target a specific slot by name from an OpenAI-compatible request — verified against src/hal0/dispatcher/_capability_resolve.py and src/hal0/api/routes/v1.py in the v1.0 tree."
+sidebar:
+  order: 30
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+hal0's dispatcher resolves the `model` field of an OpenAI-compatible request primarily
+by **model id**, not by slot name — see
+[OpenAI-compatible API → Model → slot resolution](/docs/reference/api/openai-compat/#model--slot-resolution)
+for the full 5-step resolution order. Direct slot-name addressing exists, but only as
+the last-resort fallback in that chain (`SLOT_ALIASES` direct lookup) — described in
+source as "operator muscle memory," for requesting a slot literally by name.
+
+## Chat-slot aliases
+
+For `/v1/chat/completions` specifically, the route layer recognizes a small set of
+aliases in the `model` field and rewrites them to the aliased slot's configured model
+id before dispatch even reaches the general resolver:
+
+| Alias | Resolves to |
+|---|---|
+| `agent` | The configured default chat slot. |
+| `utility` | The configured utility slot. |
+| `agent-hermes` | Legacy alias, still accepted. |
+| any enabled LLM slot name | That slot's configured model. |
+
+`hal0/*`-prefixed virtual model names are resolved separately, against live slot state,
+and set a "lane pin" recording which specific slot the caller meant — relevant when
+more than one slot serves the same underlying model id.
+
+## Omitting `model` entirely
+
+If a request omits `model`, the request **path** decides the default, not a global
+fallback model:
+
+| Path | Default target |
+|---|---|
+| `/embeddings` | `embed` capability slot |
+| `/rerank`, `/rerankings` | `rerank` capability slot |
+| `/audio/speech` | `tts` capability slot |
+| `/images/*` | `img` capability slot |
+| everything else | `agent` |
+
+<Aside type="note">
+The default for chat-shaped requests changed from `chat` to `agent` (ADR-0023) —
+if you're carrying forward assumptions from pre-1.0 docs or muscle memory, update any
+reference to a `chat` default.
+</Aside>
+
+## Capability-based routing fallback
+
+When neither an alias nor an exact model-id match resolves, the dispatcher falls back
+to capability inference from the request path and model-name hints, in this order:
+
+1. Path fragment → capability slot type (`/embeddings` → `embed`, `/rerankings`/`/rerank`
+   → `rerank`, `/audio/speech` → `tts`, `/images/generations`/`/images/edits`/
+   `/images/variations` → `img` — note the last two paths aren't actually implemented
+   endpoints, but their strings are still recognized here as routing hints).
+2. Model-name substring hints (`embed`, `rerank`).
+3. Image-model-id prefixes (`sdxl`, `sd-1.5`, `sd15`, `flux`).
+4. Direct `SLOT_ALIASES` lookup — the slot-name-as-model fallback.
+
+See [Providers, profiles & devices](/docs/reference/providers-profiles-devices/) for
+how a slot's `device`/`provider` fields relate to which capability it can serve, and
+[Slot lifecycle](/docs/reference/slot-lifecycle/) for the states a slot must be in
+(`READY`, `SERVING`, or `IDLE`) to be dispatchable at all.

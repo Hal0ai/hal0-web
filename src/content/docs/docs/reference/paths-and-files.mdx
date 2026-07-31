@@ -1,0 +1,138 @@
+---
+title: Paths & files reference
+description: "Every filesystem path hal0 creates, reads, or writes — canonical resolver in src/hal0/config/paths.py, verified against the v1.0 tree."
+sidebar:
+  order: 35
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+All roots are resolved by `hal0.config.paths` and are `HAL0_HOME`-aware — see
+[Environment variables](/docs/reference/env-vars/). Production layout (with
+`HAL0_HOME` unset) follows the FHS:
+
+| Root | Path | Purpose |
+|---|---|---|
+| `usr_lib()` | `/usr/lib/hal0/current` | Code — a symlink to the currently active versioned install dir. |
+| `lib()` | `/usr/lib/hal0` | Shipped read-only tree: `bin/` wrappers, `versions/`, hooks. |
+| `etc()` | `/etc/hal0` | User-editable config, preserved across updates. |
+| `var_lib()` | `/var/lib/hal0` | Mutable runtime state, preserved across updates. |
+| `var_log()` | `/var/log/hal0` | Optional supplementary log files — journald is the primary log sink. |
+
+With `HAL0_HOME=$X` set (dev installs, tests): `usr_lib = $X/usr-lib/hal0/current`,
+`lib = $X/usr-lib/hal0`, `etc = $X/etc/hal0`, `var_lib = $X/var-lib/hal0`,
+`var_log = $X/var-log/hal0`.
+
+## `/etc/hal0/` layout
+
+```
+/etc/hal0/
+├── hal0.toml                # main config
+├── api.env                  # 0600, systemd EnvironmentFile — secrets/keys
+├── openwebui.env
+├── hardware.json            # probe snapshot
+├── manifest.json            # release manifest, image digest pins
+├── profiles.toml            # optional — seeds apply if absent
+├── stacks.toml               # optional
+├── slots/                   # one <name>.toml per slot
+├── agents/<name>.toml       # per-agent MCP allowlist/config
+└── *.lock                   # advisory RMW lock siblings
+```
+
+`api.env` is written with mode `0600` — it carries the admin/client bearer keys and
+other secrets. See [Config schema](/docs/reference/config-schema/) for every file's
+key layout.
+
+## `/var/lib/hal0/` layout
+
+```
+/var/lib/hal0/
+├── hal0.db                  # primary SQLite — registry, PortAuthority, metrics, runtime state
+├── activity.db(+wal/shm)    # audit trail SQLite
+├── .first-run.lock          # 0600, single-use OTP for first-run claim
+├── .first_run_done          # first-run completion sentinel
+├── .bundle-chosen           # unwired for v1.0 — see caution below
+├── registry/
+│   └── registry.toml(+.lock) # model registry
+├── models/                  # default model cache (unless overridden — see below)
+├── slots/<name>/             # per-slot working dir
+├── agents/
+│   ├── secret.bin            # 0600 HMAC secret for the agent chat proxy
+│   └── <name>/workspace/     # per-agent sandbox root (chroot/bind-mount target)
+├── stacks/state.json         # active-stack pointer + content hash
+├── openwebui/                 # OpenWebUI state
+├── .hermes/runtime.json      # Hermes runtime info (embed token, etc)
+└── .config/flm/models/       # default FLM (NPU) model cache
+```
+
+<Aside type="caution">
+`.bundle-chosen` is a bundle-picker completion marker (JSON: tier + NPU flag +
+timestamp). As of v1.0 the marker is written but the bundle-picker flow that would
+consume it is deferred/unwired — don't document it as an active decision point.
+</Aside>
+
+### Model store resolution
+
+The default model cache is `/var/lib/hal0/models`. Resolution order:
+
+1. `HAL0_MODEL_STORE` env var, if set.
+2. `[models].store` (or the deprecated `[models].pull_root`) in `hal0.toml`, via
+   `effective_store()`.
+3. `/var/lib/hal0/models` (the `models_dir()` default).
+
+`[models].roots` (default: just the effective store) plus the effective store itself,
+deduplicated, form the full scan set (`scan_roots()`).
+
+`DEFAULT_MODEL_STORE = /mnt/ai-models` is a historic convention for an external
+NFS/fast-disk mount used as a slot container bind target — it's not a resolver default,
+just a documented convention some installs still use.
+
+## Other notable paths
+
+| Path | Purpose |
+|---|---|
+| `~/.local/share/hal0/models` | XDG-style per-user model store — a UI display option only, not a resolver default. |
+| `$PWD/.hal0ai` (or `$HAL0_PREFIX`) | Dev-mode install root, used by `hal0 uninstall --dev`. |
+| `$HERMES_HOME` (default `~/.hermes`) | Hermes agent home directory. |
+
+## Lock files
+
+hal0 uses a generic sibling-lock pattern (`hal0.config.locking.file_lock()`):
+`<target>.lock` next to any config file, advisory `fcntl.flock`.
+
+| Pattern | Purpose |
+|---|---|
+| `/etc/hal0/*.lock` | Advisory read-modify-write locks on config writes. |
+| `/var/lib/hal0/*.lock` | Advisory read-modify-write locks on state writes. |
+| `/var/lib/hal0/registry/registry.toml.lock` | Registry cross-process write lock (sidecar file). |
+| `<slots_dir>.lock` | Slot-config directory-level lock. |
+| `<record>.lock` | Per-record lock for MCP `installed.py` read-modify-write. |
+
+## Temp file prefixes (atomic-write pattern)
+
+hal0 writes config and state files via `tempfile.mkstemp` in the same directory,
+`fsync`, then `os.replace` — so readers never see a torn write. Recognizable prefixes:
+
+| Prefix | Used by |
+|---|---|
+| `.hal0-writeprobe-{pid}` | Write-permission probe. |
+| `.hal0-managed` | Marker stamped in a claimed `HERMES_HOME`/agent data dir — gates the unmanaged-directory refusal. |
+| `.hal0-gpu-arbiter-*.tmp` | GPU arbiter state. |
+| `.hal0-state-*.tmp` | Slot state / ID-keying migration. |
+| `.hal0-stack-state-*.tmp` | Stack state. |
+| `.hal0-env-*.tmp` | Atomic env-file writer (`config/env.py`). |
+| `.hal0-build-stamp` | UI prebuild content-hash stamp under the served dist dir. |
+
+## Portable export envelope formats
+
+| Extension | Purpose |
+|---|---|
+| `.hal0profile.json` | Portable profile export/import envelope. |
+| `.hal0stack.json` | Portable stack export/import envelope. |
+
+<Aside type="note">
+API keys are **never** stored in TOML config files — `providers.toml`/`upstreams.toml`
+entries only hold the *name* of an environment variable (`auth_value_env`); the actual
+secret value lives in `api.env` (mode `0600`), written atomically via
+`hal0.config.env.write_env_atomic`.
+</Aside>

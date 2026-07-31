@@ -1,0 +1,130 @@
+---
+title: Slot lifecycle reference
+description: "The slot state machine — every state, every legal transition, dispatch ranking, typed errors, and the v1.0 write-boundary guard — verified against src/hal0/slots/state.py in the v1.0 tree."
+sidebar:
+  order: 80
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The canonical state machine lives in `hal0.slots.state` and is used by `SlotManager`,
+the dashboard SSE stream, and the `state.json` persistence layer.
+
+## States
+
+| State | Meaning |
+|---|---|
+| `OFFLINE` | Not running. No systemd unit active. |
+| `PULLING` | Model files are being downloaded or verified. systemd unit not yet started. |
+| `STARTING` | systemd unit has been started; waiting for the container to come up. |
+| `WARMING` | Container is up; the health probe is returning non-ready responses while the model loads into VRAM/GTT. |
+| `READY` | Passed the full health probe (non-empty `/v1/models` plus a sentinel completion). Ready to serve. |
+| `SERVING` | An inference request is actively in-flight on this slot. |
+| `IDLE` | Reached two ways, both render identically on the wire: `warming → idle` (process up but `/v1/models` is empty — launched with `--model ""` or a missing file; routers must not treat this as ready), or `ready → idle` (no request for longer than the idle timeout — eviction candidate). |
+| `UNLOADING` | Graceful shutdown in progress. systemd stop issued; waiting for the container to exit. |
+| `ERROR` | Failed. Details in `state.json` and journald. |
+
+```
+offline → pulling → starting → warming → ready ←──┐
+                                   │      ↑       │
+                                   │      ↓       │
+                                   └──→ idle ←──serving
+                                          │
+                                          ↓
+                                      unloading → offline
+                                          ↑
+                                        error
+```
+
+## Legal transitions
+
+`LEGAL_TRANSITIONS` is the authoritative map `SlotManager` enforces:
+
+| From | Legal next states |
+|---|---|
+| `OFFLINE` | `PULLING`, `STARTING` |
+| `PULLING` | `STARTING`, `ERROR`, `OFFLINE` |
+| `STARTING` | `WARMING`, `ERROR`, `OFFLINE` |
+| `WARMING` | `READY`, `IDLE`, `ERROR`, `OFFLINE` |
+| `READY` | `SERVING`, `IDLE`, `UNLOADING`, `ERROR` |
+| `SERVING` | `READY`, `IDLE`, `ERROR` |
+| `IDLE` | `SERVING`, `UNLOADING`, `READY` |
+| `UNLOADING` | `OFFLINE`, `ERROR` |
+| `ERROR` | `OFFLINE`, `PULLING`, `STARTING` (re-loadable, subject to the crash-loop breaker) |
+
+## Dispatchable states
+
+`DISPATCHABLE_STATES = {READY, SERVING, IDLE}` — the single source of truth used by
+`SlotManager`, the GPU arbiter, stack-apply, the Prometheus renderer, and the
+slot-view aggregator to decide whether a slot can take a request right now.
+
+## Selection ranking
+
+When more than one candidate slot binds the same model, `_SELECTION_ORDER` ranks them:
+
+1. `DISPATCHABLE_STATES` (ready/serving/idle) — answers now.
+2. `{WARMING, STARTING, PULLING}` — will answer shortly.
+3. `{OFFLINE, UNLOADING}` — needs a cold load.
+4. `{ERROR}` — last resort (already failed once).
+
+Unknown states rank as `ERROR`.
+
+## Typed errors
+
+Each is an HTTP-status-bearing error under the `slot.*` namespace:
+
+| Error | HTTP status | Meaning |
+|---|---|---|
+| `SlotNotFound` | 404 | — |
+| `IllegalSlotTransition` | 409 | Attempted transition not in `LEGAL_TRANSITIONS`. |
+| `SlotNotReady` | 503 | — |
+| `SlotSpawnFailed` | 500 | — |
+| `SlotHealthFailed` | 503 | — |
+| `SlotCrashLooping` | 503 | Reload blocked during exponential backoff, or after too many consecutive failures. Carries `retry_after_s`. |
+| `SlotTerminateTimeout` | 504 | Stop didn't return in time — the request unblocks anyway. |
+| `SlotConfigError` | 400 | — |
+| `NpuExclusivityViolation` | 409 | Only one `device=npu, type=llm, enabled=true` slot is allowed at a time (AMD XDNA hardware context limit). |
+| `SlotPinned` | 409 | A pinned slot needs `?force=true` to unload or delete. |
+
+Health-probe resolution on timeout: unresolved health checks resolve to `WARMING`, not
+`ERROR` — an ambiguous outcome is treated as "still loading," not "failed."
+
+## Persistence
+
+`SlotStateRecord` (`name`, `state`, `model_id`, `port`, `updated_at`, `message`,
+`extra`) is written atomically (tempfile + `fsync` + `os.replace`) to
+`/var/lib/hal0/slots/<name>/state.json`, so SSE readers never observe a torn write.
+
+## Self-managed providers
+
+`SELF_MANAGED_PROVIDERS = {kokoro, qwen3tts, moonshine, vibevoice}` — these providers
+serve a baked-in model, so no explicit `model_id` is needed to dispatch to them
+(`provider_requires_model()` returns `False` for this set). This set must stay in sync
+with the dashboard's own `SELF_MANAGED_PROVIDERS` constant.
+
+## Activation
+
+There is **no `enabled` field** on `SlotConfig`. A non-empty `model.default` is the
+activation signal; boot autostart is gated by the Quadlet unit's
+`WantedBy=hal0.target` plus `SlotManager.load()`'s empty-model guard.
+
+## The v1.0 write-boundary guard
+
+<Aside type="caution">
+New in v1.0 (Stream F, `fix/write-boundary-enforcement` — reviewed PASS, not yet
+merged to `main` at time of writing). Before this change, `stacks/apply.py` and
+`SlotManager.create()` could both write slot TOML in-process **without** ever routing
+through the HTTP-layer's model-owned-key guard or the `[server].extra_args`
+hardware-flag screen — a real bypass of the model/slot key-ownership split described in
+[Config schema](/docs/reference/config-schema/#model-nested-under-a-slot).
+</Aside>
+
+`guard_slot_write_payload` (`hal0.slots.config_write`) is now the single shared
+in-process gate every writer of slot TOML must pass through — API routes, stacks-apply,
+and `SlotManager` alike. It partitions model-owned vs. slot-owned keys and screens
+`extra_args` for hardware flags, so a stack-apply or in-process create can no longer
+silently write a key the model is supposed to own. `PATCH /slots/{name}/defaults`
+correctly reports model-owned keys as such after this change.
+
+For the CLI surface that drives slot lifecycle transitions directly, see
+[CLI reference → hal0 slot](/docs/reference/cli/#hal0-slot--manage-inference-slots).
