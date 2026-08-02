@@ -14,6 +14,9 @@
 #     preserved so the mirror stays diff-clean against this repo).
 #   - hal0/docs/internal/ is NEVER touched (hand-maintained dev docs).
 #   - hal0/docs/agents/ is NEVER touched (hand-maintained agent policy docs).
+#   - hal0/docs/rework/ is NEVER touched (hand-maintained working docs).
+#   - hal0/docs/hal0-install-migration-guide.html is NEVER touched
+#     (hand-maintained in hal0 itself, not part of the Astro site).
 #   - hal0/docs/README.md is NEVER touched (explains the split).
 #   - Files removed upstream are removed in the mirror.
 
@@ -53,6 +56,8 @@ jobs:
           rsync -av --delete \
             --exclude='internal/' \
             --exclude='agents/' \
+            --exclude='rework/' \
+            --exclude='hal0-install-migration-guide.html' \
             --exclude='README.md' \
             hal0-web/src/content/docs/docs/ \
             hal0/docs/
