@@ -23,6 +23,14 @@ Deployed on Vercel at `hal0.dev`.
 
 Licensed **Apache-2.0** (matches the upstream hal0 product repo).
 
+## Where the docs live
+
+`src/content/docs/docs/**` is **generated** — mirrored from
+[`Hal0ai/hal0:docs/`](https://github.com/Hal0ai/hal0/tree/main/docs) by that repo's
+`mirror-docs` workflow on every merge to `main`. Do not edit those files here; edits
+will be overwritten by the next sync. Blog posts, marketing pages, and `alpha-docs/`
+are native to this repo.
+
 ## Layout
 
 ```
