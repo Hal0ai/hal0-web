@@ -8,6 +8,7 @@
     "prebuild": "node scripts/sync-changelog.mjs",
     "build": "astro build",
     "preview": "astro preview",
+    "test": "node --test \"test/**/*.test.mjs\"",
     "astro": "astro",
     "sync:changelog": "node scripts/sync-changelog.mjs",
     "capture:screenshots": "node scripts/capture-screenshots.mjs"
