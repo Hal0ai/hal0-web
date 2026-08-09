@@ -1,0 +1,168 @@
+---
+/**
+ * FeaturedProfiles — homepage community layer, section (c): featured
+ * profiles.
+ *
+ * Top 3 profiles by headline decode tok/s, joined against ROSTER the same
+ * way /profiles does (src/lib/profiles-join.mjs). A profile with no
+ * measured run in the roster has no headline number to rank or show, so
+ * it's excluded here rather than shown with a borrowed or missing metric
+ * — the full, unranked gallery lives at /profiles.
+ *
+ * Cards link to /profiles?p=<slug>, the deep-link convention the profile
+ * detail drawer already listens for.
+ */
+import profilesSnapshot from '../../data/profiles.json';
+import { benchFor } from '../../lib/profiles-join.mjs';
+import { ROSTER } from '../../data/model-roster';
+
+const FEATURED_COUNT = 3;
+
+const featured = profilesSnapshot.profiles
+  .map((record) => ({ record, bench: benchFor(record, ROSTER) }))
+  .filter((c) => c.bench.headline)
+  .sort((a, b) => (b.bench.headline?.dec ?? 0) - (a.bench.headline?.dec ?? 0))
+  .slice(0, FEATURED_COUNT);
+---
+
+{featured.length > 0 && (
+  <section class="sec">
+    <div class="sec-h">
+      <div>
+        <span class="eyebrow">shared configs</span>
+        <h2 class="site-h2">start from someone else's tuning</h2>
+      </div>
+      <a href="/profiles" class="mono sec-link">all profiles →</a>
+    </div>
+    <div class="cards3">
+      {featured.map(({ record, bench }) => (
+        <a class="pmini" href={`/profiles?p=${record.profile.slug}`}>
+          <div class="pmini-top">
+            <span class="slug mono">{record.profile.slug}</span>
+            <span class="chip amber">{record.profile.intent}</span>
+          </div>
+          <p class="site-sm pmini-desc">{record.profile.summary}</p>
+          <div class="fl mono">{record.args.raw}</div>
+          <div class="pmini-foot">
+            <span class="mono pmini-dec">{bench.headline?.dec.toFixed(1)}<u>tok/s</u></span>
+            {record.profile.first_party ? (
+              <span class="chip amber">first-party</span>
+            ) : (
+              <span class="pmini-author">
+                <img
+                  src={`https://github.com/${record.profile.author}.png?size=32`}
+                  alt=""
+                  width="16"
+                  height="16"
+                  loading="lazy"
+                />
+                <span class="mono">@{record.profile.author}</span>
+              </span>
+            )}
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+
+<style>
+  .sec {
+    padding-block: 52px 0;
+  }
+  .sec-h {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .sec-h .site-h2 {
+    margin: 8px 0 0;
+  }
+  .sec-link {
+    font-size: 12px;
+    color: var(--fg-3);
+    text-decoration: none;
+  }
+  .sec-link:hover {
+    color: var(--accent);
+  }
+  .cards3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .pmini {
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--dur-fast) var(--ease);
+  }
+  .pmini:hover {
+    border-color: var(--line-strong);
+  }
+  .pmini-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .slug {
+    font-size: 13px;
+    color: var(--fg);
+  }
+  .pmini-desc {
+    margin: 0;
+  }
+  .fl {
+    font-size: 10.5px;
+    color: var(--fg-4);
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 7px 9px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pmini-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 10px;
+  }
+  .pmini-dec {
+    color: var(--fg);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pmini-dec u {
+    text-decoration: none;
+    color: var(--fg-4);
+    font-size: 10px;
+    margin-left: 3px;
+  }
+  .pmini-author {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--fg-3);
+  }
+  .pmini-author img {
+    border-radius: var(--rad-sm);
+  }
+  @media (max-width: 1080px) {
+    .cards3 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

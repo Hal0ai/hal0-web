@@ -9,8 +9,13 @@
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
 import HermesCard from '../components/HermesCard.astro';
+import BenchHighlights from '../components/landing/BenchHighlights.astro';
+import ForumTopics from '../components/landing/ForumTopics.astro';
+import FeaturedProfiles from '../components/landing/FeaturedProfiles.astro';
+import LatestWriting from '../components/landing/LatestWriting.astro';
 import rawChangelog from '../data/changelog.md?raw';
 import { parseChangelog } from '../lib/changelog.js';
+import '../styles/site-data.css';
 
 const canonicalUrl = 'https://hal0.dev/';
 // Derived from the changelog (synced from the product repo) — never hardcoded.
@@ -511,6 +516,16 @@ const shipNowHighlights = [
       </article>
     </div>
   </section>
+
+  <!-- COMMUNITY LAYER — homepage design screen 6: bench highlights, forum
+       (omitted entirely when unreachable), featured profiles, latest
+       writing. Below the existing feature cards, in that order. -->
+  <div class="shell-wide">
+    <BenchHighlights />
+    <ForumTopics />
+    <FeaturedProfiles />
+    <LatestWriting />
+  </div>
 
   <!-- PERF -->
   <section class="perf" id="perf">

@@ -1,0 +1,156 @@
+---
+/**
+ * BenchHighlights — homepage community layer, section (a): headline bench
+ * figures + top-5 table.
+ *
+ * Source of truth: ROSTER in src/data/model-roster.ts — the same
+ * first-party sweep the /docs/reference/model-roster-benchmark/ reference
+ * page reads. /benchmarks isn't built yet (another team owns that page),
+ * so every link here points at the roster reference doc instead.
+ *
+ * Rows are measured only, top 5 by decode tok/s. The comp
+ * (docs/design/2026-08-09-community-comps/06 Homepage.html) also shows a
+ * ttft column sourced from a derived API field that doesn't exist in
+ * ROSTER yet — dropped rather than inventing a number; `params` takes its
+ * place so the row still differentiates models at a glance.
+ */
+import { ROSTER, ROSTER_MEASURED, ROSTER_DATE } from '../../data/model-roster';
+
+const BENCH_HREF = '/docs/reference/model-roster-benchmark/';
+const TOP_N = 5;
+
+const measured = ROSTER.filter((r) => r.measured && r.dec != null);
+const top = [...measured].sort((a, b) => (b.dec ?? 0) - (a.dec ?? 0)).slice(0, TOP_N);
+
+const fastestDecode = top[0]?.dec ?? null;
+const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
+---
+
+<section class="sec bench-sec">
+  <div class="sec-h">
+    <div>
+      <span class="eyebrow">measured, not claimed</span>
+      <h2 class="site-h2">what this box actually does</h2>
+    </div>
+    <a href={BENCH_HREF} class="mono sec-link">all {ROSTER.length} models · sweep {ROSTER_DATE} →</a>
+  </div>
+  <a class="benchstrip" href={BENCH_HREF} aria-label="View the full model roster benchmark">
+    <div class="figs">
+      <div class="fig">
+        <div class="n">{fastestDecode?.toFixed(1) ?? '—'}</div>
+        <div class="label">fastest decode · tok/s</div>
+      </div>
+      <div class="fig">
+        <div class="n plain">{ROSTER_MEASURED}</div>
+        <div class="label">models measured</div>
+      </div>
+      <div class="fig">
+        <div class="n plain">{peakPrefill.toFixed(0)}</div>
+        <div class="label">peak prefill · tok/s</div>
+      </div>
+    </div>
+    <div class="bench-table-wrap">
+      <table class="dtable">
+        <thead>
+          <tr>
+            <th>model</th>
+            <th class="n">params</th>
+            <th class="n sorted">decode ▼</th>
+            <th class="n">prefill</th>
+            <th class="n">gb</th>
+          </tr>
+        </thead>
+        <tbody>
+          {top.map((r) => (
+            <tr>
+              <td class="lead bench-model">{r.id}</td>
+              <td class="n">{r.params}</td>
+              <td class="n">{r.dec?.toFixed(1)}</td>
+              <td class="n">{r.pf?.toFixed(0)}</td>
+              <td class="n">{r.gb}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </a>
+</section>
+
+<style>
+  .bench-sec {
+    padding-block: 52px 0;
+  }
+  .sec-h {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .sec-h .site-h2 {
+    margin: 8px 0 0;
+  }
+  .sec-link {
+    font-size: 12px;
+    color: var(--fg-3);
+    text-decoration: none;
+  }
+  .sec-link:hover {
+    color: var(--accent);
+  }
+  .benchstrip {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+  }
+  .benchstrip:hover {
+    border-color: var(--line-strong);
+  }
+  .figs {
+    border-right: 1px solid var(--line-soft);
+    padding: 18px;
+  }
+  .fig {
+    padding: 10px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .fig:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .fig .n {
+    font-family: var(--jbm);
+    font-size: 26px;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: var(--num-features);
+  }
+  .fig .n.plain {
+    color: var(--fg);
+  }
+  .bench-table-wrap {
+    overflow-x: auto;
+  }
+  .bench-model {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 1080px) {
+    .benchstrip {
+      grid-template-columns: 1fr;
+    }
+    .figs {
+      border-right: 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+  }
+</style>

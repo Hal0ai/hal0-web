@@ -1,0 +1,151 @@
+---
+/**
+ * LatestWriting — homepage community layer, section (d): latest blog
+ * (+ KB, when it exists).
+ *
+ * Blog posts live in the `docs` content collection under blog/ (see
+ * astro.config.mjs's starlight-blog wiring) — filtered and sorted here
+ * rather than through starlight-blog's internal helpers, since those are
+ * scoped to its own route generation, not a homepage teaser.
+ *
+ * The KB doesn't exist on this branch's base yet — another team is adding
+ * it in parallel (Team B). No placeholder UI renders in its place; this
+ * section is blog-only until KB content lands, at which point the KB
+ * teaser slot below should read from its collection the same way.
+ */
+import { getCollection } from 'astro:content';
+
+const LATEST_COUNT = 2;
+
+const posts = (await getCollection('docs', (entry) => entry.id.startsWith('blog/') && !entry.data.draft))
+  .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0))
+  .slice(0, LATEST_COUNT);
+
+const formatDate = (d?: Date) => (d ? d.toISOString().slice(0, 10) : '');
+
+// `authors` in the blog schema is `string | Author | Array<string | Author>`
+// (blogSchema, node_modules/starlight-blog/schema.ts) — a bare `hal0` string
+// is the common case here, not an array, so indexing it directly picks off
+// a single character ('h') instead of the name. Normalize to a flat list of
+// display names regardless of shape.
+function authorNames(authors: unknown): string[] {
+  if (!authors) return [];
+  const list = Array.isArray(authors) ? authors : [authors];
+  return list.map((a) => (typeof a === 'string' ? a : (a as { name: string }).name));
+}
+---
+
+{posts.length > 0 && (
+  <section class="sec">
+    <div class="sec-h">
+      <div>
+        <span class="eyebrow">learn</span>
+        <h2 class="site-h2">latest from the blog</h2>
+      </div>
+      <a href="/blog" class="mono sec-link">all posts →</a>
+      {/* Team B's knowledge base lands separately — its teaser slot goes
+          here once /kb content exists. No placeholder in the meantime. */}
+    </div>
+    <div class="blogrow" data-count={posts.length}>
+      {posts.map((post, i) => (
+        i === 0 ? (
+          <a class="blead" href={`/${post.id}/`}>
+            <span class="eyebrow">blog · {formatDate(post.data.date)}</span>
+            <h3 class="blead-title">{post.data.title}</h3>
+            {post.data.excerpt && <p class="site-body blead-body">{post.data.excerpt}</p>}
+            {authorNames(post.data.authors)[0] && (
+              <div class="blead-byline mono">{authorNames(post.data.authors)[0]}</div>
+            )}
+          </a>
+        ) : (
+          <a class="bsmall" href={`/${post.id}/`}>
+            <span class="eyebrow">blog · {formatDate(post.data.date)}</span>
+            <h4 class="bsmall-title">{post.data.title}</h4>
+          </a>
+        )
+      ))}
+    </div>
+  </section>
+)}
+
+<style>
+  .sec {
+    padding-block: 52px 0;
+  }
+  .sec-h {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .sec-h .site-h2 {
+    margin: 8px 0 0;
+  }
+  .sec-link {
+    font-size: 12px;
+    color: var(--fg-3);
+    text-decoration: none;
+  }
+  .sec-link:hover {
+    color: var(--accent);
+  }
+  .blogrow {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 16px;
+  }
+  .blead,
+  .bsmall {
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--dur-fast) var(--ease);
+  }
+  .blead:hover,
+  .bsmall:hover {
+    border-color: var(--line-strong);
+  }
+  .blead {
+    padding: 20px;
+  }
+  .blead-title {
+    font-size: 20px;
+    line-height: 1.28;
+    margin: 12px 0 10px;
+    color: var(--fg);
+    font-weight: 500;
+    letter-spacing: var(--ls-tight);
+  }
+  .blead-body {
+    font-size: 14px;
+  }
+  .blead-byline {
+    margin-top: 14px;
+    font-size: 11px;
+    color: var(--fg-4);
+  }
+  .bsmall {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+  }
+  .bsmall-title {
+    font-size: 14.5px;
+    line-height: 1.35;
+    margin: 10px 0 0;
+    color: var(--fg-2);
+    font-weight: 500;
+  }
+  .bsmall:hover .bsmall-title {
+    color: var(--accent);
+  }
+  @media (max-width: 1080px) {
+    .blogrow {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
