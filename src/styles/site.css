@@ -378,7 +378,11 @@
 		border-bottom-color: var(--accent);
 	}
 
-	/* ── footer ──────────────────────────────────────────────────── */
+	/* ── footer ──────────────────────────────────────────────────────
+	 * `&.ftr` matters: on Starlight pages the footer element itself
+	 * carries `class="site ftr"` with no `.site` ancestor, so a plain
+	 * nested `.ftr` (→ `.site .ftr`) would never match it there. */
+	&.ftr,
 	.ftr {
 		border-top: 1px solid var(--line);
 		background: var(--bg-sunken);

@@ -48,8 +48,13 @@ test('header manifest links present in the header of both surfaces', { skip: !bu
   const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
   assert.ok(marketingHeader, 'marketing page has a <header>');
   assert.ok(starlightNav, 'starlight page has the site docnav');
+  // Marketing renders the umbrella entries; the Starlight docnav flattens
+  // `sub` lists (StarlightSiteTitle), so assert each surface's actual shape.
+  const flattened = visibleHeader.flatMap((l) => l.sub ?? [l]);
   for (const l of visibleHeader) {
     assert.ok(marketingHeader.includes(`href="${l.href}"`), `marketing header missing ${l.href}`);
+  }
+  for (const l of flattened) {
     assert.ok(starlightNav.includes(`href="${l.href}"`), `starlight docnav missing ${l.href}`);
   }
 });
