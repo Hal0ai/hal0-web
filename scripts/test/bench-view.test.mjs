@@ -48,10 +48,27 @@ test('cellsMatching filters by kind/depth/configLabel independently, ignoring un
   assert.deepEqual(cellsMatching(cells, { kind: 'pp' }).map((c) => c.cell_key), ['d']);
 });
 
-test('bestCell picks the highest decode_ts_med and ignores nulls', () => {
+test('bestCell picks the highest decode_ts_med by default and ignores nulls when a real ranking exists', () => {
   assert.equal(bestCell(cells).cell_key, 'd');
   assert.equal(bestCell([]), null);
-  assert.equal(bestCell([{ decode_ts_med: null }]), null);
+});
+
+test('bestCell falls back to the first cell, not null, when every cell is null on the ranking metric', () => {
+  // A model measured under the active filter should never vanish from the
+  // table just because its primary metric is null (e.g. an embed/rerank
+  // sweep with no decode_ts_med yet) — C2 regression guard.
+  const noDecode = [{ cell_key: 'x', decode_ts_med: null, prefill_ts_med: null }];
+  assert.deepEqual(bestCell(noDecode), noDecode[0]);
+  assert.deepEqual(bestCell(noDecode, 'embed'), noDecode[0]);
+});
+
+test('bestCell ranks a "pp" workload on prefill_ts_med, not decode_ts_med', () => {
+  const pp = [
+    { cell_key: 'p1', decode_ts_med: 90, prefill_ts_med: 100 },
+    { cell_key: 'p2', decode_ts_med: 10, prefill_ts_med: 500 },
+  ];
+  assert.equal(bestCell(pp, 'pp').cell_key, 'p2');
+  assert.equal(bestCell(pp).cell_key, 'p1'); // default (non-pp) still ranks on decode
 });
 
 test('cellForLane: "best"/unset picks max-decode, a named lane picks that exact lane', () => {
@@ -85,6 +102,33 @@ test('rowsFromRoster picks a named lane per-model and carries run identity field
   const rows = rowsFromRoster(models, { kind: 'tg', depth: 2048, configLabel: 'default', lane: 'rocm' });
   assert.equal(rows[0].runId, 'r1');
   assert.equal(rows[0].measuredAt, 't1');
+  assert.equal(rows[0].cellKey, 'a');
+});
+
+test('rowsFromRoster never surfaces host.mem_gb as gb (C1) — gb is always null until the snapshot join fills it', () => {
+  const rows = rowsFromRoster(models, { kind: 'tg', depth: 2048, configLabel: 'default', lane: 'best' });
+  assert.equal(rows[0].gb, null, 'host.mem_gb (12) must not leak into gb');
+});
+
+test('rowsFromRoster keeps a model whose matching cells are all null-decode (e.g. an embed/rerank sweep)', () => {
+  const embedModels = [
+    { model_id: 'model-e', quant: 'q4', cells: [{ cell_key: 'e1', lane: 'rocm', kind: 'embed', depth: 512, config_label: 'default', decode_ts_med: null, prefill_ts_med: null, ttft_ms_p50: null, ttft_ms_p95: null, accept_med: null, run_id: 'r6', measured_at: 't6', flagged: false }] },
+  ];
+  const rows = rowsFromRoster(embedModels, { kind: 'embed', depth: 512, configLabel: 'default', lane: 'best' });
+  assert.equal(rows.length, 1, 'the model must not be dropped just because decode_ts_med is null');
+  assert.equal(rows[0].id, 'model-e');
+  assert.equal(rows[0].dec, null);
+});
+
+test('rowsFromRoster tolerates a null model_id without throwing', () => {
+  const nullIdModels = [
+    { model_id: null, quant: 'q4', cells: [{ cell_key: 'n1', lane: 'rocm', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 30, prefill_ts_med: 300, ttft_ms_p50: null, ttft_ms_p95: null, accept_med: null, run_id: 'r7', measured_at: 't7', flagged: false }] },
+  ];
+  const rows = rowsFromRoster(nullIdModels, { kind: 'tg', depth: 2048, configLabel: 'default', lane: 'best' });
+  assert.equal(rows[0].id, null);
+  assert.doesNotThrow(() => applyQuery(rows, 'anything'));
+  assert.equal(applyQuery(rows, 'anything').length, 0);
+  assert.equal(applyQuery(rows, '').length, 1);
 });
 
 test('facetOptions dedups and sorts kinds/depths/variants/lanes across all models', () => {
@@ -113,12 +157,15 @@ test('rowsFromSnapshot only includes measured rows and never invents ttft/lane/d
   }
 });
 
-test('joinSnapshotIdentity attaches caps/hfRepo/params from the roster by id, leaves unmatched rows alone', () => {
+test('joinSnapshotIdentity attaches caps/hfRepo/params/gb from the roster by id, leaves unmatched rows alone', () => {
   const live = rowsFromRoster(models, { kind: 'tg', depth: 2048, configLabel: 'default', lane: 'best' });
   const joined = joinSnapshotIdentity(live, roster);
   assert.deepEqual(joined[0].caps, ['mtp']);
   assert.equal(joined[0].hfRepo, 'org/model-a');
   assert.equal(joined[0].params, '7B');
+  // C1: gb comes from the snapshot's on-disk model size (5), never from the
+  // live payload's host.mem_gb (12, already forced null by rowsFromRoster).
+  assert.equal(joined[0].gb, 5);
   const noMatch = joinSnapshotIdentity([{ id: 'ghost', caps: [], hfRepo: null, params: null, kv: null, spec: null, gb: null }], roster);
   assert.deepEqual(noMatch[0].caps, []);
 });

@@ -12,7 +12,17 @@
         { "label": "releases", "href": "/releases", "match": "/releases" }
       ]
     },
-    { "label": "benchmarks", "href": "/benchmarks", "match": "/benchmarks" },
+    {
+      "label": "benchmarks",
+      "href": "/benchmarks",
+      "match": "/benchmarks",
+      "sub": [
+        { "label": "leaderboard", "href": "/benchmarks", "match": "/benchmarks" },
+        { "label": "evals", "href": "/benchmarks?tab=evals" },
+        { "label": "methodology", "href": "/docs/reference/model-roster-benchmark/" },
+        { "label": "profiles", "href": "/profiles" }
+      ]
+    },
     { "label": "profiles", "href": "/profiles", "match": "/profiles" },
     { "label": "forum", "href": "https://forum.hal0.dev", "external": true, "hidden": true }
   ],

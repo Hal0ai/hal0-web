@@ -2,9 +2,10 @@
 //
 // Pure view-model logic for /benchmarks: decode-speed bucket classification,
 // best-lane reduction over live /v1/roster cells, filter application (AND
-// across facets, OR within a facet's own multi-select — caps only), and
-// sort comparators. No DOM, no fetch, no Date.now() — safe for node --test
-// and the browser island alike. DOM wiring stays in src/pages/benchmarks.astro.
+// across every facet, including a facet's own multi-select — caps requires
+// all selected caps to be present, not any), and sort comparators. No DOM,
+// no fetch, no Date.now() — safe for node --test and the browser island
+// alike. DOM wiring stays in src/pages/benchmarks.astro.
 //
 // Bucket thresholds and wording match src/components/ModelRoster.astro
 // verbatim (fast >= 60, mid >= 25, slow < 25) per the comp handoff README.
@@ -18,7 +19,7 @@ export const DECODE_MID = 25;
  * @returns {'fast' | 'mid' | 'slow' | null}
  */
 export function decodeBucket(v) {
-  if (v == null || Number.isNaN(v)) return null;
+  if (v == null || typeof v !== 'number' || Number.isNaN(v)) return null;
   if (v >= DECODE_FAST) return 'fast';
   if (v >= DECODE_MID) return 'mid';
   return 'slow';
@@ -55,25 +56,51 @@ export function cellsMatching(cells, filters = {}) {
   });
 }
 
-/** The cell with the highest decode_ts_med, or null for an empty/all-null set. */
-export function bestCell(cells) {
+/**
+ * The workload's primary ranking metric: prefill throughput for a pure
+ * prompt-processing workload, decode throughput for everything else (tg,
+ * chat, batch, embed, rerank, reuse all read out on decode_ts_med in the
+ * comp). Keeps `bestCell` from silently ranking a `pp` sweep on a field
+ * that workload rarely populates.
+ * @param {string | null | undefined} kind
+ */
+function primaryMetricKey(kind) {
+  return kind === 'pp' ? 'prefill_ts_med' : 'decode_ts_med';
+}
+
+/**
+ * The cell ranking highest on the workload's primary metric. Cells missing
+ * that metric are never preferred over one that has it, but an empty
+ * *ranking* (every cell null on the metric — e.g. an embed/rerank sweep
+ * that doesn't populate decode_ts_med) still returns the first matching
+ * cell rather than nothing: a model measured under the active filter
+ * shouldn't vanish from the table just because its primary metric is null.
+ * Only a genuinely empty cell set returns null.
+ * @param {Cell[]} cells
+ * @param {string} [kind]
+ */
+export function bestCell(cells, kind) {
+  if (!cells || !cells.length) return null;
+  const key = primaryMetricKey(kind);
   let best = null;
   for (const c of cells) {
-    if (c.decode_ts_med == null) continue;
-    if (best == null || c.decode_ts_med > best.decode_ts_med) best = c;
+    if (c[key] == null) continue;
+    if (best == null || c[key] > best[key]) best = c;
   }
-  return best;
+  return best ?? cells[0];
 }
 
 /**
  * Resolve one cell for a given lane selection: `"best"` (or unset) picks the
- * highest-decode cell across the set; anything else picks the first cell on
- * that exact lane (or null if the model has no cell on that lane).
+ * cell ranking highest on the active workload's primary metric (see
+ * `bestCell`); anything else picks the first cell on that exact lane (or
+ * null if the model has no cell on that lane).
  * @param {Cell[]} cells
  * @param {string} [lane]
+ * @param {string} [kind]
  */
-export function cellForLane(cells, lane) {
-  if (lane == null || lane === 'best') return bestCell(cells);
+export function cellForLane(cells, lane, kind) {
+  if (lane == null || lane === 'best') return bestCell(cells, kind);
   return cells.find((c) => c.lane === lane) ?? null;
 }
 
@@ -81,7 +108,7 @@ export function cellForLane(cells, lane) {
  * Build one leaderboard row per model from a `/v1/roster` response's
  * `models` array, given the active workload/depth/variant/lane filter.
  * Models with no cell matching the filter are dropped, not shown empty.
- * @param {Array<{model_id: string, quant: string, host?: {gpu?: string, mem_gb?: number}, cells: Cell[]}>} models
+ * @param {Array<{model_id: string|null, quant: string, host?: {gpu?: string, mem_gb?: number}, cells: Cell[]}>} models
  * @param {{ kind?: string, depth?: number, configLabel?: string, lane?: string }} filters
  */
 export function rowsFromRoster(models, filters = {}) {
@@ -89,7 +116,7 @@ export function rowsFromRoster(models, filters = {}) {
   const rows = [];
   for (const m of models) {
     const matching = cellsMatching(m.cells ?? [], { kind, depth, configLabel });
-    const cell = cellForLane(matching, lane);
+    const cell = cellForLane(matching, lane, kind);
     if (!cell) continue;
     rows.push({
       id: m.model_id,
@@ -99,7 +126,11 @@ export function rowsFromRoster(models, filters = {}) {
       params: null,
       kv: null,
       spec: null,
-      gb: m.host?.mem_gb ?? null,
+      // C1: host.mem_gb is the reference box's RAM, not the model's
+      // on-disk size — never surface it as `gb`. Always resolved from the
+      // snapshot join (joinSnapshotIdentity); a live row with no snapshot
+      // match just shows no gb, rather than a wildly wrong host figure.
+      gb: null,
       dec: cell.decode_ts_med,
       pf: cell.prefill_ts_med,
       ttftP50: cell.ttft_ms_p50,
@@ -110,6 +141,7 @@ export function rowsFromRoster(models, filters = {}) {
       kind: cell.kind,
       variant: cell.config_label,
       runId: cell.run_id,
+      cellKey: cell.cell_key ?? null,
       measuredAt: cell.measured_at,
       flagged: !!cell.flagged,
       live: true,
@@ -170,6 +202,7 @@ export function rowsFromSnapshot(roster) {
       kind: null,
       variant: null,
       runId: null,
+      cellKey: null,
       measuredAt: null,
       flagged: false,
       live: false,
@@ -209,11 +242,13 @@ export function applyCaps(rows, caps) {
   return rows.filter((r) => caps.every((c) => r.caps.includes(c)));
 }
 
-/** Case-insensitive substring match on model id. */
+/** Case-insensitive substring match on model id. `id` is string|null per the
+ * /v1/roster contract — a null id never matches a non-empty query rather
+ * than throwing. */
 export function applyQuery(rows, q) {
   if (!q) return rows;
   const needle = q.toLowerCase();
-  return rows.filter((r) => r.id.toLowerCase().includes(needle));
+  return rows.filter((r) => String(r.id ?? '').toLowerCase().includes(needle));
 }
 
 // ── sorting ──────────────────────────────────────────────────────────────

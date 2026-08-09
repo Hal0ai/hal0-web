@@ -133,8 +133,13 @@ test('subFor: the retained docs bench page resolves to learn\'s sub list, like a
   assert.deepEqual(subForJs('/docs/reference/model-roster-benchmark/'), learn.sub);
 });
 
-test('subFor: /benchmarks (no sub) resolves to null', () => {
-  assert.equal(subForJs('/benchmarks'), null);
+test('subFor: /benchmarks resolves to the benchmarks sub list (leaderboard/evals/methodology/profiles)', () => {
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  assert.deepEqual(subForJs('/benchmarks'), bench.sub);
+  assert.deepEqual(
+    bench.sub.map((l) => l.label),
+    ['leaderboard', 'evals', 'methodology', 'profiles'],
+  );
 });
 
 test('subFor: unrelated path resolves to null', () => {

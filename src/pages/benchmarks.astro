@@ -34,8 +34,16 @@
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import '../styles/site-data.css';
-import { ROSTER, HARDWARE, BINARY, ROSTER_DATE } from '../data/model-roster.ts';
+import { ROSTER, HARDWARE, BINARY, ROSTER_DATE, ROSTER_MEASURED } from '../data/model-roster.ts';
 import { rowsFromSnapshot, decodeBucket, decodeBucketFill } from '../lib/bench-view.mjs';
+
+// Mirrors the client script's `esc` (src/lib/bench-view.mjs has no DOM/HTML
+// concerns, so this stays duplicated rather than shared) — every raw HTML
+// string built below goes through it, even values sourced from the
+// repo-committed ROSTER snapshot, so the two markup-building code paths
+// (this frontmatter and the client <script>) stay under the same discipline.
+const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 
 // Capability glyphs — lifted verbatim from src/components/ModelRoster.astro.
 const ICONS: Record<string, { label: string; svg: string }> = {
@@ -55,7 +63,7 @@ function capsMarkup(caps: string[]) {
   var inner = caps
     .map(function (k) {
       var icon = ICONS[k];
-      return icon ? '<span class="cap cap-' + k + '" title="' + icon.label + '">' + icon.svg + '</span>' : '';
+      return icon ? '<span class="cap cap-' + esc(k) + '" title="' + esc(icon.label) + '">' + icon.svg + '</span>' : '';
     })
     .join('');
   return '<span class="caps">' + inner + '</span>';
@@ -68,30 +76,30 @@ function meterMarkup(fill: number) {
 }
 
 function decodeMarkup(v: number | null) {
-  if (v == null) return '<span class="num">—</span>';
+  if (v == null || typeof v !== 'number' || Number.isNaN(v)) return '<span class="num">—</span>';
   var b = decodeBucket(v);
   var fill = decodeBucketFill(b);
+  var bEsc = esc(b);
   return (
     '<span class="decode ' +
-    b +
+    bEsc +
     '" title="' +
-    b +
+    bEsc +
     ' · ' +
-    v +
+    esc(v) +
     ' tok/s"><span class="meter" aria-hidden="true">' +
     meterMarkup(fill) +
     '</span><span class="v num">' +
-    v.toFixed(1) +
+    esc(v.toFixed(1)) +
     '</span><span class="sr">' +
-    b +
+    bEsc +
     '</span></span>'
   );
 }
 
 const snapshotRows = rowsFromSnapshot(ROSTER).sort((a, b) => (b.dec ?? -1) - (a.dec ?? -1));
 
-const description =
-  '26 models measured end to end on one Strix Halo box: decode and prefill throughput, time to first token, speculative accept rate, and what each run cost in memory, watts and degrees. Every cell opens the run that produced it.';
+const description = `${ROSTER_MEASURED} models measured end to end on one Strix Halo box: decode and prefill throughput, time to first token, speculative accept rate, and what each run cost in memory, watts and degrees. Every cell opens the run that produced it.`;
 
 const APIBASE = import.meta.env.PUBLIC_BENCH_API ?? 'https://api.hal0.dev';
 
@@ -135,12 +143,12 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       </div>
     </div>
 
-    <div class="tabs" role="tablist" data-bench-tabs>
-      <button type="button" class="on" role="tab" aria-selected="true" data-bench-tab="leaderboard">leaderboard</button>
-      <button type="button" role="tab" aria-selected="false" data-bench-tab="evals">evals</button>
+    <div class="tabs" role="tablist" aria-label="Benchmarks view" data-bench-tabs>
+      <button type="button" class="on" role="tab" id="bench-tab-leaderboard" aria-selected="true" aria-controls="bench-panel-leaderboard" data-bench-tab="leaderboard">leaderboard</button>
+      <button type="button" role="tab" id="bench-tab-evals" aria-selected="false" aria-controls="bench-panel-evals" tabindex="-1" data-bench-tab="evals">evals</button>
     </div>
 
-    <section data-bench-panel="leaderboard">
+    <section id="bench-panel-leaderboard" role="tabpanel" aria-labelledby="bench-tab-leaderboard" tabindex="0" data-bench-panel="leaderboard">
       <details class="filters" data-bench-filters open>
         <summary class="filters-summary"><span data-bench-filter-count>filters</span></summary>
         <div class="filters-body">
@@ -148,7 +156,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
             <span class="label">workload</span>
             <div class="seg" data-seg="kind">
               {WORKLOAD_PLACEHOLDER.map((o) => (
-                <button type="button" disabled title="needs live data" class={o === 'tg' ? 'on' : ''} data-value={o}>{o}</button>
+                <button type="button" disabled title="needs live data" class={o === 'tg' ? 'on' : ''} aria-pressed={o === 'tg' ? 'true' : 'false'} data-value={o}>{o}</button>
               ))}
             </div>
           </div>
@@ -156,7 +164,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
             <span class="label">depth</span>
             <div class="seg" data-seg="depth">
               {DEPTH_PLACEHOLDER.map((o) => (
-                <button type="button" disabled title="needs live data" class={o === 2048 ? 'on' : ''} data-value={o}>{o}</button>
+                <button type="button" disabled title="needs live data" class={o === 2048 ? 'on' : ''} aria-pressed={o === 2048 ? 'true' : 'false'} data-value={o}>{o}</button>
               ))}
             </div>
           </div>
@@ -164,7 +172,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
             <span class="label">variant</span>
             <div class="seg" data-seg="variant">
               {VARIANT_PLACEHOLDER.map((o) => (
-                <button type="button" disabled title="needs live data" class={o === 'default' ? 'on' : ''} data-value={o}>{o}</button>
+                <button type="button" disabled title="needs live data" class={o === 'default' ? 'on' : ''} aria-pressed={o === 'default' ? 'true' : 'false'} data-value={o}>{o}</button>
               ))}
             </div>
           </div>
@@ -172,7 +180,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
             <span class="label">lane</span>
             <div class="seg" data-seg="lane">
               {LANE_PLACEHOLDER.map((o) => (
-                <button type="button" disabled title="needs live data" class={o === 'best' ? 'on' : ''} data-value={o}>{o}</button>
+                <button type="button" disabled title="needs live data" class={o === 'best' ? 'on' : ''} aria-pressed={o === 'best' ? 'true' : 'false'} data-value={o}>{o}</button>
               ))}
             </div>
           </div>
@@ -192,7 +200,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
               <input type="text" placeholder="filter models" data-bench-query />
             </div>
             <span class="mono" data-bench-readout style="font-size:11.5px; color:var(--fg-3)">
-              {snapshotRows.length} of {ROSTER.length} models · best lane per model
+              {snapshotRows.length} of {ROSTER_MEASURED} models
             </span>
             <button type="button" class="btn ghost sm" data-bench-reset>reset to default view</button>
             <a href={`${APIBASE}/v1/roster`} rel="noopener" class="mono" style="margin-left:auto; font-size:11.5px; color:var(--fg-3)">
@@ -205,9 +213,9 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       <div class="tablewrap" data-bench-wrap>
         <div class="panel-h">
           <span class="label" data-bench-caption>leaderboard · snapshot</span>
-          <span class="fresh snap" data-bench-fresh title="api.hal0.dev did not answer at build/hydration time. Showing the build-time snapshot — figures are correct but not live.">
+          <span class="fresh snap" data-bench-fresh title="Showing the build-time snapshot — figures are correct but not live.">
             <span class="dot stale" aria-hidden="true"></span>
-            <span data-bench-fresh-text>snapshot from {ROSTER_DATE} · api unreachable</span>
+            <span data-bench-fresh-text>snapshot from {ROSTER_DATE}</span>
           </span>
         </div>
 
@@ -215,14 +223,14 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
           <table class="dtable" data-bench-table>
             <thead data-bench-thead>
               <tr>
-                <th class="model" data-key="id" data-sort-type="string">model</th>
+                <th class="model" aria-sort="none"><button type="button" data-key="id">model</button></th>
                 <th>caps</th>
-                <th data-key="params" data-sort-type="string">params</th>
+                <th aria-sort="none"><button type="button" data-key="params">params</button></th>
                 <th>kv · spec</th>
-                <th class="n sorted" data-key="dec" data-sort-type="number">decode tok/s ▼</th>
-                <th class="n" data-key="pf" data-sort-type="number">prefill</th>
-                <th class="n" data-key="acc" data-sort-type="number">accept</th>
-                <th class="n" data-key="gb" data-sort-type="number">gb</th>
+                <th class="n sorted" aria-sort="descending"><button type="button" data-key="dec">decode tok/s ▼</button></th>
+                <th class="n" aria-sort="none"><button type="button" data-key="pf">prefill</button></th>
+                <th class="n" aria-sort="none"><button type="button" data-key="acc">accept</button></th>
+                <th class="n" aria-sort="none"><button type="button" data-key="gb">gb</button></th>
               </tr>
             </thead>
             <tbody data-bench-tbody>
@@ -264,7 +272,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       </div>
     </section>
 
-    <section data-bench-panel="evals" hidden>
+    <section id="bench-panel-evals" role="tabpanel" aria-labelledby="bench-tab-evals" tabindex="0" data-bench-panel="evals" hidden>
       <div class="tablewrap" style="margin-top:16px">
         <div class="panel-h">
           <span class="label">evals · task accuracy against decode speed</span>
@@ -285,7 +293,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   </div>
 
   <div class="scrim" data-run-scrim hidden></div>
-  <aside class="drawer-run" role="dialog" aria-label="run detail" hidden data-run-drawer>
+  <aside class="drawer-run" role="dialog" aria-modal="true" aria-label="run detail" hidden data-run-drawer>
     <div class="dr-head">
       <div>
         <span class="eyebrow">run detail</span>
@@ -301,10 +309,12 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   </aside>
 </MarketingLayout>
 
-<script define:vars={{ APIBASE, ROSTER: ROSTER, CAP_KEYS }}>
+<script define:vars={{ APIBASE, ROSTER: ROSTER, CAP_KEYS, ROSTER_DATE, ROSTER_MEASURED }}>
   window.__BENCH_API__ = APIBASE;
   window.__BENCH_ROSTER__ = ROSTER;
   window.__BENCH_CAPS__ = CAP_KEYS;
+  window.__BENCH_ROSTER_DATE__ = ROSTER_DATE;
+  window.__BENCH_ROSTER_MEASURED__ = ROSTER_MEASURED;
 </script>
 
 <script>
@@ -325,11 +335,15 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       __BENCH_API__: string;
       __BENCH_ROSTER__: any[];
       __BENCH_CAPS__: string[];
+      __BENCH_ROSTER_DATE__: string;
+      __BENCH_ROSTER_MEASURED__: number;
     }
   }
 
   const API = window.__BENCH_API__;
   const ROSTER = window.__BENCH_ROSTER__;
+  const ROSTER_DATE = window.__BENCH_ROSTER_DATE__;
+  const ROSTER_MEASURED = window.__BENCH_ROSTER_MEASURED__;
 
   // Small typed helpers so DOM lookups carry a real element type instead of
   // the bare `Element` querySelector returns by default — matches the
@@ -347,6 +361,17 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   const CAP_LABEL: Record<string, string> = { mtp: 'MTP speculative', vision: 'Vision', tools: 'Tool-calling', coding: 'Coding', reasoning: 'Reasoning' };
   const laneChip = (l: string | null) => (l === 'rocm' ? 'dev-rocm' : l === 'vulkan_radv' ? 'dev-vulkan' : 'dev-cpu');
 
+  const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  // Every value below flows into innerHTML/outerHTML, so every interpolation
+  // — including numbers, which can't normally carry markup — goes through
+  // this uniformly. The threat model is a compromised bench API: a payload
+  // is JSON but its field *values* aren't guaranteed to be the types the
+  // /v1/roster contract promises, and an unescaped string masquerading as a
+  // number in an attribute (e.g. an unquoted title) is a real injection
+  // vector even though a well-behaved number never is. Escaping both costs
+  // nothing and removes the need to reason about which call sites are safe.
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
+
   // See the matching note in the frontmatter above: string concatenation,
   // not nested template literals, to stay clear of the same class of markup.
   function capsHtml(caps: string[]) {
@@ -354,7 +379,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     const inner = caps
       .map((k) => {
         const svg = ICON_SVG[k];
-        return svg ? '<span class="cap cap-' + k + '" title="' + CAP_LABEL[k] + '">' + svg + '</span>' : '';
+        return svg ? '<span class="cap cap-' + esc(k) + '" title="' + esc(CAP_LABEL[k]) + '">' + svg + '</span>' : '';
       })
       .join('');
     return '<span class="caps">' + inner + '</span>';
@@ -365,17 +390,16 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     return out;
   }
   function decodeHtml(v: number | null) {
-    if (v == null) return '<span class="num">—</span>';
+    if (v == null || typeof v !== 'number' || Number.isNaN(v)) return '<span class="num">—</span>';
     const b = decodeBucket(v);
     const fill = decodeBucketFill(b);
+    const bEsc = esc(b);
     return (
-      '<span class="decode ' + b + '" title="' + b + ' · ' + v + ' tok/s"><span class="meter" aria-hidden="true">' +
+      '<span class="decode ' + bEsc + '" title="' + bEsc + ' · ' + esc(v) + ' tok/s"><span class="meter" aria-hidden="true">' +
       meterHtml(fill) +
-      '</span><span class="v num">' + v.toFixed(1) + '</span><span class="sr">' + b + '</span></span>'
+      '</span><span class="v num">' + esc(v.toFixed(1)) + '</span><span class="sr">' + bEsc + '</span></span>'
     );
   }
-  const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 
   // ── state ────────────────────────────────────────────────────────────
   const DEFAULT_FILTERS: { kind: string; depth: number; configLabel: string; lane: string } = {
@@ -432,20 +456,27 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     { key: 'gb', label: 'gb', sortType: 'number', n: true },
   ];
 
-  function renderThead() {
+  function theadHtml() {
     const cols = live ? LIVE_COLS : SNAPSHOT_COLS;
-    thead.innerHTML = `<tr>${cols
+    return `<tr>${cols
       .map((c) => {
-        const sortedCls = sort.key === c.key ? ' sorted' : '';
-        const arrow = sort.key === c.key ? (sort.dir === -1 ? ' ▼' : ' ▲') : '';
-        const clickable = c.sortType ? ' data-key="' + c.key + '" data-sort-type="' + c.sortType + '"' : '';
+        const isSorted = sort.key === c.key;
+        const arrow = isSorted ? (sort.dir === -1 ? ' ▼' : ' ▲') : '';
+        const sortedCls = isSorted ? ' sorted' : '';
         const modelCls = c.key === 'id' ? ' model' : '';
-        return `<th class="${c.n ? 'n ' : ''}${modelCls}${sortedCls}"${clickable}>${c.label}${arrow}</th>`;
+        const ariaSort = c.sortType ? ` aria-sort="${isSorted ? (sort.dir === -1 ? 'descending' : 'ascending') : 'none'}"` : '';
+        const label = c.sortType
+          ? `<button type="button" data-key="${esc(c.key)}">${esc(c.label)}${arrow}</button>`
+          : esc(c.label);
+        return `<th class="${c.n ? 'n ' : ''}${modelCls}${sortedCls}"${ariaSort}>${label}</th>`;
       })
       .join('')}</tr>`;
-    $$<HTMLTableCellElement>('[data-bench-thead] th[data-key]').forEach((th) => {
-      th.addEventListener('click', () => {
-        const key = th.dataset.key as string;
+  }
+
+  function bindThead() {
+    $$<HTMLButtonElement>('[data-bench-thead] button[data-key]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key as string;
         sort = { key, dir: sort.key === key ? (-sort.dir as 1 | -1) : key === 'id' || key === 'params' || key === 'lane' ? 1 : -1 };
         render();
       });
@@ -454,36 +485,61 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
 
   function rowHtml(row: any) {
     const clickable = row.live && row.runId;
-    return `<tr data-row-id="${esc(row.id)}"${row.runId ? ` data-run-id="${esc(row.runId)}"` : ''}${clickable ? ' class="clickable"' : ''}>
-      <td class="model mid"><span class="mname">${esc(row.id)}</span><span class="msub">${esc(row.hfRepo || 'local build')}</span></td>
+    const quantLine = row.quant ? `<span class="msub msub-quant">${esc(row.quant)}</span>` : '';
+    const flagMark = row.live && row.flagged
+      ? '<span class="flag-mark" title="Flagged run — numbers may not reflect a clean sweep.">⚠</span>'
+      : '';
+    return `<tr data-row-id="${esc(row.id)}"${row.runId ? ` data-run-id="${esc(row.runId)}"` : ''}${row.cellKey ? ` data-cell-key="${esc(row.cellKey)}"` : ''}${clickable ? ' class="clickable"' : ''}>
+      <td class="model mid"><span class="mname">${flagMark}${esc(row.id)}</span><span class="msub">${esc(row.hfRepo || 'local build')}</span>${quantLine}</td>
       <td>${capsHtml(row.caps)}</td>
       <td>${esc(row.params ?? '—')}</td>
       <td>${esc(row.kv ?? '—')} · ${row.spec && row.spec !== 'none' ? esc(row.spec) : '—'}</td>
       ${live ? `<td><span class="chip ${laneChip(row.lane)}">${esc(row.lane ?? '—')}</span></td>` : ''}
       <td class="n">${decodeHtml(row.dec)}</td>
-      <td class="n">${row.pf != null ? row.pf.toFixed(0) : '—'}</td>
-      ${live ? `<td class="n">${row.ttftP50 != null ? row.ttftP50 + ' ms' : '—'}</td><td class="n" style="color:var(--fg-4)">${row.ttftP95 ?? '—'}</td>` : ''}
-      <td class="n">${row.acc != null ? row.acc + '%' : '—'}</td>
-      <td class="n">${row.gb ?? '—'}</td>
+      <td class="n">${row.pf != null && typeof row.pf === 'number' ? esc(row.pf.toFixed(0)) : '—'}</td>
+      ${live ? `<td class="n">${row.ttftP50 != null ? esc(row.ttftP50) + ' ms' : '—'}</td><td class="n" style="color:var(--fg-4)">${esc(row.ttftP95 ?? '—')}</td>` : ''}
+      <td class="n">${row.acc != null ? esc(row.acc) + '%' : '—'}</td>
+      <td class="n">${esc(row.gb ?? '—')}</td>
     </tr>`;
   }
 
+  // Renders the leaderboard from current state. Building the row markup can
+  // throw (a compromised/malformed live payload slipping past the type
+  // contract) — everything that touches the DOM (thead + tbody) happens
+  // only after the full rows array and its markup are built successfully,
+  // so a failure never leaves a stale N-col tbody under a fresh M-col
+  // thead (or vice versa). On failure we drop the live payload and
+  // re-render the snapshot, which is always well-formed — C3.
   function render() {
-    renderThead();
-    let rows: any[] = live
-      ? joinSnapshotIdentity(rowsFromRoster(live.models, filters), ROSTER)
-      : rowsFromSnapshot(ROSTER);
-    rows = applyCaps(rows, filters.caps);
-    rows = applyQuery(rows, filters.q);
-    rows = sortRows(rows, sort.key, sort.dir);
+    let rows: any[];
+    let bodyHtml: string;
+    try {
+      rows = live
+        ? joinSnapshotIdentity(rowsFromRoster(live.models, filters), ROSTER)
+        : rowsFromSnapshot(ROSTER);
+      rows = applyCaps(rows, filters.caps);
+      rows = applyQuery(rows, filters.q);
+      rows = sortRows(rows, sort.key, sort.dir);
+      bodyHtml = rows.map(rowHtml).join('');
+    } catch (err) {
+      console.error('benchmarks: live payload could not be rendered, reverting to the snapshot', err);
+      if (live) {
+        live = null;
+        setSnapshotBadge('parse-error');
+        render();
+      }
+      return;
+    }
 
-    tbody.innerHTML = rows.map(rowHtml).join('');
+    thead.innerHTML = theadHtml();
+    bindThead();
+    tbody.innerHTML = bodyHtml;
     $$<HTMLTableRowElement>('[data-bench-tbody] tr[data-run-id]').forEach((tr) => {
-      tr.addEventListener('click', () => openRun(tr.dataset.runId as string));
+      tr.addEventListener('click', () => openRun(tr.dataset.runId as string, tr, tr.dataset.cellKey));
     });
 
-    const total = live ? live.models.length : ROSTER.filter((r: any) => r.measured).length;
-    readout.textContent = `${rows.length} of ${total} models${filters.lane === 'best' || !live ? ' · best lane per model' : ''}`;
+    const total = live ? live.models.length : ROSTER_MEASURED;
+    readout.textContent = `${rows.length} of ${total} models${live && filters.lane === 'best' ? ' · best lane per model' : ''}`;
     emptyEl.hidden = rows.length !== 0;
     scrollEl.hidden = rows.length === 0;
     legendEl.hidden = rows.length === 0;
@@ -493,14 +549,41 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     filterCountEl.textContent = activeCount ? `filters · ${activeCount}` : 'filters';
   }
 
-  function setLiveBadge(generated: string) {
+  function setLiveBadge(generated: unknown) {
     freshEl.classList.remove('snap');
     freshEl.title = '';
     freshEl.querySelector('.dot')!.className = 'dot serving';
-    const ageMs = Date.now() - new Date(generated).getTime();
-    const ageMin = Math.max(0, Math.round(ageMs / 60000));
     const host = new URL(API).host;
+    // I1: `generated` comes straight off the live payload — validate before
+    // doing arithmetic on it, so a missing/malformed timestamp reads as an
+    // honest "freshness unknown" instead of "live · host, NaN min ago".
+    const parsed = typeof generated === 'string' ? new Date(generated) : null;
+    if (!parsed || Number.isNaN(parsed.getTime())) {
+      freshText.textContent = `live · ${host}, freshness unknown`;
+      return;
+    }
+    const ageMs = Date.now() - parsed.getTime();
+    const ageMin = Math.max(0, Math.round(ageMs / 60000));
     freshText.textContent = `live · ${host}, ${ageMin} min ago`;
+  }
+
+  // Reverts the badge to the snapshot's degraded state. `reason` is honest
+  // about *why* we're not live: a fetch/HTTP failure reads differently from
+  // a payload that answered but couldn't be turned into rows (render()'s
+  // catch, C3) — both still land on the always-well-formed snapshot.
+  function setSnapshotBadge(reason?: 'unreachable' | 'parse-error') {
+    freshEl.classList.add('snap');
+    freshEl.querySelector('.dot')!.className = 'dot stale';
+    if (reason === 'unreachable') {
+      freshText.textContent = `snapshot from ${ROSTER_DATE} · api unreachable`;
+      freshEl.title = 'The bench API did not answer — showing the build-time snapshot.';
+    } else if (reason === 'parse-error') {
+      freshText.textContent = `snapshot from ${ROSTER_DATE} · live data invalid`;
+      freshEl.title = 'The bench API responded, but this page could not render the payload — showing the build-time snapshot.';
+    } else {
+      freshText.textContent = `snapshot from ${ROSTER_DATE}`;
+      freshEl.title = 'Showing the build-time snapshot — figures are correct but not live.';
+    }
   }
 
   function enableSegs(opts: { kinds: string[]; depths: number[]; variants: string[]; lanes: string[] }) {
@@ -515,12 +598,19 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       if (!seg || !values.length) continue;
       const filterKey = dim === 'kind' ? 'kind' : dim === 'variant' ? 'configLabel' : dim;
       seg.innerHTML = values
-        .map((v) => `<button type="button" data-value="${esc(v)}" class="${v === filters[filterKey] ? 'on' : ''}">${esc(v)}</button>`)
+        .map((v) => {
+          const on = v === filters[filterKey];
+          return `<button type="button" data-value="${esc(v)}" class="${on ? 'on' : ''}" aria-pressed="${on}">${esc(v)}</button>`;
+        })
         .join('');
       Array.from(seg.querySelectorAll<HTMLButtonElement>('button')).forEach((btn) => {
         btn.addEventListener('click', () => {
-          Array.from(seg.querySelectorAll('button')).forEach((b) => b.classList.remove('on'));
+          Array.from(seg.querySelectorAll<HTMLButtonElement>('button')).forEach((b) => {
+            b.classList.remove('on');
+            b.setAttribute('aria-pressed', 'false');
+          });
           btn.classList.add('on');
+          btn.setAttribute('aria-pressed', 'true');
           const raw = btn.dataset.value;
           filters[filterKey] = dim === 'depth' ? Number(raw) : raw;
           render();
@@ -537,10 +627,21 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       if (!Array.isArray(data.models)) throw new Error('malformed roster payload');
       live = { models: data.models, generated: data.generated };
       setLiveBadge(data.generated);
-      enableSegs(facetOptions(data.models));
+      const opts = facetOptions(data.models);
+      // Default-view fallback: the comp's default (tg @ 2048, default
+      // config) may not exist in a given sweep (e.g. a partial or
+      // in-progress run). Fall back to the first available value per
+      // dimension rather than rendering an empty table against filters
+      // that don't exist in this payload — enableSegs below reads the
+      // (now possibly adjusted) `filters` to mark the right segment "on".
+      if (opts.kinds.length && !opts.kinds.includes(filters.kind)) filters.kind = opts.kinds[0];
+      if (opts.depths.length && !opts.depths.includes(filters.depth)) filters.depth = opts.depths[0];
+      if (opts.variants.length && !opts.variants.includes(filters.configLabel)) filters.configLabel = opts.variants[0];
+      enableSegs(opts);
       render();
     } catch {
-      // stays on the snapshot — badge is already the amber degraded state
+      // stays on the snapshot
+      setSnapshotBadge('unreachable');
     }
   }
 
@@ -563,6 +664,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   }
   function resetFilters() {
     filters = { ...DEFAULT_FILTERS, caps: [], q: '' };
+    sort = { key: 'dec', dir: -1 };
     if (queryInput) queryInput.value = '';
     capButtons.forEach((b) => {
       b.classList.remove('on');
@@ -577,24 +679,45 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   // ── mobile filters collapse ──────────────────────────────────────────
   if (filtersDetails && window.innerWidth <= 820) filtersDetails.removeAttribute('open');
 
-  // ── tabs ─────────────────────────────────────────────────────────────
+  // ── tabs (full WAI-ARIA tabs pattern: roving tabindex, arrow-key nav,
+  // automatic activation) ─────────────────────────────────────────────
+  const tablist = $<HTMLElement>('[data-bench-tabs]');
   const tabButtons = $$<HTMLButtonElement>('[data-bench-tab]');
   const panels = {
     leaderboard: $<HTMLElement>('[data-bench-panel="leaderboard"]')!,
     evals: $<HTMLElement>('[data-bench-panel="evals"]')!,
   };
   let evalsLoaded = false;
-  tabButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.benchTab;
-      tabButtons.forEach((b) => {
-        b.classList.toggle('on', b === btn);
-        b.setAttribute('aria-selected', String(b === btn));
-      });
-      panels.leaderboard.hidden = tab !== 'leaderboard';
-      panels.evals.hidden = tab !== 'evals';
-      if (tab === 'evals' && !evalsLoaded) loadEvals();
+
+  function activateTab(btn: HTMLButtonElement, focus = false) {
+    const tab = btn.dataset.benchTab;
+    tabButtons.forEach((b) => {
+      const active = b === btn;
+      b.classList.toggle('on', active);
+      b.setAttribute('aria-selected', String(active));
+      b.tabIndex = active ? 0 : -1;
     });
+    panels.leaderboard.hidden = tab !== 'leaderboard';
+    panels.evals.hidden = tab !== 'evals';
+    if (focus) btn.focus();
+    if (tab === 'evals' && !evalsLoaded) loadEvals();
+  }
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => activateTab(btn));
+  });
+  tablist?.addEventListener('keydown', (e) => {
+    const key = (e as KeyboardEvent).key;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+    const idx = tabButtons.indexOf(document.activeElement as HTMLButtonElement);
+    if (idx === -1) return;
+    e.preventDefault();
+    let next = idx;
+    if (key === 'ArrowLeft') next = (idx - 1 + tabButtons.length) % tabButtons.length;
+    else if (key === 'ArrowRight') next = (idx + 1) % tabButtons.length;
+    else if (key === 'Home') next = 0;
+    else if (key === 'End') next = tabButtons.length - 1;
+    activateTab(tabButtons[next], true);
   });
 
   type EvalRow = { model?: string; task?: string; score?: number };
@@ -627,11 +750,11 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
             const s = scores.get(t);
             if (s == null) return '<td class="n" style="color:var(--fg-5)">—</td>';
             const cls = s >= 0.75 ? ' good' : s < 0.4 ? ' bad' : '';
-            return `<td class="n"><span class="evalbar"><span class="track"><span class="fill${cls}" style="width:${Math.round(s * 100)}%"></span></span><span class="num" style="font-size:11px">${s.toFixed(2)}</span></span></td>`;
+            return `<td class="n"><span class="evalbar"><span class="track"><span class="fill${cls}" style="width:${esc(Math.round(s * 100))}%"></span></span><span class="num" style="font-size:11px">${esc(s.toFixed(2))}</span></span></td>`;
           });
           const vals = [...scores.values()].filter((v): v is number => v != null);
           const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-          return `<tr><td class="model mid"><span class="mname">${esc(model)}</span>${snap ? `<span class="msub">${esc(snap.params)}</span>` : ''}</td><td class="n">${decodeHtml(snap ? snap.dec : null)}</td>${cells.join('')}<td class="n" style="color:${mean == null ? 'var(--fg-5)' : mean >= 0.7 ? 'var(--ok)' : 'var(--fg)'}">${mean != null ? mean.toFixed(2) : '—'}</td></tr>`;
+          return `<tr><td class="model mid"><span class="mname">${esc(model)}</span>${snap ? `<span class="msub">${esc(snap.params)}</span>` : ''}</td><td class="n">${decodeHtml(snap ? snap.dec : null)}</td>${cells.join('')}<td class="n" style="color:${mean == null ? 'var(--fg-5)' : mean >= 0.7 ? 'var(--ok)' : 'var(--fg)'}">${mean != null ? esc(mean.toFixed(2)) : '—'}</td></tr>`;
         })
         .join('');
       emptyEvals.hidden = true;
@@ -649,6 +772,12 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   const drawerClose = $<HTMLButtonElement>('[data-run-close]')!;
   let openRunId: string | null = null;
   let pushedState = false;
+  // I5: the element that opened the drawer (a leaderboard row, or nothing
+  // when the drawer was opened by a deep-link page load / popstate) gets
+  // focus back on close — mirrors profiles.astro's triggerBySlug pattern,
+  // just tracking one live trigger instead of a static per-slug map since
+  // rows here are rebuilt on every render().
+  let lastTrigger: HTMLElement | null = null;
   const runCache = new Map<string, any>();
 
   function setShellInert(on: boolean) {
@@ -685,8 +814,15 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     }
   });
 
-  function renderRunBody(run: any) {
-    const rec = run.records?.[run.records.length - 1] ?? run.records?.[0];
+  function renderRunBody(run: any, cellKey?: string) {
+    // Prefer the record for the exact cell the user clicked — a run can
+    // carry multiple records (one per cell it measured), and picking the
+    // last/first one regardless of which row opened the drawer showed the
+    // wrong record whenever a run had more than one. Fall back to
+    // last-then-first only when no cellKey was available (deep link /
+    // popstate) or it doesn't match anything in this run.
+    const byCellKey = cellKey ? run.records?.find((r: any) => r.cell_key === cellKey) : null;
+    const rec = byCellKey ?? run.records?.[run.records.length - 1] ?? run.records?.[0];
     if (!rec) {
       drawerBody.innerHTML = '<p class="site-sm">This run has no published records.</p>';
       return;
@@ -698,9 +834,9 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     drawerBody.innerHTML = `
       <div class="dr-metrics">
         <div><div class="label">decode</div>${decodeHtml(rec.decode_ts_med)}</div>
-        <div><div class="label">prefill</div><div class="stat">${rec.prefill_ts_med != null ? rec.prefill_ts_med.toFixed(1) : '—'} <span class="u">tok/s</span></div></div>
-        <div><div class="label">ttft p50 / p95</div><div class="stat">${rec.ttft_ms_p50 ?? '—'} <span class="u">/ ${rec.ttft_ms_p95 ?? '—'} ms</span></div></div>
-        <div><div class="label">accept rate</div><div class="stat">${rec.accept_med != null ? rec.accept_med + ' %' : '—'}</div></div>
+        <div><div class="label">prefill</div><div class="stat">${rec.prefill_ts_med != null ? esc(rec.prefill_ts_med.toFixed(1)) : '—'} <span class="u">tok/s</span></div></div>
+        <div><div class="label">ttft p50 / p95</div><div class="stat">${esc(rec.ttft_ms_p50 ?? '—')} <span class="u">/ ${esc(rec.ttft_ms_p95 ?? '—')} ms</span></div></div>
+        <div><div class="label">accept rate</div><div class="stat">${rec.accept_med != null ? esc(rec.accept_med) + ' %' : '—'}</div></div>
       </div>
       <section>
         <h4 class="label">identity</h4>
@@ -719,7 +855,7 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       ${rec.flagged ? '<div class="banner warn">Flagged run — numbers may not reflect a clean sweep.</div>' : ''}
       <section>
         <h4 class="label">host · telemetry</h4>
-        ${telemetry.throttled ? `<div class="banner warn">Throttled during this run${telemetry.max_edge_temp_c ? ` — max edge ${telemetry.max_edge_temp_c} °C` : ''}. Numbers are a floor, not a ceiling.</div>` : ''}
+        ${telemetry.throttled ? `<div class="banner warn">Throttled during this run${telemetry.max_edge_temp_c != null ? ` — max edge ${esc(telemetry.max_edge_temp_c)} °C` : ''}. Numbers are a floor, not a ceiling.</div>` : ''}
         <dl class="kv">
           ${kvRow('gpu', host.gpu)}
           ${kvRow('platform', host.platform)}
@@ -751,20 +887,29 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     });
   }
 
+  class FetchRunError extends Error {
+    status?: number;
+    constructor(message: string, status?: number) {
+      super(message);
+      this.status = status;
+    }
+  }
+
   async function fetchRun(runId: string) {
     if (runCache.has(runId)) return runCache.get(runId);
     const res = await fetch(`${API}/v1/runs/${encodeURIComponent(runId)}`, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) throw new Error(`status ${res.status}`);
+    if (!res.ok) throw new FetchRunError(`status ${res.status}`, res.status);
     const data = await res.json();
     runCache.set(runId, data);
     return data;
   }
 
-  async function show(runId: string) {
+  async function show(runId: string, trigger?: HTMLElement, cellKey?: string) {
     drawer.hidden = false;
     scrim.hidden = false;
     document.body.style.overflow = 'hidden';
     openRunId = runId;
+    lastTrigger = trigger ?? null;
     setShellInert(true);
     drawerTitle.textContent = runId;
     drawerBody.innerHTML = '<div class="mono dim">loading run…</div>';
@@ -772,10 +917,16 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     try {
       const run = await fetchRun(runId);
       if (openRunId !== runId) return; // closed while loading
-      renderRunBody(run);
-    } catch {
+      renderRunBody(run, cellKey);
+    } catch (err) {
       if (openRunId !== runId) return;
-      drawerBody.innerHTML = '<p class="site-sm">Could not load this run — the API may be unreachable.</p>';
+      // MINOR: a 404 means the run genuinely isn't published — a distinct,
+      // honest message from "the API may be unreachable" (network/5xx),
+      // which implies the run might exist and is just temporarily unread.
+      drawerBody.innerHTML =
+        err instanceof FetchRunError && err.status === 404
+          ? '<p class="site-sm">This run hasn’t been published.</p>'
+          : '<p class="site-sm">Could not load this run — the API may be unreachable.</p>';
     }
   }
   function hideAll() {
@@ -784,8 +935,8 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     document.body.style.overflow = '';
     setShellInert(false);
   }
-  function openRun(runId: string) {
-    show(runId);
+  function openRun(runId: string, trigger?: HTMLElement, cellKey?: string) {
+    show(runId, trigger, cellKey);
     const url = new URL(window.location.href);
     if (url.searchParams.get('run') !== runId) {
       url.searchParams.set('run', runId);
@@ -800,7 +951,19 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     if (pushedState) {
       pushedState = false;
       window.history.back();
+    } else {
+      // MINOR: a drawer opened from a page load that already carried
+      // ?run=<id> (deep link) never pushed a history entry, so closing it
+      // must still strip the param itself rather than leaving a stale
+      // ?run= pointing at a now-closed drawer.
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('run')) {
+        url.searchParams.delete('run');
+        window.history.replaceState({}, '', url);
+      }
     }
+    lastTrigger?.focus();
+    lastTrigger = null;
   }
   drawerClose.addEventListener('click', closeRun);
   scrim.addEventListener('click', closeRun);
@@ -820,8 +983,15 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   // ── boot ─────────────────────────────────────────────────────────────
   render();
   loadLive();
-  const deepLinkRun = new URL(window.location.href).searchParams.get('run');
+  const bootUrl = new URL(window.location.href);
+  const deepLinkRun = bootUrl.searchParams.get('run');
   if (deepLinkRun) show(deepLinkRun);
+  // MINOR: honor ?tab=evals on load — the benchmarks sub-nav's "evals" item
+  // deep-links here.
+  if (bootUrl.searchParams.get('tab') === 'evals') {
+    const evalsTab = tabButtons.find((b) => b.dataset.benchTab === 'evals');
+    if (evalsTab) activateTab(evalsTab);
+  }
 </script>
 
 <style>
@@ -1023,11 +1193,22 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     user-select: none;
     background: var(--bg-1);
   }
-  .dtable :global(th[data-key]) {
+  /* I4: sortable headers carry a real <button> so Tab/Enter/Space work,
+   * not just a mouse click on the <th> — the button is unstyled to read
+   * identically to the plain-text header cells around it. */
+  .dtable :global(th button) {
+    all: unset;
     cursor: pointer;
+    display: inline-block;
+    width: 100%;
   }
-  .dtable :global(th[data-key]:hover) {
+  .dtable :global(th button:hover) {
     color: var(--fg);
+  }
+  .dtable :global(th button:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
   .dtable :global(td.model),
   .dtable :global(th.model) {
@@ -1058,6 +1239,21 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     font-size: 10.5px;
     display: block;
     margin-top: 2px;
+  }
+  /* I3: a distinct sub-line for quant, so two rows for the same model id
+   * under different quants (e.g. two live cells joined to the same
+   * snapshot identity) stay visually distinguishable rather than
+   * collapsing into identical-looking rows. */
+  .dtable :global(.msub-quant) {
+    color: var(--fg-3);
+    font-family: var(--jbm);
+  }
+  /* I2: flagged live runs stay visible in the leaderboard itself, not just
+   * behind a click into the drawer. */
+  .dtable :global(.flag-mark) {
+    color: var(--hal0-warn);
+    margin-right: 4px;
+    cursor: help;
   }
   .dtable :global(.capnone) {
     color: var(--fg-5);
