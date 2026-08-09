@@ -14,27 +14,35 @@
 <style>
 html,body{margin:0;background:var(--bg)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.phead{padding-block:34px 20px}
 .phead-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
-.pcard{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:18px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.phead{padding-block:34px 20px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+.pcard{position:relative;border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:20px 22px 18px;display:flex;flex-direction:column;gap:14px;cursor:pointer;overflow:hidden;transition:border-color var(--dur-fast) var(--ease)}
+.pcard::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--line) 18%,color-mix(in srgb,var(--accent) 65%,var(--line)) 50%,var(--line) 82%,transparent);opacity:.5;transition:opacity var(--dur-fast) var(--ease)}
 .pcard:hover{border-color:var(--line-strong)}
-.pcard .top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.pcard .slug{font-family:var(--jbm);font-size:13.5px;color:var(--fg)}
-.pcard .title{font-size:14px;color:var(--fg-2);margin-top:3px}
-.pcard .sum{font-size:13px;line-height:1.55;color:var(--fg-3);margin:0}
-.flags{position:relative;background:var(--bg-sunken);border:1px solid var(--line);border-radius:var(--rad-sm);padding:8px 10px;font-family:var(--jbm);font-size:11px;line-height:1.6;color:var(--fg-2);white-space:pre-wrap;word-break:break-all}
-.flags.clip{max-height:38px;overflow:hidden}
-.flags.clip::after{content:"";position:absolute;inset:auto 0 0 0;height:20px;background:linear-gradient(transparent,var(--bg-sunken))}
-.flagbtn{background:none;border:0;color:var(--fg-4);font-family:var(--jbm);font-size:10.5px;cursor:pointer;padding:0;align-self:flex-start}
-.flagbtn:hover{color:var(--accent)}
-.pcard .meta{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line-soft);padding-top:12px;font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
-.headline{display:flex;align-items:baseline;gap:5px}
-.headline .n{font-family:var(--jbm);font-size:19px;font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features)}
-.headline .u{font-size:10px;color:var(--fg-4)}
-.modellist{display:flex;flex-direction:column;gap:4px}
-.modellist a{font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.modellist a:hover{color:var(--accent)}
+.pcard:hover::after{opacity:1}
+.pc-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pc-title{font-family:var(--jbm);font-size:21px;line-height:1.15;letter-spacing:var(--ls-title);color:var(--fg);margin:0;word-break:break-word}
+.pc-desc{font-size:14px;line-height:1.5;color:var(--fg-3);margin:6px 0 0}
+.pc-models{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line-soft);padding-top:13px}
+.mchip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border:1px solid var(--line);border-radius:var(--rad-sm);background:var(--bg);font-family:var(--jbm);font-size:11px;color:var(--fg-2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mchip .fam{color:var(--accent);opacity:.85}
+.mchip.more{color:var(--fg-4);border-style:dashed}
+.pc-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;border-top:1px solid var(--line-soft);padding-top:13px}
+.pc-metrics .m .v{font-family:var(--jbm);font-size:20px;letter-spacing:-0.02em;color:var(--fg);font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features);display:flex;align-items:baseline;gap:5px}
+.pc-metrics .m .v u{font-size:10px;color:var(--fg-4);text-decoration:none}
+.pc-metrics .m .k{font-family:var(--jbm);font-size:9.5px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--fg-4);margin-top:5px}
+.pc-src{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);margin-top:11px;line-height:1.5;overflow:hidden;text-overflow:ellipsis}
+.pc-src b{color:var(--fg-3);font-weight:400}
+.pc-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line-soft);padding-top:13px}
+.pc-stat .n{font-family:var(--jbm);font-size:24px;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features)}
+.pc-open{font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);display:inline-flex;align-items:center;gap:6px}
+.pcard:hover .pc-open{color:var(--accent)}
+.filterbar{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:14px 16px;margin-bottom:20px}
+.frow{display:flex;align-items:flex-start;gap:12px}
+.frow>.label{width:64px;flex-shrink:0;padding-top:6px}
+.msearch{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--rad-sm);padding:0 10px;height:28px;background:var(--bg);color:var(--fg-3);min-width:240px}
+.msearch input{border:0;background:transparent;outline:0;color:var(--fg);font-family:var(--jbm);font-size:11.5px;width:100%}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60}
 .drawer-run{position:fixed;top:0;right:0;bottom:0;width:min(620px,100vw);background:var(--bg-1);border-left:1px solid var(--line-strong);box-shadow:var(--shadow-drawer);z-index:61;display:flex;flex-direction:column}
 .dr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
@@ -46,14 +54,6 @@ html,body{margin:0;background:var(--bg)}
 .vhist{display:flex;flex-direction:column}
 .vh{display:grid;grid-template-columns:34px 84px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line-soft);font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
 .vh .v{color:var(--accent)}
-.decode{display:inline-flex;align-items:center;gap:6px}
-.decode .meter{display:inline-flex;gap:1.5px}
-.decode .meter i{width:3px;height:11px;background:var(--fg-5);border-radius:1px}
-.decode.fast .meter i.on{background:var(--ok)}.decode.mid .meter i.on{background:var(--fg-2)}.decode.slow .meter i.on{background:var(--fg-4)}
-.decode .v{font-size:13px}
-.decode.fast .v{color:var(--ok)}.decode.mid .v{color:var(--fg)}.decode.slow .v{color:var(--fg-3)}
-.decode .sd{font-size:10px;color:var(--fg-4)}
-.caps{display:inline-flex;gap:6px;color:var(--fg-3)}
 .anat{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
 .anat ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
 .anat ol b{color:var(--accent);margin-right:8px}
@@ -75,8 +75,25 @@ const { Icon } = window.Hal0DesignSystem_692ad8;
 const P = window.PROFILES, MODELS = window.MODELS;
 const modelOf = (id) => MODELS.find(m => m.id === id);
 const runsFor = (p) => window.BENCH.filter(r => p.models.includes(r.model) && r.variant === "default" && r.depth === 2048 && r.lane === p.lane);
-/* headline is always the best run this profile actually produced */
-const headlineDec = (p) => { const rs = runsFor(p); return rs.length ? Math.max(...rs.map(r => r.dec)) : p.dec; };
+/* the card only ever shows numbers one of this profile's own runs produced */
+const bestRun = (p) => runsFor(p).sort((a, b) => b.dec - a.dec)[0];
+
+/* model family + short display name, derived from the roster id */
+const family = (id) => {
+  const s = id.toLowerCase();
+  if (s.startsWith("chadrock")) return "chadrock";
+  if (s.startsWith("qwopus")) return "qwopus";
+  if (s.startsWith("qwen3-coder") || s.includes("coder-next")) return "qwen3-coder";
+  if (s.startsWith("qwen3")) return "qwen3";
+  if (s.startsWith("gemma")) return "gemma";
+  if (s.startsWith("hermes")) return "hermes";
+  return "other";
+};
+const short = (id) => id
+  .replace(/-(rocmfp4|strix-lean|mtp|dynamic|it)(?=-|$)/g, "")
+  .replace(/-(q\d[\w-]*|f16|mxfp4)$/i, "")
+  .replace(/-+$/, "");
+const familiesOf = (p) => [...new Set(p.models.map(family))];
 
 function Toml({ text }) {
   return (
@@ -92,33 +109,43 @@ function Toml({ text }) {
 }
 
 function Card({ p, onOpen }) {
-  const [open, setOpen] = React.useState(false);
+  const best = bestRun(p);
+  const fams = familiesOf(p);
   return (
     <article className="pcard" onClick={() => onOpen(p)}>
-      <div className="top">
-        <div>
-          <div className="slug">{p.slug}</div>
-          <div className="title">{p.title}</div>
-        </div>
+      <div className="pc-top">
+        <span className="eyebrow">profile · v{p.v} · {p.lane}</span>
         <span className="chip amber">{p.intent}</span>
       </div>
-      <p className="sum">{p.summary}</p>
-      <div className={"flags" + (open ? "" : " clip")}>{p.flags}</div>
-      <button className="flagbtn" onClick={e => { e.stopPropagation(); setOpen(v => !v); }}>{open ? "collapse flags" : "expand flags"}</button>
-      <div className="modellist">
-        <span className="label" style={{ marginBottom: 2 }}>benched with</span>
-        {p.models.slice(0, 2).map(m => <a key={m} href="#" onClick={e => e.stopPropagation()}>{m}</a>)}
-        {p.models.length > 2 && <span className="mono" style={{ fontSize: 11, color: "var(--fg-5)" }}>+{p.models.length - 2} more</span>}
+      <div>
+        <h3 className="pc-title">{p.slug}</h3>
+        <p className="pc-desc">{p.title}</p>
       </div>
-      <div className="meta">
-        <span className="headline">
-          <Decode v={headlineDec(p)} showSd={false} />
-          <span className="u">tok/s decode</span>
-        </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <Attribution user={p.author} first={p.first} />
-          <span style={{ color: "var(--fg-5)" }}>·</span>v{p.v}
-        </span>
+
+      <div className="pc-models">
+        <span className="label">runs these models</span>
+        <div className="fbar">
+          {p.models.slice(0, 2).map(m => (
+            <span className="mchip" key={m} title={m}><span className="fam">{family(m)}</span>{short(m)}</span>
+          ))}
+          {p.models.length > 2 && <span className="mchip more">+{p.models.length - 2}</span>}
+        </div>
+      </div>
+
+      {best && (
+        <div>
+          <div className="pc-metrics">
+            <div className="m"><div className="v"><Decode v={best.dec} showSd={false} /></div><div className="k">decode tok/s</div></div>
+            <div className="m"><div className="v">{best.pf.toFixed(0)}<u>tok/s</u></div><div className="k">prefill</div></div>
+            <div className="m"><div className="v">{best.ttftP50}<u>ms</u></div><div className="k">first token</div></div>
+          </div>
+          <div className="pc-src">measured on <b>{best.model}</b> · tg @ {best.depth} · {best.lane}</div>
+        </div>
+      )}
+
+      <div className="pc-foot">
+        <Attribution user={p.author} first={p.first} />
+        <span className="pc-open">config &amp; flags →</span>
       </div>
     </article>
   );
@@ -141,6 +168,7 @@ function ProfileDrawer({ p, onClose }) {
           <button className="iconbtn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button>
         </div>
         <div className="dr-body">
+          <p className="site-body" style={{ fontSize: 14 }}>{p.summary}</p>
           <div className="dr-actions">
             <button className="btn">download toml</button>
             <button className="btn ghost" onClick={() => { navigator.clipboard && navigator.clipboard.writeText(p.flags); setCopied(true); setTimeout(() => setCopied(false), 1400); }}>{copied ? "flags copied" : "copy flags"}</button>
@@ -152,6 +180,12 @@ function ProfileDrawer({ p, onClose }) {
             <div className="well" style={{ padding: "12px 14px", marginTop: 8 }}>
               <span className="amber">hal0</span> profile install {p.slug}
             </div>
+          </section>
+
+          <section>
+            <div className="dr-sec-head"><h4 className="label">flags</h4>
+              <span className="mono dim" style={{ fontSize: 11 }}>llama-server</span></div>
+            <pre className="well toml" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{p.flags}</pre>
           </section>
 
           <section>
@@ -197,14 +231,22 @@ function ProfileDrawer({ p, onClose }) {
 
 function App() {
   const [intent, setIntent] = React.useState("all");
+  const [fam, setFam] = React.useState("all");
   const [lane, setLane] = React.useState("all");
+  const [q, setQ] = React.useState("");
   const [open, setOpen] = React.useState(null);
   const intents = ["all", ...new Set(P.map(p => p.intent))];
-  const list = P.filter(p => (intent === "all" || p.intent === intent) && (lane === "all" || p.lane === lane));
+  const fams = ["all", ...new Set(P.flatMap(familiesOf))];
+  const list = P.filter(p =>
+    (intent === "all" || p.intent === intent) &&
+    (lane === "all" || p.lane === lane) &&
+    (fam === "all" || familiesOf(p).includes(fam)) &&
+    (!q || p.models.some(m => m.toLowerCase().includes(q.toLowerCase())) || p.slug.includes(q.toLowerCase()))
+  );
   return (
     <div className="site">
-      <Header active="profiles" sticky desktop user="lemond" />
-      <SubNav items={["all profiles", "by intent", "submit a profile", "how profiles work"]} active="all profiles" />
+      <Header active="profiles" sticky user="lemond" />
+      <SubNav items={[["all profiles", "#"], ["by model", "#"], ["by intent", "#"], ["benchmarks", window.P_BENCH], ["submit a profile", "#"]]} active="all profiles" />
       <div className="wrap wide phead">
         <div className="phead-row">
           <div>
@@ -212,7 +254,8 @@ function App() {
             <h1 className="site-h1" style={{ margin: "10px 0 10px" }}>profiles</h1>
             <p className="site-body" style={{ maxWidth: "60ch" }}>
               A profile is the flag string that produced a number, versioned and downloadable.
-              Install one with the CLI, or read the config and steal the parts you want.
+              Find the one for your model, install it with the CLI, or read the config and steal the
+              parts you want.
             </p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -220,38 +263,65 @@ function App() {
             <button className="btn">submit a profile</button>
           </div>
         </div>
-        <div className="fbar" style={{ marginTop: 18, gap: 16 }}>
-          <div className="fbar">
-            <span className="label" style={{ marginRight: 4 }}>intent</span>
-            {intents.map(i => <Fpill key={i} on={intent === i} onClick={() => setIntent(i)}>{i}</Fpill>)}
-          </div>
-          <div className="fbar">
-            <span className="label" style={{ marginRight: 4 }}>lane</span>
-            {["all", "rocm", "vulkan_radv"].map(l => <Fpill key={l} on={lane === l} onClick={() => setLane(l)}>{l}</Fpill>)}
-          </div>
-          <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-3)", marginLeft: "auto" }}>{list.length} of {P.length} profiles</span>
-        </div>
       </div>
 
       <div className="wrap wide">
-        <div className="pgrid">{list.map(p => <Card key={p.slug} p={p} onOpen={setOpen} />)}</div>
+        <div className="filterbar">
+          <div className="frow">
+            <span className="label">model</span>
+            <div className="fbar">
+              {fams.map(f => (
+                <Fpill key={f} on={fam === f} onClick={() => setFam(f)}
+                       count={f === "all" ? P.length : P.filter(p => familiesOf(p).includes(f)).length}>{f}</Fpill>
+              ))}
+            </div>
+          </div>
+          <div className="frow">
+            <span className="label">intent</span>
+            <div className="fbar">{intents.map(i => <Fpill key={i} on={intent === i} onClick={() => setIntent(i)}>{i}</Fpill>)}</div>
+          </div>
+          <div className="frow">
+            <span className="label">lane</span>
+            <div className="fbar">{["all", "rocm", "vulkan_radv"].map(l => <Fpill key={l} on={lane === l} onClick={() => setLane(l)}>{l}</Fpill>)}</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, borderTop: "1px solid var(--line-soft)", paddingTop: 11, flexWrap: "wrap" }}>
+            <div className="msearch"><Icon name="search" size={13} />
+              <input placeholder="model name — e.g. qwen3.5-9b, gemma-4-26b" value={q} onChange={e => setQ(e.target.value)} /></div>
+            <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-3)" }}>{list.length} of {P.length} profiles</span>
+            {(intent !== "all" || fam !== "all" || lane !== "all" || q) &&
+              <button className="btn ghost sm" onClick={() => { setIntent("all"); setFam("all"); setLane("all"); setQ(""); }}>clear</button>}
+          </div>
+        </div>
+
+        {list.length === 0 ? (
+          <div className="panel" style={{ padding: "48px 24px", textAlign: "center" }}>
+            <div className="mono" style={{ fontSize: 13, color: "var(--fg-2)" }}>No profile for that model yet.</div>
+            <p className="site-sm" style={{ margin: "8px auto 14px", maxWidth: "44ch" }}>
+              If you have one working, submitting it is a file and a pull request — the CLI opens it for you.
+            </p>
+            <button className="btn sm">submit a profile</button>
+          </div>
+        ) : (
+          <div className="pgrid">{list.map(p => <Card key={p.slug} p={p} onOpen={setOpen} />)}</div>
+        )}
 
         <div style={{ marginTop: 48 }}>
           <span className="eyebrow">component spec</span>
           <h2 className="site-h2" style={{ margin: "10px 0 16px" }}>profile card anatomy</h2>
           <div className="anat">
             <ol>
-              <li><b>1</b>slug in mono, 13.5px — the thing you type into the CLI, so it leads.</li>
-              <li><b>2</b>intent chip, amber, lowercase: chat · moe · coding · agent · vision · draft · embedding.</li>
-              <li><b>3</b>one-sentence summary in Geist. What it trades and what it costs, never a pitch.</li>
-              <li><b>4</b>flag string in a sunken well, clipped to two lines with a fade; expand in place, never a modal.</li>
-              <li><b>5</b>models benched with this profile, mono, first two plus a count. Each links to its leaderboard row.</li>
-              <li><b>6</b>headline decode with the same three-segment bucket meter the leaderboard uses.</li>
-              <li><b>7</b>attribution slot — GitHub avatar + handle, or the amber first-party chip. Community submissions drop in here with no layout change.</li>
+              <li><b>1</b>eyebrow: version and lane, so the card states its provenance before anything else.</li>
+              <li><b>2</b>slug in mono at 21px — the thing you type into the CLI, and the card's biggest element.</li>
+              <li><b>3</b>one line of description. The full summary, flags and config live in the drawer, not here.</li>
+              <li><b>4</b>the models this profile actually runs, as chips: family in amber, short model name after it. This is what people scan for, so it sits above the numbers.</li>
+              <li><b>5</b>three metrics from the profile's best run — decode with the bucket meter, prefill, first token. Never a number none of its runs produced.</li>
+              <li><b>6</b>a mono footnote naming the exact model, depth and lane the metrics came from. Metrics without this line are unfalsifiable.</li>
+              <li><b>7</b>attribution slot — avatar and handle, or the amber first-party chip — and the affordance that opens the drawer.</li>
+              <li><b>8</b>2px filament along the bottom edge, brightening on hover. Same motif as the header and the OG cards.</li>
             </ol>
             <div>
               <Card p={P[0]} onOpen={setOpen} />
-              <p className="site-sm" style={{ marginTop: 10 }}>Cards stay one column on mobile at full width; nothing is hidden, the flags well just clips a line earlier.</p>
+              <p className="site-sm" style={{ marginTop: 10 }}>Cards stay one column on mobile at full width; the model chips wrap and the metric row keeps its three columns.</p>
             </div>
           </div>
         </div>

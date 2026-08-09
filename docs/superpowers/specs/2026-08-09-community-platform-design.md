@@ -172,11 +172,32 @@ merge-triggered rebuilds.
 
 ## Design comps (visual source of truth)
 
-Approved comps are vendored at `docs/design/2026-08-09-community-comps/`
-(`01 Unified Chrome.html`, `02 Benchmarks.html`, `03 Profiles.html`,
-`hal0-site.css`, `site-chrome.jsx`, data files, `_ds/` token set). The comp
-`.site` ramp matches shipped `tokens.css` values exactly; chrome v2 adoption is
-planned in `docs/superpowers/plans/2026-08-09-chrome-v2.md`.
+The complete high-fidelity handoff is vendored at
+`docs/design/2026-08-09-community-comps/` — eight screens (unified chrome,
+benchmarks, profiles, blog + KB, OG card template, homepage, forum, docs) plus
+`README.md`, the authoritative implementation reference (tokens incl. required
+light-theme AA overrides for device/status hues, chrome spec, per-screen
+behavior, state/data contracts, and the Discourse split of responsibility:
+header/footer/palette as a theme component, topic rows restyled via Discourse
+CSS variables, composer/moderation/search native). The comp `.site` ramp
+matches shipped `tokens.css` values exactly; chrome v2 adoption shipped in
+PR #62. The submission flow (spec section 2's two doors) is explicitly **not
+designed yet** — entry points exist; wireframes are a follow-up design ask.
+
+Handoff details that supersede earlier assumptions:
+
+- Footer base line reads `Apache-2.0 · hal0 v<app> · <release>` — versions
+  must match `BINARY` in `src/data/model-roster.ts`, never invented.
+- Benchmarks sub-nav: leaderboard · evals · hardware · methodology · profiles ·
+  share your results. Learn sub-nav gains `knowledge base` when the KB ships.
+- OG cards: one 1200×630 template, five fills, generated at build time
+  (`scripts/build-og.sh`); only bench/profile fills carry the amber figure.
+- Homepage community layer order: feature cards → headline bench figures +
+  top-5 table → latest forum topics (omitted entirely when API unreachable) →
+  featured profiles → latest blog/KB.
+- Bench run record schema (identity/results/host/telemetry/history/evals/
+  provenance) is enumerated in the README's Data section — use it as the
+  starting point for the `hal0-bench-data` JSON schema.
 
 Data contracts the comps establish for later workstreams:
 

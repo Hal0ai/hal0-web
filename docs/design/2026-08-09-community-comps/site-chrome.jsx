@@ -6,11 +6,20 @@
 const DS = window.Hal0DesignSystem_692ad8;
 const { Icon, Wordmark, Button, Chip, StatusDot, Kbd } = DS;
 
+const P_HOME = "06%20Homepage.html";
+const P_DOCS = "08%20Docs.html";
+const P_WRITE = "04%20Blog%20and%20KB.html";
+const P_BENCH = "02%20Benchmarks.html";
+const P_PROF = "03%20Profiles.html";
+const P_FORUM = "07%20Forum.html";
+const P_SHEET = "01%20Unified%20Chrome.html";
+const P_OG = "05%20OG%20Card%20Template.html";
+
 const NAV = [
-  { id: "learn", label: "learn", href: "#", sub: ["docs", "knowledge base", "blog"] },
-  { id: "bench", label: "benchmarks", href: "#" },
-  { id: "profiles", label: "profiles", href: "#" },
-  { id: "forum", label: "forum", href: "#", host: "forum.hal0.dev" },
+  { id: "learn", label: "learn", href: P_DOCS, sub: ["docs", "knowledge base", "blog"] },
+  { id: "bench", label: "benchmarks", href: P_BENCH },
+  { id: "profiles", label: "profiles", href: P_PROF },
+  { id: "forum", label: "forum", href: P_FORUM, host: "forum.hal0.dev" },
 ];
 
 /* Brand glyphs the hal0 icon family doesn't ship (third-party marks). */
@@ -63,12 +72,16 @@ function ThemeToggle() {
  * variant: "site" (hal0.dev) | "forum" (forum.hal0.dev, Discourse controls)
  * compact: force the mobile layout regardless of viewport (specimen frames)
  */
-function Header({ active, variant = "site", sticky = false, compact = false, desktop = false, ontop = false, user = null, drawerOpen = false, onToggleDrawer, onSearch }) {
+function Header({ active, variant = "site", sticky = false, compact = false, desktop = false, ontop = false, user = null, drawerOpen, onToggleDrawer, onSearch }) {
+  /* Pages don't have to own drawer state — only the specimen frames do. */
+  const [selfOpen, setSelfOpen] = React.useState(false);
+  const open = onToggleDrawer ? drawerOpen : selfOpen;
+  const toggle = onToggleDrawer || (() => setSelfOpen(v => !v));
   const cls = ["hdr", sticky && "sticky", ontop && "ontop", compact && "mob", desktop && "desktop"].filter(Boolean).join(" ");
   return (
     <header className={cls}>
       <div className="wrap wide hdr-in">
-        <a className="hdr-brand" href="#" aria-label="hal0 home">
+        <a className="hdr-brand" href={P_HOME} aria-label="hal0 home">
           <Wordmark size={19} />
           {variant === "forum" && <span className="hdr-slug">forum</span>}
         </a>
@@ -115,12 +128,12 @@ function Header({ active, variant = "site", sticky = false, compact = false, des
               )}
             </>
           )}
-          <button className="iconbtn hdr-burger" aria-label="Menu" onClick={onToggleDrawer}>
-            <Icon name={drawerOpen ? "close" : "menu"} size={16} />
+          <button className="iconbtn hdr-burger" aria-label="Menu" aria-expanded={!!open} onClick={toggle}>
+            <Icon name={open ? "close" : "menu"} size={16} />
           </button>
         </div>
       </div>
-      {drawerOpen && <Drawer active={active} />}
+      {open && <Drawer active={active} />}
     </header>
   );
 }
@@ -148,9 +161,9 @@ function Drawer({ active }) {
 
 /* ── Footer ──────────────────────────────────────────────────── */
 const FOOTER_COLS = [
-  { h: "learn", links: ["docs", "knowledge base", "blog", "changelog", "releases"] },
-  { h: "community", links: ["forum ↗", "discord ↗", "github ↗", "contributing", "hello@hal0.dev"] },
-  { h: "data", links: ["benchmarks", "profiles", "share a run", "hardware notes", "roadmap"] },
+  { h: "learn", links: [["docs", P_DOCS], ["knowledge base", P_WRITE], ["blog", P_WRITE], ["changelog", "#"], ["releases", "#"]] },
+  { h: "community", links: [["forum ↗", P_FORUM], ["discord ↗", "#"], ["github ↗", "#"], ["contributing", "#"], ["hello@hal0.dev", "mailto:hello@hal0.dev"]] },
+  { h: "data", links: [["benchmarks", P_BENCH], ["profiles", P_PROF], ["share a run", P_BENCH], ["hardware notes", P_WRITE], ["roadmap", "#"]] },
 ];
 
 function Footer() {
@@ -173,16 +186,18 @@ function Footer() {
           {FOOTER_COLS.map((c) => (
             <div className="ftr-col" key={c.h}>
               <h4 className="label">{c.h}</h4>
-              <ul>{c.links.map((l) => <li key={l}><a href="#">{l}</a></li>)}</ul>
+              <ul>{c.links.map(([l, href]) => <li key={l}><a href={href}>{l}</a></li>)}</ul>
             </div>
           ))}
         </div>
         <div className="ftr-base">
-          <span>Apache-2.0 · v0.9.4</span>
+          <span>Apache-2.0 · hal0 v0.5.0a1 · 1.0.0-RC.3</span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <StatusDot state="ready" /> <span>all systems steady</span>
+            <a href={P_SHEET}>component sheet</a>
             <span style={{ color: "var(--fg-5)" }}>·</span>
-            <a href="#">changelog</a>
+            <a href={P_OG}>og cards</a>
+            <span style={{ color: "var(--fg-5)" }}>·</span>
+            <StatusDot state="ready" /> <span>all systems steady</span>
           </span>
         </div>
       </div>
@@ -218,10 +233,13 @@ function SubNav({ items, active }) {
   return (
     <div className="subnav">
       <div className="wrap wide subnav-in">
-        {items.map((i) => <a key={i} href="#" className={i === active ? "on" : ""}>{i}</a>)}
+        {items.map((i) => {
+          const [label, href] = Array.isArray(i) ? i : [i, "#"];
+          return <a key={label} href={href} className={label === active ? "on" : ""}>{label}</a>;
+        })}
       </div>
     </div>
   );
 }
 
-Object.assign(window, { Header, Footer, Drawer, NAV, BrandIcon, GhAvatar, ThemeToggle, Fpill, Attribution, SubNav, toggleTheme });
+Object.assign(window, { Header, Footer, Drawer, NAV, BrandIcon, GhAvatar, ThemeToggle, Fpill, Attribution, SubNav, toggleTheme, P_HOME, P_DOCS, P_WRITE, P_BENCH, P_PROF, P_FORUM, P_SHEET, P_OG });

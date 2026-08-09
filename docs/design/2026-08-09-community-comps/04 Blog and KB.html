@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>blog + knowledge base — hal0</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.phead{padding-block:38px 22px}
+.phead-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+/* blog index */
+.postlist{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.post-row{display:grid;grid-template-columns:132px 1fr 190px;gap:24px;padding:22px 0;border-bottom:1px solid var(--line-soft);cursor:pointer;align-items:start}
+.post-row:hover .post-t{color:var(--accent)}
+.post-date{font-family:var(--jbm);font-size:11.5px;color:var(--fg-4);padding-top:4px}
+.post-t{font-size:19px;line-height:1.3;color:var(--fg);margin:0 0 6px;font-weight:500;letter-spacing:var(--ls-tight)}
+.post-x{font-size:14px;line-height:1.55;color:var(--fg-3);margin:0;max-width:60ch}
+.post-meta{display:flex;flex-direction:column;gap:8px;align-items:flex-end;font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
+.lead{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:0}
+.lead .post-t{font-size:30px;letter-spacing:var(--ls-title);margin-bottom:10px}
+/* article */
+.article{display:grid;grid-template-columns:1fr 220px;gap:56px;padding-block:36px 0}
+.prose{max-width:68ch}
+.prose h2{font-family:var(--geist);font-size:21px;font-weight:600;letter-spacing:var(--ls-tight);margin:34px 0 12px;color:var(--fg)}
+.prose p{font-size:16px;line-height:1.68;color:var(--fg-2);margin:0 0 18px;text-wrap:pretty}
+.prose li{font-size:16px;line-height:1.68;color:var(--fg-2);margin-bottom:8px}
+.prose code{font-family:var(--jbm);font-size:13.5px;background:var(--bg-2);border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--fg)}
+.prose pre{background:var(--bg-sunken);border:1px solid var(--line);border-radius:var(--rad);padding:14px 16px;overflow-x:auto;font-family:var(--jbm);font-size:12.5px;line-height:1.7;color:var(--fg-2);margin:0 0 20px}
+.prose pre code{background:none;border:0;padding:0;font-size:12.5px}
+.prose blockquote{margin:0 0 20px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--rad);background:var(--bg-1);font-size:14.5px;color:var(--fg-2)}
+.toc{position:sticky;top:78px;align-self:start;font-family:var(--jbm);font-size:11.5px;display:flex;flex-direction:column;gap:9px}
+.toc a{color:var(--fg-4)}
+.toc a.on{color:var(--accent)}
+.byline{display:flex;align-items:center;gap:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-4);margin-top:14px}
+.backlink{font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);display:inline-flex;gap:6px;align-items:center}
+/* kb */
+.kbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.kbcat{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:18px;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.kbcat:hover{border-color:var(--line-strong)}
+.kbcat h3{font-size:15px;margin:10px 0 6px;color:var(--fg);font-weight:600}
+.kbcat p{font-size:13px;line-height:1.55;color:var(--fg-3);margin:0 0 14px}
+.kbcat ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--line-soft);padding-top:12px}
+.kbcat li a{font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
+.kbcat li a:hover{color:var(--accent)}
+.kbcat .n{font-family:var(--jbm);font-size:10px;color:var(--fg-5)}
+.kbshell{display:grid;grid-template-columns:216px 1fr 200px;gap:40px;padding-block:28px 0}
+.kbside{position:sticky;top:78px;align-self:start;font-family:var(--jbm);font-size:11.5px;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 100px);overflow-y:auto}
+.kbside .grp{display:flex;flex-direction:column;gap:7px}
+.kbside a{color:var(--fg-3);padding:2px 0 2px 10px}
+.kbside a.on{color:var(--accent);box-shadow:inset 2px 0 0 var(--accent)}
+.kbside .grp>.label{padding-left:10px}
+.surface-tag{display:inline-flex;align-items:center;gap:7px;font-family:var(--jbm);font-size:10px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--accent)}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--rad-sm);padding:0 10px;background:var(--bg-1);color:var(--fg-3)}
+.search input{width:170px}
+.surface-tag::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.diffgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.diff{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:16px}
+.diff dl{display:grid;grid-template-columns:74px 1fr;margin:10px 0 0;font-family:var(--jbm);font-size:11px}
+.diff dt{color:var(--fg-4);padding:4px 0;border-top:1px solid var(--line-soft)}
+.diff dd{color:var(--fg-2);padding:4px 0;margin:0;border-top:1px solid var(--line-soft)}
+@media(max-width:1000px){.article{grid-template-columns:1fr;gap:0}.toc{display:none}.kbshell{grid-template-columns:1fr}.kbside{display:none}.post-row{grid-template-columns:1fr;gap:8px}.post-meta{flex-direction:row;align-items:center;justify-content:flex-start}.diffgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel">
+const { Icon } = window.Hal0DesignSystem_692ad8;
+
+const POSTS = [
+  { slug: "june-sweep", date: "2026-06-19", read: "12 min", author: "hal0-ci", first: true, tag: "benchmarks",
+    title: "The June sweep: 26 models on one Strix Halo box",
+    excerpt: "Every model in the roster, measured end to end on the same hardware, same container, same flags. What moved since April, what regressed, and the two results we still can't explain." },
+  { slug: "v050a1", date: "2026-06-02", read: "6 min", author: "kyuz0", tag: "release",
+    title: "v0.5.0a1 — slots get a lifecycle",
+    excerpt: "offline → pulling → starting → warming → ready → serving. Typed states mean the dashboard can finally tell you why a slot is not answering instead of showing a spinner." },
+  { slug: "draft-mtp", date: "2026-05-21", read: "9 min", author: "jcbtc", tag: "runtime",
+    title: "draft-mtp landed, and what it costs",
+    excerpt: "Speculative decode more than doubles tokens per second on the 35B MoE models. It also pins a second model in memory and makes your accept rate a number you now have to care about." },
+  { slug: "single-run", date: "2026-05-04", read: "5 min", author: "lhl", tag: "methodology",
+    title: "Why we stopped quoting single-run numbers",
+    excerpt: "Three reps, median reported, standard deviation printed next to it. A 4 % spread is normal on a thermally honest box, and hiding it made every comparison a coin flip." },
+  { slug: "rocm-lxc", date: "2026-04-18", read: "14 min", author: "ratchet", tag: "hardware",
+    title: "ROCm 7.2.4 in a Proxmox LXC without tears",
+    excerpt: "Passthrough, render nodes, the group id that has to match on both sides, and the two kernel flags that decide whether gfx1151 comes up at all." },
+];
+
+const KB = [
+  { cat: "getting started", icon: "start", blurb: "Install, first slot, first request. The path from a bare box to a working /v1/ endpoint.",
+    items: ["Install on a bare Linux box", "Your first slot", "Talking to /v1/chat/completions", "Picking a loadout"] },
+  { cat: "hardware notes", icon: "hardware", blurb: "What each machine can actually hold, and where the wall is.",
+    items: ["Unified memory is not VRAM", "Strix Halo: 128 GB, ~96 GB addressable", "HX 370 on 32 GB", "Discrete AMD alongside an iGPU", "Thermals and why decode drifts"] },
+  { cat: "runtime & backends", icon: "backends", blurb: "ROCm, Vulkan, the NPU lane, and how to tell which one you are on.",
+    items: ["ROCm vs vulkan_radv", "Building the rocmfp4 fork", "XDNA and FLM today", "When to pin a container digest"] },
+  { cat: "models & quants", icon: "models", blurb: "Choosing a model that fits, and a quant that does not ruin it.",
+    items: ["Reading a quant name", "q4 vs q8 KV cache", "MoE models on unified memory", "Draft models for speculative pairs", "Vision projectors", "Context length costs"] },
+  { cat: "operating hal0", icon: "slots", blurb: "Running the box day to day: slots, eviction, logs, upgrades.",
+    items: ["Co-resident slots without eviction", "Reading the memory map", "Upgrading without downtime", "What the journal ribbon is telling you"] },
+  { cat: "tool reviews", icon: "connections", blurb: "Honest notes on the things people plug into hal0.",
+    items: ["OpenWebUI as the chat tab", "Continue.dev against a coder slot", "MCP servers worth running"] },
+];
+
+function BlogIndex({ onOpen }) {
+  const [lead, ...rest] = POSTS;
+  return (
+    <>
+      <div className="wrap wide phead">
+        <div className="phead-row">
+          <div>
+            <span className="surface-tag">blog · dated</span>
+            <h1 className="site-h1" style={{ margin: "12px 0 10px" }}>what changed, and when</h1>
+            <p className="site-body" style={{ maxWidth: "58ch" }}>
+              Releases, sweeps and post-mortems, in order. Anything that stays true after six months
+              moves to the <a href="#" className="amber">knowledge base</a> instead.
+            </p>
+          </div>
+          <button className="btn ghost" style={{ gap: 8 }}><BrandIcon name="rss" size={12} />rss</button>
+        </div>
+      </div>
+      <div className="wrap wide">
+        <div className="postlist">
+          <div className="post-row lead" onClick={() => onOpen(lead)}>
+            <div className="post-date">{lead.date}</div>
+            <div>
+              <span className="chip amber">{lead.tag}</span>
+              <h2 className="post-t" style={{ marginTop: 10 }}>{lead.title}</h2>
+              <p className="post-x" style={{ fontSize: 15 }}>{lead.excerpt}</p>
+            </div>
+            <div className="post-meta"><Attribution user={lead.author} first={lead.first} /><span>{lead.read}</span></div>
+          </div>
+          {rest.map(p => (
+            <div className="post-row" key={p.slug} onClick={() => onOpen(p)}>
+              <div className="post-date">{p.date}</div>
+              <div>
+                <h2 className="post-t">{p.title}</h2>
+                <p className="post-x">{p.excerpt}</p>
+              </div>
+              <div className="post-meta"><Attribution user={p.author} first={p.first} /><span>{p.read} · {p.tag}</span></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Post({ post, onBack }) {
+  return (
+    <div className="wrap wide article">
+      <article className="prose">
+        <a className="backlink" href="#" onClick={e => { e.preventDefault(); onBack(); }}>← blog</a>
+        <div style={{ marginTop: 18 }}><span className="surface-tag">blog · {post.date}</span></div>
+        <h1 className="site-h1" style={{ margin: "12px 0 14px" }}>{post.title}</h1>
+        <p style={{ fontSize: 18, color: "var(--fg-2)", lineHeight: 1.6 }}>{post.excerpt}</p>
+        <div className="byline"><Attribution user={post.author} first={post.first} /><span>·</span><span>{post.read} read</span><span>·</span><a href="#">discuss on the forum ↗</a></div>
+        <hr className="hairline" style={{ margin: "26px 0 30px" }} />
+        <h2 id="s1">What we measured</h2>
+        <p>Twenty-six models, three repetitions each, median reported with the standard deviation next to it. Same box, same container digest, same <code>llama.cpp</code> build — <code>b9219-1faa48eef</code> from the rocmfp4 fork, which is the one that carries draft-mtp.</p>
+        <p>Every run was taken in exclusive mode: no other slot resident, no image generation queued, ZFS ARC capped so it could not eat into the pool halfway through a sweep. That last one cost us two days.</p>
+        <pre><code>{`hal0 bench --sweep june --reps 3 --exclusive \\
+  --depth 2048 --workload tg --lane rocm`}</code></pre>
+        <h2 id="s2">What moved</h2>
+        <p>The MoE models with a draft head are the story. <code>chadrock3-6-35b-uncensored-mtp-strix-lean</code> decodes at 102.1 tok/s against 46.1 for a comparable 35B MoE without speculation — and it does that while holding 19 GB, not 22.</p>
+        <blockquote>Accept rate is the number to watch. Below roughly 60 % the draft model costs more than it saves, and you are better off turning speculation off entirely.</blockquote>
+        <h2 id="s3">What regressed</h2>
+        <p>Prefill on the Vulkan lane is down 29 % against ROCm, wider than the 18 % gap we saw in April. The lane is still the right answer when ROCm will not build, but it is no longer close.</p>
+        <h2 id="s4">Two results we cannot explain</h2>
+        <p>Two 27B dense models with identical flags landed 4.9 tok/s apart across every repetition. Same quant, same cache types, same depth. If you have seen this, the thread is open.</p>
+      </article>
+      <nav className="toc">
+        <span className="label">on this page</span>
+        <a href="#s1" className="on">what we measured</a>
+        <a href="#s2">what moved</a>
+        <a href="#s3">what regressed</a>
+        <a href="#s4">two results we cannot explain</a>
+        <hr className="hairline" style={{ margin: "6px 0" }} />
+        <a href="#">edit this page ↗</a>
+      </nav>
+    </div>
+  );
+}
+
+function KbLanding({ onOpen }) {
+  return (
+    <>
+      <div className="wrap wide phead">
+        <div className="phead-row">
+          <div>
+            <span className="surface-tag">knowledge base · evergreen</span>
+            <h1 className="site-h1" style={{ margin: "12px 0 10px" }}>things that stay true</h1>
+            <p className="site-body" style={{ maxWidth: "58ch" }}>
+              Guides, hardware notes, explainers and honest tool reviews. Undated on purpose — every
+              page carries a last-reviewed stamp instead, and gets revised rather than superseded.
+            </p>
+          </div>
+          <div className="search" style={{ height: 30 }}><Icon name="search" size={13} /><input placeholder="search the kb" style={{ border: 0, background: "transparent", outline: 0, color: "var(--fg)", fontFamily: "var(--jbm)", fontSize: 12 }} /></div>
+        </div>
+      </div>
+      <div className="wrap wide">
+        <div className="kbgrid">
+          {KB.map(c => (
+            <div className="kbcat" key={c.cat} onClick={onOpen}>
+              <span style={{ color: "var(--accent)" }}><Icon name={c.icon} size={16} /></span>
+              <h3>{c.cat}</h3>
+              <p>{c.blurb}</p>
+              <ul>
+                {c.items.slice(0, 4).map(i => <li key={i}><a href="#" onClick={e => { e.preventDefault(); onOpen(); }}>{i}</a></li>)}
+                {c.items.length > 4 && <li><span className="n">+{c.items.length - 4} more</span></li>}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 48 }}>
+          <span className="eyebrow">system note</span>
+          <h2 className="site-h2" style={{ margin: "10px 0 6px" }}>docs, blog and kb are the same site</h2>
+          <p className="site-body" style={{ maxWidth: "64ch" }}>
+            All three sit under <span className="mono">learn</span> and share the header, footer and
+            type. They differ only in the three things a reader needs to judge trust: whether it is
+            dated, whether it is versioned against a release, and who owns it.
+          </p>
+          <div className="diffgrid">
+            {[["docs", "reference for the version you run", [["shape", "sidebar + versioned"], ["stamp", "applies to v0.5.x"], ["owner", "maintainers"], ["shell", "starlight"]]],
+              ["blog", "what changed, and when", [["shape", "reverse-chronological"], ["stamp", "posted 2026-06-19"], ["owner", "named author"], ["shell", "wide reading column"]]],
+              ["knowledge base", "things that stay true", [["shape", "categories + sidebar"], ["stamp", "reviewed 2026-07-28"], ["owner", "community, editable"], ["shell", "docs-style, undated"]]]
+            ].map(([t, sub, rows]) => (
+              <div className="diff" key={t}>
+                <div className="mono" style={{ fontSize: 13, color: "var(--fg)" }}>{t}</div>
+                <div className="site-sm" style={{ marginTop: 4 }}>{sub}</div>
+                <dl>{rows.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd>{v}</dd></React.Fragment>)}</dl>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function KbArticle({ onBack }) {
+  return (
+    <div className="wrap wide kbshell">
+      <nav className="kbside">
+        {KB.map(c => (
+          <div className="grp" key={c.cat}>
+            <span className="label">{c.cat}</span>
+            {c.items.map(i => <a key={i} href="#" className={i === "Unified memory is not VRAM" ? "on" : ""}>{i}</a>)}
+          </div>
+        ))}
+      </nav>
+      <article className="prose">
+        <a className="backlink" href="#" onClick={e => { e.preventDefault(); onBack(); }}>← knowledge base</a>
+        <div style={{ marginTop: 18 }}><span className="surface-tag">knowledge base · hardware notes</span></div>
+        <h1 className="site-h1" style={{ margin: "12px 0 14px" }}>Unified memory is not VRAM</h1>
+        <p style={{ fontSize: 18, color: "var(--fg-2)", lineHeight: 1.6 }}>
+          A Strix Halo box reports 128 GB and addresses about 96 of it from the iGPU. That number is a
+          pool, not a card, and treating it like VRAM is how loadouts end up thrashing.
+        </p>
+        <div className="byline">
+          <span>reviewed 2026-07-28</span><span>·</span><Attribution user="nx-void" /><span>·</span><a href="#">suggest an edit ↗</a>
+        </div>
+        <hr className="hairline" style={{ margin: "26px 0 30px" }} />
+        <h2 id="k1">The pool</h2>
+        <p>GTT is the portion of system memory the GPU may address. On the reference box that is roughly 96 GB of the 128 GB installed, and it is shared with everything else the machine is doing — page cache, ZFS ARC, the container runtime.</p>
+        <p>A model that reports 19 GB resident is not taking 19 GB away from a dedicated card. It is taking it from the same pool your file cache lives in, which is why a sweep that looks stable at rep one can drift by rep three.</p>
+        <h2 id="k2">Sizing a loadout</h2>
+        <ul>
+          <li>Add the resident size of every slot you want co-resident, then add the KV cache at your target context.</li>
+          <li>Leave 8–12 GB of headroom for the host. Below that, eviction starts and the lifecycle churns.</li>
+          <li><code>q8_0</code> KV cache roughly halves cache memory against <code>f16</code> for about 3 % decode.</li>
+        </ul>
+        <pre><code>{`# what is actually resident right now
+hal0 slots --memory
+
+primary   qwen3.5-9b-q4kxl      6.0 GB   serving
+embed     nomic-embed-text-v2   2.3 GB   ready
+stt       whisper-v3.turbo      1.6 GB   idle
+────────────────────────────────────────────
+resident  9.9 GB / 96 GB GTT`}</code></pre>
+        <h2 id="k3">When it goes wrong</h2>
+        <p>The failure mode is not an out-of-memory error. It is a slot that unloads while you are talking to it, because a larger slot asked for room and the scheduler took it from the least recently used one.</p>
+      </article>
+      <nav className="toc">
+        <span className="label">on this page</span>
+        <a href="#k1" className="on">the pool</a>
+        <a href="#k2">sizing a loadout</a>
+        <a href="#k3">when it goes wrong</a>
+        <hr className="hairline" style={{ margin: "6px 0" }} />
+        <span className="label">related</span>
+        <a href="#">reading the memory map</a>
+        <a href="#">q4 vs q8 kv cache</a>
+      </nav>
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = React.useState({ name: "blog" });
+  const sub = view.name === "kb" || view.name === "kbarticle" ? "knowledge base" : "blog";
+  return (
+    <div className="site">
+      <Header active="learn" sticky user="lemond" />
+      <div className="subnav">
+        <div className="wrap wide subnav-in">
+          <a href={window.P_DOCS}>docs</a>
+          <a href="#" className={sub === "knowledge base" ? "on" : ""} onClick={e => { e.preventDefault(); setView({ name: "kb" }); }}>knowledge base</a>
+          <a href="#" className={sub === "blog" ? "on" : ""} onClick={e => { e.preventDefault(); setView({ name: "blog" }); }}>blog</a>
+          <a href="#">changelog</a>
+        </div>
+      </div>
+      {view.name === "blog" && <BlogIndex onOpen={p => setView({ name: "post", post: p })} />}
+      {view.name === "post" && <Post post={view.post} onBack={() => setView({ name: "blog" })} />}
+      {view.name === "kb" && <KbLanding onOpen={() => setView({ name: "kbarticle" })} />}
+      {view.name === "kbarticle" && <KbArticle onBack={() => setView({ name: "kb" })} />}
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

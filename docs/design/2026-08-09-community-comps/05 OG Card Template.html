@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>og card template — hal0</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.ogwrap{width:600px;height:315px;overflow:hidden;border:1px solid var(--line);border-radius:var(--rad-lg)}
+.og{width:1200px;height:630px;transform:scale(.5);transform-origin:0 0;background:var(--bg);position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:64px 72px;box-sizing:border-box}
+.og::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,transparent,#262626 18%,var(--accent) 50%,#262626 82%,transparent)}
+.og-top{display:flex;align-items:center;justify-content:space-between}
+.og-eyebrow{font-family:var(--jbm);font-size:22px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);display:inline-flex;align-items:center;gap:14px}
+.og-eyebrow::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}
+.og-title{font-family:var(--jbm);font-size:62px;line-height:1.08;letter-spacing:-0.03em;color:var(--fg);margin:0;max-width:18ch}
+.og-title.long{font-size:50px}
+.og-sub{font-family:var(--geist);font-size:26px;line-height:1.45;color:var(--fg-3);margin:22px 0 0;max-width:44ch}
+.og-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:40px}
+.og-meta{font-family:var(--jbm);font-size:22px;color:var(--fg-4);display:flex;align-items:center;gap:14px}
+.og-stat{text-align:right}
+.og-stat .n{font-family:var(--jbm);font-size:76px;line-height:1;letter-spacing:-0.03em;color:var(--accent);font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features)}
+.og-stat .u{font-family:var(--jbm);font-size:20px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-4);margin-top:12px}
+.og-flags{font-family:var(--jbm);font-size:20px;color:var(--fg-3);background:var(--bg-sunken);border:1px solid var(--line);border-radius:8px;padding:16px 20px;margin-top:26px;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(600px,1fr));gap:24px}
+.cap{display:flex;align-items:baseline;gap:10px;margin:0 0 10px}
+.specrow{display:grid;grid-template-columns:1fr 300px;gap:32px;align-items:start}
+.specrow ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
+.specrow ol b{color:var(--accent);margin-right:8px}
+@media(max-width:1320px){.grid{grid-template-columns:1fr}.specrow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel">
+const { Wordmark } = window.Hal0DesignSystem_692ad8;
+
+function Og({ eyebrow, title, sub, meta, stat, unit, flags, long }) {
+  return (
+    <div className="ogwrap">
+      <div className="og">
+        <div className="og-top">
+          <Wordmark size={40} />
+          <span className="og-eyebrow">{eyebrow}</span>
+        </div>
+        <div>
+          <h2 className={"og-title" + (long ? " long" : "")}>{title}</h2>
+          {sub && <p className="og-sub">{sub}</p>}
+          {flags && <div className="og-flags">{flags}</div>}
+        </div>
+        <div className="og-foot">
+          <div className="og-meta">{meta}</div>
+          {stat && <div className="og-stat"><div className="n">{stat}</div><div className="u">{unit}</div></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Frame({ cap, tag, children }) {
+  return (
+    <div>
+      <div className="cap"><span className="label">{cap}</span><span className="mono" style={{ fontSize: 10.5, color: "var(--fg-4)" }}>{tag}</span></div>
+      {children}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div className="site">
+      <Header active={null} sticky user="lemond" />
+      <div className="wrap wide" style={{ paddingBlock: "38px 0" }}>
+        <span className="eyebrow">shared link template · 1200 × 630</span>
+        <h1 className="site-h1" style={{ margin: "10px 0 10px" }}>og cards</h1>
+        <p className="site-body" style={{ maxWidth: "62ch", marginBottom: 28 }}>
+          One template, four fills. Every hal0.dev link — a post, a KB page, a benchmark cell, a
+          profile — shares the same wordmark position, the same amber eyebrow, the same filament
+          along the bottom edge. What changes is the eyebrow, and whether the right-hand slot carries
+          a number. Shown at 50 %; type sizes are the real ones.
+        </p>
+
+        <div className="grid">
+          <Frame cap="blog post" tag="/blog/june-sweep">
+            <Og eyebrow="blog · 2026-06-19"
+                title="The June sweep: 26 models on one box"
+                sub="Every model in the roster, measured end to end on the same hardware, same container, same flags."
+                meta={<><span>hal0.dev</span><span style={{ color: "var(--fg-5)" }}>·</span><span>@hal0-ci</span><span style={{ color: "var(--fg-5)" }}>·</span><span>12 min</span></>}
+                long />
+          </Frame>
+
+          <Frame cap="knowledge base" tag="/kb/unified-memory">
+            <Og eyebrow="knowledge base · hardware"
+                title="Unified memory is not VRAM"
+                sub="128 GB installed, ~96 GB addressable from the iGPU — a pool, not a card."
+                meta={<><span>hal0.dev</span><span style={{ color: "var(--fg-5)" }}>·</span><span>reviewed 2026-07-28</span></>} />
+          </Frame>
+
+          <Frame cap="benchmark cell" tag="/benchmarks?model=chadrock3-6-35b">
+            <Og eyebrow="benchmark · tg @ 2048"
+                title="chadrock3-6-35b-uncensored-mtp"
+                sub="Ryzen AI Max+ 395 · rocm · draft-mtp · q4 cache · 19.0 GB resident"
+                meta={<><span>hal0.dev/benchmarks</span><span style={{ color: "var(--fg-5)" }}>·</span><span>sweep 2026-06-19</span></>}
+                stat="102.1" unit="tok/s decode" long />
+          </Frame>
+
+          <Frame cap="profile" tag="/profiles/strix-mtp-max">
+            <Og eyebrow="profile · v4"
+                title="strix-mtp-max"
+                sub="Speculative decode, everything on."
+                flags="-ngl 99 -c 2048 -fa 1 -ctk f16 --mtp on"
+                meta={<><span>hal0.dev/profiles</span><span style={{ color: "var(--fg-5)" }}>·</span><span>@hal0-ci</span></>}
+                stat="102.1" unit="tok/s decode" />
+          </Frame>
+
+          <Frame cap="fallback · og-default.png" tag="landing, docs, anything without its own fill">
+            <Og eyebrow="self-hosted ai inference"
+                title="Your Strix Halo box, running real /v1/* inference"
+                sub="One command installs it. Slots, unified memory, an OpenAI-compatible API."
+                meta={<><span>hal0.dev</span><span style={{ color: "var(--fg-5)" }}>·</span><span>Apache-2.0</span></>}
+                long />
+          </Frame>
+        </div>
+
+        <div style={{ marginTop: 48 }}>
+          <span className="eyebrow">component spec</span>
+          <h2 className="site-h2" style={{ margin: "10px 0 16px" }}>template anatomy</h2>
+          <div className="specrow">
+            <ol>
+              <li><b>1</b>64/72px padding, fixed. Nothing moves between fills, so a timeline of hal0 links reads as one set.</li>
+              <li><b>2</b>wordmark top-left at 40px, always the inline SVG lockup — never a screenshot of it.</li>
+              <li><b>3</b>amber eyebrow top-right with a glowing dot: which surface this link is from, plus its date or version.</li>
+              <li><b>4</b>title in JetBrains Mono 62px, dropping to 50px past ~28 characters. Two lines maximum; the generator truncates rather than shrinking further.</li>
+              <li><b>5</b>subtitle in Geist 26px, 44ch. Optional — bench cells often carry the config line here instead.</li>
+              <li><b>6</b>bottom-left meta in mono: host, author handle, read time or sweep date.</li>
+              <li><b>7</b>bottom-right number slot: one figure, amber, 76px. Only bench and profile cards fill it; blog and KB leave it empty rather than inventing a metric.</li>
+              <li><b>8</b>4px filament along the bottom edge, brightening to amber at centre — the same motif as the site header.</li>
+            </ol>
+            <div>
+              <div className="panel" style={{ padding: 16 }}>
+                <span className="label">generation</span>
+                <p className="site-sm" style={{ marginTop: 8 }}>
+                  Rendered at build time by <span className="mono">scripts/build-og.sh</span> from the same
+                  tokens — no runtime image service. Pages without a fill fall back to
+                  <span className="mono"> /og-default.png</span>.
+                </p>
+                <div className="well" style={{ padding: "10px 12px", marginTop: 12, fontSize: 11 }}>
+                  og:image · 1200×630 · png<br />
+                  og:image:alt · title + eyebrow<br />
+                  twitter:card · summary_large_image
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

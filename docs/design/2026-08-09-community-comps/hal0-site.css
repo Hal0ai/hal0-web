@@ -10,10 +10,14 @@
 /* ── base ────────────────────────────────────────────────────── */
 /* site ramp — literal values from the hal0-web implementation */
 .site{--bg:#0a0a0a;--bg-1:#141414;--bg-sunken:#050505;--fg:#f5f5f4;--fg-2:#c8c2bd;--fg-3:#a3a09c;--line:#262626;--line-strong:#3a3a3a;--accent:#ffb000;--accent-hover:#ffc533;--accent-muted:#7a5500;--accent-glow:rgba(255,176,0,0.18);background:var(--bg);color:var(--fg);font-family:var(--geist);font-feature-settings:var(--geist-features);-webkit-font-smoothing:antialiased}
-[data-theme="light"] .site{--bg:#fafaf9;--bg-1:#ffffff;--bg-sunken:#f0eeea;--fg:#1c1917;--fg-2:#44403c;--fg-3:#6b6660;--line:#e7e5e4;--line-strong:#cfccc8;--accent:#b87800;--accent-glow:rgba(184,120,0,0.16)}
+[data-theme="light"] .site{--bg:#fafaf9;--bg-1:#ffffff;--bg-2:#f3f2f0;--bg-3:#ebe9e6;--bg-sunken:#f0eeea;--fg:#1c1917;--fg-2:#44403c;--fg-3:#6b6660;--line:#e7e5e4;--line-strong:#cfccc8;--accent:#b87800;--accent-glow:rgba(184,120,0,0.16);--dev-rocm:#a32e2e;--dev-vulkan:#1f5fbf;--dev-npu:#6b3fbf;--dev-cpu:#5c5c58;--ok:#1a7f37;--warn:#8a5a00;--err:#cf222e;--info:#1f5fbf;--ok-soft:rgba(26,127,55,0.10);--ok-line:rgba(26,127,55,0.32);--warn-soft:rgba(138,90,0,0.10);--warn-line:rgba(138,90,0,0.32);--err-soft:rgba(207,34,46,0.10);--err-line:rgba(207,34,46,0.32);--info-soft:rgba(31,95,191,0.10);--info-line:rgba(31,95,191,0.32)}
 .site *{box-sizing:border-box}
 .site a{color:var(--fg);text-decoration:none}
 .site a:hover{color:var(--accent)}
+.site a.btn{color:#0a0a0a}
+.site a.btn:hover{color:#0a0a0a}
+.site a.btn.ghost,.site a.btn.ghost:hover{color:var(--fg)}
+.site a.btn.danger{color:var(--err)}
 .site :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
 .site ::selection{background:var(--accent-glow);color:var(--fg)}
 .mono{font-family:var(--jbm);font-feature-settings:var(--mono-features)}
@@ -69,9 +73,11 @@
 .hdr.mob .hdr-nav,.hdr.mob .desk{display:none}
 .hdr.mob .hdr-burger{display:inline-flex}
 .hdr.mob .hdr-in{height:52px}
-.hdr.desktop .hdr-nav,.hdr.desktop .desk{display:flex}
-.hdr.desktop .hdr-burger{display:none}
-.hdr.desktop .hdr-in{height:56px}
+/* Desktop layout can only be forced inside a specimen frame (01's narrow
+ * frames); on real pages the viewport media query stays in charge. */
+.frame .hdr.desktop .hdr-nav,.frame .hdr.desktop .desk{display:flex}
+.frame .hdr.desktop .hdr-burger{display:none}
+.frame .hdr.desktop .hdr-in{height:56px}
 .deskframe{overflow-x:auto}
 .deskframe>.hdr{min-width:1180px}
 
@@ -125,6 +131,34 @@
 .well{background:var(--bg-sunken);border:1px solid var(--line);border-radius:var(--rad);font-family:var(--jbm);font-size:12.5px;line-height:1.7}
 .hairline{height:1px;background:var(--line);border:0;margin:0}
 .stat{font-family:var(--jbm);font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features);letter-spacing:var(--ls-title)}
+
+/* ── shared component styles for bench-app.jsx (Decode / Caps / Spark) ──
+ * Bucket colours and capability tints are lifted from src/components/ModelRoster.astro
+ * so the new surfaces read identically to the existing roster. */
+.site{--fast:#3fb950;--mid:var(--accent);--slow:#f85149}
+[data-theme="light"] .site{--fast:#1a7f37;--slow:#cf222e}
+.sr{position:absolute;left:0;top:0;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.caps{display:inline-flex;gap:5px;white-space:nowrap;color:var(--fg-2)}
+.cap{display:inline-flex;width:16px;height:16px;vertical-align:middle}
+.cap-mtp{color:var(--accent)}
+.cap-vision{color:#6cb6ff}
+.capnone{color:var(--fg-4)}
+.decode{display:inline-flex;align-items:center;gap:6px}
+.decode .meter{display:inline-flex;gap:1.5px}
+.decode .meter i{width:3px;height:11px;background:var(--fg-5);border-radius:1px}
+.decode.fast .meter i.on{background:var(--fast)}
+.decode.mid .meter i.on{background:var(--mid)}
+.decode.slow .meter i.on{background:var(--slow)}
+.decode .v{font-size:13px}
+.decode.fast .v{color:var(--fast);font-weight:600}
+.decode.mid .v{color:var(--mid)}
+.decode.slow .v{color:var(--slow)}
+.decode .sd{font-size:10px;color:var(--fg-4)}
+.spark{vertical-align:middle}
+.bucket-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:10px 16px;border-top:1px solid var(--line-soft);font-family:var(--jbm);font-size:11px;color:var(--fg-3)}
+.bucket-legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.bucket-legend .lg{display:inline-flex;align-items:center;gap:6px}
+.bucket-legend .sep{color:var(--fg-5)}
 
 /* ── specimen sheet chrome (this document only) ──────────────── */
 .spec{padding-block:56px 0}
