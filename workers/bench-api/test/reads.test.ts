@@ -307,4 +307,13 @@ describe("CORS", () => {
     expect(res.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
     expect(res.headers.get("access-control-allow-headers")).toBe("content-type");
   });
+
+  it("read-path 404s include CORS headers for allowed origins", async () => {
+    const res = await SELF.fetch("https://api.hal0.dev/v1/runs/no-such-run", {
+      headers: { origin: "https://hal0.dev" },
+    });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://hal0.dev");
+    expect(res.headers.get("vary")).toBe("origin");
+  });
 });
