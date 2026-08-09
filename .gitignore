@@ -26,7 +26,7 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# deploy targets (we don't deploy to these — keep out anyway)
+# deploy targets (site deploys via Vercel; local CLI state stays out either way)
 .vercel
 .netlify
 
@@ -44,14 +44,12 @@ Thumbs.db
 
 # Serena MCP cache
 .serena/
-.claude/wip.json
-graphify-out/graph.html
-graphify-out/cost.json
-graphify-out/cache/
-graphify-out/.graphify_*
-graphify-out/.rebuild.lock
 
+# graphify knowledge-graph output
 graphify-out/
+
+# Superset personal overrides (team config in .superset/config.json is committed)
+.superset/config.local.json
 
 # benchmark data source (regenerates src/data/model-roster.ts via bench/build_data.py)
 !bench/roster.log
