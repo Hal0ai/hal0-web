@@ -15,12 +15,33 @@
 	/* Dark surfaces (default theme) */
 	--hal0-bg:           #0a0a0a;
 	--hal0-bg-elevated: #141414;
+	--hal0-bg-2:        #161616; /* hover / inset rows */
+	--hal0-bg-3:        #1c1c1c; /* deeper inset (tracks, wells) */
 	--hal0-bg-sunken:   #050505;
 	--hal0-fg:          #f5f5f4;
 	--hal0-fg-muted:    #c8c2bd; /* ≥7:1 on bg-elevated */
 	--hal0-fg-dim:      #a3a09c; /* ≥4.5:1 on bg-elevated */
+	--hal0-fg-faint:    #5c5c58; /* quaternary / placeholder, keys */
+	--hal0-fg-ghost:    #3d3d3a; /* faintest — dividers as text */
 	--hal0-border:      #262626;
+	--hal0-border-soft: #1c1c1c;
 	--hal0-border-strong: #3a3a3a;
+
+	/* Accent shorthands (tints of amber on dark) */
+	--hal0-accent-soft: rgba(255, 176, 0, 0.10); /* fill behind amber chips */
+	--hal0-accent-line: rgba(255, 176, 0, 0.34); /* amber border */
+
+	/* Status · semantic */
+	--hal0-ok:        #6fcf97; --hal0-ok-soft:   rgba(111, 207, 151, 0.10); --hal0-ok-line:   rgba(111, 207, 151, 0.30);
+	--hal0-warn:      #e8b94e; --hal0-warn-soft: rgba(232, 185, 78, 0.10);  --hal0-warn-line: rgba(232, 185, 78, 0.30);
+	--hal0-err:       #ef6b6b; --hal0-err-soft:  rgba(239, 107, 107, 0.10); --hal0-err-line:  rgba(239, 107, 107, 0.30);
+	--hal0-info:      #7fb8ff; --hal0-info-soft: rgba(127, 184, 255, 0.10); --hal0-info-line: rgba(127, 184, 255, 0.30);
+
+	/* Device / runtime colours — each inference backend has a stable hue */
+	--hal0-dev-rocm:   #d76b6b; /* AMD ROCm */
+	--hal0-dev-vulkan: #7fb8ff; /* Vulkan (default GPU path) */
+	--hal0-dev-cpu:    #9c9c95; /* CPU fallback */
+	--hal0-dev-npu:    #c896ff; /* AMD XDNA NPU / FLM */
 
 	/* Type stack — 'JBM Fallback' / 'Geist Fallback' are local size-adjusted
 	 * faces (see fonts.css) so the swap from system → webfont is metric-
@@ -30,6 +51,44 @@
 	                      'Segoe UI', Roboto, sans-serif;
 	--hal0-font-display: var(--hal0-font-mono);
 
+	/* Letter-spacing scale */
+	--hal0-ls-display: -0.03em; /* big mono titles tighten */
+	--hal0-ls-title:   -0.02em;
+	--hal0-ls-label:    0.1em;  /* UPPERCASE mono section labels open up */
+	--hal0-ls-tight:   -0.01em;
+
+	/* Radii — small and restrained */
+	--hal0-rad:      6px;   /* inputs, menus, chips group */
+	--hal0-rad-sm:   4px;   /* buttons, inset fields */
+	--hal0-rad-lg:  10px;   /* cards, panels */
+	--hal0-rad-pill: 999px;
+
 	/* Motion */
-	--hal0-ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--hal0-ease:     cubic-bezier(0.22, 1, 0.36, 1);
+	--hal0-dur-fast: 0.12s;
+}
+
+/* ── light theme overrides ──────────────────────────────────────
+ * Mapped 1:1 from the comp's `[data-theme="light"]` ramp
+ * (docs/design/2026-08-09-community-comps/hal0-site.css line 8) onto
+ * canonical --hal0-* names. bg-4 has no --hal0-* counterpart yet — the
+ * comp doesn't reference it either, so it's intentionally omitted. */
+[data-theme='light'] {
+	--hal0-bg:            #fafaf9;
+	--hal0-bg-elevated:   #ffffff;
+	--hal0-bg-2:          #f3f2f0;
+	--hal0-bg-3:          #ebe9e6;
+	--hal0-bg-sunken:     #f0eeea;
+	--hal0-fg:            #1c1917;
+	--hal0-fg-muted:      #44403c;
+	--hal0-fg-dim:        #6b6660;
+	--hal0-fg-faint:      #8f8a83;
+	--hal0-fg-ghost:      #bfbab3;
+	--hal0-border:        #e7e5e4;
+	--hal0-border-soft:   #f0eeec;
+	--hal0-border-strong: #cfccc8;
+	--hal0-accent:        #b87800;
+	--hal0-accent-soft:   rgba(184, 120, 0, 0.09);
+	--hal0-accent-line:   rgba(184, 120, 0, 0.34);
+	--hal0-accent-glow:   rgba(184, 120, 0, 0.16);
 }

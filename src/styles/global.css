@@ -6,6 +6,7 @@
 
 @import './fonts.css';
 @import './tokens.css';
+@import './site.css';
 @import 'tailwindcss';
 @import '@astrojs/starlight-tailwind';
 
