@@ -27,6 +27,7 @@ function siteFooter(html) {
 
 const footerLinks = nav.footerColumns.flatMap((col) => col.links);
 const visibleHeader = nav.header.filter((l) => !l.hidden);
+const footerExtras = ['/blog/rss.xml', '/changelog'];
 
 test('SiteFooter link set identical across surfaces', { skip: !built && 'run npm run build first' }, async () => {
   const marketing = hrefs(siteFooter(await readFile(pages.marketing, 'utf8')));
@@ -34,6 +35,9 @@ test('SiteFooter link set identical across surfaces', { skip: !built && 'run npm
   assert.deepEqual([...marketing].sort(), [...starlight].sort(), 'footer href sets must be equal');
   for (const l of [...footerLinks, ...nav.social]) {
     assert.ok(marketing.has(l.href), `footer missing manifest link ${l.href}`);
+  }
+  for (const href of footerExtras) {
+    assert.ok(marketing.has(href), `footer missing expected link ${href}`);
   }
 });
 
