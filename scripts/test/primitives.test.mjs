@@ -11,18 +11,45 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access, readdir } from 'node:fs/promises';
 
+const dist = new URL('../../dist/', import.meta.url);
 const distAstro = new URL('../../dist/_astro/', import.meta.url);
 const indexHtml = new URL('../../dist/index.html', import.meta.url);
 
 const built = await access(indexHtml).then(() => true, () => false);
 
+// Astro's default `inlineStylesheets: 'auto'` inlines small CSS chunks into
+// page <style> blocks instead of emitting them under dist/_astro/ — and
+// chunk boundaries shift with the module graph, so WHICH rules get inlined
+// varies branch to branch. Scan both the emitted .css files and the inlined
+// <style> blocks so the assertion is about the shipped CSS, not about how
+// the bundler happened to chunk it.
 async function bundledCss() {
   const entries = await readdir(distAstro).catch(() => []);
   const cssFiles = entries.filter((f) => f.endsWith('.css'));
   const chunks = await Promise.all(
     cssFiles.map((f) => readFile(new URL(f, distAstro), 'utf8'))
   );
-  return chunks.join('\n');
+
+  const htmlFiles = [];
+  const walk = async (dir) => {
+    const items = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const item of items) {
+      const child = new URL(`${item.name}${item.isDirectory() ? '/' : ''}`, dir);
+      if (item.isDirectory()) await walk(child);
+      else if (item.name.endsWith('.html')) htmlFiles.push(child);
+    }
+  };
+  await walk(dist);
+  const inlined = await Promise.all(
+    htmlFiles.map(async (f) => {
+      const html = await readFile(f, 'utf8');
+      return [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+        .map((m) => m[1])
+        .join('\n');
+    })
+  );
+
+  return chunks.concat(inlined).join('\n');
 }
 
 // The production build runs source CSS nesting (`.site { .dtable { ... } }`)
