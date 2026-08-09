@@ -3,13 +3,14 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "node scripts/sync-changelog.mjs && astro dev",
+    "dev": "node scripts/sync-changelog.mjs && node scripts/sync-profiles.mjs && astro dev",
     "start": "astro dev",
-    "prebuild": "node scripts/sync-changelog.mjs",
+    "prebuild": "node scripts/sync-changelog.mjs && node scripts/sync-profiles.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "sync:changelog": "node scripts/sync-changelog.mjs",
+    "sync:profiles": "node scripts/sync-profiles.mjs",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
     "test": "node --test 'scripts/test/**/*.mjs'"
   },
@@ -26,6 +27,7 @@
     "astro-icon": "^1.1.5",
     "marked": "^15.0.7",
     "sharp": "^0.35.3",
+    "smol-toml": "^1.7.1",
     "starlight-blog": "^0.28.0",
     "tailwindcss": "^4.3.0"
   },
