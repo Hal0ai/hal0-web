@@ -165,18 +165,21 @@ repo's bench system. No community submissions.
 ## Design comps (visual source of truth)
 
 The complete high-fidelity handoff is vendored at
-`docs/design/2026-08-09-community-comps/` — eight screens (unified chrome,
-benchmarks, profiles, blog + KB, OG card template, homepage, forum, docs) plus
-`README.md`, the authoritative implementation reference (tokens incl. required
-light-theme AA overrides for device/status hues, chrome spec, per-screen
-behavior, state/data contracts, and the Discourse split of responsibility:
-header/footer/palette as a theme component, topic rows restyled via Discourse
-CSS variables, composer/moderation/search native). The comp `.site` ramp
-matches shipped `tokens.css` values exactly; chrome v2 adoption shipped in
-PR #62. The **profile** submission flow is not designed yet — entry points
-exist; wireframes are the outstanding design ask (web upload with validation
-states, PR-opened confirmation, status display, CLI success landing). Bench
-submission wireframes are NOT needed (community bench dropped).
+`docs/design/2026-08-09-community-comps/` — nine screens (unified chrome,
+benchmarks, profiles, blog + KB, OG card template, homepage, forum, docs,
+profile submission) plus `README.md`, the authoritative implementation
+reference (tokens incl. required light-theme AA overrides for device/status
+hues, chrome spec, per-screen behavior, state/data contracts, and the
+Discourse split of responsibility: header/footer/palette as a theme
+component, topic rows restyled via Discourse CSS variables,
+composer/moderation/search native). The comp `.site` ramp matches shipped
+`tokens.css` values exactly; chrome v2 adoption shipped in PR #62. The
+**profile** submission flow now has wireframes (section 9, `09 Profile
+Submission.html`): web upload/paste with the four validation states (pass,
+schema error, missing required fields, unknown model/lane warning),
+PR-opened confirmation, and CLI success landing. Only the **BENCH-RUN**
+submission flow remains undesigned — community bench dropped, so no
+wireframes are needed for it.
 
 Handoff details that supersede earlier assumptions (and one the revision
 supersedes back):

@@ -14,6 +14,7 @@ const P_PROF = "03%20Profiles.html";
 const P_FORUM = "07%20Forum.html";
 const P_SHEET = "01%20Unified%20Chrome.html";
 const P_OG = "05%20OG%20Card%20Template.html";
+const P_SUBMIT = "09%20Profile%20Submission.html";
 
 const NAV = [
   { id: "learn", label: "learn", href: P_DOCS, sub: ["docs", "knowledge base", "blog"] },
@@ -163,7 +164,7 @@ function Drawer({ active }) {
 const FOOTER_COLS = [
   { h: "learn", links: [["docs", P_DOCS], ["knowledge base", P_WRITE], ["blog", P_WRITE], ["changelog", "#"], ["releases", "#"]] },
   { h: "community", links: [["forum ↗", P_FORUM], ["discord ↗", "#"], ["github ↗", "#"], ["contributing", "#"], ["hello@hal0.dev", "mailto:hello@hal0.dev"]] },
-  { h: "data", links: [["benchmarks", P_BENCH], ["profiles", P_PROF], ["share a run", P_BENCH], ["hardware notes", P_WRITE], ["roadmap", "#"]] },
+  { h: "data", links: [["benchmarks", P_BENCH], ["profiles", P_PROF], ["submit a profile", P_SUBMIT], ["hardware notes", P_WRITE], ["roadmap", "#"]] },
 ];
 
 function Footer() {
@@ -242,4 +243,4 @@ function SubNav({ items, active }) {
   );
 }
 
-Object.assign(window, { Header, Footer, Drawer, NAV, BrandIcon, GhAvatar, ThemeToggle, Fpill, Attribution, SubNav, toggleTheme, P_HOME, P_DOCS, P_WRITE, P_BENCH, P_PROF, P_FORUM, P_SHEET, P_OG });
+Object.assign(window, { Header, Footer, Drawer, NAV, BrandIcon, GhAvatar, ThemeToggle, Fpill, Attribution, SubNav, toggleTheme, P_HOME, P_DOCS, P_WRITE, P_BENCH, P_PROF, P_FORUM, P_SHEET, P_OG, P_SUBMIT });

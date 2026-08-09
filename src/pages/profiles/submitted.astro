@@ -1,0 +1,181 @@
+---
+/**
+ * /profiles/submitted — the shared landing page both submission doors end
+ * on, per docs/design/2026-08-09-community-comps/09 Profile Submission.html
+ * ("two doors, one queue"). Door A (the `hal0 profile share` CLI) would
+ * open this with `?pr=<number>` once the GitHub App/Worker exists to open
+ * that PR itself — that backend is not built yet (see the PR body), so
+ * today this is reached only from door B's "I've opened it" link, always
+ * without a PR number.
+ *
+ * ?pr= is read client-side (this page is static/prerendered — there is no
+ * server request per visit to read a query string from). With ?pr= it
+ * shows the PR link, a validating chip, and the three next steps. Without
+ * it, it renders the same next-steps copy under generic "submission
+ * received" framing so the page still reads sensibly if it's ever bookmarked
+ * or shared directly.
+ */
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import '../../styles/site-data.css';
+
+const REPO_URL = 'https://github.com/Hal0ai/hal0-profiles';
+const description = 'Your hal0 profile submission — pull request status and what happens next.';
+---
+
+<MarketingLayout title="submission received — hal0" description={description} ogImage="/og-default.png">
+  <div class="wrap wide phead">
+    <div class="done">
+      <div>
+        <div class="bigcheck">✓</div>
+        <h1 class="site-h1" style="font-size: 27px; margin: 16px 0 10px" data-submitted-heading tabindex="-1">
+          submission received
+        </h1>
+        <p class="site-body" style="max-width: 52ch" data-submitted-intro>
+          If you just pressed &ldquo;Propose changes&rdquo; on GitHub, your file is now open as a pull
+          request against <span class="mono">hal0ai/hal0-profiles</span>. You don't need to touch git
+          again from here.
+        </p>
+
+        <div class="fbar" style="margin-top: 16px" data-pr-chip hidden>
+          <span class="chip info"><span class="dot loading" style="margin-right:5px"></span>validating</span>
+          <a class="mono" data-pr-link href="#" rel="noopener" style="font-size: 11px; color: var(--fg-3)"></a>
+        </div>
+
+        <ol class="steps">
+          <li>
+            <span class="n">01</span>
+            <div>
+              <span class="t">CI validates the schema</span>
+              <span class="d">Usually under a minute. The same checks the browser ran, plus a lint of the flag string against the pinned llama.cpp build.</span>
+            </div>
+          </li>
+          <li>
+            <span class="n">02</span>
+            <div>
+              <span class="t">A maintainer reads it</span>
+              <span class="d">They check the profile does what it claims and that the model id resolves. Most profiles are reviewed within 2–3 days.</span>
+            </div>
+          </li>
+          <li>
+            <span class="n">03</span>
+            <div>
+              <span class="t">Merge publishes it</span>
+              <span class="d">The site rebuilds on merge. Your profile appears in the gallery with your handle on it, and any benchmark runs carrying the slug join to it automatically.</span>
+            </div>
+          </li>
+        </ol>
+
+        <div class="fbar" style="margin-top: 20px">
+          <a class="btn ghost" data-pr-link-2 href={REPO_URL} rel="noopener">view pull requests ↗</a>
+          <a class="btn ghost" href="/profiles">back to profiles</a>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <div class="banner warn" style="display:flex; gap:8px; padding:10px 12px">
+          <span>
+            First submission from a given GitHub account is held for a maintainer read before CI runs.
+            One-time only — it's there so a longer first wait doesn't read as something being broken.
+          </span>
+        </div>
+        <div class="note">
+          There's no sign-in and no `/profiles/mine` status page yet — that needs an identity piece we
+          haven't built. Track your PR directly on GitHub in the meantime.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Static page — ?pr= only exists in the client, so it's read and
+    // painted in here rather than in frontmatter (which only ever sees
+    // the build-time URL).
+    const params = new URLSearchParams(window.location.search);
+    const pr = params.get('pr');
+    if (pr && /^\d+$/.test(pr)) {
+      const heading = document.querySelector('[data-submitted-heading]');
+      const intro = document.querySelector('[data-submitted-intro]');
+      const chip = document.querySelector<HTMLElement>('[data-pr-chip]');
+      const link = document.querySelector<HTMLAnchorElement>('[data-pr-link]');
+      const link2 = document.querySelector<HTMLAnchorElement>('[data-pr-link-2]');
+      const prUrl = `https://github.com/Hal0ai/hal0-profiles/pull/${pr}`;
+      if (heading) heading.textContent = `PR opened — hal0-profiles#${pr}`;
+      if (intro)
+        intro.textContent = `Pull request hal0-profiles#${pr} is open against hal0ai/hal0-profiles. You don't need to touch git from here.`;
+      if (chip) chip.hidden = false;
+      if (link) {
+        link.href = prUrl;
+        link.textContent = `hal0-profiles#${pr} ↗`;
+      }
+      if (link2) {
+        link2.href = prUrl;
+        link2.textContent = 'view the pull request ↗';
+      }
+    }
+    document.querySelector<HTMLElement>('[data-submitted-heading]')?.focus();
+  </script>
+</MarketingLayout>
+
+<style>
+  .done {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 28px;
+    align-items: start;
+  }
+  .bigcheck {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--ok-line);
+    background: var(--ok-soft);
+    color: var(--ok);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .steps {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .steps li {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .steps .n {
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-4);
+  }
+  .steps .t {
+    font-family: var(--jbm);
+    font-size: 12.5px;
+    color: var(--fg);
+    display: block;
+  }
+  .steps .d {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--fg-3);
+    margin-top: 5px;
+    display: block;
+  }
+  .note {
+    font-family: var(--jbm);
+    font-size: 10.5px;
+    color: var(--fg-4);
+    line-height: 1.6;
+  }
+  @media (max-width: 900px) {
+    .done {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

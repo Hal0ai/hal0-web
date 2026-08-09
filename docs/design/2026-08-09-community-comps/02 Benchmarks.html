@@ -264,7 +264,7 @@ function App() {
   return (
     <div className="site">
       <Header active="bench" sticky user="lemond" />
-      <SubNav items={[["leaderboard", "#"], ["evals", "#"], ["hardware", "#"], ["methodology", "#"], ["profiles", window.P_PROF], ["share your results", "#"]]} active={tab === "evals" ? "evals" : "leaderboard"} />
+      <SubNav items={[["leaderboard", "#"], ["evals", "#"], ["hardware", "#"], ["methodology", "#"], ["profiles", window.P_PROF]]} active={tab === "evals" ? "evals" : "leaderboard"} />
       <div className="wrap wide phead">
         <div className="phead-row">
           <div>
@@ -277,8 +277,8 @@ function App() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn ghost">methodology</button>
-            <button className="btn">share your results</button>
+            <a className="btn ghost" href="#">methodology</a>
+            <a className="btn ghost" href="#">download this view as json ↓</a>
           </div>
         </div>
         <div className="ctx">
