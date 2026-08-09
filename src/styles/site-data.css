@@ -9,34 +9,8 @@
  * until a page opts in. Scoped under `.site` to match site.css. */
 
 .site {
-	.searchbtn {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		height: 30px;
-		padding: 0 8px 0 10px;
-		border: 1px solid var(--line);
-		border-radius: var(--rad-sm);
-		background: var(--bg-1);
-		color: var(--fg-4);
-		font-family: var(--jbm);
-		font-size: 11.5px;
-		cursor: pointer;
-		min-width: 180px;
-		transition: border-color var(--dur-fast) var(--ease);
-	}
-	.searchbtn:hover {
-		border-color: var(--line-strong);
-		color: var(--fg-3);
-	}
-	.searchbtn .k {
-		margin-left: auto;
-		font-size: 10px;
-		color: var(--fg-4);
-		border: 1px solid var(--line);
-		border-radius: 3px;
-		padding: 1px 4px;
-	}
+	/* .searchbtn / .hdr-sep moved to site.css — live header chrome now,
+	 * not an inert specimen (one-header unification). */
 	.avatar {
 		display: inline-flex;
 		align-items: center;
@@ -75,12 +49,6 @@
 		width: 1px;
 		height: 16px;
 		background: var(--line-strong);
-	}
-	.hdr-sep {
-		width: 1px;
-		height: 20px;
-		background: var(--line);
-		margin: 0 4px;
 	}
 	/* Comp specimen sheet's explicit mobile/desktop header variants — the
 	 * real SiteHeader only ever uses the @media (max-width: 1000px) switch

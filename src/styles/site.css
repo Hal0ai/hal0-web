@@ -339,6 +339,148 @@
 		background: var(--bg-2);
 		border-color: var(--line);
 	}
+	/* Comp .searchbtn / .hdr-sep — moved here from site-data.css when the
+	 * one-header pass made them live chrome on every marketing page. */
+	.searchbtn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		height: 30px;
+		padding: 0 8px 0 10px;
+		border: 1px solid var(--line);
+		border-radius: var(--rad-sm);
+		background: var(--bg-1);
+		color: var(--fg-4);
+		font-family: var(--jbm);
+		font-size: 11.5px;
+		cursor: pointer;
+		min-width: 180px;
+		transition: border-color var(--dur-fast) var(--ease);
+	}
+	.searchbtn:hover {
+		border-color: var(--line-strong);
+		color: var(--fg-3);
+	}
+	.searchbtn .k {
+		margin-left: auto;
+		font-size: 10px;
+		color: var(--fg-4);
+		border: 1px solid var(--line);
+		border-radius: 3px;
+		padding: 1px 4px;
+	}
+	.hdr-sep {
+		width: 1px;
+		height: 20px;
+		background: var(--line);
+		margin: 0 4px;
+	}
+	/* Drawer-foot search variant: grows to fill the icon row. */
+	.drawer .foot .searchbtn {
+		flex: 1;
+		min-width: 0;
+	}
+
+	/* ── search palette (01 Unified Chrome `.pal`) — marketing pages'
+	 * ⌘K modal, rendered as a <dialog> by /js/site-search.js. Starlight
+	 * pages keep their Pagefind modal (styled to the same spec in
+	 * site-starlight.css). ── */
+	dialog.pal {
+		width: 560px;
+		max-width: calc(100vw - 32px);
+		background: var(--bg-1);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--rad-lg);
+		box-shadow: var(--shadow-menu);
+		overflow: hidden;
+		padding: 0;
+		margin: 12vh auto auto;
+		color: var(--fg-2);
+	}
+	dialog.pal::backdrop {
+		background: rgba(5, 5, 5, 0.55);
+		-webkit-backdrop-filter: blur(2px);
+		backdrop-filter: blur(2px);
+	}
+	.pal-in {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 12px 14px;
+		border-bottom: 1px solid var(--line-soft);
+		color: var(--fg-3);
+	}
+	.pal-in input {
+		flex: 1;
+		background: transparent;
+		border: 0;
+		outline: 0;
+		color: var(--fg);
+		font-family: var(--jbm);
+		font-size: 13.5px;
+	}
+	.pal-in .k {
+		font-size: 10px;
+		color: var(--fg-4);
+		border: 1px solid var(--line);
+		border-radius: 3px;
+		padding: 1px 4px;
+		font-family: var(--jbm);
+	}
+	.pal-results {
+		max-height: 50vh;
+		overflow-y: auto;
+		padding: 8px 0;
+	}
+	.pal-msg {
+		font-family: var(--jbm);
+		font-size: 10.5px;
+		text-transform: uppercase;
+		letter-spacing: var(--ls-label);
+		color: var(--fg-3);
+		padding: 6px 14px;
+	}
+	.pal-row {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		padding: 7px 14px;
+		font-family: var(--jbm);
+		font-size: 12.5px;
+		color: var(--fg-2);
+		text-decoration: none;
+	}
+	.pal-row .t {
+		color: var(--fg-2);
+	}
+	.pal-row.on,
+	.pal-row:hover {
+		background: var(--accent-soft);
+		box-shadow: inset 2px 0 0 var(--accent);
+	}
+	.pal-row.on .t,
+	.pal-row:hover .t {
+		color: var(--fg);
+	}
+	.pal-row .src {
+		margin-left: auto;
+		font-size: 10px;
+		color: var(--fg-4);
+		flex-shrink: 0;
+	}
+	.pal-row .x {
+		display: block;
+		font-family: var(--geist);
+		font-size: 12px;
+		line-height: 1.5;
+		color: var(--fg-3);
+		font-weight: 400;
+	}
+	.pal-row .x mark {
+		background: transparent;
+		color: var(--accent);
+		font-weight: 500;
+	}
 	.hdr-burger {
 		display: none;
 	}
