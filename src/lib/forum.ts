@@ -101,23 +101,32 @@ export async function fetchLatestTopics(discourseUrl: string | undefined = proce
   ]);
   if (!latest || !latest.topic_list?.topics?.length) return null;
 
-  const categoryBySlug = new Map((categories?.category_list.categories ?? []).map((c) => [c.id, c.slug]));
-  const userById = new Map(latest.users.map((u) => [u.id, u]));
+  // A 200 response with a shape that doesn't match what we expect (missing
+  // `posters`/`users`, unexpected nesting, etc.) must degrade to "omit the
+  // section" like any other unreachable-forum case — never fail the build.
+  try {
+    const categoryBySlug = new Map((categories?.category_list.categories ?? []).map((c) => [c.id, c.slug]));
+    const userById = new Map((latest.users ?? []).map((u) => [u.id, u]));
 
-  return latest.topic_list.topics.slice(0, TOPIC_COUNT).map((topic) => {
-    const posterEntry =
-      topic.posters.find((p) => p.description === REGULAR_POSTER_ROLE) ?? topic.posters[0];
-    const poster = posterEntry ? userById.get(posterEntry.user_id) : undefined;
+    const topics = latest.topic_list.topics.slice(0, TOPIC_COUNT).map((topic) => {
+      const posters = topic.posters ?? [];
+      const posterEntry = posters.find((p) => p.description === REGULAR_POSTER_ROLE) ?? posters[0];
+      const poster = posterEntry ? userById.get(posterEntry.user_id) : undefined;
 
-    return {
-      id: topic.id,
-      title: topic.title,
-      href: `${base}/t/${topic.slug}/${topic.id}`,
-      category: categoryBySlug.get(topic.category_id) ?? 'general',
-      replies: topic.reply_count,
-      author: poster?.username ?? 'unknown',
-      authorAvatar: poster ? avatarUrl(base, poster.avatar_template) : null,
-      activityAt: topic.last_posted_at,
-    };
-  });
+      return {
+        id: topic.id,
+        title: topic.title,
+        href: `${base}/t/${topic.slug}/${topic.id}`,
+        category: categoryBySlug.get(topic.category_id) ?? 'general',
+        replies: topic.reply_count,
+        author: poster?.username ?? 'unknown',
+        authorAvatar: poster ? avatarUrl(base, poster.avatar_template) : null,
+        activityAt: topic.last_posted_at,
+      };
+    });
+
+    return topics.length > 0 ? topics : null;
+  } catch {
+    return null;
+  }
 }

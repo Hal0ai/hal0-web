@@ -22,6 +22,17 @@ const posts = (await getCollection('docs', (entry) => entry.id.startsWith('blog/
   .slice(0, LATEST_COUNT);
 
 const formatDate = (d?: Date) => (d ? d.toISOString().slice(0, 10) : '');
+
+// `authors` in the blog schema is `string | Author | Array<string | Author>`
+// (blogSchema, node_modules/starlight-blog/schema.ts) — a bare `hal0` string
+// is the common case here, not an array, so indexing it directly picks off
+// a single character ('h') instead of the name. Normalize to a flat list of
+// display names regardless of shape.
+function authorNames(authors: unknown): string[] {
+  if (!authors) return [];
+  const list = Array.isArray(authors) ? authors : [authors];
+  return list.map((a) => (typeof a === 'string' ? a : (a as { name: string }).name));
+}
 ---
 
 {posts.length > 0 && (
@@ -42,8 +53,8 @@ const formatDate = (d?: Date) => (d ? d.toISOString().slice(0, 10) : '');
             <span class="eyebrow">blog · {formatDate(post.data.date)}</span>
             <h3 class="blead-title">{post.data.title}</h3>
             {post.data.excerpt && <p class="site-body blead-body">{post.data.excerpt}</p>}
-            {post.data.authors?.[0] && (
-              <div class="blead-byline mono">{typeof post.data.authors[0] === 'string' ? post.data.authors[0] : post.data.authors[0].name}</div>
+            {authorNames(post.data.authors)[0] && (
+              <div class="blead-byline mono">{authorNames(post.data.authors)[0]}</div>
             )}
           </a>
         ) : (
