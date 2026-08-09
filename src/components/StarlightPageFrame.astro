@@ -22,24 +22,32 @@
  * pre-wrapper build; no incidental extra `<div>` on every Starlight page).
  *
  * `data-docs` is the mirror-image seam added for the docs-shape pass (see
- * docs/design/2026-08-09-community-comps/08 Docs.html): the comp's docs
- * article PROSE (paragraph/list text and reading measure — not the h1) is
- * a denser scale than blog/KB's (15.5px/1.68 @ 74ch vs. 16px/1.68 @ 68ch)
- * — different enough that reusing `[data-longform]` for that would be a
- * lie, so docs pages get their own attribute and site-docs.css scopes its
- * prose rules to `[data-docs]` instead. Every Starlight-rendered entry.id
- * is exactly one of docs/blog/kb, so this if/else is exhaustive — no
- * third, attributeless case exists among Starlight routes.
+ * docs/design/2026-08-09-community-comps/08 Docs.html): docs pages get
+ * their own attribute for docs-only chrome (the LinkCard grid, state-table
+ * headers, the landing page's Sections cards) that has no blog/KB
+ * equivalent, plus a page-title/TOC/pager treatment that IS shared with
+ * blog (see `data-blog` below). Every Starlight-rendered entry.id is
+ * exactly one of docs/blog/kb, so this if/else is exhaustive — no third,
+ * attributeless case exists among Starlight routes.
+ *
+ * Reading measure (68ch, 16px/1.68) is shared across ALL THREE surfaces —
+ * `site-blog-kb.css`'s prose rule matches `:is([data-longform],
+ * [data-docs])`, i.e. every Starlight route — per the operator's site-wide
+ * baseline: "all pages must fit the same width/layout system as the KB
+ * page — same content measure, container widths, and gutter rhythm."
+ * (An earlier pass here kept docs prose at the comp's literal, denser
+ * docs-article spec — 15.5px/1.68 @ 74ch vs. 16px/1.68 @ 68ch for
+ * blog/KB — before that broader instruction landed and superseded it.)
  *
  * `data-blog` is an ADDITIONAL attribute (not a branch) on the same
  * `[data-longform]` wrapper, only for entry.id starting "blog/". It exists
  * so the docs-shape pass can also polish a few blog-only chrome elements
  * (page-title, TOC, pager) that the comp draws IDENTICALLY for docs and
- * blog (unlike prose, where they diverge) — site-docs.css shares those
- * rules via `:is([data-docs], [data-blog])` — WITHOUT touching KB:
- * `[data-longform]` itself, and every existing rule scoped to it, is
- * untouched, so KB's build output stays byte-for-byte identical; only
- * `[data-blog]`-scoped selectors (new, additive) can ever affect blog.
+ * blog — site-docs.css shares those rules via `:is([data-docs],
+ * [data-blog])` — WITHOUT touching KB: `[data-longform]` itself, and
+ * every existing rule scoped to it, is untouched, so KB's build output
+ * stays byte-for-byte identical; only `[data-blog]`-scoped selectors (new,
+ * additive) can ever affect blog.
  */
 import Default from '@astrojs/starlight/components/PageFrame.astro';
 import SiteFooter from './SiteFooter.astro';

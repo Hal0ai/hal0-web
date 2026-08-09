@@ -82,8 +82,7 @@ const description =
       </div>
     </div>
 
-    <div class="wrap wide">
-      <div class="clshell">
+    <div class="clshell">
         <nav class="clside" data-cl-side aria-label="Releases">
           {versions.map((v) => (
             <a href={`#${v.slug}`}>
@@ -183,7 +182,6 @@ const description =
           </ol>
         </div>
       </div>
-    </div>
 
     <CTA
       title="Read the docs"
@@ -196,14 +194,23 @@ const description =
 </MarketingLayout>
 
 <style>
-  /* ── shell — KB article's sidebar+content idiom, ported for a plain
-   * MarketingLayout page (see file header). Sidebar hides below 900px,
-   * same breakpoint/behavior as the KB article's `.kbside` in the comp —
-   * content keeps its own scroll, no secondary nav needed on mobile. */
+  /* ── shell — the KB ARTICLE's actual page frame, not just its idiom.
+   * Per the operator's site-wide layout baseline ("all pages must fit the
+   * KB page's width/layout system — same content measure, container
+   * widths, and gutter rhythm"), this isn't a wrap.wide-capped, centered
+   * box like every other MarketingLayout page (kb landing, benchmarks,
+   * profiles) — it's full-bleed, edge to edge, matching how Starlight
+   * itself renders the KB/docs/blog article frame: a 300px sidebar
+   * (Starlight's own `--sl-sidebar-width: 18.75rem`, measured off a live
+   * KB article) hard-left, then content filling the rest, uncapped except
+   * by its own reading measure. `padding-inline` on `.clside`/`.cl-content`
+   * mirrors Starlight's `--sl-content-pad-x` (1.5rem ≥72rem viewport).
+   * Sidebar hides below 900px, same breakpoint/behavior as the KB
+   * article's `.kbside` in the comp — content keeps its own scroll, no
+   * secondary nav needed on mobile. */
   .clshell {
     display: grid;
-    grid-template-columns: 216px 1fr;
-    gap: 40px;
+    grid-template-columns: 300px 1fr;
     padding-block: 28px 64px;
   }
   .clside {
@@ -217,6 +224,7 @@ const description =
     gap: 2px;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
+    padding-inline: 1.5rem;
   }
   .clside a {
     display: flex;
@@ -254,6 +262,7 @@ const description =
 
   .cl-content {
     max-width: 68ch;
+    padding-inline: 1.5rem;
   }
 
   /* ── "Get hal0" block — the old /releases page's headline + install/
