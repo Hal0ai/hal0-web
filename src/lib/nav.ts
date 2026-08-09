@@ -25,6 +25,7 @@ export interface FooterColumn {
 export const header = nav.header as NavLink[];
 export const footerColumns = nav.footerColumns as FooterColumn[];
 export const social = nav.social as SocialLink[];
+export const footerBase = nav.footerBase as NavLink[];
 
 export const visibleHeader = header.filter((l) => !l.hidden);
 

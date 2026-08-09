@@ -46,5 +46,9 @@
   "social": [
     { "id": "github", "label": "github", "href": "https://github.com/hal0ai/hal0" },
     { "id": "discord", "label": "discord", "href": "https://discord.gg/7M4y6dcUyq" }
+  ],
+  "footerBase": [
+    { "label": "changelog", "href": "/changelog" },
+    { "label": "rss", "href": "/blog/rss.xml" }
   ]
 }

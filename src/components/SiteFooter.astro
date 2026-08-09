@@ -11,7 +11,7 @@
 import Wordmark from './Wordmark.astro';
 import GithubIcon from './GithubIcon.astro';
 import DiscordIcon from './DiscordIcon.astro';
-import { footerColumns, getSocial } from '../lib/nav';
+import { footerColumns, footerBase, getSocial } from '../lib/nav';
 import rawChangelog from '../data/changelog.md?raw';
 import { parseChangelog } from '../lib/changelog.js';
 
@@ -19,6 +19,8 @@ const { latest } = parseChangelog(rawChangelog);
 const footerVersion = latest?.version ?? '';
 const github = getSocial('github');
 const discord = getSocial('discord');
+const rss = footerBase.find((l) => l.label === 'rss');
+const changelogBase = footerBase.find((l) => l.label === 'changelog');
 ---
 
 <footer class="site ftr" data-site-footer>
@@ -37,7 +39,7 @@ const discord = getSocial('discord');
           <a class="iconbtn" href={discord.href} rel="noopener" aria-label="Discord">
             <DiscordIcon size={16} />
           </a>
-          <a class="iconbtn" href="/blog/rss.xml" aria-label="RSS">
+          <a class="iconbtn" href={rss?.href} aria-label="RSS">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <path d="M2.5 12.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM1 6.5v2.2c3.7 0 6.7 3 6.7 6.8h2.2C9.9 10.6 5.9 6.5 1 6.5zM1 1v2.2c6.4 0 11.6 5.2 11.6 11.6h2.2C14.8 7.2 8.6 1 1 1z" />
             </svg>
@@ -63,7 +65,7 @@ const discord = getSocial('discord');
     <div class="ftr-base">
       <span>Apache-2.0{footerVersion ? ` · ${footerVersion}` : ''}</span>
       <span>
-        <a href="/changelog">changelog</a>
+        <a href={changelogBase?.href}>{changelogBase?.label}</a>
       </span>
     </div>
   </div>

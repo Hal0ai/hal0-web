@@ -27,7 +27,7 @@ function siteFooter(html) {
 
 const footerLinks = nav.footerColumns.flatMap((col) => col.links);
 const visibleHeader = nav.header.filter((l) => !l.hidden);
-const footerExtras = ['/blog/rss.xml', '/changelog'];
+const footerExtras = nav.footerBase.map((l) => l.href);
 
 test('SiteFooter link set identical across surfaces', { skip: !built && 'run npm run build first' }, async () => {
   const marketing = hrefs(siteFooter(await readFile(pages.marketing, 'utf8')));
