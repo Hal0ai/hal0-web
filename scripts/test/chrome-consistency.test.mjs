@@ -25,11 +25,14 @@ function siteFooter(html) {
   return m[0];
 }
 
+const footerLinks = nav.footerColumns.flatMap((col) => col.links);
+const visibleHeader = nav.header.filter((l) => !l.hidden);
+
 test('SiteFooter link set identical across surfaces', { skip: !built && 'run npm run build first' }, async () => {
   const marketing = hrefs(siteFooter(await readFile(pages.marketing, 'utf8')));
   const starlight = hrefs(siteFooter(await readFile(pages.starlight, 'utf8')));
   assert.deepEqual([...marketing].sort(), [...starlight].sort(), 'footer href sets must be equal');
-  for (const l of [...nav.footer, ...nav.social]) {
+  for (const l of [...footerLinks, ...nav.social]) {
     assert.ok(marketing.has(l.href), `footer missing manifest link ${l.href}`);
   }
 });
@@ -41,7 +44,7 @@ test('header manifest links present in the header of both surfaces', { skip: !bu
   const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
   assert.ok(marketingHeader, 'marketing page has a <header>');
   assert.ok(starlightNav, 'starlight page has the site docnav');
-  for (const l of nav.header) {
+  for (const l of visibleHeader) {
     assert.ok(marketingHeader.includes(`href="${l.href}"`), `marketing header missing ${l.href}`);
     assert.ok(starlightNav.includes(`href="${l.href}"`), `starlight docnav missing ${l.href}`);
   }

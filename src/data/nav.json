@@ -1,19 +1,47 @@
 {
   "header": [
-    { "label": "docs", "href": "/docs/getting-started/", "match": "/docs", "exclude": ["/docs/reference/model-roster-benchmark"] },
+    {
+      "label": "learn",
+      "href": "/docs/getting-started/",
+      "match": ["/docs", "/blog", "/changelog", "/releases"],
+      "exclude": ["/docs/reference/model-roster-benchmark"],
+      "sub": [
+        { "label": "docs", "href": "/docs/getting-started/", "match": "/docs", "exclude": ["/docs/reference/model-roster-benchmark"] },
+        { "label": "blog", "href": "/blog", "match": "/blog" },
+        { "label": "changelog", "href": "/changelog", "match": "/changelog" },
+        { "label": "releases", "href": "/releases", "match": "/releases" }
+      ]
+    },
     { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/", "match": "/docs/reference/model-roster-benchmark" },
-    { "label": "blog", "href": "/blog", "match": "/blog" },
-    { "label": "changelog", "href": "/changelog", "match": "/changelog" },
-    { "label": "releases", "href": "/releases", "match": "/releases" }
+    { "label": "profiles", "href": "/profiles", "match": "/profiles", "hidden": true },
+    { "label": "forum", "href": "https://forum.hal0.dev", "external": true, "hidden": true }
   ],
-  "footer": [
-    { "label": "docs", "href": "/docs/getting-started/" },
-    { "label": "blog", "href": "/blog" },
-    { "label": "changelog", "href": "/changelog" },
-    { "label": "releases", "href": "/releases" },
-    { "label": "contributing", "href": "/contributing" },
-    { "label": "roadmap", "href": "/#roadmap" },
-    { "label": "hello@hal0.dev", "href": "mailto:hello@hal0.dev" }
+  "footerColumns": [
+    {
+      "heading": "learn",
+      "links": [
+        { "label": "docs", "href": "/docs/getting-started/" },
+        { "label": "blog", "href": "/blog" },
+        { "label": "changelog", "href": "/changelog" },
+        { "label": "releases", "href": "/releases" }
+      ]
+    },
+    {
+      "heading": "community",
+      "links": [
+        { "label": "discord", "href": "https://discord.gg/7M4y6dcUyq", "external": true },
+        { "label": "github", "href": "https://github.com/hal0ai/hal0", "external": true },
+        { "label": "contributing", "href": "/contributing" },
+        { "label": "hello@hal0.dev", "href": "mailto:hello@hal0.dev" }
+      ]
+    },
+    {
+      "heading": "data",
+      "links": [
+        { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/" },
+        { "label": "roadmap", "href": "/#roadmap" }
+      ]
+    }
   ],
   "social": [
     { "id": "github", "label": "github", "href": "https://github.com/hal0ai/hal0" },

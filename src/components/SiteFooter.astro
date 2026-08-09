@@ -6,12 +6,13 @@
  */
 import Wordmark from './Wordmark.astro';
 import DiscordIcon from './DiscordIcon.astro';
-import { footer, getSocial } from '../lib/nav';
+import { footerColumns, getSocial } from '../lib/nav';
 import rawChangelog from '../data/changelog.md?raw';
 import { parseChangelog } from '../lib/changelog.js';
 
 const { latest } = parseChangelog(rawChangelog);
 const footerVersion = latest?.version ?? '';
+const footer = footerColumns.flatMap((col) => col.links);
 const github = getSocial('github');
 const discord = getSocial('discord');
 ---
