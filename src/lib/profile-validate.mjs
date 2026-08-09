@@ -95,10 +95,26 @@ export function locateLine(text, path) {
   return null;
 }
 
+const ROOT_KEYS = ['schema', 'profile', 'runner', 'model', 'args', 'requires', 'history'];
+const PROFILE_KEYS = ['slug', 'title', 'summary', 'intent', 'author', 'first_party'];
+const RUNNER_KEYS = ['kind', 'lane', 'min_build', 'image'];
+const MODEL_KEYS = ['id', 'quant', 'compatible'];
+const ARGS_KEYS = ['raw'];
+const REQUIRES_KEYS = ['gtt_gb', 'exclusive'];
+const HISTORY_ITEM_KEYS = ['v', 'date', 'note'];
+
 /**
  * Hand-rolled mirror of profile.schema.json's shape rules. Returns a flat
  * list of issues rather than throwing — the caller decides how to bucket
  * them into validation states.
+ *
+ * Parity target: any document the CI validator (hal0-profiles/lib/validate.mjs
+ * + schema/profile.schema.json, run via ajv with `additionalProperties: false`
+ * on every table) would reject must also produce at least one issue here.
+ * A validator that is strictly more permissive than CI is a pass-here/
+ * fail-in-review hole — see the additionalProperties, minLength, integer,
+ * and history-ordering checks below, which exist specifically to close
+ * that gap rather than to mirror the JSON Schema academically.
  *
  * @param {unknown} parsed - the object returned by smol-toml's parse()
  * @returns {Array<{ path: string, kind: 'missing'|'invalid', message: string }>}
@@ -107,10 +123,30 @@ export function collectSchemaIssues(parsed) {
   const issues = [];
   const add = (path, kind, message) => issues.push({ path, kind, message });
 
+  const addUnknownKeys = (obj, allowed, prefix) => {
+    if (obj == null || typeof obj !== 'object' || Array.isArray(obj)) return;
+    for (const key of Object.keys(obj)) {
+      if (!allowed.includes(key)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        add(path, 'invalid', `${path}: unknown key (not permitted by the schema)`);
+      }
+    }
+  };
+
+  const requireNonEmptyString = (obj, key, path) => {
+    const v = obj?.[key];
+    if (v === undefined) return;
+    if (typeof v !== 'string' || v.length < 1) {
+      add(path, 'invalid', `${path} must be a non-empty string (got ${JSON.stringify(v)})`);
+    }
+  };
+
   if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
     add('(root)', 'invalid', 'document must be a table');
     return issues;
   }
+
+  addUnknownKeys(parsed, ROOT_KEYS, '');
 
   if (parsed.schema !== 1) {
     add(
@@ -127,6 +163,7 @@ export function collectSchemaIssues(parsed) {
   }
 
   const profile = parsed.profile ?? {};
+  addUnknownKeys(profile, PROFILE_KEYS, 'profile');
   for (const key of ['slug', 'title', 'summary', 'intent', 'author']) {
     if (profile[key] === undefined) add(`profile.${key}`, 'missing', `profile.${key}: required`);
   }
@@ -137,6 +174,9 @@ export function collectSchemaIssues(parsed) {
       `profile.slug must match ${SLUG_PATTERN} (got ${JSON.stringify(profile.slug)})`
     );
   }
+  requireNonEmptyString(profile, 'title', 'profile.title');
+  requireNonEmptyString(profile, 'summary', 'profile.summary');
+  requireNonEmptyString(profile, 'author', 'profile.author');
   if (profile.intent !== undefined && !INTENTS.includes(profile.intent)) {
     add(
       'profile.intent',
@@ -144,8 +184,16 @@ export function collectSchemaIssues(parsed) {
       `profile.intent must be one of ${INTENTS.join(' | ')} (got ${JSON.stringify(profile.intent)})`
     );
   }
+  if (profile.first_party !== undefined && typeof profile.first_party !== 'boolean') {
+    add(
+      'profile.first_party',
+      'invalid',
+      `profile.first_party must be a boolean (got ${JSON.stringify(profile.first_party)})`
+    );
+  }
 
   const runner = parsed.runner ?? {};
+  addUnknownKeys(runner, RUNNER_KEYS, 'runner');
   for (const key of ['kind', 'lane']) {
     if (runner[key] === undefined) add(`runner.${key}`, 'missing', `runner.${key}: required`);
   }
@@ -163,12 +211,58 @@ export function collectSchemaIssues(parsed) {
       `runner.lane must be one of ${LANES.join(' | ')} (got ${JSON.stringify(runner.lane)})`
     );
   }
+  requireNonEmptyString(runner, 'min_build', 'runner.min_build');
+  requireNonEmptyString(runner, 'image', 'runner.image');
 
   const model = parsed.model ?? {};
+  addUnknownKeys(model, MODEL_KEYS, 'model');
   if (model.id === undefined) add('model.id', 'missing', 'model.id: required');
+  else requireNonEmptyString(model, 'id', 'model.id');
+  requireNonEmptyString(model, 'quant', 'model.quant');
+  if (model.compatible !== undefined) {
+    if (!Array.isArray(model.compatible)) {
+      add('model.compatible', 'invalid', 'model.compatible must be an array of strings');
+    } else {
+      model.compatible.forEach((v, i) => {
+        if (typeof v !== 'string' || v.length < 1) {
+          add(
+            `model.compatible[${i}]`,
+            'invalid',
+            `model.compatible[${i}] must be a non-empty string (got ${JSON.stringify(v)})`
+          );
+        }
+      });
+    }
+  }
 
   const args = parsed.args ?? {};
+  addUnknownKeys(args, ARGS_KEYS, 'args');
   if (args.raw === undefined || args.raw === '') add('args.raw', 'missing', 'args.raw: required');
+
+  const requires = parsed.requires;
+  if (requires !== undefined) {
+    if (requires == null || typeof requires !== 'object' || Array.isArray(requires)) {
+      add('requires', 'invalid', 'requires must be a table');
+    } else {
+      addUnknownKeys(requires, REQUIRES_KEYS, 'requires');
+      if (requires.gtt_gb !== undefined) {
+        if (!Number.isInteger(requires.gtt_gb) || requires.gtt_gb < 0) {
+          add(
+            'requires.gtt_gb',
+            'invalid',
+            `requires.gtt_gb must be an integer >= 0 (got ${JSON.stringify(requires.gtt_gb)})`
+          );
+        }
+      }
+      if (requires.exclusive !== undefined && typeof requires.exclusive !== 'boolean') {
+        add(
+          'requires.exclusive',
+          'invalid',
+          `requires.exclusive must be a boolean (got ${JSON.stringify(requires.exclusive)})`
+        );
+      }
+    }
+  }
 
   const history = parsed.history;
   if (history !== undefined) {
@@ -176,10 +270,36 @@ export function collectSchemaIssues(parsed) {
       add('history', 'invalid', 'history must be a non-empty array with at least one entry');
     } else {
       history.forEach((h, i) => {
-        if (h?.v === undefined) add(`history[${i}].v`, 'missing', `history[${i}].v: required`);
+        addUnknownKeys(h, HISTORY_ITEM_KEYS, `history[${i}]`);
+        if (h?.v === undefined) {
+          add(`history[${i}].v`, 'missing', `history[${i}].v: required`);
+        } else if (!Number.isInteger(h.v) || h.v < 1) {
+          add(
+            `history[${i}].v`,
+            'invalid',
+            `history[${i}].v must be an integer >= 1 (got ${JSON.stringify(h.v)})`
+          );
+        }
         if (h?.date === undefined) add(`history[${i}].date`, 'missing', `history[${i}].date: required`);
+        requireNonEmptyString(h ?? {}, 'note', `history[${i}].note`);
         if (h?.note === undefined) add(`history[${i}].note`, 'missing', `history[${i}].note: required`);
       });
+
+      // Cross-check that needs the whole array, not just one entry — mirrors
+      // hal0-profiles/lib/validate.mjs's strictly-descending (newest first)
+      // check. Only compares entries that already parsed as valid integers,
+      // so a malformed `v` doesn't also spam a spurious ordering error.
+      for (let i = 1; i < history.length; i++) {
+        const prev = history[i - 1]?.v;
+        const cur = history[i]?.v;
+        if (Number.isInteger(prev) && Number.isInteger(cur) && !(prev > cur)) {
+          add(
+            `history[${i}].v`,
+            'invalid',
+            `history must be strictly descending (newest first); history[${i - 1}].v=${prev} is not greater than history[${i}].v=${cur}`
+          );
+        }
+      }
     }
   }
 

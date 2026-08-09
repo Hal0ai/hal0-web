@@ -222,12 +222,21 @@ if (root) {
     }
     if (copyTomlBtn) {
       copyTomlBtn.onclick = async () => {
-        await navigator.clipboard.writeText(text);
         const original = copyTomlBtn.textContent;
-        copyTomlBtn.textContent = 'copied';
+        let delay = 1400;
+        try {
+          await navigator.clipboard.writeText(text);
+          copyTomlBtn.textContent = 'copied';
+        } catch {
+          // Clipboard access can fail silently (permissions, insecure
+          // context, older browsers) — surface it rather than leaving the
+          // button reading "copy TOML" while nothing happened.
+          copyTomlBtn.textContent = "couldn't copy — select the text and copy it manually";
+          delay = 2600;
+        }
         setTimeout(() => {
           copyTomlBtn.textContent = original;
-        }, 1400);
+        }, delay);
       };
     }
     void length;

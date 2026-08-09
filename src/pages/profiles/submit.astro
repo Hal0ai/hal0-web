@@ -9,13 +9,26 @@
  * pre-filled "new file" page on GitHub — GitHub itself handles the
  * fork/branch/PR for non-writers, so the visitor never runs a git command.
  *
- * Deliberate scope cut from the wireframe: there is no GitHub App/Worker
- * yet to open a pull request on the visitor's behalf, so the wireframe's
- * sign-in step and "PR opened on your behalf" copy are replaced by an
- * honest "continue on GitHub" button and copy that says exactly what
- * happens (see the PR body for the full pending-backend list). No
- * /profiles/mine status page exists yet either — that needs the same
- * identity piece.
+ * Deliberate scope cuts from the wireframe (see the PR body for the full
+ * pending-backend list):
+ *  - There is no GitHub App/Worker yet to open a pull request on the
+ *    visitor's behalf, so the wireframe's sign-in step and "PR opened on
+ *    your behalf" copy are replaced by an honest "continue on GitHub"
+ *    button and copy that says exactly what happens.
+ *  - No /profiles/mine status page exists yet either — that needs the
+ *    same identity piece.
+ *  - The wireframe's "fix it for me" button (schema-error state, an
+ *    auto-correct action) is not implemented — there is no backend to
+ *    generate a fix, and a client-only "fix" would just be a guess. The
+ *    schema-error panel here only offers "re-validate" after a manual
+ *    edit.
+ *
+ * Known gap: the duplicate-slug check below reads the committed prebuild
+ * snapshot (src/data/profiles.json), which only refreshes on the next
+ * site rebuild — see docs/superpowers/specs/2026-08-09-community-platform-design.md's
+ * rebuild architecture. A profile merged since the last rebuild won't be
+ * caught here; CI's own duplicate-slug check (hal0-profiles/lib/validate.mjs)
+ * still catches it at review time.
  *
  * All four wireframe validation states are implemented: pass, schema
  * error (line-railed, blocking), missing required fields (intent,
@@ -92,15 +105,15 @@ const description =
         </div>
 
         <div class="drop" data-dropzone hidden>
-          <span class="big">drop your .toml here, or click to browse</span>
-          <span class="sm" data-filename-badge>no file selected yet</span>
+          <span class="big" id="dropzone-label">drop your .toml here, or click to browse</span>
+          <span class="sm" id="dropzone-filename" data-filename-badge>no file selected yet</span>
           <input
             id="profile-file-input"
             type="file"
             accept=".toml,text/plain"
             data-file-input
             class="visually-hidden"
-            aria-label="Profile TOML file"
+            aria-labelledby="dropzone-label dropzone-filename"
           />
         </div>
 

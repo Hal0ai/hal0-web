@@ -159,6 +159,85 @@ test('validateProfileToml: duplicate-slug edge state offers the version-bump pat
   assert.equal(result.nextVersion, 7);
 });
 
+// ── CI-parity gaps (validator must be at least as strict as
+// hal0-profiles/lib/validate.mjs — a pass-here/fail-in-review hole is the
+// worst outcome for this page) ────────────────────────────────────────
+
+test('collectSchemaIssues rejects an empty-string model.id (minLength 1)', () => {
+  const bad = withField(VALID_TOML, 'id = "qwen3.5-9b-q4kxl"', 'id = ""');
+  const result = validateProfileToml(bad);
+  assert.equal(result.state, 'schema-error');
+  assert.equal(result.blocking, true);
+  assert.ok(
+    result.issues.some((i) => i.path === 'model.id'),
+    'expected an issue at model.id'
+  );
+});
+
+test('collectSchemaIssues rejects an unknown key in any table (additionalProperties: false)', () => {
+  const unknownProfileKey = withField(VALID_TOML, 'author = "lemond"', 'author = "lemond"\nnickname = "lem"');
+  const r1 = validateProfileToml(unknownProfileKey);
+  assert.equal(r1.state, 'schema-error');
+  assert.ok(r1.issues.some((i) => i.path === 'profile.nickname'));
+
+  const unknownRootKey = `${VALID_TOML}\n[extra]\nfoo = "bar"\n`;
+  const r2 = validateProfileToml(unknownRootKey);
+  assert.equal(r2.state, 'schema-error');
+  assert.ok(r2.issues.some((i) => i.path === 'extra'));
+});
+
+test('collectSchemaIssues rejects out-of-order and duplicate history versions', () => {
+  const outOfOrder = VALID_TOML.replace(
+    '[[history]]\nv = 1\ndate = "2026-08-01"\nnote = "initial"\n',
+    '[[history]]\nv = 1\ndate = "2026-08-01"\nnote = "initial"\n\n[[history]]\nv = 2\ndate = "2026-08-05"\nnote = "bumped after v1, out of order"\n'
+  );
+  const r1 = validateProfileToml(outOfOrder);
+  assert.equal(r1.state, 'schema-error');
+  assert.ok(
+    r1.issues.some((i) => i.path === 'history[1].v' && /strictly descending/.test(i.message)),
+    'expected an ordering issue at history[1].v'
+  );
+
+  const duplicateV = VALID_TOML.replace(
+    '[[history]]\nv = 1\ndate = "2026-08-01"\nnote = "initial"\n',
+    '[[history]]\nv = 1\ndate = "2026-08-05"\nnote = "second"\n\n[[history]]\nv = 1\ndate = "2026-08-01"\nnote = "initial"\n'
+  );
+  const r2 = validateProfileToml(duplicateV);
+  assert.equal(r2.state, 'schema-error');
+  assert.ok(
+    r2.issues.some((i) => i.path === 'history[1].v' && /strictly descending/.test(i.message)),
+    'expected a duplicate-version issue at history[1].v'
+  );
+});
+
+test('collectSchemaIssues rejects a non-integer history[i].v', () => {
+  const bad = withField(VALID_TOML, 'v = 1', 'v = 1.5');
+  const result = validateProfileToml(bad);
+  assert.equal(result.state, 'schema-error');
+  assert.ok(result.issues.some((i) => i.path === 'history[0].v' && /integer/.test(i.message)));
+});
+
+test('collectSchemaIssues rejects bad requires.gtt_gb / requires.exclusive types', () => {
+  const badGtt = `${VALID_TOML}\n[requires]\ngtt_gb = "lots"\n`;
+  const r1 = validateProfileToml(badGtt);
+  assert.equal(r1.state, 'schema-error');
+  assert.ok(r1.issues.some((i) => i.path === 'requires.gtt_gb'));
+
+  const negativeGtt = `${VALID_TOML}\n[requires]\ngtt_gb = -1\n`;
+  const r2 = validateProfileToml(negativeGtt);
+  assert.equal(r2.state, 'schema-error');
+  assert.ok(r2.issues.some((i) => i.path === 'requires.gtt_gb'));
+
+  const badExclusive = `${VALID_TOML}\n[requires]\nexclusive = "yes"\n`;
+  const r3 = validateProfileToml(badExclusive);
+  assert.equal(r3.state, 'schema-error');
+  assert.ok(r3.issues.some((i) => i.path === 'requires.exclusive'));
+
+  const validRequires = `${VALID_TOML}\n[requires]\ngtt_gb = 24\nexclusive = true\n`;
+  const r4 = validateProfileToml(validRequires, { rosterRows: ROSTER, existingProfiles: [] });
+  assert.equal(r4.state, 'pass');
+});
+
 test('githubSubmitUrl builds a pre-filled new-file URL and flags overlength', () => {
   const short = githubSubmitUrl('qwen3-9b-longctx', VALID_TOML);
   assert.match(short.url, /^https:\/\/github\.com\/Hal0ai\/hal0-profiles\/new\/main\?filename=/);
