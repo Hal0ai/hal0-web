@@ -3,13 +3,43 @@
  * PageFrame override: render Starlight's default frame, then append the
  * shared SiteFooter OUTSIDE <main> so it is a real contentinfo landmark
  * and spans full width — identical chrome to marketing pages.
+ *
+ * Also the seam for scoping the comp's long-form prose scale (16px/1.68,
+ * 68–74ch measure — see docs/design/2026-08-09-community-comps/04 Blog
+ * and KB.html) to blog posts and KB articles WITHOUT touching regular
+ * docs pages. Starlight's actual page shell (`<html>`, `.content-panel`,
+ * `.sl-markdown-content`) is core and not an overridable component —
+ * PageFrame is the innermost slot this repo does override — so a
+ * `data-longform` attribute is set on a wrapper div here, one level above
+ * Starlight's own frame, and site-blog-kb.css scopes its prose rules to
+ * `[data-longform] .sl-markdown-content` instead of the bare class.
+ * `entry.id` is the collection slug (e.g. "blog/whats-new-in-the-v0-8-line"
+ * or "kb/hardware-notes/unified-memory-is-not-vram"); plain docs pages
+ * ("docs/...") never match. The `[data-longform]` wrapper div itself is
+ * only rendered for those matching pages — not rendered-but-attributeless
+ * for everyone else — so a docs page's DOM is byte-identical to before
+ * this wrapper existed (verified: `dist/docs/**` diffs clean against the
+ * pre-wrapper build; no incidental extra `<div>` on every Starlight page).
  */
 import Default from '@astrojs/starlight/components/PageFrame.astro';
 import SiteFooter from './SiteFooter.astro';
+
+const { entry } = Astro.locals.starlightRoute;
+const isLongForm = entry.id.startsWith('blog/') || entry.id.startsWith('kb/');
 ---
-<Default>
-  <slot name="header" slot="header" />
-  <slot name="sidebar" slot="sidebar" />
-  <slot />
-</Default>
+{isLongForm ? (
+  <div data-longform>
+    <Default>
+      <slot name="header" slot="header" />
+      <slot name="sidebar" slot="sidebar" />
+      <slot />
+    </Default>
+  </div>
+) : (
+  <Default>
+    <slot name="header" slot="header" />
+    <slot name="sidebar" slot="sidebar" />
+    <slot />
+  </Default>
+)}
 <SiteFooter />

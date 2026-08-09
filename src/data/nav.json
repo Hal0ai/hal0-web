@@ -3,10 +3,11 @@
     {
       "label": "learn",
       "href": "/docs/getting-started/",
-      "match": ["/docs", "/blog", "/changelog", "/releases"],
+      "match": ["/docs", "/kb", "/blog", "/changelog", "/releases"],
       "exclude": ["/docs/reference/model-roster-benchmark"],
       "sub": [
         { "label": "docs", "href": "/docs/getting-started/", "match": "/docs", "exclude": ["/docs/reference/model-roster-benchmark"] },
+        { "label": "knowledge base", "href": "/kb/", "match": "/kb" },
         { "label": "blog", "href": "/blog", "match": "/blog" },
         { "label": "changelog", "href": "/changelog", "match": "/changelog" },
         { "label": "releases", "href": "/releases", "match": "/releases" }
@@ -21,6 +22,7 @@
       "heading": "learn",
       "links": [
         { "label": "docs", "href": "/docs/getting-started/" },
+        { "label": "knowledge base", "href": "/kb/" },
         { "label": "blog", "href": "/blog" },
         { "label": "changelog", "href": "/changelog" },
         { "label": "releases", "href": "/releases" }
