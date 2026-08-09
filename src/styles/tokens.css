@@ -96,4 +96,16 @@
 	--hal0-accent-soft:   rgba(184, 120, 0, 0.09);
 	--hal0-accent-line:   rgba(184, 120, 0, 0.34);
 	--hal0-accent-glow:   rgba(184, 120, 0, 0.16);
+
+	/* Status + device hues — the dark values fail AA on white; these light
+	 * overrides come from the design handoff README ("Colour — light
+	 * overrides") and are required, not optional. */
+	--hal0-ok:        #1a7f37; --hal0-ok-soft:   rgba(26, 127, 55, 0.10);  --hal0-ok-line:   rgba(26, 127, 55, 0.30);
+	--hal0-warn:      #8a5a00; --hal0-warn-soft: rgba(138, 90, 0, 0.10);   --hal0-warn-line: rgba(138, 90, 0, 0.30);
+	--hal0-err:       #cf222e; --hal0-err-soft:  rgba(207, 34, 46, 0.10);  --hal0-err-line:  rgba(207, 34, 46, 0.30);
+	--hal0-info:      #1f5fbf; --hal0-info-soft: rgba(31, 95, 191, 0.10);  --hal0-info-line: rgba(31, 95, 191, 0.30);
+	--hal0-dev-rocm:   #a32e2e;
+	--hal0-dev-vulkan: #1f5fbf;
+	--hal0-dev-npu:    #6b3fbf;
+	--hal0-dev-cpu:    #5c5c58;
 }
