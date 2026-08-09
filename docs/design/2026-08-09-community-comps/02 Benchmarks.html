@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>benchmarks — hal0</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.phead{padding-block:34px 20px}
+.phead-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.fresh{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border:1px solid var(--line);border-radius:var(--rad-pill);font-family:var(--jbm);font-size:11px;color:var(--fg-3);cursor:pointer}
+.fresh.snap{border-color:var(--warn-line);background:var(--warn-soft);color:var(--warn)}
+.ctx{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.ctx .panel{padding:2px 0}
+.ctx dl{display:grid;grid-template-columns:88px 1fr;gap:0;margin:0;font-family:var(--jbm);font-size:11.5px}
+.ctx dt{padding:6px 14px;color:var(--fg-4);border-top:1px solid var(--line-soft)}
+.ctx dd{padding:6px 14px;margin:0;color:var(--fg-2);border-top:1px solid var(--line-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx dt:first-of-type,.ctx dl>dt:first-of-type+dd{border-top:0}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-top:24px}
+.tabs button{background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 14px;font-family:var(--jbm);font-size:12.5px;color:var(--fg-3);cursor:pointer}
+.tabs button.on{color:var(--fg);border-bottom-color:var(--accent)}
+.filters{border:1px solid var(--line);border-top:0;border-radius:0 0 var(--rad-lg) var(--rad-lg);background:var(--bg-1);padding:12px 16px;display:flex;flex-direction:column;gap:9px}
+.segrow{display:flex;align-items:center;gap:12px}
+.segrow>.label{width:74px;flex-shrink:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--rad-sm);overflow:hidden}
+.seg button{background:transparent;border:0;border-right:1px solid var(--line);padding:5px 11px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:var(--bg-2);color:var(--fg)}
+.seg button.on{background:var(--accent-soft);color:var(--accent)}
+.filters .bottom{display:flex;align-items:center;gap:12px;border-top:1px solid var(--line-soft);padding-top:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--rad-sm);padding:0 9px;height:26px;background:var(--bg)}
+.search input{border:0;background:transparent;outline:0;color:var(--fg);font-family:var(--jbm);font-size:11.5px;width:150px}
+.tablewrap{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden;margin-top:16px}
+.tablescroll{overflow-x:auto}
+.dtable th{cursor:pointer;user-select:none;background:var(--bg-1)}
+.dtable th:hover{color:var(--fg)}
+.dtable td.model,.dtable th.model{position:sticky;left:0;background:var(--bg-1);z-index:1;border-right:1px solid var(--line-soft)}
+.dtable th.model{z-index:3}
+.dtable tbody tr:hover td.model{background:var(--bg-2)}
+.dtable tbody tr{cursor:pointer}
+.mid{font-family:var(--jbm);font-size:12.5px}
+.mname{color:var(--fg);display:block;max-width:330px;overflow:hidden;text-overflow:ellipsis}
+.msub{color:var(--fg-4);font-size:10.5px;display:block;margin-top:2px}
+.caps{display:inline-flex;gap:6px;color:var(--fg-3)}
+.decode{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
+.decode .meter{display:inline-flex;gap:1.5px}
+.decode .meter i{width:3px;height:11px;background:var(--fg-5);border-radius:1px}
+.decode.fast .meter i.on{background:var(--ok)}.decode.mid .meter i.on{background:var(--fg-2)}.decode.slow .meter i.on{background:var(--fg-4)}
+.decode .v{font-size:13px}
+.decode.fast .v{color:var(--ok)}.decode.mid .v{color:var(--fg)}.decode.slow .v{color:var(--fg-3)}
+.decode .sd{font-size:10px;color:var(--fg-4)}
+.spark{vertical-align:middle}
+.empty{padding:56px 24px;text-align:center}
+.skel{height:12px;border-radius:3px;background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.banner{display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border-radius:var(--rad-sm);font-family:var(--jbm);font-size:11.5px;line-height:1.5}
+.banner.warn{background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60}
+.drawer-run{position:fixed;top:0;right:0;bottom:0;width:min(580px,100vw);background:var(--bg-1);border-left:1px solid var(--line-strong);box-shadow:var(--shadow-drawer);z-index:61;display:flex;flex-direction:column}
+.dr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dr-title{font-size:14px;margin-top:6px;color:var(--fg);word-break:break-all}
+.dr-body{overflow-y:auto;padding:18px 20px 40px;display:flex;flex-direction:column;gap:22px}
+.dr-metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px;border:1px solid var(--line);border-radius:var(--rad);padding:14px}
+.dr-metrics .stat{font-size:14px;margin-top:4px;color:var(--fg)}
+.dr-metrics .u{color:var(--fg-4);font-size:11px}
+.dr-metrics .decode{justify-content:flex-start;margin-top:4px}
+.dr-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.kv{display:grid;grid-template-columns:104px 1fr;margin:8px 0 0;font-family:var(--jbm);font-size:11.5px}
+.kv dt{color:var(--fg-4);padding:5px 0;border-top:1px solid var(--line-soft)}
+.kv dd{color:var(--fg-2);padding:5px 0;margin:0;border-top:1px solid var(--line-soft)}
+.kv dd.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.argv{margin:0;padding:12px 14px;white-space:pre-wrap;word-break:break-all;color:var(--fg-2);font-size:11.5px}
+.histbox{border:1px solid var(--line);border-radius:var(--rad);padding:14px}
+.dr-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.evalbar{display:flex;align-items:center;gap:8px}
+.evalbar .track{width:64px;height:6px;background:var(--bg-3);border-radius:3px;overflow:hidden}
+.evalbar .fill{height:100%;background:var(--fg-3)}
+.evalbar .fill.good{background:var(--ok)}.evalbar .fill.bad{background:var(--err)}
+.statecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:16px}
+.mobframe{width:390px;border:1px solid var(--line);border-radius:var(--rad-lg);overflow:hidden;background:var(--bg-1)}
+@media(max-width:820px){.ctx{grid-template-columns:1fr}.segrow{align-items:flex-start;flex-direction:column;gap:6px}.segrow>.label{width:auto}.seg{overflow-x:auto;max-width:100%}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script src="roster-data.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel" src="bench-app.jsx"></script>
+<script type="text/babel">
+const { Icon } = window.Hal0DesignSystem_692ad8;
+
+function Leaderboard() {
+  const [f, setF] = React.useState({ workload: "tg", depth: 2048, variant: "default", lane: "best", caps: [], q: "" });
+  const [sort, setSort] = React.useState({ k: "dec", dir: -1 });
+  const [run, setRun] = React.useState(null);
+  const [live, setLive] = React.useState(true);
+
+  let rows = window.BENCH.filter(r => r.workload === f.workload && r.depth === f.depth && r.variant === f.variant);
+  if (f.lane === "best") {
+    const best = {};
+    rows.forEach(r => { if (!best[r.model] || r.dec > best[r.model].dec) best[r.model] = r; });
+    rows = Object.values(best);
+  } else rows = rows.filter(r => r.lane === f.lane);
+  if (f.caps.length) rows = rows.filter(r => f.caps.every(c => r.caps.includes(c)));
+  if (f.q) rows = rows.filter(r => r.model.toLowerCase().includes(f.q.toLowerCase()));
+  rows = [...rows].sort((a, b) => {
+    const A = a[sort.k], B = b[sort.k];
+    return (typeof A === "number" ? A - B : String(A).localeCompare(String(B))) * sort.dir;
+  });
+
+  const th = (k, label, n) => (
+    <th className={(n ? "n " : "") + (sort.k === k ? "sorted" : "")}
+        onClick={() => setSort(s => ({ k, dir: s.k === k ? -s.dir : -1 }))}>
+      {label}{sort.k === k ? (sort.dir === -1 ? " ▼" : " ▲") : ""}
+    </th>
+  );
+
+  return (
+    <>
+      <div className="filters">
+        <Seg label="workload" value={f.workload} options={window.WORKLOADS} onChange={v => setF({ ...f, workload: v })} />
+        <Seg label="depth" value={f.depth} options={window.DEPTHS} onChange={v => setF({ ...f, depth: v })} />
+        <Seg label="variant" value={f.variant} options={window.VARIANT_NAMES} onChange={v => setF({ ...f, variant: v })} />
+        <Seg label="lane" value={f.lane} options={["best", ...window.LANE_NAMES]} onChange={v => setF({ ...f, lane: v })} />
+        <div className="segrow">
+          <span className="label">capability</span>
+          <div className="fbar">
+            {["mtp", "vision", "tools", "coding", "reasoning"].map(c => (
+              <Fpill key={c} on={f.caps.includes(c)}
+                     onClick={() => setF({ ...f, caps: f.caps.includes(c) ? f.caps.filter(x => x !== c) : [...f.caps, c] })}>
+                <Cap name={c} size={12} />{c}
+              </Fpill>
+            ))}
+          </div>
+        </div>
+        <div className="bottom">
+          <div className="search"><Icon name="search" size={12} />
+            <input placeholder="filter models" value={f.q} onChange={e => setF({ ...f, q: e.target.value })} /></div>
+          <span>{rows.length} of 26 models{f.lane === "best" ? " · best lane per model" : ""}</span>
+          <button className="btn ghost sm" onClick={() => setF({ workload: "tg", depth: 2048, variant: "default", lane: "best", caps: [], q: "" })}>reset to default view</button>
+          <a href="#" style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--fg-3)" }} className="mono">api.hal0.dev/v1/bench ↗</a>
+        </div>
+      </div>
+
+      <div className="tablewrap">
+        <div className="panel-h">
+          <span className="label">leaderboard · tg @ depth {f.depth}</span>
+          <button className={"fresh" + (live ? "" : " snap")} onClick={() => setLive(v => !v)}>
+            <span className={"dot " + (live ? "serving" : "stale")} />
+            {live ? "live · api.hal0.dev, 4 min ago" : "snapshot from 2026-06-19 · api unreachable"}
+          </button>
+        </div>
+        {rows.length === 0 ? (
+          <div className="empty">
+            <div className="mono" style={{ fontSize: 13, color: "var(--fg-2)" }}>No runs for this combination.</div>
+            <p className="site-sm" style={{ margin: "8px auto 16px", maxWidth: "46ch" }}>
+              The June sweep covers <span className="mono">tg</span> only; <span className="mono">{f.workload}</span> lands
+              in the next one. Drop back to the default view, or ask for it in the forum.
+            </p>
+            <button className="btn ghost sm" onClick={() => setF({ ...f, workload: "tg", depth: 2048, variant: "default", lane: "best" })}>reset filters</button>
+          </div>
+        ) : (
+          <div className="tablescroll">
+            <table className="dtable">
+              <thead><tr>
+                {th("model", "model")}<th>caps</th>{th("params", "params")}<th>kv · spec</th>{th("lane", "lane")}
+                {th("dec", "decode tok/s", 1)}{th("pf", "prefill", 1)}{th("ttftP50", "ttft p50", 1)}{th("ttftP95", "p95", 1)}
+                {th("acc", "accept", 1)}{th("gb", "gb", 1)}<th>trend</th>
+              </tr></thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.id} onClick={() => setRun(r)}>
+                    <td className="model mid"><span className="mname">{r.model}</span><span className="msub">{r.hf || "local build"}</span></td>
+                    <td><Caps caps={r.caps} /></td>
+                    <td>{r.params}</td>
+                    <td>{r.kv} · {r.spec === "none" ? "—" : r.spec}</td>
+                    <td><span className={"chip " + laneChip(r.lane)}>{r.lane}</span></td>
+                    <td className="n"><Decode v={r.dec} sd={r.decSd} /></td>
+                    <td className="n">{r.pf.toFixed(0)}</td>
+                    <td className="n">{r.ttftP50} ms</td>
+                    <td className="n" style={{ color: "var(--fg-4)" }}>{r.ttftP95}</td>
+                    <td className="n">{r.acc ? r.acc + "%" : "—"}</td>
+                    <td className="n">{r.gb}</td>
+                    <td><Spark data={r.history} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <Drawer run={run} onClose={() => setRun(null)} />
+    </>
+  );
+}
+
+function Evals() {
+  const models = window.MODELS;
+  return (
+    <div className="tablewrap" style={{ marginTop: 16 }}>
+      <div className="panel-h">
+        <span className="label">evals · task accuracy against decode speed</span>
+        <span className="mono dim" style={{ fontSize: 11 }}>0–1 per task · 40 scenarios each · same build as the leaderboard</span>
+      </div>
+      <div className="tablescroll">
+        <table className="dtable">
+          <thead><tr>
+            <th className="model">model</th><th>caps</th><th className="n">decode</th>
+            {window.EVAL_TASKS.map(t => <th key={t} className="n">{t}</th>)}<th className="n">mean</th>
+          </tr></thead>
+          <tbody>
+            {models.map(m => {
+              const mean = m.evals ? m.evals.reduce((a, e) => a + e.score, 0) / m.evals.length : null;
+              return (
+                <tr key={m.id}>
+                  <td className="model mid"><span className="mname">{m.id}</span><span className="msub">{m.params} · {m.kv}</span></td>
+                  <td><Caps caps={m.caps} /></td>
+                  <td className="n"><Decode v={m.dec} showSd={false} /></td>
+                  {m.evals
+                    ? m.evals.map(e => (
+                        <td key={e.task} className="n">
+                          <span className="evalbar"><span className="track"><span className={"fill" + (e.score >= 0.75 ? " good" : e.score < 0.4 ? " bad" : "")} style={{ width: (e.score * 100) + "%" }} /></span><span className="num" style={{ fontSize: 11 }}>{e.score.toFixed(2)}</span></span>
+                        </td>
+                      ))
+                    : <td colSpan={window.EVAL_TASKS.length} style={{ color: "var(--fg-5)" }}>not evaluated — no tool/coding claim to test</td>}
+                  <td className="n" style={{ color: mean == null ? "var(--fg-5)" : mean >= 0.7 ? "var(--ok)" : "var(--fg)" }}>{mean ? mean.toFixed(2) : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonTable() {
+  return (
+    <table className="dtable">
+      <thead><tr><th className="model">model</th><th>caps</th><th className="n">decode</th><th className="n">prefill</th><th className="n">ttft</th></tr></thead>
+      <tbody>
+        {[0, 1, 2, 3, 4].map(i => (
+          <tr key={i}>
+            <td className="model"><div className="skel" style={{ width: 190 }} /><div className="skel" style={{ width: 120, height: 8, marginTop: 6, opacity: .6 }} /></td>
+            <td><div className="skel" style={{ width: 40 }} /></td>
+            <td><div className="skel" style={{ width: 56 }} /></td>
+            <td><div className="skel" style={{ width: 40 }} /></td>
+            <td><div className="skel" style={{ width: 46 }} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function App() {
+  const [tab, setTab] = React.useState("leaderboard");
+  return (
+    <div className="site">
+      <Header active="bench" sticky desktop user="lemond" />
+      <SubNav items={["leaderboard", "evals", "hardware", "methodology", "share your results"]} active={tab === "evals" ? "evals" : "leaderboard"} />
+      <div className="wrap wide phead">
+        <div className="phead-row">
+          <div>
+            <span className="eyebrow">measured on the reference box · rebuilt on every sweep</span>
+            <h1 className="site-h1" style={{ margin: "10px 0 10px" }}>benchmarks</h1>
+            <p className="site-body" style={{ maxWidth: "60ch" }}>
+              26 models measured end to end on one Strix Halo box: decode and prefill throughput,
+              time to first token, speculative accept rate, and what each run cost in memory, watts
+              and degrees. Every cell opens the run that produced it.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn ghost">methodology</button>
+            <button className="btn">share your results</button>
+          </div>
+        </div>
+        <div className="ctx">
+          <div className="panel">
+            <div className="panel-h"><span className="label">hardware</span><span className="mono dim" style={{ fontSize: 11 }}>exclusive mode</span></div>
+            <dl>{window.HARDWARE.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd title={v}>{v}</dd></React.Fragment>)}</dl>
+          </div>
+          <div className="panel">
+            <div className="panel-h"><span className="label">binary</span><span className="mono dim" style={{ fontSize: 11 }}>sweep {window.ROSTER_DATE}</span></div>
+            <dl>{window.BINARY.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd title={v}>{v}</dd></React.Fragment>)}</dl>
+          </div>
+        </div>
+        <div className="tabs">
+          <button className={tab === "leaderboard" ? "on" : ""} onClick={() => setTab("leaderboard")}>leaderboard</button>
+          <button className={tab === "evals" ? "on" : ""} onClick={() => setTab("evals")}>evals</button>
+        </div>
+        {tab === "leaderboard" ? <Leaderboard /> : <Evals />}
+
+        <div style={{ marginTop: 48 }}>
+          <span className="eyebrow">states</span>
+          <h2 className="site-h2" style={{ margin: "10px 0 6px" }}>degraded, loading, empty</h2>
+          <p className="site-body" style={{ maxWidth: "62ch" }}>
+            The page renders from a build-time snapshot first and upgrades when the API answers, so
+            there is always a table on screen. These are the three cases the leaderboard hands to the
+            reader instead of a spinner.
+          </p>
+          <div className="statecards">
+            <div className="panel">
+              <div className="panel-h"><span className="label">degraded · snapshot</span></div>
+              <div style={{ padding: 16 }}>
+                <div className="banner warn"><Icon name="warn" size={14} /><span>api.hal0.dev did not answer. Showing the build-time snapshot from 2026-06-19 — figures are correct but not live.</span></div>
+                <p className="site-sm" style={{ marginTop: 12 }}>The badge in the table header turns amber and names the snapshot date. Sorting and filtering keep working; only the freshness claim changes.</p>
+              </div>
+            </div>
+            <div className="panel">
+              <div className="panel-h"><span className="label">loading · hydration</span></div>
+              <SkeletonTable />
+            </div>
+            <div className="panel">
+              <div className="panel-h"><span className="label">empty · no cell for this combination</span></div>
+              <div className="empty" style={{ padding: "36px 20px" }}>
+                <div className="mono" style={{ fontSize: 13, color: "var(--fg-2)" }}>No runs for this combination.</div>
+                <p className="site-sm" style={{ margin: "8px auto 14px", maxWidth: "40ch" }}>Name the workload and depth you want and the next sweep can cover it.</p>
+                <button className="btn ghost sm">reset filters</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 48 }}>
+          <span className="eyebrow">mobile</span>
+          <h2 className="site-h2" style={{ margin: "10px 0 6px" }}>pinned model column, not card collapse</h2>
+          <p className="site-body" style={{ maxWidth: "62ch" }}>
+            Recommended: keep the table and pin the model column, with the rest scrolling
+            horizontally. Cards break the one thing this audience does on a phone — compare two
+            models on the same metric. Filters collapse into a sheet behind a single button.
+          </p>
+          <div className="mobframe" style={{ marginTop: 16 }}>
+            <div className="panel-h"><span className="label">/benchmarks · 390px</span><span className="mono dim" style={{ fontSize: 10 }}>tg · 2048</span></div>
+            <div style={{ display: "flex", gap: 6, padding: "10px 12px", borderBottom: "1px solid var(--line-soft)" }}>
+              <button className="btn ghost sm" style={{ flex: 1 }}>filters · 3</button>
+              <button className="btn ghost sm" style={{ flex: 1 }}>sort · decode</button>
+            </div>
+            <div className="tablescroll">
+              <table className="dtable">
+                <thead><tr><th className="model">model</th><th className="n sorted">decode ▼</th><th className="n">prefill</th><th className="n">ttft</th><th className="n">gb</th></tr></thead>
+                <tbody>
+                  {window.BENCH.filter(r => r.lane === "rocm" && r.variant === "default" && r.depth === 2048)
+                    .sort((a, b) => b.dec - a.dec).slice(0, 6).map(r => (
+                    <tr key={r.id}>
+                      <td className="model mid"><span className="mname" style={{ maxWidth: 150 }}>{r.model}</span><span className="msub">{r.params}</span></td>
+                      <td className="n"><Decode v={r.dec} showSd={false} /></td>
+                      <td className="n">{r.pf.toFixed(0)}</td>
+                      <td className="n">{r.ttftP50}</td>
+                      <td className="n">{r.gb}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

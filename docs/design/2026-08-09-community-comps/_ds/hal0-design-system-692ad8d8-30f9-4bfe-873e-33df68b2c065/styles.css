@@ -1,0 +1,13 @@
+/* hal0 design system — global entry point.
+ * Consumers link THIS file. It is an @import manifest only; every token,
+ * font-face and foundation lives in a file reached from here.
+ *
+ * "sodium amber on graphite" — an operator console for a homelab AI
+ * inference appliance. Dark, dense, monospace-forward, one warm accent.
+ */
+
+@import "./tokens/fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./components/components.css";

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hal0.dev — unified chrome</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>html,body{margin:0;background:var(--bg)}.sheet-head{padding-block:56px 8px}.sheet-head h1{font-family:var(--jbm);font-size:26px;font-weight:500;letter-spacing:var(--ls-title);margin:14px 0 8px}.rule{height:1px;background:var(--line);margin:40px 0 0}.mobcol{width:390px;flex-shrink:0}.two{display:flex;gap:24px;flex-wrap:wrap}.pal{width:560px;max-width:100%;background:var(--bg-1);border:1px solid var(--line-strong);border-radius:var(--rad-lg);box-shadow:var(--shadow-menu);overflow:hidden}.pal-in{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line-soft)}.pal-in input{flex:1;background:transparent;border:0;outline:0;color:var(--fg);font-family:var(--jbm);font-size:13.5px}.pal-grp{padding:8px 0}.pal-grp .label{padding:6px 14px}.pal-row{display:flex;align-items:center;gap:10px;padding:7px 14px;font-family:var(--jbm);font-size:12.5px;color:var(--fg-2)}.pal-row.on{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent);color:var(--fg)}.pal-row .src{margin-left:auto;font-size:10px;color:var(--fg-4)}.cardlink{display:block;padding:16px;text-decoration:none}.cardlink:hover{border-color:var(--line-strong)}</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel">
+const { Icon, Wordmark, Button, Chip, StatusDot, Card, Kbd, Input } = window.Hal0DesignSystem_692ad8;
+
+function Spec({ n, title, note, children }) {
+  return (
+    <section className="spec">
+      <div className="wrap wide">
+        <div className="spec-h"><span className="eyebrow">{n}</span><h2 className="site-h2">{title}</h2></div>
+        {note && <p className="site-body spec-note">{note}</p>}
+        <div className="specimens">{children}</div>
+        <div className="rule" />
+      </div>
+    </section>
+  );
+}
+function Frame({ cap, tag, children, style }) {
+  return (
+    <div className="frame" style={style}>
+      <div className="frame-cap"><span>{cap}</span>{tag && <span className="tag">{tag}</span>}</div>
+      {children}
+    </div>
+  );
+}
+
+function Sheet() {
+  const [drawer, setDrawer] = React.useState(true);
+  return (
+    <div className="site">
+      <div className="wrap wide sheet-head">
+        <span className="eyebrow">hal0.dev · platform design</span>
+        <h1>unified chrome &amp; component sheet</h1>
+        <p className="site-body" style={{ maxWidth: "62ch" }}>
+          One header, one footer, one set of primitives — authored once and reused verbatim by
+          the landing page, docs, benchmarks, profiles, blog, knowledge base and the Discourse
+          forum. Every specimen below is the live component from <span className="mono">site-chrome.jsx</span>,
+          not a redraw. Colour, type and spacing resolve to hal0 design-system tokens.
+        </p>
+        <div className="fbar" style={{ marginTop: 18 }}>
+          <Chip tone="amber">sodium amber #FFB000</Chip>
+          <Chip>geist · jetbrains mono</Chip>
+          <Chip>dark default · light via toggle</Chip>
+        </div>
+      </div>
+
+      <Spec n="01" title="header — desktop" note="Wordmark left, four nav items in lowercase mono, utility cluster right. The existing signature carries over: frosted rgba(10,10,10,0.85) with 12px blur and the 1px filament hairline that brightens to sodium amber at centre with a faint under-glow. Active section is amber text (aria-current) plus a 2px amber rail on that hairline. One Discourse SSO session covers the whole platform, so the signed-in avatar + notification bell appear on hal0.dev too, not only on the forum.">
+        <Frame cap="default" tag="signed out" style={{ overflowX: "auto" }}><div style={{ minWidth: 1180 }}><Header active={null} desktop /></div></Frame>
+        <Frame cap="active section" tag="/benchmarks · signed in via discourse sso" style={{ overflowX: "auto" }}><div style={{ minWidth: 1180 }}><Header active="bench" desktop user="lemond" /></div></Frame>
+        <Frame cap="landing, above the fold" tag="transparent until the nav promotes past the hero" style={{ overflowX: "auto" }}><div style={{ minWidth: 1180, background: "radial-gradient(120% 140% at 50% -20%, rgba(255,176,0,0.10), transparent 60%), var(--bg)" }}><Header active={null} desktop ontop /><div style={{ height: 96 }} /></div></Frame>
+      </Spec>
+
+      <Spec n="02" title="header — forum variant" note="Same shell, same nav, same spacing. Discourse's own controls (topic search, notifications, account menu, new topic) replace the site utility cluster on the right; a mono 'forum' slug sits beside the wordmark so the host change is legible without breaking the lockup.">
+        <Frame cap="forum.hal0.dev" tag="discourse controls in the right cluster" style={{ overflowX: "auto" }}><div style={{ minWidth: 1180 }}><Header active="forum" variant="forum" desktop /></div></Frame>
+      </Spec>
+
+      <Spec n="03" title="header — mobile" note="Below 1000px the nav collapses to a drawer. Utility icons that matter on a phone (theme, menu) stay in the bar; search moves into the drawer footer.">
+        <div className="two">
+          <div className="mobcol"><Frame cap="collapsed"><Header active="learn" compact /></Frame></div>
+          <div className="mobcol"><Frame cap="drawer open" style={{ overflow: "hidden" }}><Header active="learn" compact drawerOpen={drawer} onToggleDrawer={() => setDrawer(v => !v)} /><div style={{ height: 400 }} /></Frame></div>
+        </div>
+      </Spec>
+
+      <Spec n="04" title="section sub-nav" note="Top nav stays at four items: learn · benchmarks · profiles · forum. Everything with more than one surface gets a second 42px bar under the header — that's where docs, the knowledge base and the blog live, and where per-model comparison and 'share your results' hang off benchmarks.">
+        <Frame cap="learn" style={{ overflowX: "auto" }}><SubNav items={["docs", "knowledge base", "blog", "changelog"]} active="knowledge base" /></Frame>
+        <Frame cap="benchmarks" style={{ overflowX: "auto" }}><SubNav items={["overview", "by model", "by hardware", "runners", "share your results"]} active="overview" /></Frame>
+      </Spec>
+
+      <Spec n="05" title="footer" note="Identical on every surface including the forum. Three link columns, a brand column, and a base line carrying licence, data licence, build status and version.">
+        <Frame cap="all surfaces"><Footer /></Frame>
+      </Spec>
+
+      <Spec n="06" title="search" note="One index across docs, KB, blog, benchmarks, profiles and forum topics — the result row is tagged with its source so a unified index still reads as five sections.">
+        <div className="row-demo" style={{ background: "var(--bg-2)", padding: 32 }}>
+          <div className="pal">
+            <div className="pal-in"><Icon name="search" size={15} style={{ color: "var(--fg-3)" }} /><input defaultValue="qwen3-32b" /><span className="kbd">esc</span></div>
+            <div className="pal-grp">
+              <div className="label">benchmarks</div>
+              <div className="pal-row on"><Icon name="hardware" size={14} /><span>Qwen3-32B-Q4_K_M — 14 runs across 4 boxes</span><span className="src">bench</span></div>
+              <div className="pal-row"><Icon name="slots" size={14} /><span>strix-halo-395 · rocm · 128 GB</span><span className="src">bench</span></div>
+              <div className="label" style={{ marginTop: 6 }}>profiles</div>
+              <div className="pal-row"><Icon name="settings" size={14} /><span>qwen3-32b-rocm-longctx</span><span className="src">profile</span></div>
+              <div className="label" style={{ marginTop: 6 }}>writing</div>
+              <div className="pal-row"><Icon name="logs" size={14} /><span>Tuning --parallel for 32B on unified memory</span><span className="src">kb</span></div>
+              <div className="pal-row"><Icon name="chat" size={14} /><span>Qwen3-32B keeps evicting my embed slot</span><span className="src">forum</span></div>
+            </div>
+          </div>
+        </div>
+      </Spec>
+
+      <Spec n="07" title="buttons" note="One solid amber button per view — it means 'the primary action here'. Everything else is a ghost outline. Sizes: sm 26px, default 30px, lg 36px.">
+        <Frame cap="variants">
+          <div className="row-demo">
+            <button className="btn">share your results</button>
+            <button className="btn ghost">view raw json</button>
+            <button className="btn ghost sm">copy</button>
+            <button className="btn lg">install hal0</button>
+            <button className="btn ghost" disabled>merged</button>
+            <button className="btn danger sm">withdraw pr</button>
+          </div>
+        </Frame>
+      </Spec>
+
+      <Spec n="08" title="filter pills, chips &amp; status" note="Filter pills are the only true pills on the site besides status. Device chips keep the dashboard's load-bearing hues — rocm red, vulkan blue, npu violet, cpu grey — so a backend reads the same colour in a chart legend, a table cell and a profile card.">
+        <Frame cap="filter bar">
+          <div className="row-demo" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
+            <div className="fgroup"><span className="label" style={{ width: 74 }}>hardware</span><div className="fbar"><Fpill on count={128}>strix halo 395</Fpill><Fpill count={41}>strix halo 370</Fpill><Fpill count={19}>rx 7900 xtx</Fpill><Fpill count={12}>cpu only</Fpill></div></div>
+            <div className="fgroup"><span className="label" style={{ width: 74 }}>runner</span><div className="fbar"><Fpill count={96}>llama.cpp</Fpill><Fpill on count={22}>flm</Fpill><Fpill count={14}>onnx</Fpill><Fpill count={8}>vllm</Fpill></div></div>
+            <div className="fgroup"><span className="label" style={{ width: 74 }}>quant</span><div className="fbar"><Fpill count={71}>q4_k_m</Fpill><Fpill count={33}>q5_k_m</Fpill><Fpill count={18}>q8_0</Fpill><Fpill count={9}>fp16</Fpill></div></div>
+          </div>
+        </Frame>
+        <Frame cap="chips + status">
+          <div className="row-demo">
+            <span className="chip dev-rocm">gpu-rocm</span>
+            <span className="chip dev-vulkan">gpu-vulkan</span>
+            <span className="chip dev-npu">npu</span>
+            <span className="chip dev-cpu">cpu</span>
+            <span className="chip amber">first-party</span>
+            <span className="chip">q4_k_m</span>
+            <span className="chip ok"><span className="dot ready" style={{ marginRight: 5 }} />merged</span>
+            <span className="chip warn"><span className="dot warming" style={{ marginRight: 5 }} />awaiting review</span>
+            <span className="chip info"><span className="dot loading" style={{ marginRight: 5 }} />validating</span>
+            <span className="chip err"><span className="dot error" style={{ marginRight: 5 }} />changes requested</span>
+          </div>
+        </Frame>
+        <Frame cap="attribution">
+          <div className="row-demo"><Attribution first /><span style={{ color: "var(--fg-5)" }}>·</span><Attribution user="kyuz0" /><Attribution user="lhl" /><Attribution user="donutloop" /></div>
+        </Frame>
+      </Spec>
+
+      <Spec n="09" title="cards" note="Three card shapes cover the whole site: a data card (bench), a config card (profile), a reading card (blog/KB). All flat on the graphite — 1px border, 10px radius, no shadow.">
+        <div className="grid-3">
+          <div className="card cardlink">
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span className="eyebrow">bench run</span><Attribution user="kyuz0" />
+            </div>
+            <div className="mono" style={{ fontSize: 14, margin: "10px 0 6px" }}>Qwen3-32B · q4_k_m</div>
+            <div className="site-sm">Ryzen AI Max+ 395 · 128 GB · llama.cpp b4780</div>
+            <div style={{ display: "flex", gap: 20, marginTop: 14, alignItems: "baseline" }}>
+              <div><div className="stat amber" style={{ fontSize: 22 }}>9.4</div><div className="label">tok/s</div></div>
+              <div><div className="stat" style={{ fontSize: 22 }}>310</div><div className="label">ttft ms</div></div>
+              <div><div className="stat" style={{ fontSize: 22 }}>19.8</div><div className="label">gb</div></div>
+            </div>
+            <div className="fbar" style={{ marginTop: 14 }}><span className="chip dev-rocm">gpu-rocm</span><span className="chip">ctx 8192</span></div>
+          </div>
+          <div className="card cardlink">
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span className="eyebrow">profile</span><span className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>v3</span>
+            </div>
+            <div className="mono" style={{ fontSize: 14, margin: "10px 0 6px" }}>qwen3-32b-rocm-longctx</div>
+            <div className="site-sm">32k context on 128 GB unified memory without evicting the embed slot.</div>
+            <div className="fbar" style={{ marginTop: 14 }}><span className="chip dev-rocm">gpu-rocm</span><span className="chip">strix halo 395</span><span className="chip">llama.cpp</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line-soft)" }}>
+              <Attribution user="lhl" />
+              <span className="mono amber" style={{ fontSize: 12 }}>9.4 tok/s ↗</span>
+            </div>
+          </div>
+          <div className="card cardlink">
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span className="eyebrow">knowledge base · hardware</span>
+            </div>
+            <div className="site-h3" style={{ margin: "10px 0 8px", fontSize: 17 }}>Unified memory is not VRAM</div>
+            <div className="site-sm">What the 128 GB pool actually costs you when three slots stay co-resident, and how to size a loadout around it.</div>
+            <div className="mono" style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 14 }}>evergreen · updated 2026-07-28 · 9 min</div>
+          </div>
+        </div>
+      </Spec>
+
+      <Spec n="10" title="table" note="The workhorse of benchmarks and profile detail. Mono throughout, tabular slashed-zero numerals, numeric columns right-aligned, sorted column amber. Rows stay 40px — dense but scannable.">
+        <div className="panel">
+          <div className="panel-h"><span className="label">results · qwen3-32b · q4_k_m</span><span className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>14 runs · 9 contributors</span></div>
+          <table className="dtable">
+            <thead><tr><th>hardware</th><th>runner</th><th>backend</th><th className="n sorted">tok/s ▼</th><th className="n">ttft</th><th className="n">mem</th><th>submitted by</th></tr></thead>
+            <tbody>
+              <tr><td className="lead">Ryzen AI Max+ 395 · 128 GB</td><td>llama.cpp b4780</td><td><span className="chip dev-rocm">gpu-rocm</span></td><td className="n hero">9.4</td><td className="n">310 ms</td><td className="n">19.8 GB</td><td><Attribution user="kyuz0" /></td></tr>
+              <tr><td className="lead">Ryzen AI Max+ 395 · 128 GB</td><td>llama.cpp b4780</td><td><span className="chip dev-vulkan">gpu-vulkan</span></td><td className="n">8.1</td><td className="n">402 ms</td><td className="n">19.6 GB</td><td><Attribution first /></td></tr>
+              <tr><td className="lead">Ryzen AI Max 385 · 64 GB</td><td>llama.cpp b4771</td><td><span className="chip dev-vulkan">gpu-vulkan</span></td><td className="n">7.2</td><td className="n">560 ms</td><td className="n">19.6 GB</td><td><Attribution user="lhl" /></td></tr>
+              <tr><td className="lead">Radeon RX 7900 XTX · 24 GB</td><td>llama.cpp b4780</td><td><span className="chip dev-rocm">gpu-rocm</span></td><td className="n">26.8</td><td className="n">140 ms</td><td className="n">19.8 GB</td><td><Attribution user="deadbeef7" /></td></tr>
+              <tr><td className="lead">EPYC 7402P · 256 GB</td><td>llama.cpp b4780</td><td><span className="chip dev-cpu">cpu</span></td><td className="n">2.1</td><td className="n">2.41 s</td><td className="n">20.1 GB</td><td><Attribution user="ratchet" /></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </Spec>
+
+      <Spec n="11" title="terminal well" note="Config bodies, install commands and CLI output share one surface: sunken near-black, mono, amber only on the thing you can act on.">
+        <div className="well" style={{ padding: "14px 16px" }}>
+          <div style={{ color: "var(--fg-4)" }}># install this profile</div>
+          <div><span className="amber">hal0</span> profile install qwen3-32b-rocm-longctx</div>
+          <div style={{ color: "var(--fg-4)", marginTop: 10 }}># share a run — opens a PR on your behalf</div>
+          <div><span className="amber">hal0</span> bench --model qwen3-32b --share</div>
+        </div>
+      </Spec>
+
+      <div style={{ height: 40 }} />
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<Sheet />);
+</script>
+</body>
+</html>
