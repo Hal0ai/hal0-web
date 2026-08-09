@@ -48,7 +48,7 @@ export default defineConfig({
 				replacesTitle: true,
 			},
 			favicon: '/favicon.svg',
-			customCss: ['./src/styles/global.css', './src/styles/site-blog-kb.css'],
+			customCss: ['./src/styles/global.css', './src/styles/site-blog-kb.css', './src/styles/site-docs.css'],
 			social: [
 				{
 					icon: 'github',

@@ -20,15 +20,33 @@
  * for everyone else — so a docs page's DOM is byte-identical to before
  * this wrapper existed (verified: `dist/docs/**` diffs clean against the
  * pre-wrapper build; no incidental extra `<div>` on every Starlight page).
+ *
+ * `data-docs` is the mirror-image seam added for the docs-shape pass (see
+ * docs/design/2026-08-09-community-comps/08 Docs.html): the comp's docs
+ * article prose is a denser scale than blog/KB (15.5px/1.68 @ 74ch vs.
+ * 16px/1.68 @ 68ch) — different enough that reusing `[data-longform]`
+ * would be a lie, so docs pages get their own attribute and site-docs.css
+ * scopes to `[data-docs]` instead. Every Starlight-rendered entry.id is
+ * exactly one of docs/blog/kb, so this if/else is exhaustive — no third,
+ * attributeless case exists among Starlight routes.
  */
 import Default from '@astrojs/starlight/components/PageFrame.astro';
 import SiteFooter from './SiteFooter.astro';
 
 const { entry } = Astro.locals.starlightRoute;
 const isLongForm = entry.id.startsWith('blog/') || entry.id.startsWith('kb/');
+const isDocs = entry.id.startsWith('docs/');
 ---
 {isLongForm ? (
   <div data-longform>
+    <Default>
+      <slot name="header" slot="header" />
+      <slot name="sidebar" slot="sidebar" />
+      <slot />
+    </Default>
+  </div>
+) : isDocs ? (
+  <div data-docs>
     <Default>
       <slot name="header" slot="header" />
       <slot name="sidebar" slot="sidebar" />
