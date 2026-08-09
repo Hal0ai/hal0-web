@@ -193,11 +193,19 @@ function matchesFacet(rowValue, filterValue, defaultValue) {
 export function applyFilters(rows, filters = {}) {
   const { workload = null, depth = null, variant = null, lane = null, caps = [], q = '' } = filters;
   const needle = q ? q.trim().toLowerCase() : '';
+  // DEFAULT_LANE ('best') is a UI sentinel for "reduce to the best lane per
+  // model" — it is never a literal value stored on row.lane (real lanes are
+  // e.g. 'rocm', 'vulkan_radv', or the adapter's 'default' for unlaned
+  // cells). Treating it as a facet value to match against would exclude
+  // every row (see matchesFacet), so it's normalized to "no lane filter"
+  // here; the actual best-lane selection happens downstream in
+  // reduceBestLane.
+  const effectiveLane = lane === DEFAULT_LANE ? null : lane;
   return (rows ?? []).filter((row) => {
     if (!matchesFacet(row.workload, workload, DEFAULT_WORKLOAD)) return false;
     if (!matchesFacet(row.depth, depth, DEFAULT_DEPTH)) return false;
     if (!matchesFacet(row.variant, variant, DEFAULT_VARIANT)) return false;
-    if (!matchesFacet(row.lane, lane, DEFAULT_LANE)) return false;
+    if (!matchesFacet(row.lane, effectiveLane, DEFAULT_LANE)) return false;
     if (caps && caps.length > 0) {
       const rowCaps = row.caps ?? [];
       const hit = caps.some((c) => rowCaps.includes(c));

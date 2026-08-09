@@ -237,6 +237,60 @@ test('normalizeApiRoster: drops entries with a missing/null/non-string model_id'
   assert.deepEqual(rows.map((r) => r.id), ['model-ok']);
 });
 
+// Live-shaped fixture matching the CT105 adapter: real lanes 'rocm' and
+// 'vulkan_radv', plus 'default' — the adapter's own mapping of CT105's
+// unlaned '' cells, not a real backend. All cells sit at the tg@2048/default
+// facet defaults so a bare lane-only filter reproduces what the UI sends.
+const LIVE_LANE_FIXTURE = {
+  generated: '2026-08-09T12:00:00Z',
+  models: [
+    {
+      model_id: 'model-a',
+      cells: [
+        { lane: 'rocm', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 50, run_id: 'run-1' },
+        { lane: 'vulkan_radv', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 70, run_id: 'run-2' },
+      ],
+    },
+    {
+      model_id: 'model-b',
+      cells: [
+        { lane: 'default', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 30, run_id: 'run-3' },
+      ],
+    },
+  ],
+};
+
+// --- applyFilters: lane facet against live-shaped data ("best"/"default") -
+
+test('applyFilters+reduceBestLane: lane="best" must never be empty when cells exist (regression: was 0 rows)', () => {
+  const rows = normalizeApiRoster(LIVE_LANE_FIXTURE);
+  const filtered = applyFilters(rows, {
+    workload: DEFAULT_WORKLOAD,
+    depth: DEFAULT_DEPTH,
+    variant: DEFAULT_VARIANT,
+    lane: DEFAULT_LANE, // 'best' — a UI sentinel, never a literal row.lane value
+  });
+  const view = reduceBestLane(filtered);
+  assert.equal(view.length, 2);
+  const a = view.find((r) => r.id === 'model-a');
+  // best of rocm(50)/vulkan_radv(70) is vulkan_radv
+  assert.equal(a.lane, 'vulkan_radv');
+  assert.equal(a.dec, 70);
+  const b = view.find((r) => r.id === 'model-b');
+  // single-lane model: its only (unlaned/'default') cell still shows up
+  assert.equal(b.lane, 'default');
+  assert.equal(b.dec, 30);
+});
+
+test('applyFilters: named-lane filters (rocm/vulkan_radv) still scope to their own subset', () => {
+  const rows = normalizeApiRoster(LIVE_LANE_FIXTURE);
+  const rocm = applyFilters(rows, { workload: DEFAULT_WORKLOAD, depth: DEFAULT_DEPTH, variant: DEFAULT_VARIANT, lane: 'rocm' });
+  assert.deepEqual(rocm.map((r) => r.id), ['model-a']);
+
+  const vulkan = applyFilters(rows, { workload: DEFAULT_WORKLOAD, depth: DEFAULT_DEPTH, variant: DEFAULT_VARIANT, lane: 'vulkan_radv' });
+  assert.deepEqual(vulkan.map((r) => r.id), ['model-a']);
+});
+
 // --- applyFilters ---------------------------------------------------------
 
 test('applyFilters: snapshot rows only match the default facet values', () => {
