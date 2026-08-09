@@ -214,6 +214,150 @@
 	--ec-frm-inlBtnFg: var(--hal0-fg-dim);
 }
 
+/* ── search palette (01 Unified Chrome, `.pal` — "search" spec 06) ──
+ * Tier A of handoff item 3.5: restyle Starlight's Pagefind modal in
+ * place. The comp: 560px palette on --bg-1 (elevated), 1px
+ * --line-strong border, --rad-lg, --shadow-menu; mono 13.5px input row
+ * on a --line-soft hairline; mono 12.5px result rows, selected row =
+ * --accent-soft fill + 2px inset amber rail. Selection here maps to
+ * hover/focus (Pagefind's UI has no roving arrow-key selection).
+ * Global to all Starlight pages by design — the palette is chrome, the
+ * same overlay everywhere, and renders in a top-layer <dialog> outside
+ * any page's content (KB byte-parity is untouched; the dialog only
+ * exists while open). */
+
+site-search dialog {
+	background: var(--hal0-bg-elevated);
+	border: 1px solid var(--hal0-border-strong);
+	border-radius: var(--hal0-rad-lg, 10px);
+	box-shadow: var(--hal0-shadow-menu);
+	color: var(--hal0-fg-muted);
+}
+@media (min-width: 50rem) {
+	site-search dialog {
+		max-width: 560px;
+	}
+}
+site-search dialog::backdrop {
+	background: rgba(5, 5, 5, 0.55);
+	-webkit-backdrop-filter: blur(2px);
+	backdrop-filter: blur(2px);
+}
+/* comp `.pal-in`: the input row owns the padding; the frame has none. */
+site-search .dialog-frame {
+	padding: 12px 14px;
+}
+site-search button[data-close-modal] {
+	font-family: var(--hal0-font-mono);
+	font-size: 11.5px;
+	color: var(--hal0-fg-dim);
+}
+
+#starlight__search {
+	--pagefind-ui-font: var(--hal0-font-mono);
+	--pagefind-ui-background: var(--hal0-bg-elevated);
+	--pagefind-ui-border: var(--hal0-border);
+	--pagefind-ui-text: var(--hal0-fg-muted);
+	--pagefind-ui-primary: var(--hal0-accent);
+	--pagefind-ui-tag: var(--hal0-bg-2);
+}
+#starlight__search .pagefind-ui__search-input {
+	font-family: var(--hal0-font-mono);
+	font-size: 13.5px;
+	font-weight: 400;
+	color: var(--hal0-fg);
+	background: transparent;
+	border: 0;
+	border-bottom: 1px solid var(--hal0-border-soft);
+	border-radius: 0;
+}
+#starlight__search .pagefind-ui__search-input::placeholder {
+	color: var(--hal0-fg-faint);
+	opacity: 1;
+}
+#starlight__search .pagefind-ui__search-clear {
+	font-family: var(--hal0-font-mono);
+	font-size: 11px;
+	color: var(--hal0-fg-dim);
+	background: transparent;
+}
+
+/* result count / empty state — the `.label` idiom */
+#starlight__search .pagefind-ui__message {
+	font-family: var(--hal0-font-mono);
+	font-size: 10.5px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: var(--hal0-ls-label);
+	color: var(--hal0-fg-dim);
+}
+
+/* result rows — comp `.pal-row` */
+#starlight__search .pagefind-ui__result {
+	border: 0;
+	padding: 7px 0;
+}
+#starlight__search .pagefind-ui__result-title {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	font-size: 12.5px;
+	font-weight: 400;
+}
+#starlight__search .pagefind-ui__result-link {
+	font-family: var(--hal0-font-mono);
+	font-weight: 400;
+	color: var(--hal0-fg-muted);
+}
+#starlight__search .pagefind-ui__result-link:hover,
+#starlight__search .pagefind-ui__result-link:focus-visible {
+	color: var(--hal0-fg);
+	text-decoration: none;
+}
+#starlight__search .pagefind-ui__result:hover,
+#starlight__search .pagefind-ui__result:focus-within {
+	background: var(--hal0-accent-soft);
+	box-shadow: inset 2px 0 0 var(--hal0-accent);
+}
+#starlight__search .pagefind-ui__result-excerpt {
+	font-family: var(--hal0-font-body);
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--hal0-fg-dim);
+	font-weight: 400;
+}
+#starlight__search .pagefind-ui__result-excerpt mark {
+	background: transparent;
+	color: var(--hal0-accent);
+	font-weight: 500;
+}
+
+/* source tag on each row — comp `.pal-row .src`, populated by
+ * /js/search-source-tags.js (Tier B). */
+#starlight__search .search-src {
+	margin-left: auto;
+	font-family: var(--hal0-font-mono);
+	font-size: 10px;
+	color: var(--hal0-fg-faint);
+	flex-shrink: 0;
+}
+
+/* load-more — quiet mono button */
+#starlight__search .pagefind-ui__button {
+	font-family: var(--hal0-font-mono);
+	font-size: 11.5px;
+	font-weight: 400;
+	color: var(--hal0-fg-muted);
+	background: transparent;
+	border: 1px solid var(--hal0-border);
+	border-radius: var(--hal0-rad-sm, 4px);
+}
+#starlight__search .pagefind-ui__button:hover {
+	border-color: var(--hal0-border-strong);
+	color: var(--hal0-fg);
+	background: var(--hal0-bg-2);
+}
+
 /* ── inline code (comp `.prose code`, 08 Docs.html line 34) ──
  * EC blocks style themselves via the expressiveCode config in
  * astro.config.mjs; the :not() guard keeps this off their internals. */
