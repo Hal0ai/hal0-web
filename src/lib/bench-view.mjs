@@ -125,19 +125,31 @@ export function normalizeRoster(rosterRows, meta = {}) {
  * `kv` only becomes real once upgradeRows merges it in from the matching
  * snapshot row.
  *
- * @param {{generated?: string, models?: Array<{model_id: string, quant?: string, cells?: Array<{lane?: string, kind?: string, depth?: number, config_label?: string, decode_ts_med?: number|null, prefill_ts_med?: number|null, ttft_ms_p50?: number|null, ttft_ms_p95?: number|null, accept_med?: number|null, run_id?: string, measured_at?: string, flagged?: boolean}>}>}} apiJson
+ * `caps`: the committed snapshot's ids and the live roster's ids live in
+ * different namespaces (the snapshot's curated short ids vs. the live
+ * roster's full gguf-derived slugs), so upgradeRows' by-id join against the
+ * snapshot only accidentally matches a handful of models — nowhere near
+ * real capability coverage. When the live payload itself carries a `caps`
+ * array per model (an optional contract extension a v1/roster adapter can
+ * populate — see bench-live-adapter.mjs), it's read here and preferred by
+ * upgradeRows over the snapshot join; a missing/malformed `model.caps`
+ * falls back to `[]` (upgradeRows' snapshot-join fallback still applies —
+ * never invented).
+ *
+ * @param {{generated?: string, models?: Array<{model_id: string, quant?: string, caps?: string[], cells?: Array<{lane?: string, kind?: string, depth?: number, config_label?: string, decode_ts_med?: number|null, prefill_ts_med?: number|null, ttft_ms_p50?: number|null, ttft_ms_p95?: number|null, accept_med?: number|null, run_id?: string, measured_at?: string, flagged?: boolean}>}>}} apiJson
  * @returns {BenchRow[]}
  */
 export function normalizeApiRoster(apiJson) {
   const rows = [];
   for (const model of apiJson?.models ?? []) {
     if (typeof model.model_id !== 'string' || model.model_id === '') continue;
+    const caps = Array.isArray(model.caps) ? model.caps.filter((c) => typeof c === 'string') : [];
     const cells = model.cells ?? [];
     for (const cell of cells) {
       rows.push({
         id: model.model_id,
         hfRepo: '',
-        caps: [],
+        caps,
         params: '—',
         kv: null,
         quant: model.quant ?? null,
@@ -310,14 +322,19 @@ export function defaultView(rows) {
 
 /**
  * Merge caps (and hfRepo/params/gb/kv where the API lacks them) from the
- * snapshot row of the same model id into each API row. The /v1/roster
- * contract carries no capability data (normalizeApiRoster always sets
- * `caps: []`) and no real KV-cache-mode data (normalizeApiRoster leaves
- * `kv: null` — model.quant is a different axis, see normalizeApiRoster's
- * header comment), so without this merge every API-sourced row would lose
- * its capability glyphs, drop out of any active caps filter, and never show
- * a kv value the moment the page upgrades from the snapshot to a live
- * fetch.
+ * snapshot row of the same model id into each API row. The committed
+ * snapshot's curated ids and the live roster's full gguf-slug ids live in
+ * different namespaces, so this by-id join only accidentally matches a
+ * handful of models — real capability coverage instead comes from
+ * normalizeApiRoster reading a `caps` array straight off the live payload
+ * when the adapter/worker populates one (see its header comment); those
+ * payload-sourced caps are preferred here and never clobbered by the
+ * snapshot join; only when a row's caps are still empty (no payload caps
+ * supplied) does the snapshot join fill them in as a fallback. `kv` has no
+ * live-payload source at all (`kv: null` — model.quant is a different axis,
+ * see normalizeApiRoster's header comment), so it always relies on this
+ * same by-id join — without it, an API-sourced row would never show a kv
+ * value the moment the page upgrades from the snapshot to a live fetch.
  *
  * @param {BenchRow[]} snapshotRows
  * @param {BenchRow[]} apiRows
@@ -331,7 +348,7 @@ export function upgradeRows(snapshotRows, apiRows) {
     if (!snap) return row;
     return {
       ...row,
-      caps: snap.caps ?? row.caps,
+      caps: row.caps && row.caps.length > 0 ? row.caps : snap.caps ?? row.caps,
       hfRepo: row.hfRepo ? row.hfRepo : snap.hfRepo,
       params: row.params && row.params !== '—' ? row.params : snap.params,
       gb: row.gb ?? snap.gb,

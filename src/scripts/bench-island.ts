@@ -33,9 +33,6 @@ import {
   evalScoreBucket,
   selectInitialRows,
   DEFAULT_WORKLOAD,
-  DEFAULT_DEPTH,
-  DEFAULT_VARIANT,
-  DEFAULT_LANE,
 } from '../lib/bench-view.mjs';
 import { ROSTER, ROSTER_DATE } from '../data/model-roster';
 import BENCH_SNAPSHOT from '../data/bench-snapshot.json';
@@ -69,14 +66,23 @@ interface BenchRow {
   flagged: boolean;
 }
 
-type FacetKey = 'workload' | 'depth' | 'variant' | 'lane';
+// depth and variant were dropped as filter facets (not just made
+// deselectable): the live corpus is effectively single-depth/single-variant,
+// so a facet for them was noise rather than a real choice. The underlying
+// `depth`/`variant` BenchRow fields are untouched — still real data used
+// elsewhere (defaultView's opinionated reduction, the drawer's identity
+// chips) — only the interactive filter UI/state for them is gone.
+type FacetKey = 'workload' | 'lane';
 type Tab = 'leaderboard' | 'evals';
 
+// workload/lane are deselectable: `null` means the facet is off — "all
+// values of this dimension", not a literal value to match (see
+// bench-view.mjs's applyFilters, which treats a null/unset facet as no
+// filter at all). Clicking an already-active segment button clears it back
+// to null rather than forcing exactly one value to always be selected.
 interface Filters {
-  workload: string;
-  depth: number;
-  variant: string;
-  lane: string;
+  workload: string | null;
+  lane: string | null;
   caps: string[];
   q: string;
 }
@@ -420,11 +426,13 @@ function init() {
     sortMenu?.querySelectorAll<HTMLButtonElement>('button[data-sort-key]') ?? [],
   );
 
+  // The opinionated default: workload=tg, lane off (best lane per model).
+  // "reset to default view" returns here — everything else (depth, variant,
+  // an off lane) is the widest-possible view, not a facet with its own
+  // default value to reset to.
   const DEFAULT_FILTERS: Filters = {
     workload: DEFAULT_WORKLOAD,
-    depth: DEFAULT_DEPTH,
-    variant: DEFAULT_VARIANT,
-    lane: DEFAULT_LANE,
+    lane: null,
     caps: [],
     q: '',
   };
@@ -456,8 +464,6 @@ function init() {
   function activeFilterCount(): number {
     let n = 0;
     if (state.filters.workload !== DEFAULT_FILTERS.workload) n++;
-    if (state.filters.depth !== DEFAULT_FILTERS.depth) n++;
-    if (state.filters.variant !== DEFAULT_FILTERS.variant) n++;
     if (state.filters.lane !== DEFAULT_FILTERS.lane) n++;
     n += state.filters.caps.length;
     if (state.filters.q) n++;
@@ -498,8 +504,12 @@ function init() {
 
     if (countEl) {
       const total = new Set(state.corpus.map((r) => r.id)).size;
-      const laneSuffix = state.filters.lane === DEFAULT_LANE ? ' · best lane per model' : '';
-      countEl.textContent = `${view.length} of ${total} models${laneSuffix}`;
+      // Deselectable facets ("off" = every value of that dimension) make the
+      // readout the only place the active filter set is legible at a
+      // glance — so it always names both facets' state, not just lane.
+      const workloadSuffix = state.filters.workload ? '' : ' · all workloads';
+      const laneSuffix = state.filters.lane ? ` · ${state.filters.lane} only` : ' · best lane per model';
+      countEl.textContent = `${view.length} of ${total} models${workloadSuffix}${laneSuffix}`;
     }
 
     for (const th of sortHeaders) {
@@ -521,15 +531,21 @@ function init() {
       if (!facet) continue;
       const buttons = Array.from(seg.querySelectorAll<HTMLButtonElement>('button[data-value]'));
       for (const btn of buttons) {
-        const raw = btn.dataset.value ?? '';
-        const value: string | number = facet === 'depth' ? Number(raw) : raw;
-        btn.classList.toggle('on', state.filters[facet] === value);
+        const value = btn.dataset.value ?? '';
+        // state.filters[facet] is null when the facet is off — no button is
+        // "on" in that state (a cleared facet has no active value, not a
+        // hidden default one).
+        const active = state.filters[facet] === value;
+        btn.classList.toggle('on', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
       }
     }
 
     for (const btn of capButtons) {
       const cap = btn.dataset.value ?? '';
-      btn.classList.toggle('on', state.filters.caps.includes(cap));
+      const active = state.filters.caps.includes(cap);
+      btn.classList.toggle('on', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
 
     if (searchInput && searchInput.value !== state.filters.q) {
@@ -610,9 +626,11 @@ function init() {
       const target = event.target as HTMLElement;
       const btn = target.closest<HTMLButtonElement>('button[data-value]');
       if (!btn || !seg.contains(btn)) return;
-      const raw = btn.dataset.value ?? '';
-      const value: string | number = facet === 'depth' ? Number(raw) : raw;
-      (state.filters as unknown as Record<FacetKey, string | number>)[facet] = value;
+      const value = btn.dataset.value ?? '';
+      // Deselectable: clicking the already-active segment clears the facet
+      // back to "off" (null = every value of this dimension) instead of
+      // forcing exactly one value to always be selected.
+      state.filters[facet] = state.filters[facet] === value ? null : value;
       render();
     });
   }

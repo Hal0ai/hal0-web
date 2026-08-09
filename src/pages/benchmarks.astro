@@ -23,14 +23,7 @@ import BucketMeter from '../components/bench/BucketMeter.astro';
 import RunDrawer from '../components/bench/RunDrawer.astro';
 import { ROSTER, HARDWARE, BINARY, ROSTER_DATE } from '../data/model-roster.ts';
 import BENCH_SNAPSHOT from '../data/bench-snapshot.json';
-import {
-  selectInitialRows,
-  capCounts,
-  DEFAULT_WORKLOAD,
-  DEFAULT_DEPTH,
-  DEFAULT_VARIANT,
-  DEFAULT_LANE,
-} from '../lib/bench-view.mjs';
+import { selectInitialRows, capCounts, DEFAULT_WORKLOAD } from '../lib/bench-view.mjs';
 
 // scripts/sync-bench.mjs (a prebuild step) writes src/data/bench-snapshot.json
 // from the live /v1/roster API when it's reachable at build time, falling
@@ -45,15 +38,25 @@ const { rows, freshnessDate } = selectInitialRows(ROSTER, { generatedAt: ROSTER_
 // (tg @ 2048, variant default, best lane); the full catalogs are what the
 // live api.hal0.dev/v1/roster surface will fill in once deployed. All rows
 // currently on the page only ever match the default of each facet.
+//
+// depth and variant are deliberately NOT filter facets: the live corpus is
+// effectively single-depth (2048)/single-variant (default), so a facet for
+// either was noise, not a real choice — bench-island.ts no longer wires
+// UI for them (the underlying BenchRow depth/variant fields are untouched;
+// defaultView's opinionated reduction and the drawer's identity chips still
+// use them). Workload and lane remain — and are deselectable (see
+// bench-island.ts): clicking the active segment clears it back to "all
+// values of this dimension" rather than forcing exactly one selection.
 const WORKLOADS = ['tg', 'pp', 'chat', 'batch', 'embed', 'rerank', 'reuse'];
-const DEPTHS = [512, 2048, 8192, 16384];
-const VARIANTS = ['default', 'b1024', 'kv-q8', 'mtp-off'];
-// 'default' is deliberately excluded here: it's the bench adapter's own
-// name for CT105's unlaned ('') cells, not a real backend lane, and is
-// meaningless as a visitor-facing filter. Unlaned cells still participate
-// in the 'best' reduction (bench-view.mjs's applyFilters/reduceBestLane) —
-// they're just not reachable via a named-lane filter button.
-const LANES = ['best', 'rocm', 'vulkan_radv'];
+// 'best' and 'default' are deliberately excluded from the lane pills:
+// 'best' is now the implicit state when no lane pill is active (the
+// deselected/"off" state — see bench-island.ts), not a pill of its own;
+// 'default' is the bench adapter's own name for CT105's unlaned ('') cells,
+// not a real backend lane, and is meaningless as a visitor-facing filter.
+// Unlaned cells still participate in the best-cell reduction
+// (bench-view.mjs's applyFilters/reduceBestLane) — they're just not
+// reachable via a named-lane filter button.
+const LANES = ['rocm', 'vulkan_radv'];
 const CAPS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
 
 // The June sweep ran exclusively on the ROCm container (see BINARY above:
@@ -172,23 +175,7 @@ const description =
         <span class="label">workload</span>
         <div class="seg" data-facet="workload">
           {WORKLOADS.map((w) => (
-            <button type="button" class={w === DEFAULT_WORKLOAD ? 'on' : ''} data-value={w}>{w}</button>
-          ))}
-        </div>
-      </div>
-      <div class="segrow">
-        <span class="label">depth</span>
-        <div class="seg" data-facet="depth">
-          {DEPTHS.map((d) => (
-            <button type="button" class={d === DEFAULT_DEPTH ? 'on' : ''} data-value={d}>{d}</button>
-          ))}
-        </div>
-      </div>
-      <div class="segrow">
-        <span class="label">variant</span>
-        <div class="seg" data-facet="variant">
-          {VARIANTS.map((v) => (
-            <button type="button" class={v === DEFAULT_VARIANT ? 'on' : ''} data-value={v}>{v}</button>
+            <button type="button" class={w === DEFAULT_WORKLOAD ? 'on' : ''} aria-pressed={w === DEFAULT_WORKLOAD ? 'true' : 'false'} data-value={w}>{w}</button>
           ))}
         </div>
       </div>
@@ -196,7 +183,7 @@ const description =
         <span class="label">lane</span>
         <div class="seg" data-facet="lane">
           {LANES.map((l) => (
-            <button type="button" class={l === DEFAULT_LANE ? 'on' : ''} data-value={l}>{l}</button>
+            <button type="button" class="" aria-pressed="false" data-value={l}>{l}</button>
           ))}
         </div>
       </div>
@@ -204,7 +191,7 @@ const description =
         <span class="label">capability</span>
         <div class="fbar" data-facet="caps">
           {CAPS.map((c) => (
-            <button type="button" class="fpill" data-value={c}>
+            <button type="button" class="fpill" aria-pressed="false" data-value={c}>
               <CapGlyphs caps={[c]} />
               {c}
               <span class="n num" data-cap-count={c}>{CAP_COUNTS[c] ?? 0}</span>
@@ -224,7 +211,7 @@ const description =
 
     <div class="tablewrap panel" id="panel-leaderboard" role="tabpanel" aria-labelledby="tab-leaderboard">
       <div class="panel-h">
-        <span class="label" id="bench-panel-label">leaderboard · tg @ depth {DEFAULT_DEPTH}</span>
+        <span class="label" id="bench-panel-label">leaderboard</span>
         <span class="fresh snap" id="bench-freshness">
           <span class="dot stale"></span>
           <span id="bench-freshness-text">snapshot from {freshnessDate} · live sync coming soon</span>
