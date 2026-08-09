@@ -126,3 +126,41 @@ marketing hero character.
   (Qwen3, Llama, GPT-OSS), plausible tokens/sec figures — no lorem ipsum.
 - Deliver each section as its own artifact/page; start with section 1 and get
   the chrome right before fanning out.
+
+## Addendum — exact values from the implementation (match these)
+
+**Full token palette** (dark, default — use these literal values):
+
+```css
+--hal0-accent: #ffb000;        --hal0-accent-hover: #ffc533;
+--hal0-accent-muted: #7a5500;  --hal0-accent-glow: rgba(255,176,0,0.18);
+--hal0-bg: #0a0a0a;            --hal0-bg-elevated: #141414;
+--hal0-bg-sunken: #050505;     --hal0-fg: #f5f5f4;
+--hal0-fg-muted: #c8c2bd;      --hal0-fg-dim: #a3a09c;
+--hal0-border: #262626;        --hal0-border-strong: #3a3a3a;
+```
+
+Light mode accent is `#b87800` (AA on light backgrounds), bg `#fafaf9`,
+text `#1c1917`.
+
+**Nav conventions:**
+- Labels are lowercase JetBrains Mono everywhere: `docs`, `benchmarks`,
+  `profiles`, `blog`, `forum` — never Capitalized.
+- Target header set (design for this): docs · benchmarks · profiles · blog ·
+  forum, then right cluster: github, discord icons, theme toggle, search.
+- Footer set: docs, blog, changelog, releases, contributing, roadmap,
+  hello@hal0.dev, github, discord — plus wordmark and a mono
+  `Apache-2.0 · v<version>` line, on the sunken background (`#050505`) with a
+  top border.
+- Active nav link renders in accent amber (`#ffb000`) with `aria-current`.
+
+**Wordmark construction:** "hal" set in Monomaniac One + slashed "0" in
+JetBrains Mono, amber zero on dark. The slashed-zero alone is the mark-only
+glyph. Don't redraw; treat as a fixed asset.
+
+**Existing header signature (keep it):** sticky nav, frosted near-black
+(`rgba(10,10,10,0.85)` + 12px blur) with a 1px "filament" line along the
+bottom edge — a gradient that brightens to sodium amber at center, plus a
+faint amber under-glow. On the landing page the nav starts transparent and
+promotes to solid past the fold. This is the "the rack is on" motif; carry it
+to every surface including the forum chrome.
