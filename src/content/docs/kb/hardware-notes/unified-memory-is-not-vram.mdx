@@ -1,0 +1,57 @@
+---
+title: Unified memory is not VRAM
+description: A Strix Halo box reports 128 GB and addresses roughly 96 of it from the iGPU — that number is a shared pool, not a dedicated card.
+kbCategory: hardware notes
+reviewed: "2026-08-09"
+---
+
+import KbStamp from '../../../../components/KbStamp.astro';
+
+<KbStamp
+  category="hardware notes"
+  reviewed="2026-08-09"
+  editHref="https://github.com/hal0ai/hal0-web/edit/master/src/content/docs/kb/hardware-notes/unified-memory-is-not-vram.mdx"
+/>
+
+A Strix Halo box reports 128 GB of system memory and addresses roughly
+96 GB of it from the iGPU. That number is a **pool**, not a card, and
+treating it like dedicated VRAM is how loadouts end up thrashing.
+
+## The pool
+
+**GTT** (Graphics Translation Table) is the portion of system memory the
+GPU may address. On the reference box that's roughly 96 GB of the 128 GB
+installed, and it's shared with everything else the machine is doing —
+page cache, ZFS ARC if you run one, the container runtime.
+
+A model that reports 19 GB resident isn't taking 19 GB away from a
+dedicated card. It's taking it from the same pool your file cache lives
+in, which is why a sweep that looks stable at the first request can drift
+by the tenth. See [Size the GTT
+pool](/docs/getting-started/drivers/#size-the-gtt-pool) for the kernel
+command-line parameters that set the ceiling in the first place.
+
+## Sizing a loadout
+
+- Add the resident size of every slot you want co-resident, then add the
+  KV cache at your target context length.
+- Leave 8–12 GB of headroom for the host. Below that, eviction starts and
+  the slot lifecycle churns — a slot can unload mid-conversation because
+  a larger one asked for room.
+- `q8_0` KV cache roughly halves cache memory against `f16` for a small
+  decode-speed cost — see [q4 vs q8 KV
+  cache](/kb/models-and-quants/reading-a-quant-name/) for the tradeoff.
+
+## When it goes wrong
+
+The failure mode isn't an out-of-memory error. It's a slot that unloads
+while you're mid-conversation, because a larger slot asked for room and
+the scheduler took it from the least-recently-used one. `hal0 slots
+--memory` shows what's actually resident right now — reach for it before
+you reach for a bigger box.
+
+## Related
+
+- [Reading the memory map](/kb/operating-hal0/reading-the-memory-map/)
+- [Reading a quant name](/kb/models-and-quants/reading-a-quant-name/) —
+  the other half of a sizing decision: what the model itself costs.

@@ -1,0 +1,74 @@
+---
+/**
+ * KbStamp — the badge every knowledge-base article opens with, per the
+ * "distinction" spec in docs/design/2026-08-09-community-comps/README.md:
+ * docs are versioned reference, blog is dated and authored, KB is
+ * "undated, reviewed and community-editable" — same chrome, same type,
+ * only the surface tag and the stamp differ. Ported from the comp's
+ * `.surface-tag` + byline row (`04 Blog and KB.html`).
+ *
+ * Usage: drop straight into the top of a kb/**\/*.mdx body (Starlight/MDX
+ * files don't get a shared layout slot to inject this from, so each KB
+ * page imports and renders it once, right under its H1):
+ *
+ *   <KbStamp category="hardware notes" reviewed="2026-08-09" editHref="https://github.com/hal0ai/hal0-web/edit/master/src/content/docs/kb/hardware-notes/unified-memory-is-not-vram.mdx" />
+ */
+interface Props {
+  category: string;
+  reviewed: string;
+  editHref?: string;
+}
+
+const { category, reviewed, editHref } = Astro.props;
+---
+
+<p class="kb-stamp not-content">
+  <span class="kb-surface-tag">knowledge base &middot; {category}</span>
+  <span class="kb-stamp-sep">&middot;</span>
+  <span>reviewed {reviewed}</span>
+  {editHref && (
+    <>
+      <span class="kb-stamp-sep">&middot;</span>
+      <a href={editHref} rel="noopener">suggest an edit &#8599;</a>
+    </>
+  )}
+</p>
+
+<style>
+  .kb-stamp {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 24px;
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
+    color: var(--hal0-fg-faint);
+  }
+  .kb-stamp a {
+    color: var(--hal0-fg-dim);
+  }
+  .kb-stamp a:hover {
+    color: var(--hal0-accent);
+  }
+  .kb-stamp-sep {
+    color: var(--hal0-fg-ghost);
+  }
+  .kb-surface-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    text-transform: uppercase;
+    letter-spacing: var(--hal0-ls-label);
+    color: var(--hal0-accent);
+    font-size: 10px;
+  }
+  .kb-surface-tag::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--hal0-accent);
+    box-shadow: 0 0 6px var(--hal0-accent);
+  }
+</style>

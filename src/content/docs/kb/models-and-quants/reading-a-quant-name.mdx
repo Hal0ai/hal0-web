@@ -1,0 +1,61 @@
+---
+title: Reading a quant name
+description: What the suffixes in a GGUF filename actually mean, so a model card stops being a wall of noise.
+kbCategory: models & quants
+reviewed: "2026-08-09"
+---
+
+import KbStamp from '../../../../components/KbStamp.astro';
+
+<KbStamp
+  category="models & quants"
+  reviewed="2026-08-09"
+  editHref="https://github.com/hal0ai/hal0-web/edit/master/src/content/docs/kb/models-and-quants/reading-a-quant-name.mdx"
+/>
+
+A GGUF filename like `qwen3.5-9b-q4kxl.gguf` packs several independent
+decisions into one string. Reading it correctly is the difference between
+picking a model that fits and one that thrashes your GTT pool.
+
+## The quant suffix
+
+`q4`, `q5`, `q6`, `q8` name the bits-per-weight target; `_k` variants
+(`q4_k_m`, `q4_k_l`) use a mixed-precision scheme that keeps a few
+sensitive tensors at higher precision instead of quantizing everything
+uniformly. Roughly:
+
+| Quant | Size vs f16 | Typical quality cost |
+|---|---|---|
+| `q8_0` | ~50% | negligible |
+| `q6_k` | ~40% | very small |
+| `q5_k_m` | ~35% | small |
+| `q4_k_m` | ~28% | noticeable on hard tasks |
+
+## KV cache type is a separate knob
+
+The quant suffix describes the **weights**. The **KV cache** (attention
+state, grows with context length) has its own type, set independently —
+`f16` (full precision, largest), `q8_0` (roughly half the size, ~3% decode
+cost), or `q4_0` (smallest, more noticeable quality cost on long
+contexts). A `q4` model with an `f16` KV cache is a legitimate, common
+combination — don't assume the two numbers match.
+
+## MoE, draft heads, and vision
+
+Beyond size, a few suffixes change what the model *is*, not just how big
+it is:
+
+- **MoE** (mixture-of-experts) models activate a subset of parameters per
+  token — a 35B MoE model can decode faster than a dense 13B while
+  holding more total weights in memory.
+- **`-mtp`** marks a model shipping a draft head for speculative decode —
+  it roughly doubles decode throughput on a good accept rate, at the cost
+  of a second model pinned in memory. See the [blog](/blog/) for
+  write-ups as speculative-decode sweeps land.
+- A **vision projector** (`mmproj-*.gguf`) is a second file paired with
+  the base model, not a suffix on it — both need to be resident together.
+
+## Related
+
+- [Unified memory is not VRAM](/kb/hardware-notes/unified-memory-is-not-vram/)
+- [Choosing a model that fits](/docs/guides/choose-models/)

@@ -1,0 +1,62 @@
+---
+title: ROCm vs vulkan_radv
+description: hal0 can serve the same model over two different GPU lanes on the same box — what each one actually trades.
+kbCategory: runtime & backends
+reviewed: "2026-08-09"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import KbStamp from '../../../../components/KbStamp.astro';
+
+<KbStamp
+  category="runtime & backends"
+  reviewed="2026-08-09"
+  editHref="https://github.com/hal0ai/hal0-web/edit/master/src/content/docs/kb/runtime-and-backends/rocm-vs-vulkan-radv.mdx"
+/>
+
+A Strix Halo box can serve the same model two different ways: through
+**ROCm** (AMD's compute stack) or through **`vulkan_radv`** (Mesa's
+open-source Vulkan driver). hal0 picks a lane per slot, and which one is
+right depends on what you're optimizing for.
+
+## The short version
+
+- **ROCm** is faster on prefill and generally the better default when it
+  builds cleanly for your kernel/driver combination.
+- **`vulkan_radv`** needs nothing beyond the in-tree Mesa driver — no
+  userspace ROCm stack to install or pin — at the cost of slower prefill
+  on long contexts.
+- Both lanes read from the same GTT pool and the same model weights on
+  disk; switching lanes doesn't change what's resident.
+
+## Telling which one you're on
+
+```sh
+hal0 slots --verbose
+```
+
+The `lane` column reports `rocm` or `vulkan_radv` per slot. The
+[leaderboard](/docs/reference/model-roster-benchmark/) also breaks out
+decode/prefill by lane per model, so you can see the actual gap for your
+model rather than trusting a rule of thumb.
+
+## When to reach for Vulkan
+
+ROCm's kernel and firmware requirements move faster than distro
+packaging. If a ROCm build won't come up on your kernel version, `hal0`
+falls back to `vulkan_radv` rather than failing to serve — that fallback
+is deliberate, not a bug. It's also the simpler starting point if you're
+still validating that the iGPU is visible at all before debugging a
+ROCm-specific issue.
+
+## Related
+
+- [Unified memory is not VRAM](/kb/hardware-notes/unified-memory-is-not-vram/)
+- [Benchmarks leaderboard](/docs/reference/model-roster-benchmark/) — the
+  measured decode/prefill gap per model and lane, not a rule of thumb.
+
+<Aside type="note" title="More runtime & backends pages are coming">
+Building the rocmfp4 fork, the XDNA/FastFlowLM NPU lane, and container
+digest pinning are planned pages in this category — not yet written. This
+page is the category's seed.
+</Aside>

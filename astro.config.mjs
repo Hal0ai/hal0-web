@@ -48,7 +48,7 @@ export default defineConfig({
 				replacesTitle: true,
 			},
 			favicon: '/favicon.svg',
-			customCss: ['./src/styles/global.css'],
+			customCss: ['./src/styles/global.css', './src/styles/site-blog-kb.css'],
 			social: [
 				{
 					icon: 'github',
@@ -92,6 +92,25 @@ export default defineConfig({
 					label: 'Reference',
 					items: [{ autogenerate: { directory: 'docs/reference' } }],
 				},
+				{
+					// Knowledge base: undated, reviewed, community-editable — same
+					// Starlight sidebar/TOC shell as docs, distinguished only by the
+					// KbStamp badge each kb/**/*.mdx page renders inline (surface tag
+					// + "reviewed <date>", not "applies to v0.5.x"). One explicit
+					// sub-group per category (rather than one `autogenerate: { directory:
+					// 'kb' }`) so the sidebar label can use the comp's copy verbatim
+					// ("runtime & backends") instead of Starlight's dash-to-space
+					// titleisation of the directory slug ("Runtime And Backends").
+					label: 'Knowledge base',
+					items: [
+						{ label: 'Getting started', items: [{ autogenerate: { directory: 'kb/getting-started' } }] },
+						{ label: 'Hardware notes', items: [{ autogenerate: { directory: 'kb/hardware-notes' } }] },
+						{ label: 'Runtime & backends', items: [{ autogenerate: { directory: 'kb/runtime-and-backends' } }] },
+						{ label: 'Models & quants', items: [{ autogenerate: { directory: 'kb/models-and-quants' } }] },
+						{ label: 'Operating hal0', items: [{ autogenerate: { directory: 'kb/operating-hal0' } }] },
+						{ label: 'Tool reviews', items: [{ autogenerate: { directory: 'kb/tool-reviews' } }] },
+					],
+				},
 			],
 			components: {
 				// Inline the wordmark SVG so the "hal" glyphs inherit
@@ -120,6 +139,13 @@ export default defineConfig({
 				{
 					tag: 'script',
 					attrs: { src: '/js/lightbox.js', defer: true },
+				},
+				// Blog index RSS button — see public/js/blog-rss-button.js for why
+				// this is a progressive-enhancement script rather than a template
+				// override (starlight-blog's blog index route has no override seam).
+				{
+					tag: 'script',
+					attrs: { src: '/js/blog-rss-button.js', defer: true },
 				},
 			],
 		}),
