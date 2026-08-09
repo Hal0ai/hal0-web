@@ -10,3 +10,9 @@
 # hal0 README + older links point at hal0.dev/roadmap; the roadmap
 # lives as a landing-page section, not a standalone page.
 /roadmap  /#roadmap  302
+
+# The Quick Start & Migration Guide is authored in the product repo as
+# docs/hal0-install-migration-guide.html and hosted here verbatim at
+# /install-migration-guide/ — catch links that use the source filename.
+/hal0-install-migration-guide.html        /install-migration-guide/  301
+/docs/hal0-install-migration-guide.html   /install-migration-guide/  301
