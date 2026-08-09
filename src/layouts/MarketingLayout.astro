@@ -114,5 +114,7 @@ const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString()
 
     <!-- Screenshot lightbox (shared with the docs/blog via astro.config head). -->
     <script is:inline src="/js/lightbox.js" defer></script>
+    <!-- ⌘K search palette over the Pagefind index (see public/js/site-search.js). -->
+    <script is:inline src="/js/site-search.js" defer></script>
   </body>
 </html>

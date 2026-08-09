@@ -216,6 +216,134 @@
 	--ec-frm-inlBtnFg: var(--hal0-fg-dim);
 }
 
+/* ── header bar → the comp's ONE `.hdr` (01 Unified Chrome) ──
+ * Starlight's top bar restyled to the exact geometry the marketing
+ * SiteHeader draws from site.css: 56px, frosted bg, filament hairline,
+ * mono 12.5px nav links with the amber 2px active bar, and the big
+ * centered search input collapsed into the comp's compact right-aligned
+ * `.searchbtn`. One header, two renderers. */
+
+:root {
+	/* comp .hdr-in height (Starlight default is 4rem) */
+	--sl-nav-height: 3.5rem;
+}
+
+header.header {
+	background: color-mix(in srgb, var(--hal0-bg) 85%, transparent);
+	-webkit-backdrop-filter: blur(12px);
+	backdrop-filter: blur(12px);
+	border-bottom: 0;
+}
+/* the filament: 1px line brightening to sodium amber at centre (comp
+ * .hdr::after) */
+header.header::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 1px;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		var(--hal0-border) 18%,
+		color-mix(in srgb, var(--hal0-accent) 70%, var(--hal0-border)) 50%,
+		var(--hal0-border) 82%,
+		transparent 100%
+	);
+	box-shadow: 0 1px 14px rgba(255, 176, 0, 0.09);
+}
+
+/* search → comp .searchbtn: compact, right-aligned next to the icon
+ * cluster instead of a giant centered input */
+div.header > div:has(> site-search) {
+	justify-content: flex-end;
+}
+site-search {
+	flex: 0 0 auto;
+	width: auto;
+}
+site-search button[data-open-modal] {
+	height: 30px;
+	width: 180px;
+	min-width: 180px;
+	padding: 0 8px 0 10px;
+	gap: 8px;
+	border: 1px solid var(--hal0-border);
+	border-radius: var(--hal0-rad-sm, 4px);
+	background: var(--hal0-bg-elevated);
+	color: var(--hal0-fg-faint);
+	font-family: var(--hal0-font-mono);
+	font-size: 11.5px;
+	justify-content: flex-start;
+	transition: border-color var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease);
+}
+site-search button[data-open-modal]:hover {
+	border-color: var(--hal0-border-strong);
+	color: var(--hal0-fg-dim);
+	background: var(--hal0-bg-elevated);
+}
+site-search button[data-open-modal] > kbd {
+	margin-left: auto;
+	padding: 0;
+	background: transparent;
+	gap: 4px;
+}
+site-search button[data-open-modal] > kbd kbd {
+	font-size: 10px;
+	color: var(--hal0-fg-faint);
+	border: 1px solid var(--hal0-border);
+	border-radius: 3px;
+	padding: 1px 4px;
+	background: transparent;
+	font-family: var(--hal0-font-mono);
+}
+
+/* docnav links (StarlightSiteTitle override) → comp .hdr-nav: full-bar
+ * hit area with the amber 2px active bar sitting on the filament */
+.hal0-docnav {
+	align-self: stretch;
+	gap: 2px; /* comp .hdr-nav — spacing comes from the links' 11px padding */
+}
+.hal0-docnav-link {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	height: var(--sl-nav-height, 3.5rem);
+	padding: 0 11px;
+	font-size: 12.5px;
+	letter-spacing: var(--hal0-ls-tight);
+	color: var(--hal0-fg-dim);
+}
+.hal0-docnav-link:hover {
+	color: var(--hal0-fg);
+}
+.hal0-docnav-link.active {
+	color: var(--hal0-accent);
+}
+.hal0-docnav-link.active::after {
+	content: '';
+	position: absolute;
+	left: 11px;
+	right: 11px;
+	bottom: 0;
+	height: 2px;
+	background: var(--hal0-accent);
+	box-shadow: 0 0 8px var(--hal0-accent-glow);
+}
+
+/* theme select → mono, quiet */
+starlight-theme-select label,
+starlight-theme-select select {
+	font-family: var(--hal0-font-mono);
+	font-size: 11.5px;
+	color: var(--hal0-fg-dim);
+}
+starlight-theme-select label:hover,
+starlight-theme-select select:hover {
+	color: var(--hal0-fg);
+}
+
 /* ── version stamp (08 Docs.html `.vernote` + DocFoot) — rendered by
  * the PageTitle override when a page declares `appliesTo`. The dot is
  * the comp's `.dot ready` status (ok green). ── */

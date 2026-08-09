@@ -74,10 +74,26 @@ export function getSocial(id: SocialLink['id']): SocialLink {
  * Returns the `sub` list of the header entry whose section is active for
  * `path`, restricted to visible header entries. Returns null when no
  * visible header entry with a sub-nav is active for the given path.
+ *
+ * Hub entries (array `match`, i.e. `learn`) are EXCLUDED since the
+ * one-header unification: their sub links live flat in the main nav on
+ * every surface (see `flatHeader`), so repeating them in a sub-nav row
+ * was pure duplication. Sections with a real landing page (benchmarks)
+ * keep their contextual sub-nav.
  */
 export function subFor(path: string): NavLink[] | null {
   for (const link of visibleHeader) {
-    if (link.sub && isActive(path, link)) return link.sub;
+    if (link.sub && !Array.isArray(link.match) && isActive(path, link)) return link.sub;
   }
   return null;
 }
+
+/**
+ * The flat site nav — ONE list for every header (marketing SiteHeader,
+ * Starlight docnav, mobile drawers): hub entries with an array `match`
+ * (i.e. `learn`, which has no page of its own) contribute their sub
+ * links; real sections pass through as their umbrella link.
+ */
+export const flatHeader: NavLink[] = visibleHeader.flatMap((l) =>
+  l.sub && Array.isArray(l.match) ? l.sub : [l],
+);
