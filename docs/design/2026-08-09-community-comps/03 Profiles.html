@@ -246,7 +246,7 @@ function App() {
   return (
     <div className="site">
       <Header active="profiles" sticky user="lemond" />
-      <SubNav items={[["all profiles", "#"], ["by model", "#"], ["by intent", "#"], ["benchmarks", window.P_BENCH], ["submit a profile", "#"]]} active="all profiles" />
+      <SubNav items={[["all profiles", "#"], ["by model", "#"], ["by intent", "#"], ["benchmarks", window.P_BENCH], ["submit a profile", window.P_SUBMIT]]} active="all profiles" />
       <div className="wrap wide phead">
         <div className="phead-row">
           <div>
@@ -260,7 +260,7 @@ function App() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn ghost">how profiles work</button>
-            <button className="btn">submit a profile</button>
+            <a className="btn" href={window.P_SUBMIT}>submit a profile</a>
           </div>
         </div>
       </div>
@@ -299,7 +299,7 @@ function App() {
             <p className="site-sm" style={{ margin: "8px auto 14px", maxWidth: "44ch" }}>
               If you have one working, submitting it is a file and a pull request — the CLI opens it for you.
             </p>
-            <button className="btn sm">submit a profile</button>
+            <a className="btn sm" href={window.P_SUBMIT}>submit a profile</a>
           </div>
         ) : (
           <div className="pgrid">{list.map(p => <Card key={p.slug} p={p} onOpen={setOpen} />)}</div>

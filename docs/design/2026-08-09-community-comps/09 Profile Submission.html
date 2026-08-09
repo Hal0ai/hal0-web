@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>submit a profile — hal0</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.phead{padding-block:34px 18px}
+.sec{padding-block:44px 0}
+.sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.sec-h h2{font-family:var(--jbm);font-size:21px;letter-spacing:var(--ls-title);margin:0;font-weight:500}
+.sec-note{max-width:66ch;margin:0 0 18px}
+/* wireframe frame */
+.wf{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden}
+.wf-cap{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line-soft);background:var(--bg);font-family:var(--jbm);font-size:10px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--fg-3)}
+.wf-cap .url{margin-left:auto;text-transform:none;letter-spacing:0;color:var(--fg-4)}
+.wf-b{padding:26px 28px}
+.wf-b.tight{padding:20px 22px}
+.ghostbox{border:1px dashed var(--line-strong);border-radius:var(--rad);background:transparent;color:var(--fg-4);font-family:var(--jbm);font-size:11px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}
+.note{font-family:var(--jbm);font-size:10.5px;color:var(--accent);opacity:.85;display:flex;gap:8px;margin-top:10px;line-height:1.5}
+.note::before{content:"\2190";flex-shrink:0}
+/* flow strip */
+.flow{display:flex;align-items:stretch;gap:0;border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden;flex-wrap:wrap}
+.fstep{flex:1;min-width:150px;padding:16px 18px;border-right:1px solid var(--line-soft);position:relative}
+.fstep:last-child{border-right:0}
+.fstep .k{font-family:var(--jbm);font-size:9.5px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--fg-4)}
+.fstep .v{font-family:var(--jbm);font-size:13px;color:var(--fg);margin-top:7px}
+.fstep .d{font-size:12px;line-height:1.5;color:var(--fg-3);margin-top:6px}
+.fstep.on{background:linear-gradient(180deg,var(--accent-soft),transparent)}
+.fstep.on .v{color:var(--accent)}
+/* step rail */
+.rail{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--line-soft);background:var(--bg);flex-wrap:wrap}
+.rail button{flex:1;min-width:120px;background:none;border:0;border-right:1px solid var(--line-soft);padding:11px 12px;font-family:var(--jbm);font-size:11px;color:var(--fg-3);cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px}
+.rail button:last-child{border-right:0}
+.rail button:hover{background:var(--bg-2);color:var(--fg)}
+.rail button.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+.rail .n{width:18px;height:18px;border-radius:50%;border:1px solid var(--line-strong);display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;flex-shrink:0}
+.rail button.on .n{border-color:var(--accent);background:var(--accent);color:#0a0a0a}
+.rail button.done .n{border-color:var(--ok);color:var(--ok)}
+/* form bits */
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+.field .lbl{font-family:var(--jbm);font-size:11px;color:var(--fg-2)}
+.field .hint{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);line-height:1.5}
+.tin{width:100%;background:var(--bg-sunken);border:1px solid var(--line);border-radius:var(--rad);color:var(--fg-2);font-family:var(--jbm);font-size:12px;line-height:1.7;padding:12px 14px;box-sizing:border-box;resize:vertical}
+.tin:focus{outline:0;border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.drop{border:1px dashed var(--line-strong);border-radius:var(--rad);background:var(--bg-sunken);padding:34px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.drop.hot{border-color:var(--accent-line);background:var(--accent-soft)}
+.drop .big{font-family:var(--jbm);font-size:13px;color:var(--fg-2)}
+.drop .sm{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4)}
+.tabs2{display:inline-flex;border:1px solid var(--line);border-radius:var(--rad-sm);overflow:hidden;margin-bottom:14px}
+.tabs2 button{background:none;border:0;border-right:1px solid var(--line);padding:6px 13px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);cursor:pointer}
+.tabs2 button:last-child{border-right:0}
+.tabs2 button.on{background:var(--accent-soft);color:var(--accent)}
+/* validation */
+.vstates{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.vpanel{border:1px solid var(--line);border-radius:var(--rad);overflow:hidden}
+.vhead{display:flex;align-items:center;gap:10px;padding:12px 14px;font-family:var(--jbm);font-size:12px}
+.vhead.ok{background:var(--ok-soft);border-bottom:1px solid var(--ok-line);color:var(--ok)}
+.vhead.err{background:var(--err-soft);border-bottom:1px solid var(--err-line);color:var(--err)}
+.vhead.warn{background:var(--warn-soft);border-bottom:1px solid var(--warn-line);color:var(--warn)}
+.vbody{padding:14px}
+.vrow{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:7px 0;border-top:1px solid var(--line-soft);font-family:var(--jbm);font-size:11.5px}
+.vrow:first-child{border-top:0}
+.vrow dt{color:var(--fg-4)}
+.vrow dd{color:var(--fg-2);margin:0}
+.codeline{display:grid;grid-template-columns:34px 1fr;font-family:var(--jbm);font-size:11.5px;line-height:1.85}
+.codeline .ln{color:var(--fg-5);text-align:right;padding-right:12px}
+.codeline .bad{background:var(--err-soft);box-shadow:inset 2px 0 0 var(--err);color:var(--fg)}
+.fixlist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fixlist li{display:flex;gap:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-2);align-items:flex-start}
+.fixlist .key{color:var(--err)}
+.fixlist .why{color:var(--fg-4)}
+/* status */
+.subs{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden}
+.subrow{display:grid;grid-template-columns:1fr 150px 92px 110px;gap:14px;align-items:center;padding:13px 16px;border-top:1px solid var(--line-soft)}
+.subrow:first-of-type{border-top:0}
+.subrow .slug{font-family:var(--jbm);font-size:13px;color:var(--fg)}
+.subrow .sub{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);margin-top:4px;display:block}
+.subrow .when{font-family:var(--jbm);font-size:10.5px;color:var(--fg-3);text-align:right}
+.subrow a.pr{font-family:var(--jbm);font-size:11px;color:var(--fg-3);text-align:right}
+.subrow a.pr:hover{color:var(--accent)}
+.states4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.stcard{border:1px solid var(--line);border-radius:var(--rad);padding:14px;background:var(--bg-1)}
+.stcard .t{margin-bottom:8px}
+.stcard p{font-size:12.5px;line-height:1.55;color:var(--fg-3);margin:0}
+.stcard .you{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);margin-top:10px;display:block;border-top:1px solid var(--line-soft);padding-top:9px}
+/* success */
+.done{display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start}
+.bigcheck{width:42px;height:42px;border-radius:50%;border:1px solid var(--ok-line);background:var(--ok-soft);color:var(--ok);display:flex;align-items:center;justify-content:center}
+.steps{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:0}
+.steps li{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:12px 0;border-top:1px solid var(--line-soft)}
+.steps .n{font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
+.steps .t{font-family:var(--jbm);font-size:12.5px;color:var(--fg)}
+.steps .d{font-size:12.5px;line-height:1.55;color:var(--fg-3);margin-top:5px}
+.edge{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+@media(max-width:900px){.done{grid-template-columns:1fr}.states4{grid-template-columns:1fr 1fr}.subrow{grid-template-columns:1fr 120px}.subrow .when,.subrow a.pr{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel">
+const { Icon } = window.Hal0DesignSystem_692ad8;
+
+const TOML = `# hal0 profile · qwen3-9b-longctx
+schema = 1
+intent = "chat"
+slot   = "primary"
+
+[runner]
+kind      = "llama-server"
+lane      = "rocm"
+min_build = "b9219"
+
+[model]
+id    = "qwen3.5-9b-q4kxl"
+quant = "q4_k_xl"
+
+[args]
+raw = "-ngl 99 -c 16384 -fa 1 -ctk q4_0 -ctv q4_0 --parallel 1 -b 512"`;
+
+function Wf({ cap, url, children, pad = true }) {
+  return (
+    <div className="wf">
+      <div className="wf-cap"><span>{cap}</span>{url && <span className="url">{url}</span>}</div>
+      {pad ? <div className="wf-b">{children}</div> : children}
+    </div>
+  );
+}
+function Note({ children }) { return <div className="note">{children}</div>; }
+
+/* ── the success page both doors land on ─────────────────────── */
+function Opened({ door }) {
+  return (
+    <div className="done">
+      <div>
+        <div className="bigcheck"><Icon name="check" size={20} /></div>
+        <h2 className="site-h1" style={{ fontSize: 27, margin: "16px 0 10px" }}>PR opened on your behalf</h2>
+        <p className="site-body" style={{ maxWidth: "52ch" }}>
+          {door === "cli"
+            ? <>The CLI wrote <span className="mono">qwen3-9b-longctx.toml</span> and opened pull request <span className="mono amber">hal0-profiles#218</span> as <span className="mono">@lemond</span>. You do not need to touch git.</>
+            : <>Your file was committed to a branch and opened as pull request <span className="mono amber">hal0-profiles#218</span> under your handle. You do not need to touch git.</>}
+        </p>
+        <div className="fbar" style={{ marginTop: 16 }}>
+          <span className="chip info"><span className="dot loading" style={{ marginRight: 5 }} />validating</span>
+          <span className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>opened 12 seconds ago</span>
+        </div>
+        <ol className="steps">
+          <li><span className="n">01</span><div><span className="t">CI validates the schema</span><span className="d">Usually under a minute. Same checks the browser ran, plus a lint of the flag string against the pinned llama.cpp build.</span></div></li>
+          <li><span className="n">02</span><div><span className="t">A maintainer reads it</span><span className="d">They check the profile does what it claims and that the model id resolves. Most profiles are reviewed within 2–3 days.</span></div></li>
+          <li><span className="n">03</span><div><span className="t">Merge publishes it</span><span className="d">The site rebuilds on merge. Your profile appears in the gallery with your handle on it, and any benchmark runs carrying the slug join to it automatically.</span></div></li>
+        </ol>
+        <div className="fbar" style={{ marginTop: 20 }}>
+          <a className="btn" href="#">view the pull request ↗</a>
+          <a className="btn ghost" href="#">your submissions</a>
+          <a className="btn ghost" href={window.P_PROF}>back to profiles</a>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="panel" style={{ padding: 14 }}>
+          <span className="label">what was submitted</span>
+          <dl style={{ margin: "10px 0 0" }}>
+            <div className="vrow"><dt>file</dt><dd>profiles/qwen3-9b-longctx.toml</dd></div>
+            <div className="vrow"><dt>repo</dt><dd>hal0ai/hal0-profiles</dd></div>
+            <div className="vrow"><dt>branch</dt><dd>profile/qwen3-9b-longctx</dd></div>
+            <div className="vrow"><dt>author</dt><dd>@lemond</dd></div>
+          </dl>
+        </div>
+        <div className="banner warn" style={{ display: "flex", gap: 8, padding: "10px 12px", background: "var(--warn-soft)", border: "1px solid var(--warn-line)", borderRadius: "var(--rad)", color: "var(--warn)", fontFamily: "var(--jbm)", fontSize: 11, lineHeight: 1.5 }}>
+          <Icon name="warn" size={14} />
+          <span>First submission from this account — held for a maintainer read before CI runs. One-time only.</span>
+        </div>
+        <Note>Both doors land here. Same page, same copy, same URL shape — only the first paragraph differs.</Note>
+      </div>
+    </div>
+  );
+}
+
+/* ── validation states ───────────────────────────────────────── */
+const VSTATES = ["pass", "schema error", "missing fields", "unknown model / lane"];
+
+function Validation({ state }) {
+  if (state === "pass") return (
+    <div className="vpanel">
+      <div className="vhead ok"><Icon name="check" size={14} />Valid — schema 1, 4 sections, 8 keys parsed</div>
+      <div className="vbody">
+        <dl style={{ margin: 0 }}>
+          <div className="vrow"><dt>slug</dt><dd>qwen3-9b-longctx</dd></div>
+          <div className="vrow"><dt>intent · slot</dt><dd>chat · primary</dd></div>
+          <div className="vrow"><dt>model</dt><dd>qwen3.5-9b-q4kxl <span className="chip ok" style={{ marginLeft: 8 }}>in roster</span></dd></div>
+          <div className="vrow"><dt>lane · min build</dt><dd>rocm · b9219 <span className="chip ok" style={{ marginLeft: 8 }}>known</span></dd></div>
+          <div className="vrow"><dt>flags</dt><dd>8 flags, all recognised by b9219</dd></div>
+          <div className="vrow"><dt>linked runs</dt><dd>2 benchmark runs already carry this slug</dd></div>
+        </dl>
+      </div>
+    </div>
+  );
+  if (state === "schema error") return (
+    <div className="vpanel">
+      <div className="vhead err"><Icon name="warn" size={14} />Line 9 — `lane` must be one of rocm · vulkan_radv · default</div>
+      <div className="vbody">
+        <div className="codeline">
+          <span className="ln">7</span><span>[runner]</span>
+          <span className="ln">8</span><span>kind = "llama-server"</span>
+          <span className="ln" style={{ color: "var(--err)" }}>9</span><span className="bad">lane = "rocm-6.4"</span>
+          <span className="ln">10</span><span>min_build = "b9219"</span>
+        </div>
+        <p className="site-sm" style={{ marginTop: 12 }}>
+          <b style={{ color: "var(--fg-2)" }}>Cause then recovery.</b> The lane names the backend, not the driver version.
+          Use <span className="mono">rocm</span> and put the ROCm version in <span className="mono">min_build</span> if it matters.
+        </p>
+        <div className="fbar" style={{ marginTop: 12 }}>
+          <button className="btn sm">fix it for me</button>
+          <button className="btn ghost sm">edit in place</button>
+        </div>
+        <Note>Blocking. Continue stays disabled until every error clears.</Note>
+      </div>
+    </div>
+  );
+  if (state === "missing fields") return (
+    <div className="vpanel">
+      <div className="vhead err"><Icon name="warn" size={14} />3 required keys missing</div>
+      <div className="vbody">
+        <ul className="fixlist">
+          <li><span className="key">intent</span><span className="why">— what this profile is for: chat · coding · agent · vision · draft · moe · embedding</span></li>
+          <li><span className="key">model.id</span><span className="why">— the roster id this config was tuned against. Without it nothing can join to a benchmark run.</span></li>
+          <li><span className="key">args.raw</span><span className="why">— the flag string itself. A profile without flags is just a name.</span></li>
+        </ul>
+        <div className="ghostbox" style={{ marginTop: 14 }}>inline form — each missing key gets a field here, prefilled where it can be inferred from the file</div>
+        <Note>Recoverable in place. The user never goes back to a text editor.</Note>
+      </div>
+    </div>
+  );
+  return (
+    <div className="vpanel">
+      <div className="vhead warn"><Icon name="warn" size={14} />Model id not in the roster</div>
+      <div className="vbody">
+        <p className="site-sm" style={{ margin: 0 }}>
+          <span className="mono" style={{ color: "var(--fg-2)" }}>qwen3.7-11b-experimental</span> is not in the June sweep.
+          That is allowed — the roster lags what people run — but the profile will show
+          <span className="chip warn" style={{ margin: "0 6px" }}>unverified</span> until a benchmark run carries the slug.
+        </p>
+        <div className="fbar" style={{ marginTop: 14 }}>
+          <button className="btn sm">continue anyway</button>
+          <button className="btn ghost sm">pick from the roster</button>
+        </div>
+        <Note>Warning, not an error. Never block a submission on data the site itself is behind on.</Note>
+      </div>
+    </div>
+  );
+}
+
+/* ── door B, step by step ────────────────────────────────────── */
+const STEPS = ["sign in", "add the file", "validate", "confirm", "opened"];
+
+function DoorB() {
+  const [step, setStep] = React.useState(1);
+  const [mode, setMode] = React.useState("upload");
+  const [vs, setVs] = React.useState("pass");
+  return (
+    <div className="wf">
+      <div className="wf-cap"><span>door b · web upload</span><span className="url">hal0.dev/profiles/submit</span></div>
+      <div className="rail">
+        {STEPS.map((s, i) => (
+          <button key={s} className={(i === step ? "on " : "") + (i < step ? "done" : "")} onClick={() => setStep(i)}>
+            <span className="n">{i < step ? "✓" : i + 1}</span>{s}
+          </button>
+        ))}
+      </div>
+      <div className="wf-b">
+        {step === 0 && (
+          <div style={{ maxWidth: 520 }}>
+            <span className="eyebrow">step 1 of 4</span>
+            <h3 className="site-h2" style={{ margin: "10px 0 10px" }}>Sign in with GitHub</h3>
+            <p className="site-body">
+              hal0 has no account of its own. Signing in lets the site open the pull request
+              <b> as you</b>, so the profile carries your handle and you can update it later.
+            </p>
+            <div className="fbar" style={{ marginTop: 18 }}>
+              <button className="btn lg" style={{ gap: 9 }}><BrandIcon name="github" size={14} />continue with github</button>
+            </div>
+            <ul className="fixlist" style={{ marginTop: 18 }}>
+              <li><Icon name="check" size={13} /><span>Public profile and the ability to open a PR on your behalf. Nothing else.</span></li>
+              <li><Icon name="check" size={13} /><span>No write access to your repositories.</span></li>
+              <li><Icon name="check" size={13} /><span>Already signed in to the forum? The same Discourse SSO session covers this.</span></li>
+            </ul>
+            <Note>Signed-in users skip straight to step 2 — this screen is only ever seen once.</Note>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div>
+            <span className="eyebrow">step 2 of 4</span>
+            <h3 className="site-h2" style={{ margin: "10px 0 12px" }}>Add your profile</h3>
+            <div className="tabs2">
+              <button className={mode === "upload" ? "on" : ""} onClick={() => setMode("upload")}>upload the file</button>
+              <button className={mode === "paste" ? "on" : ""} onClick={() => setMode("paste")}>paste it</button>
+            </div>
+            {mode === "upload" ? (
+              <div className="drop">
+                <Icon name="download" size={22} style={{ color: "var(--fg-3)", transform: "rotate(180deg)" }} />
+                <span className="big">drop your .toml here</span>
+                <span className="sm">or <span className="amber">browse</span> · the CLI already wrote one at ~/.config/hal0/profiles/&lt;slug&gt;.toml</span>
+              </div>
+            ) : (
+              <textarea className="tin" rows={14} defaultValue={TOML} spellCheck="false" />
+            )}
+            <div className="field" style={{ marginTop: 18 }}>
+              <span className="lbl">flag string <span style={{ color: "var(--fg-4)" }}>— optional, overrides args.raw</span></span>
+              <input className="input mono" style={{ width: "100%" }} defaultValue="-ngl 99 -c 16384 -fa 1 -ctk q4_0 -ctv q4_0 --parallel 1 -b 512" />
+              <span className="hint">Paste what you actually ran. It is checked against the pinned llama.cpp build, not just parsed.</span>
+            </div>
+            <div className="fbar">
+              <button className="btn" onClick={() => setStep(2)}>validate</button>
+              <button className="btn ghost">cancel</button>
+            </div>
+            <Note>No form to fill in. The file is the submission — the site only ever asks for what the file cannot say.</Note>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <span className="eyebrow">step 3 of 4 · runs in the browser, before anything is sent</span>
+            <h3 className="site-h2" style={{ margin: "10px 0 12px" }}>Validation</h3>
+            <div className="vstates">
+              {VSTATES.map(s => <Fpill key={s} on={vs === s} onClick={() => setVs(s)}>{s}</Fpill>)}
+            </div>
+            <Validation state={vs} />
+            <div className="fbar" style={{ marginTop: 16 }}>
+              <button className="btn" disabled={vs === "schema error" || vs === "missing fields"} onClick={() => setStep(3)}>continue</button>
+              <button className="btn ghost" onClick={() => setStep(1)}>back</button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <span className="eyebrow">step 4 of 4</span>
+            <h3 className="site-h2" style={{ margin: "10px 0 12px" }}>Confirm</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24, alignItems: "start" }}>
+              <div>
+                <span className="label">this will open a public pull request</span>
+                <div className="well" style={{ padding: "12px 14px", marginTop: 8 }}>
+                  <div style={{ color: "var(--fg-4)" }}># hal0ai/hal0-profiles</div>
+                  <div>+ profiles/qwen3-9b-longctx.toml</div>
+                  <div style={{ color: "var(--fg-4)", marginTop: 8 }}># commit message</div>
+                  <div>profile: add qwen3-9b-longctx (chat · rocm)</div>
+                </div>
+                <ul className="fixlist" style={{ marginTop: 16 }}>
+                  <li><Icon name="check" size={13} /><span>Opened under <span className="mono">@lemond</span>. Your email is never published.</span></li>
+                  <li><Icon name="check" size={13} /><span>You can push changes to the branch, or close it, at any time.</span></li>
+                </ul>
+                <div className="fbar" style={{ marginTop: 18 }}>
+                  <button className="btn" onClick={() => setStep(4)}>open the pull request</button>
+                  <button className="btn ghost" onClick={() => setStep(2)}>back</button>
+                </div>
+              </div>
+              <div>
+                <span className="label">how it will look in the gallery</span>
+                <div className="ghostbox" style={{ marginTop: 8, height: 210, flexDirection: "column", gap: 8 }}>
+                  <span>profile card preview</span>
+                  <span style={{ color: "var(--fg-5)" }}>same component as the gallery,<br />metrics row omitted until a run joins</span>
+                </div>
+                <Note>Showing the real card here is what stops slug and intent mistakes.</Note>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && <Opened door="web" />}
+      </div>
+    </div>
+  );
+}
+
+const SUBS = [
+  ["qwen3-9b-longctx", "chat · rocm · v1", "info", "loading", "validating", "#218", "12 s ago"],
+  ["gemma4-26b-vision", "vision · rocm · v1", "warn", "warming", "awaiting review", "#214", "2 d ago"],
+  ["hx370-lean-daily", "chat · vulkan_radv · v2", "err", "error", "changes requested", "#209", "4 d ago"],
+  ["qwen3-coder-reap-25b", "coding · rocm · v3", "ok", "ready", "merged", "#203", "9 d ago"],
+];
+
+function App() {
+  return (
+    <div className="site">
+      <Header active="profiles" sticky user="lemond" />
+      <SubNav items={[["all profiles", window.P_PROF], ["by model", "#"], ["by intent", "#"], ["submit a profile", "#"], ["your submissions", "#"]]} active="submit a profile" />
+
+      <div className="wrap wide phead">
+        <span className="eyebrow">wireframe · profile submission</span>
+        <h1 className="site-h1" style={{ margin: "10px 0 12px" }}>two doors, one queue</h1>
+        <p className="site-body" style={{ maxWidth: "66ch" }}>
+          A profile is a TOML file in <span className="mono">hal0ai/hal0-profiles</span>. Both routes end
+          as a pull request there, reviewed by CI and a maintainer. The user never needs to know that —
+          they never see a git command, a fork, or a branch name they have to invent.
+        </p>
+        <div className="flow" style={{ marginTop: 22 }}>
+          <div className="fstep on"><div className="k">door a</div><div className="v">hal0 profile share</div><div className="d">CLI opens the PR, then hands the browser a landing page.</div></div>
+          <div className="fstep on"><div className="k">door b</div><div className="v">web upload</div><div className="d">Sign in, drop the file, validate in the browser, confirm.</div></div>
+          <div className="fstep"><div className="k">then</div><div className="v">pull request</div><div className="d">One branch per profile, opened under the submitter's handle.</div></div>
+          <div className="fstep"><div className="k">then</div><div className="v">ci + maintainer</div><div className="d">Schema and flag lint, then a human read. 2–3 days typical.</div></div>
+          <div className="fstep"><div className="k">then</div><div className="v">merged → live</div><div className="d">Site rebuilds; runs carrying the slug join automatically.</div></div>
+        </div>
+      </div>
+
+      <div className="wrap wide">
+        <section className="sec">
+          <div className="sec-h"><span className="eyebrow">01</span><h2>door a — the CLI landing</h2></div>
+          <p className="site-body sec-note">
+            <span className="mono">hal0 profile share</span> writes the file, opens the PR, then opens this
+            page in the browser. It is the only web surface door A needs. Door B ends on the same page.
+          </p>
+          <Wf cap="cli success" url="hal0.dev/profiles/submitted?pr=218"><Opened door="cli" /></Wf>
+        </section>
+
+        <section className="sec">
+          <div className="sec-h"><span className="eyebrow">02</span><h2>door b — the web flow</h2></div>
+          <p className="site-body sec-note">
+            Four steps, all click-through below. Validation is client-side and runs before anything is
+            sent, so a broken file never becomes a pull request someone has to close.
+          </p>
+          <DoorB />
+        </section>
+
+        <section className="sec">
+          <div className="sec-h"><span className="eyebrow">03</span><h2>where is my submission</h2></div>
+          <p className="site-body sec-note">
+            Status lives on the site, not only in GitHub notifications. The chips are the ones the system
+            already uses, so a submission reads like any other piece of hal0 state.
+          </p>
+          <Wf cap="your submissions" url="hal0.dev/profiles/mine" pad={false}>
+            <div className="subs" style={{ border: 0, borderRadius: 0 }}>
+              {SUBS.map(([slug, meta, tone, dot, label, pr, when]) => (
+                <div className="subrow" key={slug}>
+                  <div><span className="slug">{slug}</span><span className="sub">{meta}</span></div>
+                  <span className={"chip " + tone}><span className={"dot " + dot} style={{ marginRight: 5 }} />{label}</span>
+                  <a className="pr" href="#">{pr} ↗</a>
+                  <span className="when">{when}</span>
+                </div>
+              ))}
+            </div>
+          </Wf>
+          <div className="states4">
+            <div className="stcard"><div className="t"><span className="chip info"><span className="dot loading" style={{ marginRight: 5 }} />validating</span></div><p>CI is running the schema and flag checks.</p><span className="you">nothing to do · under a minute</span></div>
+            <div className="stcard"><div className="t"><span className="chip warn"><span className="dot warming" style={{ marginRight: 5 }} />awaiting review</span></div><p>Checks passed. A maintainer has it.</p><span className="you">nothing to do · 2–3 days typical</span></div>
+            <div className="stcard"><div className="t"><span className="chip err"><span className="dot error" style={{ marginRight: 5 }} />changes requested</span></div><p>A maintainer left comments on the PR.</p><span className="you">read the comments, push a fix ↗</span></div>
+            <div className="stcard"><div className="t"><span className="chip ok"><span className="dot ready" style={{ marginRight: 5 }} />merged</span></div><p>Live in the gallery under your handle.</p><span className="you">view your profile →</span></div>
+          </div>
+        </section>
+
+        <section className="sec">
+          <div className="sec-h"><span className="eyebrow">04</span><h2>edge states</h2></div>
+          <p className="site-body sec-note">
+            Three cases worth designing rather than discovering. Each states the cause, then the next action.
+          </p>
+          <div className="edge">
+            <Wf cap="first-time submitter">
+              <div className="banner warn" style={{ display: "flex", gap: 8, padding: "10px 12px", background: "var(--warn-soft)", border: "1px solid var(--warn-line)", borderRadius: "var(--rad)", color: "var(--warn)", fontFamily: "var(--jbm)", fontSize: 11.5, lineHeight: 1.5 }}>
+                <Icon name="warn" size={14} />
+                <span>Held for review — first submission from this account. A maintainer reads it before CI runs. One-time only.</span>
+              </div>
+              <p className="site-sm" style={{ marginTop: 12 }}>
+                Shown on the success page and in the submissions list. It exists so a first-timer does not
+                read a longer queue as something being wrong.
+              </p>
+            </Wf>
+
+            <Wf cap="duplicate slug">
+              <div className="vpanel">
+                <div className="vhead err"><Icon name="warn" size={14} />qwen3-9b-longctx already exists</div>
+                <div className="vbody">
+                  <p className="site-sm" style={{ margin: 0 }}>
+                    Published by <span className="mono">@kyuz0</span>, currently at v6. Slugs are unique across the registry.
+                  </p>
+                  <div className="fbar" style={{ marginTop: 14, flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+                    <button className="btn sm">submit as v7 of that profile</button>
+                    <button className="btn ghost sm">rename mine → qwen3-9b-longctx-lemond</button>
+                  </div>
+                  <Note>Offer the version path first. Most duplicates are someone improving a config, not colliding with it.</Note>
+                </div>
+              </div>
+            </Wf>
+
+            <Wf cap="gallery empty state" url="hal0.dev/profiles?model=qwen3.7">
+              <div style={{ textAlign: "center", padding: "26px 12px" }}>
+                <div className="mono" style={{ fontSize: 13, color: "var(--fg-2)" }}>No profile for that model yet.</div>
+                <p className="site-sm" style={{ margin: "8px auto 14px", maxWidth: "40ch" }}>
+                  If you have one working, submitting it is a file and a pull request — the CLI opens it for you.
+                </p>
+                <button className="btn sm">submit a profile</button>
+              </div>
+              <Note>Already built into the gallery. It is the main entry point to door B.</Note>
+            </Wf>
+          </div>
+        </section>
+
+        <section className="sec">
+          <div className="sec-h"><span className="eyebrow">05</span><h2>what changed elsewhere</h2></div>
+          <p className="site-body sec-note">
+            Benchmark submission is not part of this. The knock-on edits are already applied across the set:
+          </p>
+          <ul className="fixlist" style={{ maxWidth: "72ch" }}>
+            <li><Icon name="check" size={13} style={{ color: "var(--ok)" }} /><span>Benchmarks index drops the <span className="mono">share your results</span> primary button and the two-door explainer.</span></li>
+            <li><Icon name="check" size={13} style={{ color: "var(--ok)" }} /><span>The benchmarks sub-nav loses <span className="mono">share your results</span>.</span></li>
+            <li><Icon name="check" size={13} style={{ color: "var(--ok)" }} /><span>The footer <span className="mono">data</span> column drops <span className="mono">share a run</span> and gains <span className="mono">submit a profile</span>.</span></li>
+            <li><Icon name="check" size={13} style={{ color: "var(--ok)" }} /><span>The homepage keeps its headline bench figures — first-party sweep only, no community attribution.</span></li>
+          </ul>
+        </section>
+      </div>
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

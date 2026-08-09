@@ -81,9 +81,9 @@ function Sheet() {
         </div>
       </Spec>
 
-      <Spec n="04" title="section sub-nav" note="Top nav stays at four items: learn · benchmarks · profiles · forum. Everything with more than one surface gets a second 42px bar under the header — that's where docs, the knowledge base and the blog live, and where per-model comparison and 'share your results' hang off benchmarks.">
+      <Spec n="04" title="section sub-nav" note="Top nav stays at four items: learn · benchmarks · profiles · forum. Everything with more than one surface gets a second 42px bar under the header — that's where docs, the knowledge base and the blog live, and where the evals tab, methodology and per-model comparison hang off benchmarks.">
         <Frame cap="learn" style={{ overflowX: "auto" }}><SubNav items={["docs", "knowledge base", "blog", "changelog"]} active="knowledge base" /></Frame>
-        <Frame cap="benchmarks" style={{ overflowX: "auto" }}><SubNav items={["overview", "by model", "by hardware", "runners", "share your results"]} active="overview" /></Frame>
+        <Frame cap="benchmarks" style={{ overflowX: "auto" }}><SubNav items={["leaderboard", "evals", "hardware", "methodology", "profiles"]} active="leaderboard" /></Frame>
       </Spec>
 
       <Spec n="05" title="footer" note="Identical on every surface including the forum. Three link columns, a brand column, and a base line carrying licence, data licence, build status and version.">
@@ -111,7 +111,7 @@ function Sheet() {
       <Spec n="07" title="buttons" note="One solid amber button per view — it means 'the primary action here'. Everything else is a ghost outline. Sizes: sm 26px, default 30px, lg 36px.">
         <Frame cap="variants">
           <div className="row-demo">
-            <button className="btn">share your results</button>
+            <a className="btn" href="09%20Profile%20Submission.html">submit a profile</a>
             <button className="btn ghost">view raw json</button>
             <button className="btn ghost sm">copy</button>
             <button className="btn lg">install hal0</button>
@@ -206,8 +206,8 @@ function Sheet() {
         <div className="well" style={{ padding: "14px 16px" }}>
           <div style={{ color: "var(--fg-4)" }}># install this profile</div>
           <div><span className="amber">hal0</span> profile install qwen3-32b-rocm-longctx</div>
-          <div style={{ color: "var(--fg-4)", marginTop: 10 }}># share a run — opens a PR on your behalf</div>
-          <div><span className="amber">hal0</span> bench --model qwen3-32b --share</div>
+          <div style={{ color: "var(--fg-4)", marginTop: 10 }}># share a profile — opens a PR on your behalf</div>
+          <div><span className="amber">hal0</span> profile share qwen3-9b-longctx</div>
         </div>
       </Spec>
 

@@ -30,9 +30,12 @@ Build order, because everything inherits from the first item:
    Reference: `02 Benchmarks.html`.
 3. **Profiles** — gallery and drawer, including the benchmark join on profile slug.
    Reference: `03 Profiles.html`.
-4. **Blog + KB**, **docs polish**, **OG template**, **homepage community layer**.
+4. **Profile submission** — both doors, client-side validation, status. Reference:
+   `09 Profile Submission.html` (wireframe — apply the system's visual language when
+   building it).
+5. **Blog + KB**, **docs polish**, **OG template**, **homepage community layer**.
    References: `04`, `08`, `05`, `06`.
-5. **Forum theme** — theme component for chrome, CSS-variable restyle for topic rows
+6. **Forum theme** — theme component for chrome, CSS-variable restyle for topic rows
    and badges, nothing forked. Reference: `07 Forum.html`.
 
 Hard constraints:
@@ -47,9 +50,8 @@ Hard constraints:
   `hal0-site.css` are required, not optional.
 - Every surface must be reachable from every other surface through the shared chrome.
 
-Not designed yet, and out of scope unless asked: the submission flow (CLI success
-landing, web upload wireframes, validation states, PR confirmation, submission status).
-Its entry points exist and should link to a placeholder route.
+Out of scope: bench-run submission. The sweep is first-party — there is no upload flow,
+no "share your results" CTA, and no community attribution on benchmark rows.
 
 Start by reading `README.md`, then the two repo components above, then propose your
 component breakdown for the chrome before implementing it.

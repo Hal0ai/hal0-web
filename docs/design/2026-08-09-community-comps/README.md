@@ -172,7 +172,7 @@ past 40px of scroll. Carry the motif to every surface, forum included.
 
 Sub-nav: a second 42px bar under the header for sections with more than one surface.
 `learn` → docs · knowledge base · blog · changelog. `benchmarks` → leaderboard ·
-evals · hardware · methodology · profiles · share your results. Keep the top nav at
+evals · hardware · methodology · profiles. Keep the top nav at
 four items; everything else hangs off a sub-nav.
 
 ### Footer
@@ -181,7 +181,7 @@ Identical on every surface including the forum. `--bg-sunken` with a top hairlin
 Brand column (wordmark, one-sentence description, GitHub/Discord/RSS icon buttons) +
 three link columns — **learn** (docs, knowledge base, blog, changelog, releases),
 **community** (forum ↗, discord ↗, github ↗, contributing, hello@hal0.dev), **data**
-(benchmarks, profiles, share a run, hardware notes, roadmap). Base line in 11px mono:
+(benchmarks, profiles, submit a profile, hardware notes, roadmap). Base line in 11px mono:
 `Apache-2.0 · hal0 v0.5.0a1 · 1.0.0-RC.3` on the left, a live status dot and
 "all systems steady" on the right. Version strings must match `BINARY` in
 `src/data/model-roster.ts` and the hero release pill — never invent one.
@@ -224,8 +224,9 @@ runs.
 
 Layout, top to bottom:
 
-1. Page header — eyebrow, `benchmarks` h1, 60ch intro, `methodology` (ghost) +
-   `share your results` (primary).
+1. Page header — eyebrow, `benchmarks` h1, 60ch intro, two ghost buttons: `methodology`
+   and `download this view as json`. **No submission CTA** — benchmark runs are not
+   community-submitted through the site; the sweep is first-party.
 2. Two context cards, 50/50: **hardware** and **binary** — `dl` grids at mono 11.5px,
    88px label column, values truncated with a `title`. Content comes from `HARDWARE`
    and `BINARY` in `src/data/model-roster.ts`.
@@ -284,7 +285,7 @@ Layout, top to bottom:
 - **Filter bar**: model family pills (derived from roster ids — qwen3, qwen3-coder,
   chadrock, qwopus, gemma, hermes), intent pills (chat · coding · agent · vision ·
   draft · moe), lane pills, and a **model-name search** ("qwen3.5-9b, gemma-4-26b").
-  Empty state offers submission rather than a dead end.
+  Empty state offers submission rather than a dead end, linking to `09 Profile Submission.html`.
 - **Card** (the anatomy is specced on the page itself): eyebrow `profile · v4 · rocm`,
   intent chip, **21px mono slug**, one-line description, then `runs these models` —
   chips showing family in amber + shortened model name, first two plus a count. Below
@@ -342,6 +343,37 @@ figures + top-5 table**; **latest forum topics**; **featured profiles**; **lates
 KB**. The forum strip degrades by being **omitted entirely** when the API is unreachable
 at build time — no skeleton, no error card; the page closes up and the footer still
 links the forum. A toggle on the page previews that state.
+
+### 9. Profile submission — `09 Profile Submission.html`
+
+**Wireframe fidelity**, and the only wireframe in the set. Two doors, one queue: both end
+as a pull request in `hal0ai/hal0-profiles`, reviewed by CI and a maintainer, and the
+submitter never sees a git command.
+
+- **Door A — CLI landing** (`/profiles/submitted?pr=218`). `hal0 profile share` writes the
+  file, opens the PR, then opens this page. PR number, a `validating` chip, what happens
+  next in three numbered steps (CI schema + flag lint · maintainer read · merge publishes
+  and joins any runs carrying the slug), the 2–3 day review timeline, a
+  what-was-submitted panel (file, repo, branch, author), and the first-time-submitter hold.
+- **Door B — web**, five steps: GitHub sign-in (scope rationale; the Discourse SSO session
+  already covers it) → upload-or-paste the TOML with an optional flag-string field → **client-side
+  validation** → confirm → the same success page door A lands on. Deliberately identical
+  endings: one queue.
+- **Validation states**, all four designed: *pass* (parsed summary — slug, intent, model
+  with an "in roster" chip, lane, flag count, linked runs); *schema error* (line-numbered
+  view with the offending line railed in `--err`, cause-then-recovery copy, "fix it for me",
+  blocking); *missing required fields* (the three keys that matter — intent, model.id,
+  args.raw — each with why it matters, recoverable inline, blocking); *unknown model / lane*
+  (a **warning, not an error** — the roster lags what people run; continue with an
+  `unverified` chip until a run carries the slug).
+- **Status** — `/profiles/mine`: slug, chip, PR link, last update, using the existing
+  `.chip` + `.dot` system. Four state cards say what each state means *and what you do*:
+  validating (nothing, under a minute) · awaiting review (nothing, 2–3 days) · changes
+  requested (read comments, push a fix) · merged (view your profile).
+- **Edge states** — first-time submitter held for review (one-time, so a longer wait does
+  not read as breakage); duplicate slug, offering "submit as v7 of that profile" *before*
+  "rename mine", because most duplicates are improvements; and the gallery empty state,
+  which is the main entry point into door B.
 
 ### 7. Forum — `07 Forum.html`
 
@@ -438,13 +470,11 @@ version and a real per-profile history.
 
 ## Not designed yet
 
-Section 4 of the original brief — the **submission flow** (CLI success landing page,
-web upload wireframes with client-side schema validation pass/error states, PR-opened
-confirmation, and submission status) — was deferred and is not in this package. The
-entry points to it are designed: "share your results" on the benchmarks index and
-"submit a profile" on the profiles index, plus the two-door explainer on the benchmarks
-page (CLI `hal0 bench --share`, or web upload). Both doors must end as a PR in an org
-data repo reviewed by CI + a maintainer, and the user should never need to understand git.
+**Bench-run submission.** The benchmark sweep is first-party: runs come off the reference
+box, not from the community, so there is no upload flow, no "share your results" CTA and
+no attribution column to design. If that changes later, the profile submission flow in
+`09 Profile Submission.html` is the pattern to copy — two doors, one queue, client-side
+validation before anything is sent.
 
 ## Assets
 
@@ -472,6 +502,7 @@ data repo reviewed by CI + a maintainer, and the user should never need to under
 | `06 Homepage.html` | hero + live panel + community layer |
 | `07 Forum.html` | topic list, categories index, category, topic |
 | `08 Docs.html` | docs landing, category, article |
+| `09 Profile Submission.html` | submission wireframes — both doors, validation, status, edge states |
 | `site-chrome.jsx` | **the chrome** — Header, Drawer, Footer, SubNav, Fpill, Attribution |
 | `hal0-site.css` | site tokens, chrome, tables, pills, shared component styles, light theme |
 | `bench-app.jsx` | Cap/Caps, Decode buckets, Spark, Seg, RunDrawer, BucketLegend |
