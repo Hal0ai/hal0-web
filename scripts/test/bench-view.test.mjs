@@ -13,6 +13,14 @@ import {
   drawerModel,
   buildFlagString,
   runDetail,
+  runFailureMessage,
+  liveAgeMinutes,
+  liveBadgeText,
+  snapshotBadgeText,
+  laneGraphColor,
+  laneMarkerShape,
+  normalizeHistoryPoints,
+  sparklineGeometry,
   selectInitialRows,
   evalTable,
   evalScoreBucket,
@@ -774,6 +782,43 @@ test('runDetail: malformed identity/config/argv (non-array, non-string entries, 
   }
 });
 
+test('runDetail: cellKey matches a specific record\'s argv over other records', () => {
+  const json = {
+    run_id: 'run-123',
+    records: [
+      { cell_key: 'rocm-cell', identity: { config: { argv: ['-c', '2048', '--lane', 'rocm'] } } },
+      { cell_key: 'vulkan-cell', identity: { config: { argv: ['-c', '2048', '--lane', 'vulkan'] } } },
+    ],
+    bundle: { id: 'bundle-abc', title: null, notes: '' },
+  };
+  assert.deepEqual(runDetail(json, 'vulkan-cell').argv, ['-c', '2048', '--lane', 'vulkan']);
+  assert.deepEqual(runDetail(json, 'rocm-cell').argv, ['-c', '2048', '--lane', 'rocm']);
+});
+
+test('runDetail: no cellKey (or no match) falls back to the first record with a usable argv', () => {
+  const json = {
+    run_id: 'run-123',
+    records: [
+      { cell_key: 'rocm-cell', identity: { config: { argv: ['-c', '2048'] } } },
+    ],
+    bundle: { id: 'bundle-abc', title: null, notes: '' },
+  };
+  assert.deepEqual(runDetail(json).argv, ['-c', '2048']);
+  assert.deepEqual(runDetail(json, 'no-such-cell').argv, ['-c', '2048']);
+});
+
+test('runDetail: a cellKey match with no usable argv still falls back to another record\'s argv', () => {
+  const json = {
+    run_id: 'run-123',
+    records: [
+      { cell_key: 'rocm-cell', identity: { config: {} } },
+      { cell_key: 'vulkan-cell', identity: { config: { argv: ['-c', '512'] } } },
+    ],
+    bundle: { id: 'bundle-abc', title: null, notes: '' },
+  };
+  assert.deepEqual(runDetail(json, 'rocm-cell').argv, ['-c', '512']);
+});
+
 test('runDetail: missing bundle returns null', () => {
   assert.equal(runDetail({ run_id: 'run-123', records: [] }), null);
 });
@@ -941,4 +986,224 @@ test('evalScoreBucket: score in [0.4, 0.75) is neither — no bucket', () => {
 test('evalScoreBucket: null/undefined score returns null', () => {
   assert.equal(evalScoreBucket(null), null);
   assert.equal(evalScoreBucket(undefined), null);
+});
+
+// --- cellKey (BenchRow / drawerModel) ------------------------------------
+
+test('normalizeApiRoster: carries cell_key through as cellKey; snapshot rows have cellKey:null', () => {
+  const apiRows = normalizeApiRoster(API_FIXTURE);
+  // API_FIXTURE cells carry no cell_key field — tolerated as null, never invented.
+  assert.ok(apiRows.every((r) => r.cellKey === null));
+
+  const withCellKey = normalizeApiRoster({
+    models: [{ model_id: 'model-x', cells: [{ lane: 'rocm', kind: 'tg', cell_key: 'sha256:abc', decode_ts_med: 1 }] }],
+  });
+  assert.equal(withCellKey[0].cellKey, 'sha256:abc');
+
+  const snapshotRows = normalizeRoster(ROSTER_FIXTURE);
+  assert.ok(snapshotRows.every((r) => r.cellKey === null));
+});
+
+test('normalizeApiRoster: a non-string/empty cell_key stays null, never invented', () => {
+  const rows = normalizeApiRoster({
+    models: [
+      { model_id: 'model-x', cells: [{ lane: 'rocm', cell_key: '', decode_ts_med: 1 }] },
+      { model_id: 'model-y', cells: [{ lane: 'rocm', cell_key: 42, decode_ts_med: 1 }] },
+    ],
+  });
+  assert.ok(rows.every((r) => r.cellKey === null));
+});
+
+test('drawerModel: snapshot mode has cellKey:null; api mode carries the row\'s cellKey through', () => {
+  const [snapRow] = normalizeRoster(ROSTER_FIXTURE);
+  assert.equal(drawerModel(snapRow).cellKey, null);
+
+  const apiRow = { id: 'm', runId: 'run-1', cellKey: 'sha256:def', measured: true };
+  assert.equal(drawerModel(apiRow).cellKey, 'sha256:def');
+});
+
+// --- runFailureMessage ----------------------------------------------------
+
+test('runFailureMessage: 404 reads as "not published", distinct from an outage', () => {
+  assert.equal(runFailureMessage(404), "This run hasn't been published.");
+});
+
+test('runFailureMessage: any other status (or none at all, e.g. a network failure) reads as unreachable', () => {
+  assert.equal(runFailureMessage(500), 'Could not load full run detail — the API may be unreachable.');
+  assert.equal(runFailureMessage(503), 'Could not load full run detail — the API may be unreachable.');
+  assert.equal(runFailureMessage(null), 'Could not load full run detail — the API may be unreachable.');
+  assert.equal(runFailureMessage(undefined), 'Could not load full run detail — the API may be unreachable.');
+});
+
+// --- liveAgeMinutes / liveBadgeText / snapshotBadgeText --------------------
+
+test('liveAgeMinutes: minutes elapsed between generated and now, rounded, never negative', () => {
+  const now = Date.parse('2026-08-09T12:10:00Z');
+  assert.equal(liveAgeMinutes('2026-08-09T12:00:00Z', now), 10);
+  assert.equal(liveAgeMinutes('2026-08-09T12:09:40Z', now), 0);
+  // A generated timestamp in the "future" (clock skew) never reads as negative minutes.
+  assert.equal(liveAgeMinutes('2026-08-09T12:20:00Z', now), 0);
+});
+
+test('liveAgeMinutes: missing/malformed generated returns null, never NaN', () => {
+  const now = Date.parse('2026-08-09T12:10:00Z');
+  assert.equal(liveAgeMinutes(undefined, now), null);
+  assert.equal(liveAgeMinutes(null, now), null);
+  assert.equal(liveAgeMinutes('', now), null);
+  assert.equal(liveAgeMinutes('not-a-date', now), null);
+  assert.equal(liveAgeMinutes(12345, now), null);
+});
+
+test('liveBadgeText: renders "N min ago" when age is known', () => {
+  assert.equal(liveBadgeText('api.hal0.dev', 10), 'live · api.hal0.dev, 10 min ago');
+  assert.equal(liveBadgeText('api.hal0.dev', 0), 'live · api.hal0.dev, 0 min ago');
+});
+
+test('liveBadgeText: "freshness unknown" when age is null, never "NaN min ago"', () => {
+  assert.equal(liveBadgeText('api.hal0.dev', null), 'live · api.hal0.dev, freshness unknown');
+});
+
+test('snapshotBadgeText: default reason is the plain snapshot state', () => {
+  const { text, title } = snapshotBadgeText('2026-06-19');
+  assert.equal(text, 'snapshot from 2026-06-19');
+  assert.match(title, /not live/);
+});
+
+test('snapshotBadgeText: "unreachable" and "invalid" reasons render distinct, honest copy', () => {
+  const unreachable = snapshotBadgeText('2026-06-19', 'unreachable');
+  assert.equal(unreachable.text, 'snapshot from 2026-06-19 · api unreachable');
+  assert.match(unreachable.title, /did not answer/);
+
+  const invalid = snapshotBadgeText('2026-06-19', 'invalid');
+  assert.equal(invalid.text, 'snapshot from 2026-06-19 · live data invalid');
+  assert.match(invalid.title, /could not render/);
+});
+
+// --- laneGraphColor / laneMarkerShape --------------------------------------
+
+test('laneGraphColor: known lanes get the dashboard-ported hexes (rocm blue, vulkan_radv gold)', () => {
+  assert.equal(laneGraphColor('rocm'), '#7fb8ff');
+  assert.equal(laneGraphColor('vulkan_radv'), '#f9d884');
+});
+
+test('laneGraphColor: unknown/null lane gets a neutral fallback, never invented', () => {
+  assert.equal(laneGraphColor('default'), '#9c9c95');
+  assert.equal(laneGraphColor(null), '#9c9c95');
+  assert.equal(laneGraphColor(undefined), '#9c9c95');
+});
+
+test('laneMarkerShape: circle=rocm, square=vulkan_radv, triangle for anything else (never invisible)', () => {
+  assert.equal(laneMarkerShape('rocm'), 'circle');
+  assert.equal(laneMarkerShape('vulkan_radv'), 'square');
+  assert.equal(laneMarkerShape('default'), 'triangle');
+  assert.equal(laneMarkerShape(null), 'triangle');
+});
+
+// --- normalizeHistoryPoints -------------------------------------------------
+
+test('normalizeHistoryPoints: keeps points with at least one real metric', () => {
+  const points = normalizeHistoryPoints({
+    points: [
+      { ts: '2026-08-01', decode_ts_med: 50.2, prefill_ts_med: 900.1, lane: 'rocm' },
+      { ts: '2026-08-05', decode_ts_med: 52.0, lane: 'rocm' },
+    ],
+  });
+  assert.equal(points.length, 2);
+  assert.deepEqual(points[0], { ts: '2026-08-01', decode: 50.2, prefill: 900.1, lane: 'rocm' });
+  assert.deepEqual(points[1], { ts: '2026-08-05', decode: 52.0, prefill: null, lane: 'rocm' });
+});
+
+test('normalizeHistoryPoints: drops points with neither metric as a real number, never invents', () => {
+  const points = normalizeHistoryPoints({
+    points: [
+      { ts: 'a', decode_ts_med: null, prefill_ts_med: null },
+      { ts: 'b', decode_ts_med: 'not-a-number' },
+      { ts: 'c' },
+      null,
+      { ts: 'd', decode_ts_med: 40 },
+    ],
+  });
+  assert.deepEqual(points.map((p) => p.ts), ['d']);
+});
+
+test('normalizeHistoryPoints: tolerates a missing/malformed points array', () => {
+  assert.deepEqual(normalizeHistoryPoints({}), []);
+  assert.deepEqual(normalizeHistoryPoints({ points: 'not-an-array' }), []);
+  assert.deepEqual(normalizeHistoryPoints(null), []);
+  assert.deepEqual(normalizeHistoryPoints(undefined), []);
+});
+
+test('normalizeHistoryPoints: a non-string lane is dropped to null rather than kept as garbage', () => {
+  const points = normalizeHistoryPoints({ points: [{ ts: 'a', decode_ts_med: 1, lane: 42 }] });
+  assert.equal(points[0].lane, null);
+});
+
+// --- sparklineGeometry -------------------------------------------------
+
+test('sparklineGeometry: no usable points on either metric → empty', () => {
+  const geo = sparklineGeometry([{ decode: null, prefill: null }]);
+  assert.deepEqual(geo, { width: 260, height: 54, empty: true });
+});
+
+test('sparklineGeometry: empty input array → empty', () => {
+  assert.deepEqual(sparklineGeometry([]), { width: 260, height: 54, empty: true });
+});
+
+test('sparklineGeometry: a single point is still plotted (centered marker), not withheld', () => {
+  const geo = sparklineGeometry([{ decode: 50, prefill: 900 }]);
+  assert.equal(geo.single, true);
+  assert.deepEqual(geo.decode, { x: 130, y: 27, v: 50 });
+  assert.deepEqual(geo.prefill, { x: 130, y: 27, v: 900 });
+});
+
+test('sparklineGeometry: a single point with only one metric leaves the other null', () => {
+  const geo = sparklineGeometry([{ decode: 50, prefill: null }]);
+  assert.ok(geo.decode);
+  assert.equal(geo.prefill, null);
+});
+
+test('sparklineGeometry: 2+ points produce a decode path, markers, and a min/max scale', () => {
+  const geo = sparklineGeometry([
+    { decode: 40, prefill: 800 },
+    { decode: 60, prefill: 900 },
+    { decode: 50, prefill: 810 },
+  ]);
+  assert.match(geo.decodePath, /^M6\.0,/);
+  assert.equal(geo.decodeMarkers.length, 3);
+  assert.equal(geo.decodeMin, 40);
+  assert.equal(geo.decodeMax, 60);
+  // decode and prefill markers carry their own raw values (v), never mixed —
+  // the shared `v` is what a caller renders as the plotted number/tooltip.
+  assert.deepEqual(geo.decodeMarkers.map((m) => m.v), [40, 60, 50]);
+  assert.deepEqual(geo.prefillMarkers.map((m) => m.v), [800, 900, 810]);
+  // decode and prefill scale independently: prefill's 3rd point (810) sits
+  // near ITS series' min (800), while decode's 3rd point (50) sits at the
+  // midpoint of ITS series (40-60) — a shared scale would put both at the
+  // same normalized position; independent scales don't.
+  assert.notEqual(geo.decodeMarkers[2].y, geo.prefillMarkers[2].y);
+});
+
+test('sparklineGeometry: prefill draws a path only with 2+ of its own points (a lone prefill sample still gets a marker)', () => {
+  const geo = sparklineGeometry([
+    { decode: 40, prefill: 800 },
+    { decode: 60, prefill: null },
+  ]);
+  assert.equal(geo.prefillPath, '');
+  assert.equal(geo.prefillMarkers.length, 1);
+});
+
+test('sparklineGeometry: flat series (all equal values) doesn\'t divide by zero — span falls back to 1', () => {
+  const geo = sparklineGeometry([
+    { decode: 50, prefill: null },
+    { decode: 50, prefill: null },
+  ]);
+  assert.ok(Number.isFinite(geo.decodeMarkers[0].y));
+  assert.ok(Number.isFinite(geo.decodeMarkers[1].y));
+});
+
+test('sparklineGeometry: respects custom width/height/pad', () => {
+  const geo = sparklineGeometry([{ decode: 1, prefill: null }], { width: 100, height: 20, pad: 2 });
+  assert.equal(geo.width, 100);
+  assert.equal(geo.height, 20);
+  assert.deepEqual(geo.decode, { x: 50, y: 10, v: 1 });
 });

@@ -50,6 +50,13 @@
  * @property {string|null} runId
  * @property {string|null} measuredAt
  * @property {boolean} flagged
+ * @property {string|null} cellKey     API rows only: the /v1/roster cell's
+ *                                     `cell_key` — the dedup key a run's
+ *                                     `GET /v1/runs/{run_id}` records[] are
+ *                                     keyed by, used to pick the exact
+ *                                     record for the cell the visitor
+ *                                     clicked (a run can carry more than
+ *                                     one). null on snapshot rows.
  */
 
 /** @typedef {{workload?: string|null, depth?: number|null, variant?: string|null, lane?: string|null, caps?: string[], q?: string}} FacetFilters */
@@ -106,6 +113,7 @@ export function normalizeRoster(rosterRows, meta = {}) {
     runId: null,
     measuredAt: meta.generatedAt ?? null,
     flagged: false,
+    cellKey: null,
   }));
 }
 
@@ -171,6 +179,7 @@ export function normalizeApiRoster(apiJson) {
         runId: cell.run_id ?? null,
         measuredAt: cell.measured_at ?? null,
         flagged: !!cell.flagged,
+        cellKey: typeof cell.cell_key === 'string' && cell.cell_key !== '' ? cell.cell_key : null,
       });
     }
   }
@@ -443,6 +452,7 @@ export function buildFlagString(row) {
  * @property {string|null} flagString           api mode only
  * @property {boolean} hasHistory                api mode only
  * @property {Array|null} history                api mode only
+ * @property {string|null} cellKey               api mode only — see BenchRow.cellKey
  */
 
 /**
@@ -490,6 +500,7 @@ export function drawerModel(row) {
       flagString: null,
       hasHistory: false,
       history: null,
+      cellKey: null,
     };
   }
 
@@ -506,6 +517,7 @@ export function drawerModel(row) {
     flagString: buildFlagString(row),
     hasHistory,
     history: hasHistory ? row.history : null,
+    cellKey: row.cellKey ?? null,
   };
 }
 
@@ -548,30 +560,125 @@ export function capCounts(rows, capIds) {
  * `config.argv` wins; malformed/missing identity data yields `argv: null`
  * rather than throwing.
  *
+ * A run can carry more than one record (one per cell it measured — e.g. a
+ * sweep that covered both `rocm` and `vulkan_radv` lanes for the same
+ * model), and picking the wrong one shows the wrong argv for the cell the
+ * visitor actually clicked. When `cellKey` is supplied (BenchRow.cellKey,
+ * from the /v1/roster cell that opened the drawer) and a record with a
+ * matching `cell_key` exists, its argv is preferred; otherwise this falls
+ * back to the first record with a usable argv, same as before cellKey
+ * mattering (deep-link/snapshot opens carry no cellKey to match against).
+ *
  * @param {*} json
+ * @param {string|null} [cellKey]
  * @returns {{bundleId: string, title: string|null, argv: string[]|null} | null}
  */
-export function runDetail(json) {
+export function runDetail(json, cellKey) {
   const bundleId = json?.bundle?.id;
   if (typeof bundleId !== 'string' || bundleId === '') return null;
   const title = typeof json.bundle.title === 'string' && json.bundle.title !== '' ? json.bundle.title : null;
-  const argv = extractRealArgv(json);
+  const argv = extractRealArgv(json, cellKey);
   return { bundleId, title, argv };
 }
 
 /**
  * @param {*} json
+ * @param {string|null} [cellKey]
  * @returns {string[]|null}
  */
-function extractRealArgv(json) {
+function extractRealArgv(json, cellKey) {
   const records = Array.isArray(json?.records) ? json.records : [];
-  for (const record of records) {
+  const usableArgv = (record) => {
     const argv = record?.identity?.config?.argv;
-    if (Array.isArray(argv) && argv.length > 0 && argv.every((a) => typeof a === 'string')) {
-      return argv;
-    }
+    return Array.isArray(argv) && argv.length > 0 && argv.every((a) => typeof a === 'string') ? argv : null;
+  };
+  if (cellKey) {
+    const matched = records.find((r) => r?.cell_key === cellKey);
+    const matchedArgv = usableArgv(matched);
+    if (matchedArgv) return matchedArgv;
+  }
+  for (const record of records) {
+    const argv = usableArgv(record);
+    if (argv) return argv;
   }
   return null;
+}
+
+/**
+ * Honest, distinct copy for why `GET /v1/runs/{run_id}` couldn't be shown —
+ * a 404 means the run genuinely isn't published (a fact, not an outage),
+ * which reads very differently from a network/5xx failure that implies the
+ * run might exist and is just temporarily unreachable.
+ *
+ * @param {number|null|undefined} status   HTTP status of the failed fetch, or
+ *                                          null/undefined for a network-level
+ *                                          failure (no response at all).
+ * @returns {string}
+ */
+export function runFailureMessage(status) {
+  return status === 404 ? "This run hasn't been published." : 'Could not load full run detail — the API may be unreachable.';
+}
+
+/**
+ * Minutes elapsed since a live payload's `generated` timestamp, for the
+ * freshness badge's "live · N min ago" text. Returns null (never NaN) when
+ * `generated` is missing or doesn't parse — a malformed/absent timestamp on
+ * an otherwise-successful live fetch must read as "freshness unknown", not
+ * silently render "NaN min ago".
+ *
+ * @param {*} generated
+ * @param {number} nowMs   caller-supplied clock reading (testability — this
+ *                          module never calls Date.now() itself)
+ * @returns {number|null}
+ */
+export function liveAgeMinutes(generated, nowMs) {
+  if (typeof generated !== 'string' || generated === '') return null;
+  const parsed = Date.parse(generated);
+  if (Number.isNaN(parsed)) return null;
+  return Math.max(0, Math.round((nowMs - parsed) / 60000));
+}
+
+/**
+ * Freshness-badge text for the live state: "live · {host}, N min ago", or
+ * "live · {host}, freshness unknown" when `ageMinutes` is null (see
+ * liveAgeMinutes — never a NaN-bearing string).
+ *
+ * @param {string} host
+ * @param {number|null} ageMinutes
+ * @returns {string}
+ */
+export function liveBadgeText(host, ageMinutes) {
+  return ageMinutes === null ? `live · ${host}, freshness unknown` : `live · ${host}, ${ageMinutes} min ago`;
+}
+
+/**
+ * Freshness-badge text for the snapshot (non-live) state. `reason`
+ * distinguishes *why* the page isn't live — honest per README §Interactions:
+ * a fetch/HTTP failure ('unreachable') reads differently from a payload
+ * that answered but couldn't be turned into rows ('invalid'); both still
+ * land on the always-well-formed build-time snapshot.
+ *
+ * @param {string} rosterDate
+ * @param {'unreachable'|'invalid'|null|undefined} [reason]
+ * @returns {{text: string, title: string}}
+ */
+export function snapshotBadgeText(rosterDate, reason) {
+  if (reason === 'unreachable') {
+    return {
+      text: `snapshot from ${rosterDate} · api unreachable`,
+      title: 'The bench API did not answer — showing the build-time snapshot.',
+    };
+  }
+  if (reason === 'invalid') {
+    return {
+      text: `snapshot from ${rosterDate} · live data invalid`,
+      title: 'The bench API responded, but this page could not render the payload — showing the build-time snapshot.',
+    };
+  }
+  return {
+    text: `snapshot from ${rosterDate}`,
+    title: 'Showing the build-time snapshot — figures are correct but not live.',
+  };
 }
 
 /**
@@ -661,4 +768,152 @@ export function evalTable(rows, evals) {
   });
 
   return { tasks, rows: outRows, hasEvals: true };
+}
+
+// ── run drawer decode-history graph ────────────────────────────────────
+//
+// Ported from the hal0 dashboard's Benchmarks.tsx (Sparkline/laneColor/
+// laneMarkerFor) — visual language only, not the React code. Two
+// conventions from there are load-bearing and preserved exactly:
+//  - lane identity is color EVERYWHERE plus a fixed marker shape (never
+//    color alone) — circle=rocm, square=vulkan_radv, triangle for anything
+//    else so an unexpected lane still shows up rather than vanishing.
+//  - decode is a solid line, prefill a dashed line in the SAME lane color,
+//    each on its OWN vertical scale (prefill runs 10-100x decode's
+//    magnitude on this hardware; a shared scale would flatten decode to a
+//    near-flat line).
+//
+// The lane hexes below are hardcoded rather than reusing the site's
+// --dev-rocm/--dev-vulkan tokens: the dashboard's own convention (rocm =
+// blue, vulkan_radv = gold) diverges from what those tokens mean on this
+// site (--dev-rocm is red, --dev-vulkan is blue — see tokens.css) — porting
+// the dashboard's graph exactly as designed there takes precedence over
+// reusing tokens that carry a different meaning here. Everything else in
+// the drawer keeps using the site's existing --dev-rocm/--dev-vulkan chip
+// colors; only this graph uses these.
+
+const LANE_GRAPH_COLOR = { rocm: '#7fb8ff', vulkan_radv: '#f9d884' };
+const LANE_MARKER_SHAPE = { rocm: 'circle', vulkan_radv: 'square' };
+
+/**
+ * @param {string|null|undefined} lane
+ * @returns {string}
+ */
+export function laneGraphColor(lane) {
+  return (lane && LANE_GRAPH_COLOR[lane]) || '#9c9c95';
+}
+
+/**
+ * @param {string|null|undefined} lane
+ * @returns {'circle'|'square'|'triangle'}
+ */
+export function laneMarkerShape(lane) {
+  return (lane && LANE_MARKER_SHAPE[lane]) || 'triangle';
+}
+
+/**
+ * Parse the proposed `GET /v1/history?model=<id>&lane=<lane>` response (an
+ * adapter-only endpoint today — no production worker route yet; see
+ * bench-live-adapter.mjs's /v1/history passthrough and this repo's PR body
+ * for the proposed worker contract addition) into a validated points array
+ * for the drawer's decode-history graph.
+ *
+ * Filtered server-side by DISPLAY DIMS (model, lane — kind='tg', outcome
+ * 'ok') rather than by cell_key: a cell_key is a content-addressed
+ * identity, so an engine/image provenance bump between two sweeps forks the
+ * key and turns what should be one continuous history into several
+ * one-point series — the hal0 dashboard hit exactly this and moved its own
+ * trend view off cell_key for the same reason (see Benchmarks.tsx's
+ * sweepSeries). This function only validates the already-filtered response
+ * shape; it does no dim filtering of its own.
+ *
+ * Malformed points (neither metric present as a real number) are dropped,
+ * never invented; `ts` is passed through as-is (an opaque sort/display key,
+ * not necessarily parsed as a date).
+ *
+ * @param {*} json
+ * @returns {Array<{ts: *, decode: number|null, prefill: number|null, lane: string|null}>}
+ */
+export function normalizeHistoryPoints(json) {
+  const points = Array.isArray(json?.points) ? json.points : [];
+  const out = [];
+  for (const p of points) {
+    if (!p || typeof p !== 'object') continue;
+    const decode = typeof p.decode_ts_med === 'number' && !Number.isNaN(p.decode_ts_med) ? p.decode_ts_med : null;
+    const prefill = typeof p.prefill_ts_med === 'number' && !Number.isNaN(p.prefill_ts_med) ? p.prefill_ts_med : null;
+    if (decode === null && prefill === null) continue;
+    out.push({ ts: p.ts ?? null, decode, prefill, lane: typeof p.lane === 'string' ? p.lane : null });
+  }
+  return out;
+}
+
+/**
+ * @typedef {Object} SparkPoint
+ * @property {number} x
+ * @property {number} y
+ * @property {number} v
+ */
+
+/**
+ * Pure SVG geometry for the drawer's decode-history sparkline — no DOM, no
+ * markup, just the numbers a caller turns into an <svg>. Ported from the
+ * dashboard's Sparkline component:
+ *  - 0 usable points on both metrics → `{empty: true}` (caller omits the
+ *    graph section entirely — no chart, no placeholder).
+ *  - exactly 1 point → `{single: true, decode, prefill}`: a lone sweep still
+ *    gets plotted (a centered marker), not withheld until a second sweep
+ *    exists.
+ *  - 2+ points → full path/marker geometry, decode and prefill each scaled
+ *    independently (see this section's header comment).
+ *
+ * @param {Array<{decode: number|null, prefill: number|null}>} points
+ * @param {{width?: number, height?: number, pad?: number}} [opts]
+ * @returns {{width:number,height:number,empty:true}
+ *  | {width:number,height:number,single:true,decode:SparkPoint|null,prefill:SparkPoint|null}
+ *  | {width:number,height:number,decodePath:string,prefillPath:string,decodeMarkers:SparkPoint[],prefillMarkers:SparkPoint[],decodeMax:number|null,decodeMin:number|null}}
+ */
+export function sparklineGeometry(points, opts = {}) {
+  const width = opts.width ?? 260;
+  const height = opts.height ?? 54;
+  const pad = opts.pad ?? 6;
+  const rows = points ?? [];
+  const decodePts = rows.map((p, i) => ({ i, v: p.decode })).filter((p) => typeof p.v === 'number');
+  const prefillPts = rows.map((p, i) => ({ i, v: p.prefill })).filter((p) => typeof p.v === 'number');
+
+  if (decodePts.length === 0 && prefillPts.length === 0) {
+    return { width, height, empty: true };
+  }
+
+  if (rows.length === 1) {
+    const centered = (pts) => (pts.length === 1 ? { x: width / 2, y: height / 2, v: pts[0].v } : null);
+    return { width, height, single: true, decode: centered(decodePts), prefill: centered(prefillPts) };
+  }
+
+  const n = rows.length;
+  const x = (i) => pad + (i * (width - 2 * pad)) / (n - 1);
+  const scaleFor = (vals) => {
+    if (!vals.length) return null;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const span = max - min || 1;
+    return { min, max, y: (v) => height - pad - ((v - min) / span) * (height - 2 * pad) };
+  };
+  const decodeScale = scaleFor(decodePts.map((p) => p.v));
+  const prefillScale = scaleFor(prefillPts.map((p) => p.v));
+  const path = (pts, scale) =>
+    scale ? pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${scale.y(p.v).toFixed(1)}`).join(' ') : '';
+
+  return {
+    width,
+    height,
+    decodePath: decodeScale ? path(decodePts, decodeScale) : '',
+    // Prefill only draws as a line with 2+ of its own points — a single
+    // prefill sample among many decode samples has no line to draw, only
+    // the marker (decodeMarkers/prefillMarkers below still carry it).
+    prefillPath: prefillScale && prefillPts.length >= 2 ? path(prefillPts, prefillScale) : '',
+    decodeMarkers: decodeScale ? decodePts.map((p) => ({ x: x(p.i), y: decodeScale.y(p.v), v: p.v })) : [],
+    prefillMarkers: prefillScale ? prefillPts.map((p) => ({ x: x(p.i), y: prefillScale.y(p.v), v: p.v })) : [],
+    decodeMax: decodeScale ? decodeScale.max : null,
+    decodeMin: decodeScale ? decodeScale.min : null,
+  };
 }
