@@ -168,4 +168,36 @@ describe("validateBundle", () => {
     expect(caught).toBeInstanceOf(ValidationError);
     expect((caught as ValidationError).errors.length).toBeGreaterThan(0);
   });
+
+  it("rejects with 'no records in bundle' for empty records.jsonl", async () => {
+    const members = await loadFixtureMembers();
+    setRecordsJsonl(members, []);
+    await rehash(members);
+
+    await expect(validateBundle(members)).rejects.toThrow(/no records in bundle/);
+  });
+
+  it("rejects with 'non-finite or non-positive' for negative aggregate_ts", async () => {
+    const members = await loadFixtureMembers();
+    const records = decodeRecordsJsonl(members);
+    (records[0].summary as Record<string, unknown>).aggregate_ts = -5;
+    setRecordsJsonl(members, records.map((r) => JSON.stringify(r)));
+    await rehash(members);
+
+    await expect(validateBundle(members)).rejects.toThrow(/non-finite or non-positive/);
+  });
+
+  it("resolves when accept_med is 0 (zero is valid)", async () => {
+    const members = await loadFixtureMembers();
+    const records = decodeRecordsJsonl(members);
+    (records[0].summary as Record<string, unknown>).accept_med = 0;
+    setRecordsJsonl(members, records.map((r) => JSON.stringify(r)));
+    await rehash(members);
+
+    const result = await validateBundle(members);
+
+    expect(result.records).toHaveLength(2);
+    const found = result.records.find((r) => r.acceptMed === 0);
+    expect(found).toBeDefined();
+  });
 });

@@ -144,7 +144,7 @@ function parseRecordLine(line: string, idx: number, errs: string[]): ParsedRecor
   const ttftMsP50 = optionalMetric(summary.ttft_ms_p50, "ttft_ms_p50", lineErrs, true);
   const ttftMsP95 = optionalMetric(summary.ttft_ms_p95, "ttft_ms_p95", lineErrs, true);
   const acceptMed = optionalMetric(summary.accept_med, "accept_med", lineErrs, false);
-  const aggregateTs = optionalMetric(summary.aggregate_ts, "aggregate_ts", lineErrs, false);
+  const aggregateTs = optionalMetric(summary.aggregate_ts, "aggregate_ts", lineErrs, true);
 
   if (lineErrs.length) {
     errs.push(...lineErrs.map((e) => `records.jsonl line ${idx}: ${e}`));
@@ -272,6 +272,7 @@ export async function validateBundle(members: Map<string, Uint8Array>): Promise<
       if (rec) records.push(rec);
     }
   }
+  if (records.length === 0) errs.push("no records in bundle");
 
   // 4. evals: parse lines {run_id, model, task, score in [0,1]}.
   const evalsRaw = members.get("evals.jsonl");
