@@ -1,0 +1,22 @@
+{
+  "header": [
+    { "label": "docs", "href": "/docs/getting-started/", "match": "/docs", "exclude": ["/docs/reference/model-roster-benchmark"] },
+    { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/", "match": "/docs/reference/model-roster-benchmark" },
+    { "label": "blog", "href": "/blog", "match": "/blog" },
+    { "label": "changelog", "href": "/changelog", "match": "/changelog" },
+    { "label": "releases", "href": "/releases", "match": "/releases" }
+  ],
+  "footer": [
+    { "label": "docs", "href": "/docs/getting-started/" },
+    { "label": "blog", "href": "/blog" },
+    { "label": "changelog", "href": "/changelog" },
+    { "label": "releases", "href": "/releases" },
+    { "label": "contributing", "href": "/contributing" },
+    { "label": "roadmap", "href": "/#roadmap" },
+    { "label": "hello@hal0.dev", "href": "mailto:hello@hal0.dev" }
+  ],
+  "social": [
+    { "id": "github", "label": "github", "href": "https://github.com/hal0ai/hal0" },
+    { "id": "discord", "label": "discord", "href": "https://discord.gg/7M4y6dcUyq" }
+  ]
+}
