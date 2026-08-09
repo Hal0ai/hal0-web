@@ -1,3 +1,4 @@
+import { deleteHandler } from "./admin";
 import { handlePreflight } from "./cors";
 import { ingestHandler } from "./ingest";
 import {
@@ -13,6 +14,7 @@ import { type Env, json, register, route } from "./router";
 
 register("GET", "/v1/health", () => json({ ok: true, service: "hal0-bench-api" }));
 register("POST", "/v1/bundles", ingestHandler);
+register("DELETE", "/v1/bundles/:id", deleteHandler);
 register("GET", "/v1/roster", rosterHandler);
 register("GET", "/v1/cells", cellsHandler);
 register("GET", "/v1/runs/:run_id", runHandler);
