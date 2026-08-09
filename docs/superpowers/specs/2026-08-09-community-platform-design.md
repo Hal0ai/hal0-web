@@ -1,8 +1,14 @@
 # hal0.dev Community Platform — Phase 1 Design
 
-**Date:** 2026-08-09
+**Date:** 2026-08-09 (revised same day: community bench submissions dropped)
 **Status:** Approved
-**Scope:** Forum launch, community benchmark submissions, profile registry + gallery, blog/KB restructure.
+**Scope:** Forum launch, first-party benchmarks surface, community profile
+registry + gallery, blog/KB restructure.
+
+> **Revision note (2026-08-09):** public/community benchmark submission is
+> cancelled. Benchmarks are first-party only (the hal0 reference box, served
+> by `api.hal0.dev/v1/bench` + build-time snapshot). Community contribution
+> happens through the profile registry. `hal0-bench-data` is not built.
 
 ## Vision
 
@@ -13,18 +19,20 @@ layer.
 
 ## Architecture overview
 
-Three repos plus one service. hal0.dev remains a static Astro/Starlight site on
+Two repos plus one service. hal0.dev remains a static Astro/Starlight site on
 Cloudflare Pages.
 
 | Component | Role |
 | --- | --- |
-| `hal0-web` (existing) | Marketing, docs, blog/KB, bench charts, profile gallery. Static build ingests the data repos. |
-| `hal0-bench-data` (new) | Community benchmark results. Git is the canonical store and moderation surface. |
-| `hal0-profiles` (new) | Versioned runner/model profiles with schema CI. Feeds the site gallery and, later, `hal0 profile install`. |
+| `hal0-web` (existing) | Marketing, docs, blog/KB, benchmarks surface, profile gallery. Static build ingests `hal0-profiles` and the bench snapshot. |
+| `hal0-profiles` (new) | Community-submitted versioned runner/model profiles with schema CI. Git is the canonical store and moderation surface. Feeds the site gallery and, later, `hal0 profile install`. |
 | Discourse (new service) | Stock install at `forum.hal0.dev` on a cloud VPS. Identity hub for the community. |
 
-Merges to the data repos trigger a Cloudflare Pages rebuild via webhook, so charts
-and the gallery stay current without manual deploys.
+Bench data is first-party: the main hal0 repo's bench system publishes a
+read-only JSON feed at `api.hal0.dev/v1/bench`; hal0-web keeps a build-time
+snapshot and upgrades live client-side. Merges to `hal0-profiles` trigger a
+Cloudflare Pages rebuild via webhook, so the gallery stays current without
+manual deploys.
 
 ## 0. Unified design system (cross-cutting, strict)
 
@@ -81,63 +89,42 @@ shares identical header, footer, nav contents, colors, and typography.
 - **Site integration:** Forum link in the hal0.dev header; latest-topics strip on
   the homepage (Discourse JSON API fetched at build time, refreshed client-side).
 
-## 2. Community benchmark pipeline
+## 2. Benchmarks (first-party)
 
-### Data model
+All benchmark data comes from the hal0 reference box, produced by the main
+repo's bench system. No community submissions.
 
-One file per benchmark run; machine profiles deduped per user:
+- **Feed:** `api.hal0.dev/v1/bench`, read-only JSON. The run record follows the
+  design-handoff README's Data section (identity, results, host, telemetry,
+  history, evals, provenance).
+- **Site rendering:** the benchmarks page renders a build-time snapshot first
+  and upgrades client-side when the API answers — there is always a table on
+  screen. Freshness badge flips between live and snapshot states. Leaderboard +
+  evals tabs, run drawer with deep-linkable `?run=<id>`, per the comp.
+- **Refresh:** new sweeps update the snapshot via a rebuild trigger; the live
+  feed covers the gap between sweeps.
 
-```
-results/
-  <github-user>/
-    machines/<machine-slug>.json                     # hardware profile, written once
-    runs/<date>-<model-slug>-<runner>-<hash>.json    # one run each, references machine-slug
-```
+## 3. Profile registry + gallery (the community pillar)
 
-Rationale for per-run files: append-only (no merge conflicts between PRs), CI
-validates exactly the files a PR touches, one bad result reverts as one commit,
-and a user's history is simply their directory. Users choose what to share by
-choosing what they submit.
-
-Run schema includes: machine-slug reference, model (HF id + quant), runner +
-version, backend (ROCm/Vulkan), profile slug (joins to `hal0-profiles`), metrics
-(tps, ttft, memory), hal0 version, timestamp.
-
-### Two submission doors, one review queue
-
-Users never need to understand PRs; git stays canonical.
-
-- **Door A — CLI:** `hal0 bench --share`. GitHub device-flow auth, then the CLI
-  forks, branches, and opens the PR against `hal0-bench-data` via the GitHub API.
-  One command, PR link back.
-- **Door B — web upload:** page on hal0.dev: "Sign in with GitHub" → drop the
-  JSON file `hal0 bench` already wrote → client-side schema validation → a
-  Cloudflare Worker backed by a GitHub App opens the PR on the user's behalf
-  (user credited as author).
-
-**Review queue = the PR list.** CI validates schema plus sanity ranges
-(tps plausibility for the stated hardware, known runner versions,
-machine-profile consistency). Policy:
-
-- Green CI + plausible + returning submitter → bot auto-merges.
-- Anomalous result or first-time submitter → held for operator review.
-- The automated reviewer can later be upgraded to an agent (e.g. Claude-powered
-  GitHub Action) without changing the queue shape.
-
-### Site rendering
-
-The hal0-web build ingests merged data and renders expanded charts: filters by
-hardware, model, runner, backend, quant; per-model comparison pages; live-ish via
-merge-triggered rebuilds.
-
-## 3. Profile registry + gallery
-
-- `hal0-profiles` repo: versioned profile files (llama.cpp args, slot configs,
-  quant choices) with JSON schema CI, same PR flow as benchmarks.
-- Astro gallery page with filters (hardware, model family, runner, quant).
-- Each profile card links to bench runs that used it (join on profile slug):
-  "this config produced these numbers" is the feature that ties the pillars
-  together.
+- `hal0-profiles` repo: community-submitted versioned profile TOMLs
+  (llama.cpp args, slot configs, quant choices) with schema CI. Git is the
+  canonical store; the PR list is the moderation queue.
+- **Two submission doors** (users never need to understand PRs):
+  - **CLI:** `hal0 profile share`. GitHub device-flow auth, then the CLI forks,
+    branches, and opens the PR against `hal0-profiles` via the GitHub API.
+  - **Web upload:** page on hal0.dev: "Sign in with GitHub" → paste/upload the
+    profile TOML → client-side schema validation → a Cloudflare Worker backed
+    by a GitHub App opens the PR on the user's behalf (user credited as
+    author).
+- **Review queue = the PR list.** CI validates schema, slug uniqueness, known
+  models/lanes. Green CI + returning submitter → bot auto-merge; first-time
+  submitter or CI flags → held for operator review. The automated reviewer can
+  later be upgraded to an agent without changing the queue shape.
+- Astro gallery page with filters (model family, intent, lane) per the comp.
+- Each profile card shows metrics **joined from first-party bench runs** on
+  profile slug — the card only ever shows a number one of that profile's own
+  runs produced; if the join is unavailable at build time, the metric row is
+  omitted rather than stale or borrowed.
 - `hal0 profile install <name>` (CLI, main repo) may trail the gallery slightly.
 - Runner **image** sharing (OCI registry hosting) is explicitly phase 2.
 
@@ -152,23 +139,28 @@ merge-triggered rebuilds.
 
 ## 5. Build order
 
-1. Design tokens + nav manifest extraction in hal0-web (section 0 foundation)
-2. Bench schema + `hal0-bench-data` repo + CI (everything references this schema)
-3. Discourse VPS launch + brand theme component (forum ships already unified)
-4. hal0-web: expanded bench charts consuming community data
-5. `hal0 bench --share` (main hal0 repo) + web upload door (Worker + GitHub App)
-6. `hal0-profiles` + gallery
-7. Blog/KB restructure + seed posts
+1. ~~Design tokens + nav manifest extraction~~ (done — PR #61)
+2. ~~Chrome v2 design-comp adoption~~ (done — PR #62)
+3. `hal0-profiles` repo + TOML schema + CI + seed profiles
+4. hal0-web: profiles gallery + drawer (joined to first-party bench snapshot)
+5. hal0-web: benchmarks page (snapshot-first + live upgrade from
+   `api.hal0.dev/v1/bench`); bench feed work lands in the main hal0 repo
+6. Profile submission doors (`hal0 profile share` CLI + web upload
+   Worker/GitHub App) — needs the submission-flow wireframes
+7. Discourse VPS launch + brand theme component (forum ships already unified)
+8. Blog/KB restructure + OG template + homepage community layer
 
 ## Error handling & operational notes
 
-- Malformed submissions fail CI with actionable messages; the web door rejects
-  bad files before a PR is ever opened.
+- Malformed profile submissions fail CI with actionable messages; the web door
+  rejects bad TOML before a PR is ever opened.
 - Discourse outage does not affect hal0.dev (build-time fetch degrades to a
   hidden strip; client refresh fails silently).
-- Data-repo webhook failures self-heal on the next merge or manual rebuild.
-- VPS backups (Discourse + uploads) to R2 nightly; data repos are inherently
-  backed up by git.
+- Bench API outage degrades to the build-time snapshot with an amber freshness
+  badge; the homepage forum strip is omitted entirely when unreachable.
+- Profiles-repo webhook failures self-heal on the next merge or manual rebuild.
+- VPS backups (Discourse + uploads) to R2 nightly; the profiles repo is
+  inherently backed up by git.
 
 ## Design comps (visual source of truth)
 
@@ -181,23 +173,33 @@ behavior, state/data contracts, and the Discourse split of responsibility:
 header/footer/palette as a theme component, topic rows restyled via Discourse
 CSS variables, composer/moderation/search native). The comp `.site` ramp
 matches shipped `tokens.css` values exactly; chrome v2 adoption shipped in
-PR #62. The submission flow (spec section 2's two doors) is explicitly **not
-designed yet** — entry points exist; wireframes are a follow-up design ask.
+PR #62. The **profile** submission flow is not designed yet — entry points
+exist; wireframes are the outstanding design ask (web upload with validation
+states, PR-opened confirmation, status display, CLI success landing). Bench
+submission wireframes are NOT needed (community bench dropped).
 
-Handoff details that supersede earlier assumptions:
+Handoff details that supersede earlier assumptions (and one the revision
+supersedes back):
 
 - Footer base line reads `Apache-2.0 · hal0 v<app> · <release>` — versions
   must match `BINARY` in `src/data/model-roster.ts`, never invented.
-- Benchmarks sub-nav: leaderboard · evals · hardware · methodology · profiles ·
-  share your results. Learn sub-nav gains `knowledge base` when the KB ships.
+- Benchmarks sub-nav: leaderboard · evals · hardware · methodology · profiles
+  (the handoff's `share your results` item is dropped with community bench;
+  bench pages lose the "share your results" primary button and two-door
+  explainer; the footer data column drops "share a run"). Learn sub-nav gains
+  `knowledge base` when the KB ships.
+- Leaderboard attribution: first-party only — the community GitHub-avatar
+  attribution in the bench comp no longer applies (it remains correct on
+  profile cards).
 - OG cards: one 1200×630 template, five fills, generated at build time
   (`scripts/build-og.sh`); only bench/profile fills carry the amber figure.
 - Homepage community layer order: feature cards → headline bench figures +
   top-5 table → latest forum topics (omitted entirely when API unreachable) →
   featured profiles → latest blog/KB.
 - Bench run record schema (identity/results/host/telemetry/history/evals/
-  provenance) is enumerated in the README's Data section — use it as the
-  starting point for the `hal0-bench-data` JSON schema.
+  provenance) is enumerated in the README's Data section — it is the contract
+  for the first-party `api.hal0.dev/v1/bench` feed and the build-time
+  snapshot.
 
 Data contracts the comps establish for later workstreams:
 
