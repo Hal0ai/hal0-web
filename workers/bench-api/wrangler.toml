@@ -1,0 +1,33 @@
+name = "hal0-bench-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hal0_bench_dev"
+database_id = "local-dev"          # local/miniflare only; real ids live in the envs
+
+[[r2_buckets]]
+binding = "BUNDLES"
+bucket_name = "hal0-bench-bundles-dev"
+
+[env.staging]
+name = "hal0-bench-api-staging"
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "hal0_bench_staging"
+database_id = "REPLACE_AFTER_wrangler_d1_create_staging"
+[[env.staging.r2_buckets]]
+binding = "BUNDLES"
+bucket_name = "hal0-bench-bundles-staging"
+
+[env.production]
+name = "hal0-bench-api"
+routes = [{ pattern = "api.hal0.dev", custom_domain = true }]
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "hal0_bench"
+database_id = "REPLACE_AFTER_wrangler_d1_create_prod"
+[[env.production.r2_buckets]]
+binding = "BUNDLES"
+bucket_name = "hal0-bench-bundles"
