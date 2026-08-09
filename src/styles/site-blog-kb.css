@@ -278,66 +278,12 @@
 }
 
 /* ── 4. blog post chrome — mono page title / TOC / pager ──
- * Scoped to `[data-blog]`, NOT `[data-longform]`, so none of this reaches
- * KB (which shares the `[data-longform]` wrapper but never carries
- * `data-blog` — see StarlightPageFrame.astro). The comp draws the same
- * mono `.site-h1` / `.toc` idiom for docs, blog post and KB article
- * (04 Blog and KB.html's Post + KbArticle both render `h1
- * className="site-h1"` and a mono `.toc`), but this repo can only extend
- * it to blog without touching KB pixel-for-pixel, per the docs-shape
- * handoff's explicit "KB stays pixel-unchanged" verification step. */
-[data-blog] #_top {
-	font-family: var(--hal0-font-mono);
-	font-size: clamp(24px, 3vw, 30px);
-	line-height: 1.2;
-	letter-spacing: var(--hal0-ls-title);
-	font-weight: 500;
-	color: var(--hal0-fg);
-}
-[data-blog] .right-sidebar-panel h2 {
-	font-family: var(--hal0-font-mono);
-	font-size: 10.5px;
-	font-weight: 500;
-	text-transform: uppercase;
-	letter-spacing: var(--hal0-ls-label);
-	color: var(--hal0-fg-dim);
-}
-[data-blog] .right-sidebar-panel a {
-	font-family: var(--hal0-font-mono);
-	font-size: 11.5px;
-	color: var(--hal0-fg-faint);
-}
-[data-blog] .right-sidebar-panel a:hover {
-	color: var(--hal0-fg);
-}
-[data-blog] .right-sidebar-panel a[aria-current='true'] {
-	color: var(--hal0-accent);
-}
-[data-blog] .pagination-links a {
-	border: 1px solid var(--hal0-border);
-	border-radius: 10px;
-	background: var(--hal0-bg-elevated);
-	box-shadow: none;
-	padding: 14px 16px;
-}
-[data-blog] .pagination-links a:hover {
-	border-color: var(--hal0-accent-line);
-}
-[data-blog] .pagination-links a > span {
-	font-family: var(--hal0-font-mono);
-	font-size: 10px;
-	text-transform: uppercase;
-	letter-spacing: var(--hal0-ls-label);
-	color: var(--hal0-fg-faint);
-}
-[data-blog] .pagination-links .link-title {
-	display: block;
-	margin-top: 6px;
-	font-size: 13px;
-	text-transform: none;
-	letter-spacing: normal;
-	color: var(--hal0-fg-muted);
-}
-[data-blog] .pagination-links a:hover .link-title {
-	color: var(--hal0-accent);
-}
+ * These rules now live in site-docs.css, shared with docs via
+ * `:is([data-docs], [data-blog])` selectors — the comp draws the same
+ * mono `.site-h1` / `.toc` / pager idiom for docs and blog post alike
+ * (04 Blog and KB.html's Post renders the same `h1 className="site-h1"`
+ * and mono `.toc` as 08 Docs.html), so one rule set serves both instead
+ * of two near-identical copies. `[data-blog]` (set by StarlightPageFrame
+ * only for entry.id starting "blog/") is what keeps any of it from
+ * reaching KB, which shares the `[data-longform]` wrapper below but never
+ * carries `data-blog`. */

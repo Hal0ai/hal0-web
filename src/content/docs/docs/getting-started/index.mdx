@@ -8,6 +8,16 @@ sidebar:
 import { Card, CardGrid, LinkCard, Aside } from '@astrojs/starlight/components';
 import { Icon } from 'astro-icon/components';
 
+// Page counts below are literals, not derived at build time — deriving
+// them via `getCollection()` broke (MDX's compiled output splits
+// `export const`-visible bindings from same-file helper consts into
+// separate chunks, so a `.filter().length` helper read as "not defined"
+// at render; an inline `await` IIFE in the `export const` initializer
+// fails to parse at all). The honest fix is a guardrail instead:
+// scripts/test/docs-sections.test.mjs recounts each group directory
+// under src/content/docs/docs/ and fails if a count below goes stale.
+// `reference`'s count (13) includes its `api/` subgroup (4 pages).
+
 export const SECTIONS = [
   {
     title: 'getting started',
