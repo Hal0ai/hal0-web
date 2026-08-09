@@ -2,12 +2,15 @@
 //
 // Two responsibilities on `releases.hal0.dev`:
 //
-//  1. `releases.hal0.dev/{stable,nightly,dev}.json` is proxied LIVE from
-//     the most recent GitHub release on `Hal0ai/hal0` that carries an
-//     asset of that name. Self-syncing: each tagged release on hal0
-//     becomes visible at releases.hal0.dev without a hal0-web deploy.
-//     Static `public/releases/*.json` stays as a placeholder backstop
-//     in case the GitHub API is unreachable.
+//  1. `releases.hal0.dev/{stable,preview,nightly,dev}.json` — and each
+//     manifest's Sigstore sibling `<channel>.json.bundle` — is proxied
+//     LIVE from the most recent GitHub release on `Hal0ai/hal0` that
+//     carries an asset of that name. Self-syncing: each tagged release
+//     on hal0 becomes visible at releases.hal0.dev without a hal0-web
+//     deploy. Static `public/releases/*.json` stays as a placeholder
+//     backstop in case the GitHub API is unreachable (no backstop for
+//     bundles: an unverifiable placeholder would fail cosign anyway, so
+//     they 404 loudly instead).
 //
 //  2. Anything else on `releases.hal0.dev` (e.g. `/foo`) is rewritten
 //     to `/releases/foo` so the static files under `public/releases/`
@@ -27,7 +30,12 @@
 // limit is permanently exhausted. Authenticated requests get 5000/hr
 // per token. The token only needs public-repo read scope.
 
-const CHANNEL_RE = /^\/(stable|nightly|dev)\.json$/;
+// Channel manifests and their Sigstore bundle siblings. The hardened
+// bootstrap (installer/bootstrap.sh) and the updater default to
+// https://releases.hal0.dev/<channel>.json and verify the manifest bytes
+// against the sibling <channel>.json.bundle before parsing — both must be
+// proxied. `preview` carries the 1.0 release candidates.
+const CHANNEL_RE = /^\/(stable|preview|nightly|dev)\.json(\.bundle)?$/;
 const RELEASES_API = "https://api.github.com/repos/Hal0ai/hal0/releases?per_page=10";
 
 function authHeaders(token: string | undefined): Record<string, string> {
@@ -55,8 +63,9 @@ type ProxyOutcome =
 	| { ok: true; response: Response }
 	| { ok: false; reason: string };
 
-async function proxyChannelManifest(
+async function proxyChannelAsset(
 	channel: string,
+	assetName: string,
 	token: string | undefined,
 ): Promise<ProxyOutcome> {
 	let listResp: Response;
@@ -89,7 +98,7 @@ async function proxyChannelManifest(
 
 	for (const release of releases) {
 		if (release.draft) continue;
-		const asset = release.assets?.find((a) => a.name === `${channel}.json`);
+		const asset = release.assets?.find((a) => a.name === assetName);
 		if (!asset) continue;
 
 		// Use the api.github.com asset endpoint with octet-stream Accept.
@@ -133,7 +142,7 @@ async function proxyChannelManifest(
 			}),
 		};
 	}
-	const reason = `no-asset:${channel}.json:${releases.length}releases`;
+	const reason = `no-asset:${assetName}:${releases.length}releases`;
 	console.warn(`[releases-proxy] ${reason}`);
 	return { ok: false, reason };
 }
@@ -172,7 +181,8 @@ export const onRequest: PagesFunction = async (context) => {
 	if (url.hostname === "releases.hal0.dev") {
 		const channelMatch = url.pathname.match(CHANNEL_RE);
 		if (channelMatch) {
-			const outcome = await proxyChannelManifest(channelMatch[1], context.env.GITHUB_TOKEN);
+			const assetName = `${channelMatch[1]}.json${channelMatch[2] ?? ""}`;
+			const outcome = await proxyChannelAsset(channelMatch[1], assetName, context.env.GITHUB_TOKEN);
 			if (outcome.ok) return outcome.response;
 			// Fall through to the static placeholder, but annotate why.
 			const rewritten = new URL(context.request.url);
