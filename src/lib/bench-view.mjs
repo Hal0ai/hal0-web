@@ -50,6 +50,13 @@
  * @property {string|null} runId
  * @property {string|null} measuredAt
  * @property {boolean} flagged
+ * @property {string|null} cellKey     API rows only: the /v1/roster cell's
+ *                                     `cell_key` — the dedup key a run's
+ *                                     `GET /v1/runs/{run_id}` records[] are
+ *                                     keyed by, used to pick the exact
+ *                                     record for the cell the visitor
+ *                                     clicked (a run can carry more than
+ *                                     one). null on snapshot rows.
  */
 
 /** @typedef {{workload?: string|null, depth?: number|null, variant?: string|null, lane?: string|null, caps?: string[], q?: string}} FacetFilters */
@@ -106,6 +113,7 @@ export function normalizeRoster(rosterRows, meta = {}) {
     runId: null,
     measuredAt: meta.generatedAt ?? null,
     flagged: false,
+    cellKey: null,
   }));
 }
 
@@ -171,6 +179,7 @@ export function normalizeApiRoster(apiJson) {
         runId: cell.run_id ?? null,
         measuredAt: cell.measured_at ?? null,
         flagged: !!cell.flagged,
+        cellKey: typeof cell.cell_key === 'string' && cell.cell_key !== '' ? cell.cell_key : null,
       });
     }
   }
@@ -443,6 +452,7 @@ export function buildFlagString(row) {
  * @property {string|null} flagString           api mode only
  * @property {boolean} hasHistory                api mode only
  * @property {Array|null} history                api mode only
+ * @property {string|null} cellKey               api mode only — see BenchRow.cellKey
  */
 
 /**
@@ -490,6 +500,7 @@ export function drawerModel(row) {
       flagString: null,
       hasHistory: false,
       history: null,
+      cellKey: null,
     };
   }
 
@@ -506,6 +517,7 @@ export function drawerModel(row) {
     flagString: buildFlagString(row),
     hasHistory,
     history: hasHistory ? row.history : null,
+    cellKey: row.cellKey ?? null,
   };
 }
 
@@ -548,30 +560,125 @@ export function capCounts(rows, capIds) {
  * `config.argv` wins; malformed/missing identity data yields `argv: null`
  * rather than throwing.
  *
+ * A run can carry more than one record (one per cell it measured — e.g. a
+ * sweep that covered both `rocm` and `vulkan_radv` lanes for the same
+ * model), and picking the wrong one shows the wrong argv for the cell the
+ * visitor actually clicked. When `cellKey` is supplied (BenchRow.cellKey,
+ * from the /v1/roster cell that opened the drawer) and a record with a
+ * matching `cell_key` exists, its argv is preferred; otherwise this falls
+ * back to the first record with a usable argv, same as before cellKey
+ * mattering (deep-link/snapshot opens carry no cellKey to match against).
+ *
  * @param {*} json
+ * @param {string|null} [cellKey]
  * @returns {{bundleId: string, title: string|null, argv: string[]|null} | null}
  */
-export function runDetail(json) {
+export function runDetail(json, cellKey) {
   const bundleId = json?.bundle?.id;
   if (typeof bundleId !== 'string' || bundleId === '') return null;
   const title = typeof json.bundle.title === 'string' && json.bundle.title !== '' ? json.bundle.title : null;
-  const argv = extractRealArgv(json);
+  const argv = extractRealArgv(json, cellKey);
   return { bundleId, title, argv };
 }
 
 /**
  * @param {*} json
+ * @param {string|null} [cellKey]
  * @returns {string[]|null}
  */
-function extractRealArgv(json) {
+function extractRealArgv(json, cellKey) {
   const records = Array.isArray(json?.records) ? json.records : [];
-  for (const record of records) {
+  const usableArgv = (record) => {
     const argv = record?.identity?.config?.argv;
-    if (Array.isArray(argv) && argv.length > 0 && argv.every((a) => typeof a === 'string')) {
-      return argv;
-    }
+    return Array.isArray(argv) && argv.length > 0 && argv.every((a) => typeof a === 'string') ? argv : null;
+  };
+  if (cellKey) {
+    const matched = records.find((r) => r?.cell_key === cellKey);
+    const matchedArgv = usableArgv(matched);
+    if (matchedArgv) return matchedArgv;
+  }
+  for (const record of records) {
+    const argv = usableArgv(record);
+    if (argv) return argv;
   }
   return null;
+}
+
+/**
+ * Honest, distinct copy for why `GET /v1/runs/{run_id}` couldn't be shown —
+ * a 404 means the run genuinely isn't published (a fact, not an outage),
+ * which reads very differently from a network/5xx failure that implies the
+ * run might exist and is just temporarily unreachable.
+ *
+ * @param {number|null|undefined} status   HTTP status of the failed fetch, or
+ *                                          null/undefined for a network-level
+ *                                          failure (no response at all).
+ * @returns {string}
+ */
+export function runFailureMessage(status) {
+  return status === 404 ? "This run hasn't been published." : 'Could not load full run detail — the API may be unreachable.';
+}
+
+/**
+ * Minutes elapsed since a live payload's `generated` timestamp, for the
+ * freshness badge's "live · N min ago" text. Returns null (never NaN) when
+ * `generated` is missing or doesn't parse — a malformed/absent timestamp on
+ * an otherwise-successful live fetch must read as "freshness unknown", not
+ * silently render "NaN min ago".
+ *
+ * @param {*} generated
+ * @param {number} nowMs   caller-supplied clock reading (testability — this
+ *                          module never calls Date.now() itself)
+ * @returns {number|null}
+ */
+export function liveAgeMinutes(generated, nowMs) {
+  if (typeof generated !== 'string' || generated === '') return null;
+  const parsed = Date.parse(generated);
+  if (Number.isNaN(parsed)) return null;
+  return Math.max(0, Math.round((nowMs - parsed) / 60000));
+}
+
+/**
+ * Freshness-badge text for the live state: "live · {host}, N min ago", or
+ * "live · {host}, freshness unknown" when `ageMinutes` is null (see
+ * liveAgeMinutes — never a NaN-bearing string).
+ *
+ * @param {string} host
+ * @param {number|null} ageMinutes
+ * @returns {string}
+ */
+export function liveBadgeText(host, ageMinutes) {
+  return ageMinutes === null ? `live · ${host}, freshness unknown` : `live · ${host}, ${ageMinutes} min ago`;
+}
+
+/**
+ * Freshness-badge text for the snapshot (non-live) state. `reason`
+ * distinguishes *why* the page isn't live — honest per README §Interactions:
+ * a fetch/HTTP failure ('unreachable') reads differently from a payload
+ * that answered but couldn't be turned into rows ('invalid'); both still
+ * land on the always-well-formed build-time snapshot.
+ *
+ * @param {string} rosterDate
+ * @param {'unreachable'|'invalid'|null|undefined} [reason]
+ * @returns {{text: string, title: string}}
+ */
+export function snapshotBadgeText(rosterDate, reason) {
+  if (reason === 'unreachable') {
+    return {
+      text: `snapshot from ${rosterDate} · api unreachable`,
+      title: 'The bench API did not answer — showing the build-time snapshot.',
+    };
+  }
+  if (reason === 'invalid') {
+    return {
+      text: `snapshot from ${rosterDate} · live data invalid`,
+      title: 'The bench API responded, but this page could not render the payload — showing the build-time snapshot.',
+    };
+  }
+  return {
+    text: `snapshot from ${rosterDate}`,
+    title: 'Showing the build-time snapshot — figures are correct but not live.',
+  };
 }
 
 /**

@@ -214,7 +214,7 @@ const description =
         <span class="label" id="bench-panel-label">leaderboard</span>
         <span class="fresh snap" id="bench-freshness">
           <span class="dot stale"></span>
-          <span id="bench-freshness-text">snapshot from {freshnessDate} · live sync coming soon</span>
+          <span id="bench-freshness-text">snapshot from {freshnessDate}</span>
         </span>
       </div>
 
@@ -222,17 +222,17 @@ const description =
         <table class="dtable" id="bench-table">
           <thead>
             <tr>
-              <th class="model" data-sort-key="id"><span class="th-label">model</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th class="model" data-sort-key="id" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="id"><span class="th-label">model</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
               <th>caps</th>
-              <th data-sort-key="params"><span class="th-label">params</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th data-sort-key="params" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="params"><span class="th-label">params</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
               <th>kv · spec</th>
-              <th data-sort-key="lane"><span class="th-label">lane</span><span class="sort-arrow" aria-hidden="true"></span></th>
-              <th class="n" data-sort-key="dec"><span class="th-label">decode tok/s</span><span class="sort-arrow" aria-hidden="true"></span></th>
-              <th class="n" data-sort-key="pf"><span class="th-label">prefill</span><span class="sort-arrow" aria-hidden="true"></span></th>
-              <th class="n" data-sort-key="ttftP50"><span class="th-label">ttft p50</span><span class="sort-arrow" aria-hidden="true"></span></th>
-              <th class="n" data-sort-key="ttftP95"><span class="th-label">p95</span><span class="sort-arrow" aria-hidden="true"></span></th>
-              <th class="n" data-sort-key="acc"><span class="th-label">accept</span><span class="sort-arrow" aria-hidden="true"></span></th>
-              <th class="n" data-sort-key="gb"><span class="th-label">gb</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th data-sort-key="lane" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="lane"><span class="th-label">lane</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+              <th class="n" data-sort-key="dec" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="dec"><span class="th-label">decode tok/s</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+              <th class="n" data-sort-key="pf" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="pf"><span class="th-label">prefill</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+              <th class="n" data-sort-key="ttftP50" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="ttftP50"><span class="th-label">ttft p50</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+              <th class="n" data-sort-key="ttftP95" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="ttftP95"><span class="th-label">p95</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+              <th class="n" data-sort-key="acc" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="acc"><span class="th-label">accept</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+              <th class="n" data-sort-key="gb" aria-sort="none"><button type="button" class="th-sort-btn" data-sort-key="gb"><span class="th-label">gb</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
               <th>trend</th>
             </tr>
           </thead>
@@ -494,10 +494,20 @@ const description =
     overflow-x: auto;
   }
   .dtable th[data-sort-key] {
-    cursor: pointer;
     user-select: none;
   }
-  .dtable th[data-sort-key]:hover {
+  .th-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  .th-sort-btn:hover {
     color: var(--fg);
   }
   .sort-arrow {

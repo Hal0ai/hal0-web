@@ -29,6 +29,10 @@ import {
   capCounts,
   drawerModel,
   runDetail,
+  runFailureMessage,
+  liveAgeMinutes,
+  liveBadgeText,
+  snapshotBadgeText,
   evalTable,
   evalScoreBucket,
   selectInitialRows,
@@ -64,6 +68,7 @@ interface BenchRow {
   runId: string | null;
   measuredAt: string | null;
   flagged: boolean;
+  cellKey: string | null;
 }
 
 // depth and variant were dropped as filter facets (not just made
@@ -94,8 +99,21 @@ interface EvalEntry {
   score?: number;
 }
 
-const API_URL = 'https://api.hal0.dev/v1/roster';
-const EVALS_API_URL = 'https://api.hal0.dev/v1/evals';
+// import.meta.env.PUBLIC_BENCH_API lets a preview/staging deploy point at a
+// non-production bench API without a code change; falls back to the real
+// api.hal0.dev origin, same as the build-time sync (scripts/sync-bench.mjs's
+// HAL0_BENCH_API_URL) and the RunDrawer's static links.
+const API_BASE = (import.meta.env.PUBLIC_BENCH_API as string | undefined) ?? 'https://api.hal0.dev';
+const API_URL = `${API_BASE}/v1/roster`;
+const EVALS_API_URL = `${API_BASE}/v1/evals`;
+const RUN_API_BASE = `${API_BASE}/v1/runs`;
+const BUNDLE_API_BASE = `${API_BASE}/v1/bundles`;
+// The roster live-upgrade fetch is the visible, above-the-fold promise (the
+// leaderboard itself) — a tight 4s budget keeps a slow/unreachable API from
+// leaving the page looking stalled. Evals and the run drawer's supplementary
+// lookups are lower-stakes background enhancement, so they keep a slightly
+// longer budget.
+const ROSTER_FETCH_TIMEOUT_MS = 4000;
 const FETCH_TIMEOUT_MS = 5000;
 const SORT_KEYS = new Set(['id', 'params', 'lane', 'dec', 'pf', 'ttftP50', 'ttftP95', 'acc', 'gb']);
 const LANE_CHIP: Record<string, string> = { rocm: 'dev-rocm', vulkan_radv: 'dev-vulkan' };
@@ -263,9 +281,6 @@ function evalRowHtml(row: ReturnType<typeof evalTable>['rows'][number], tasks: s
 const WARN_SVG =
   '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2 1.4 14h13.2z"/><path d="M8 6.4v3.4"/><circle cx="8" cy="11.6" r=".2" fill="currentColor"/></svg>';
 
-const RUN_API_BASE = 'https://api.hal0.dev/v1/runs';
-const BUNDLE_API_BASE = 'https://api.hal0.dev/v1/bundles';
-
 function drawerMetricsHtml(metrics: NonNullable<DrawerModel>['metrics']): string {
   const ttft =
     metrics.ttftP50 != null
@@ -351,6 +366,7 @@ function drawerProvenanceHtml(model: NonNullable<DrawerModel>): string {
       )}" rel="noopener">download bundle</a>
       <button type="button" class="btn ghost" id="run-drawer-copy-link" data-copy-link="${escapeHtml(model.id)}">link to this run</button>
     </div>
+    <p class="site-sm dim" id="run-drawer-fetch-status" hidden></p>
   </section>`;
 }
 
@@ -487,10 +503,14 @@ function init() {
     sortToggleBtn.setAttribute('aria-expanded', 'false');
   }
 
-  function currentView(): BenchRow[] {
-    const filtered = applyFilters(state.corpus, state.filters);
+  function viewFor(corpus: BenchRow[]): BenchRow[] {
+    const filtered = applyFilters(corpus, state.filters);
     const reduced = reduceBestLane(filtered);
     return state.sort.key ? sortRows(reduced, state.sort.key, state.sort.dir) : reduced;
+  }
+
+  function currentView(): BenchRow[] {
+    return viewFor(state.corpus);
   }
 
   function render() {
@@ -603,12 +623,29 @@ function init() {
   function setLiveFreshness(generatedAt?: string | null) {
     if (!freshnessEl || !freshnessText) return;
     freshnessEl.classList.remove('snap');
+    freshnessEl.removeAttribute('title');
     freshnessDot?.classList.remove('stale');
     freshnessDot?.classList.add('serving');
-    const minutesAgo = generatedAt
-      ? Math.max(0, Math.round((Date.now() - new Date(generatedAt).getTime()) / 60000))
-      : 0;
-    freshnessText.textContent = `live · api.hal0.dev, ${minutesAgo} min ago`;
+    // liveAgeMinutes validates `generatedAt` itself — a missing/malformed
+    // timestamp on an otherwise-successful live fetch reads as "freshness
+    // unknown" (liveBadgeText), never a NaN-bearing string.
+    const host = new URL(API_URL).host;
+    freshnessText.textContent = liveBadgeText(host, liveAgeMinutes(generatedAt ?? null, Date.now()));
+  }
+
+  // Reverts the badge to the snapshot's degraded state — snapshotBadgeText's
+  // `reason` is honest about *why* the page isn't live: a fetch/HTTP failure
+  // ('unreachable') reads differently from a payload that answered but
+  // couldn't be turned into rows ('invalid'). Both still land on the
+  // always-well-formed build-time snapshot already on screen.
+  function setSnapshotFreshness(reason?: 'unreachable' | 'invalid') {
+    if (!freshnessEl || !freshnessText) return;
+    freshnessEl.classList.add('snap');
+    freshnessDot?.classList.add('stale');
+    freshnessDot?.classList.remove('serving');
+    const { text, title } = snapshotBadgeText(ROSTER_DATE, reason);
+    freshnessText.textContent = text;
+    freshnessEl.title = title;
   }
 
   // --- events -------------------------------------------------------
@@ -734,6 +771,32 @@ function init() {
 
   let openRunId: string | null = null;
 
+  // Belt-and-suspenders focus containment: trapTabKey (above) cycles Tab
+  // within the drawer, but only guards Tab itself — a screen reader's own
+  // virtual cursor, or any programmatic .focus() call, could still land on
+  // content behind the scrim. The native `inert` attribute closes that gap
+  // by making everything else in the page genuinely unfocusable and
+  // unreadable-by-AT while the drawer is open, not just skipped by one key
+  // handler. MAIN's own children get it too (except the scrim/drawer
+  // themselves) since RunDrawer.astro renders inside <main>, alongside the
+  // rest of the page content it needs to sit above.
+  function setShellInert(on: boolean) {
+    if (!drawerScrim || !drawerEl) return;
+    for (const el of Array.from(document.body.children)) {
+      if (el.tagName === 'SCRIPT') continue;
+      if (el.tagName === 'MAIN') {
+        for (const child of Array.from(el.children)) {
+          if (child === drawerScrim || child === drawerEl) continue;
+          if (on) child.setAttribute('inert', '');
+          else child.removeAttribute('inert');
+        }
+        continue;
+      }
+      if (on) el.setAttribute('inert', '');
+      else el.removeAttribute('inert');
+    }
+  }
+
   function openDrawer(id: string, opts: { pushState?: boolean } = {}) {
     if (!drawerScrim || !drawerEl || !drawerTitle || !drawerBody) return;
     // Guard against pushing a duplicate history entry (and re-rendering)
@@ -752,10 +815,11 @@ function init() {
     lastFocusedEl = document.activeElement as HTMLElement | null;
     drawerScrim.hidden = false;
     drawerEl.hidden = false;
+    setShellInert(true);
     drawerEl.focus();
 
     if (model.mode === 'api' && model.runId) {
-      void resolveBundleLink(model.runId);
+      void resolveBundleLink(model.runId, model.cellKey);
     }
 
     if (opts.pushState !== false) {
@@ -765,25 +829,35 @@ function init() {
     }
   }
 
-  // Bundle download resolves lazily: GET /v1/runs/{run_id} carries the
-  // bundle id (not derivable from the roster row), so the button stays
-  // disabled until this returns. 5s timeout, silent failure — on network
-  // error, bad status, non-JSON body, or an unrecognized payload shape the
-  // button just stays disabled with its "bundle lookup unavailable" title.
-  async function resolveBundleLink(runId: string) {
+  // Bundle download (+ the resolved argv, matched to the exact cell the
+  // visitor clicked via cellKey — see runDetail's header comment) resolves
+  // lazily: GET /v1/runs/{run_id} carries the bundle id (not derivable from
+  // the roster row), so the button stays disabled until this returns. A
+  // failure gets an honest, distinct message (runFailureMessage — a 404
+  // means the run genuinely isn't published, not that the API is down)
+  // surfaced in #run-drawer-fetch-status rather than leaving the disabled
+  // button as the only signal something didn't load.
+  async function resolveBundleLink(runId: string, cellKey: string | null) {
     const link = drawerBody?.querySelector<HTMLAnchorElement>('#run-drawer-bundle-btn');
+    const statusEl = drawerBody?.querySelector<HTMLElement>('#run-drawer-fetch-status');
     if (!link) return;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
       const res = await fetch(`${RUN_API_BASE}/${encodeURIComponent(runId)}`, { signal: controller.signal });
-      if (!res.ok) return;
-      const json = await res.json();
-      const detail = runDetail(json);
-      if (!detail) return;
       // The drawer may have been closed/reopened on a different run while
       // this fetch was in flight — bail if the link isn't for this run.
       if (link.dataset.runId !== runId || !link.isConnected) return;
+      if (!res.ok) {
+        if (statusEl) {
+          statusEl.textContent = runFailureMessage(res.status);
+          statusEl.hidden = false;
+        }
+        return;
+      }
+      const json = await res.json();
+      const detail = runDetail(json, cellKey);
+      if (!detail) return;
       link.removeAttribute('aria-disabled');
       link.removeAttribute('title');
       link.href = `${BUNDLE_API_BASE}/${encodeURIComponent(detail.bundleId)}`;
@@ -800,7 +874,12 @@ function init() {
         if (flagsWell) flagsWell.textContent = detail.argv.join(' ');
       }
     } catch {
-      // Network error, abort, or non-JSON body — stay disabled.
+      // Network error or abort — no response at all, so runFailureMessage's
+      // null-status branch (the honest "may be unreachable" copy) applies.
+      if (link.dataset.runId === runId && link.isConnected && statusEl) {
+        statusEl.textContent = runFailureMessage(null);
+        statusEl.hidden = false;
+      }
     } finally {
       clearTimeout(timeoutId);
     }
@@ -813,13 +892,18 @@ function init() {
     drawerEl.hidden = true;
     drawerBody.innerHTML = '';
     openRunId = null;
+    setShellInert(false);
     lastFocusedEl?.focus();
     lastFocusedEl = null;
 
     if (!opts.popState) {
+      // replaceState, not pushState: closing shouldn't leave a "?run=
+      // stripped" entry sitting in history behind the one that opened the
+      // drawer — that would make Back a no-op (it'd just restore the
+      // just-closed ?run= state) and double history size per open/close.
       const url = new URL(window.location.href);
       url.searchParams.delete('run');
-      history.pushState({}, '', url);
+      history.replaceState({}, '', url);
     }
   }
 
@@ -958,25 +1042,47 @@ function init() {
     }
   }
 
+  // Two-stage validation (README §Interactions): stage 1 is network/HTTP —
+  // a failure here genuinely means the API didn't answer, the honest
+  // 'unreachable' badge. Stage 2 is shape — the response arrived but has to
+  // prove it can become a working corpus (normalize → upgrade → filter →
+  // render) before anything is committed; a failure there is a live-data
+  // problem, not an outage, and gets the distinct 'invalid' badge. Building
+  // the full view/markup in a local `bodyHtml` before touching `state.corpus`
+  // or the DOM means a malformed payload never leaves either half-updated.
   async function fetchLiveRoster() {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), ROSTER_FETCH_TIMEOUT_MS);
+    let json: any;
     try {
       const res = await fetch(API_URL, { signal: controller.signal });
-      if (!res.ok) return;
-      const json = await res.json();
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      json = await res.json();
+    } catch {
+      clearTimeout(timeoutId);
+      setSnapshotFreshness('unreachable');
+      return;
+    }
+    clearTimeout(timeoutId);
+
+    try {
       const apiRows = normalizeApiRoster(json) as BenchRow[];
-      if (apiRows.length === 0) return;
+      if (apiRows.length === 0) throw new Error('empty/malformed roster payload');
       const upgraded = upgradeRows(snapshotRows, apiRows) as BenchRow[];
+      // Prove the corpus actually renders (rowHtml can throw on a value that
+      // violates the /v1/roster type contract, e.g. a non-numeric metric,
+      // despite passing normalizeApiRoster's own tolerance) before
+      // committing it to state — a throw here must never leave state.corpus
+      // pointing at a corpus the page can't paint.
+      viewFor(upgraded).map(rowHtml).join('');
+
       state.corpus = upgraded;
       updateCapCounts(upgraded);
       render();
       renderEvals();
       setLiveFreshness(json?.generated ?? null);
     } catch {
-      // Network error, non-JSON body, or abort — stay on the snapshot.
-    } finally {
-      clearTimeout(timeoutId);
+      setSnapshotFreshness('invalid');
     }
   }
 }

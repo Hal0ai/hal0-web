@@ -13,6 +13,10 @@ import {
   drawerModel,
   buildFlagString,
   runDetail,
+  runFailureMessage,
+  liveAgeMinutes,
+  liveBadgeText,
+  snapshotBadgeText,
   selectInitialRows,
   evalTable,
   evalScoreBucket,
@@ -774,6 +778,43 @@ test('runDetail: malformed identity/config/argv (non-array, non-string entries, 
   }
 });
 
+test('runDetail: cellKey matches a specific record\'s argv over other records', () => {
+  const json = {
+    run_id: 'run-123',
+    records: [
+      { cell_key: 'rocm-cell', identity: { config: { argv: ['-c', '2048', '--lane', 'rocm'] } } },
+      { cell_key: 'vulkan-cell', identity: { config: { argv: ['-c', '2048', '--lane', 'vulkan'] } } },
+    ],
+    bundle: { id: 'bundle-abc', title: null, notes: '' },
+  };
+  assert.deepEqual(runDetail(json, 'vulkan-cell').argv, ['-c', '2048', '--lane', 'vulkan']);
+  assert.deepEqual(runDetail(json, 'rocm-cell').argv, ['-c', '2048', '--lane', 'rocm']);
+});
+
+test('runDetail: no cellKey (or no match) falls back to the first record with a usable argv', () => {
+  const json = {
+    run_id: 'run-123',
+    records: [
+      { cell_key: 'rocm-cell', identity: { config: { argv: ['-c', '2048'] } } },
+    ],
+    bundle: { id: 'bundle-abc', title: null, notes: '' },
+  };
+  assert.deepEqual(runDetail(json).argv, ['-c', '2048']);
+  assert.deepEqual(runDetail(json, 'no-such-cell').argv, ['-c', '2048']);
+});
+
+test('runDetail: a cellKey match with no usable argv still falls back to another record\'s argv', () => {
+  const json = {
+    run_id: 'run-123',
+    records: [
+      { cell_key: 'rocm-cell', identity: { config: {} } },
+      { cell_key: 'vulkan-cell', identity: { config: { argv: ['-c', '512'] } } },
+    ],
+    bundle: { id: 'bundle-abc', title: null, notes: '' },
+  };
+  assert.deepEqual(runDetail(json, 'rocm-cell').argv, ['-c', '512']);
+});
+
 test('runDetail: missing bundle returns null', () => {
   assert.equal(runDetail({ run_id: 'run-123', records: [] }), null);
 });
@@ -941,4 +982,95 @@ test('evalScoreBucket: score in [0.4, 0.75) is neither — no bucket', () => {
 test('evalScoreBucket: null/undefined score returns null', () => {
   assert.equal(evalScoreBucket(null), null);
   assert.equal(evalScoreBucket(undefined), null);
+});
+
+// --- cellKey (BenchRow / drawerModel) ------------------------------------
+
+test('normalizeApiRoster: carries cell_key through as cellKey; snapshot rows have cellKey:null', () => {
+  const apiRows = normalizeApiRoster(API_FIXTURE);
+  // API_FIXTURE cells carry no cell_key field — tolerated as null, never invented.
+  assert.ok(apiRows.every((r) => r.cellKey === null));
+
+  const withCellKey = normalizeApiRoster({
+    models: [{ model_id: 'model-x', cells: [{ lane: 'rocm', kind: 'tg', cell_key: 'sha256:abc', decode_ts_med: 1 }] }],
+  });
+  assert.equal(withCellKey[0].cellKey, 'sha256:abc');
+
+  const snapshotRows = normalizeRoster(ROSTER_FIXTURE);
+  assert.ok(snapshotRows.every((r) => r.cellKey === null));
+});
+
+test('normalizeApiRoster: a non-string/empty cell_key stays null, never invented', () => {
+  const rows = normalizeApiRoster({
+    models: [
+      { model_id: 'model-x', cells: [{ lane: 'rocm', cell_key: '', decode_ts_med: 1 }] },
+      { model_id: 'model-y', cells: [{ lane: 'rocm', cell_key: 42, decode_ts_med: 1 }] },
+    ],
+  });
+  assert.ok(rows.every((r) => r.cellKey === null));
+});
+
+test('drawerModel: snapshot mode has cellKey:null; api mode carries the row\'s cellKey through', () => {
+  const [snapRow] = normalizeRoster(ROSTER_FIXTURE);
+  assert.equal(drawerModel(snapRow).cellKey, null);
+
+  const apiRow = { id: 'm', runId: 'run-1', cellKey: 'sha256:def', measured: true };
+  assert.equal(drawerModel(apiRow).cellKey, 'sha256:def');
+});
+
+// --- runFailureMessage ----------------------------------------------------
+
+test('runFailureMessage: 404 reads as "not published", distinct from an outage', () => {
+  assert.equal(runFailureMessage(404), "This run hasn't been published.");
+});
+
+test('runFailureMessage: any other status (or none at all, e.g. a network failure) reads as unreachable', () => {
+  assert.equal(runFailureMessage(500), 'Could not load full run detail — the API may be unreachable.');
+  assert.equal(runFailureMessage(503), 'Could not load full run detail — the API may be unreachable.');
+  assert.equal(runFailureMessage(null), 'Could not load full run detail — the API may be unreachable.');
+  assert.equal(runFailureMessage(undefined), 'Could not load full run detail — the API may be unreachable.');
+});
+
+// --- liveAgeMinutes / liveBadgeText / snapshotBadgeText --------------------
+
+test('liveAgeMinutes: minutes elapsed between generated and now, rounded, never negative', () => {
+  const now = Date.parse('2026-08-09T12:10:00Z');
+  assert.equal(liveAgeMinutes('2026-08-09T12:00:00Z', now), 10);
+  assert.equal(liveAgeMinutes('2026-08-09T12:09:40Z', now), 0);
+  // A generated timestamp in the "future" (clock skew) never reads as negative minutes.
+  assert.equal(liveAgeMinutes('2026-08-09T12:20:00Z', now), 0);
+});
+
+test('liveAgeMinutes: missing/malformed generated returns null, never NaN', () => {
+  const now = Date.parse('2026-08-09T12:10:00Z');
+  assert.equal(liveAgeMinutes(undefined, now), null);
+  assert.equal(liveAgeMinutes(null, now), null);
+  assert.equal(liveAgeMinutes('', now), null);
+  assert.equal(liveAgeMinutes('not-a-date', now), null);
+  assert.equal(liveAgeMinutes(12345, now), null);
+});
+
+test('liveBadgeText: renders "N min ago" when age is known', () => {
+  assert.equal(liveBadgeText('api.hal0.dev', 10), 'live · api.hal0.dev, 10 min ago');
+  assert.equal(liveBadgeText('api.hal0.dev', 0), 'live · api.hal0.dev, 0 min ago');
+});
+
+test('liveBadgeText: "freshness unknown" when age is null, never "NaN min ago"', () => {
+  assert.equal(liveBadgeText('api.hal0.dev', null), 'live · api.hal0.dev, freshness unknown');
+});
+
+test('snapshotBadgeText: default reason is the plain snapshot state', () => {
+  const { text, title } = snapshotBadgeText('2026-06-19');
+  assert.equal(text, 'snapshot from 2026-06-19');
+  assert.match(title, /not live/);
+});
+
+test('snapshotBadgeText: "unreachable" and "invalid" reasons render distinct, honest copy', () => {
+  const unreachable = snapshotBadgeText('2026-06-19', 'unreachable');
+  assert.equal(unreachable.text, 'snapshot from 2026-06-19 · api unreachable');
+  assert.match(unreachable.title, /did not answer/);
+
+  const invalid = snapshotBadgeText('2026-06-19', 'invalid');
+  assert.equal(invalid.text, 'snapshot from 2026-06-19 · live data invalid');
+  assert.match(invalid.title, /could not render/);
 });
