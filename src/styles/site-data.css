@@ -135,6 +135,9 @@
 	a.btn:hover {
 		color: #0a0a0a;
 	}
+	.btn:active {
+		transform: translateY(0.5px);
+	}
 	.btn.ghost {
 		background: transparent;
 		color: var(--fg);
@@ -149,10 +152,37 @@
 		background: var(--bg-2);
 		filter: none;
 	}
+	.btn.danger {
+		background: transparent;
+		color: var(--err);
+		border-color: var(--err-line);
+	}
+	.btn.danger:hover {
+		background: var(--err-soft);
+		filter: none;
+	}
+	a.btn.danger,
+	a.btn.danger:hover {
+		color: var(--err);
+	}
 	.btn.sm {
 		height: 26px;
 		padding: 4px 9px;
 		font-size: 11px;
+	}
+	.btn.lg {
+		height: 36px;
+		padding: 8px 16px;
+		font-size: 13px;
+	}
+	.btn[disabled],
+	.btn:disabled,
+	.btn[aria-disabled='true'] {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+	.btn svg {
+		flex-shrink: 0;
 	}
 
 	/* ── chip / tag ──────────────────────────────────────────────── */
@@ -175,6 +205,102 @@
 		background: var(--accent-soft);
 		color: var(--accent);
 		border-color: var(--accent-line);
+	}
+	.chip.ok {
+		background: var(--ok-soft);
+		color: var(--ok);
+		border-color: var(--ok-line);
+	}
+	.chip.warn {
+		background: var(--warn-soft);
+		color: var(--warn);
+		border-color: var(--warn-line);
+	}
+	.chip.err {
+		background: var(--err-soft);
+		color: var(--err);
+		border-color: var(--err-line);
+	}
+	.chip.info {
+		background: var(--info-soft);
+		color: var(--info);
+		border-color: var(--info-line);
+	}
+	.chip.dev-rocm {
+		color: var(--dev-rocm);
+		border-color: color-mix(in srgb, var(--dev-rocm) 30%, transparent);
+		background: color-mix(in srgb, var(--dev-rocm) 8%, transparent);
+	}
+	.chip.dev-vulkan {
+		color: var(--dev-vulkan);
+		border-color: color-mix(in srgb, var(--dev-vulkan) 30%, transparent);
+		background: color-mix(in srgb, var(--dev-vulkan) 8%, transparent);
+	}
+	.chip.dev-cpu {
+		color: var(--dev-cpu);
+		border-color: var(--line-strong);
+		background: var(--bg-2);
+	}
+	.chip.dev-npu {
+		color: var(--dev-npu);
+		border-color: color-mix(in srgb, var(--dev-npu) 30%, transparent);
+		background: color-mix(in srgb, var(--dev-npu) 8%, transparent);
+	}
+	.chip.outlined {
+		background: transparent;
+	}
+
+	/* ── status dot ──────────────────────────────────────────────── */
+	.dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		background: var(--fg-4);
+		display: inline-block;
+	}
+	.dot.ready {
+		background: var(--ok);
+		box-shadow: 0 0 8px var(--ok);
+	}
+	.dot.serving {
+		background: var(--ok);
+		box-shadow: 0 0 8px var(--ok);
+		animation: pulse 1.2s ease-in-out infinite;
+	}
+	.dot.recent {
+		background: var(--ok);
+		box-shadow: 0 0 8px var(--ok);
+	}
+	.dot.idle {
+		background: var(--ok);
+		opacity: 0.45;
+	}
+	.dot.stale {
+		background: var(--warn);
+		box-shadow: 0 0 6px color-mix(in srgb, var(--warn) 45%, transparent);
+	}
+	.dot.warming {
+		background: var(--warn);
+		box-shadow: 0 0 8px var(--warn);
+		animation: pulse 1.2s ease-in-out infinite;
+	}
+	.dot.loading {
+		background: var(--warn);
+		animation: pulse 1.2s ease-in-out infinite;
+	}
+	.dot.error {
+		background: var(--err);
+	}
+	.dot.offline {
+		background: var(--fg-4);
+	}
+	.dot.empty {
+		background: var(--fg-5);
+	}
+	.dot.coresident {
+		background: var(--dev-npu);
+		box-shadow: 0 0 8px var(--dev-npu);
 	}
 
 	/* ── filter pills ────────────────────────────────────────────── */
@@ -263,6 +389,326 @@
 	}
 	.dtable .hero {
 		color: var(--accent);
+	}
+
+	/* ── leaderboard row content ─────────────────────────────────────
+	 * The /benchmarks leaderboard's <tbody> is always repainted
+	 * client-side (bench-island.ts's render() runs on init, not just on
+	 * filter/sort changes, so the two render paths — server SSR and
+	 * client re-render — never drift). That means every rule below has
+	 * to live here rather than in a scoped Astro <style> block (in
+	 * benchmarks.astro or a per-row component like CapGlyphs.astro /
+	 * BucketMeter.astro): Astro's scoped-style compiler only tags
+	 * elements it rendered at build time with the `astro-*` scoping
+	 * class, and elements injected via `innerHTML` afterwards never get
+	 * it — a scoped rule here would match the very first paint and then
+	 * silently stop matching the instant the island hydrates. Same
+	 * scoping precedent as the run drawer section below. */
+	.dtable td.model,
+	.dtable th.model {
+		position: sticky;
+		left: 0;
+		background: var(--bg-1);
+		z-index: 1;
+		border-right: 1px solid var(--line-soft);
+	}
+	.dtable th.model {
+		z-index: 3;
+	}
+	.dtable tbody tr:hover td.model {
+		background: var(--bg-2);
+	}
+	.mname {
+		color: var(--fg);
+		display: block;
+		max-width: 330px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.msub {
+		color: var(--fg-4);
+		font-size: 10.5px;
+		display: block;
+		margin-top: 2px;
+	}
+	.trend-cell {
+		font-size: 11px;
+	}
+
+	/* Capability glyphs (CapGlyphs.astro) — used for the filter-bar caps
+	 * pills (static, server-rendered) and the per-row cap glyphs (dynamic,
+	 * see the note above), so this lives here rather than in the
+	 * component's own scoped style for the same reason. Verbatim from
+	 * docs/design/2026-08-09-platform-handoff/README.md's "Capability
+	 * glyphs" spec. */
+	.caps {
+		display: inline-flex;
+		gap: 5px;
+		white-space: nowrap;
+		color: var(--fg-2);
+	}
+	.cap {
+		display: inline-flex;
+		width: 16px;
+		height: 16px;
+		vertical-align: middle;
+	}
+	.cap svg {
+		width: 100%;
+		height: 100%;
+	}
+	.cap-mtp {
+		color: var(--accent);
+	}
+	.cap-vision {
+		color: var(--hal0-cap-vision);
+	}
+	.capnone {
+		color: var(--fg-4);
+	}
+	.cap-legend {
+		display: inline-flex;
+		flex-wrap: wrap;
+		gap: 6px 18px;
+	}
+	.cap-legend .lg {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	/* Decode-speed bucket meter (BucketMeter.astro) — per-row dynamic
+	 * content, same scoping note as above. Bucket colours pair with the
+	 * three-segment meter and a visually-hidden bucket word so meaning is
+	 * never colour-alone (README "Accessibility"). */
+	.decode {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.decode .meter {
+		display: inline-flex;
+		gap: 1.5px;
+	}
+	.decode .meter i {
+		display: inline-block;
+		width: 3px;
+		height: 11px;
+		background: var(--fg-5);
+		border-radius: 1px;
+	}
+	.decode.fast .meter i.on {
+		background: var(--fast);
+	}
+	.decode.mid .meter i.on {
+		background: var(--mid);
+	}
+	.decode.slow .meter i.on {
+		background: var(--slow);
+	}
+	.decode .v {
+		font-size: 13px;
+	}
+	.decode.fast .v {
+		color: var(--fast);
+		font-weight: 600;
+	}
+	.decode.mid .v {
+		color: var(--mid);
+	}
+	.decode.slow .v {
+		color: var(--slow);
+	}
+	/* The bucket word itself uses the `.sr` visually-hidden utility
+	 * further down this file (shared with the evals table's
+	 * pass/fail/borderline word). */
+
+	/* ── run drawer (Task 6) ─────────────────────────────────────────
+	 * Ported verbatim from docs/design/2026-08-09-platform-handoff/
+	 * "02 Benchmarks.html" (`.scrim` / `.drawer-run` / `.dr-*` / `.kv` /
+	 * `.histbox` / `.banner`), rgba(0,0,0,.6) tokenized as
+	 * --hal0-shadow-drawer per the brief (drawers are the one surface
+	 * allowed their own shadow). Global rather than scoped in
+	 * RunDrawer.astro on purpose: bench-island.ts populates #run-drawer-body
+	 * by setting innerHTML client-side (same pattern the table body already
+	 * uses for rowHtml()), and Astro's scoped-style compiler only matches
+	 * elements it rendered at build time — a JS-injected node never carries
+	 * the `astro-XXXXXX` scope class, so these classes have to live in the
+	 * shared, unscoped sheet to style dynamically-inserted drawer content. */
+	.scrim {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.55);
+		z-index: 60;
+	}
+	.drawer-run {
+		position: fixed;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: min(580px, 100vw);
+		background: var(--bg-1);
+		border-left: 1px solid var(--line-strong);
+		box-shadow: var(--shadow-drawer);
+		z-index: 61;
+		display: flex;
+		flex-direction: column;
+	}
+	.dr-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px 20px;
+		border-bottom: 1px solid var(--line);
+	}
+	.dr-title {
+		font-size: 14px;
+		margin-top: 6px;
+		color: var(--fg);
+		word-break: break-all;
+	}
+	.dr-body {
+		overflow-y: auto;
+		padding: 18px 20px 40px;
+		display: flex;
+		flex-direction: column;
+		gap: 22px;
+	}
+	.dr-metrics {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 14px;
+		border: 1px solid var(--line);
+		border-radius: var(--rad);
+		padding: 14px;
+	}
+	.dr-metrics .stat {
+		font-size: 14px;
+		margin-top: 4px;
+		color: var(--fg);
+	}
+	.dr-metrics .u {
+		color: var(--fg-4);
+		font-size: 11px;
+	}
+	.dr-metrics .decode {
+		justify-content: flex-start;
+		margin-top: 4px;
+	}
+	.dr-sec-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 8px;
+	}
+	.kv {
+		display: grid;
+		grid-template-columns: 104px 1fr;
+		margin: 8px 0 0;
+		font-family: var(--jbm);
+		font-size: 11.5px;
+	}
+	.kv dt {
+		color: var(--fg-4);
+		padding: 5px 0;
+		border-top: 1px solid var(--line-soft);
+	}
+	.kv dd {
+		color: var(--fg-2);
+		padding: 5px 0;
+		margin: 0;
+		border-top: 1px solid var(--line-soft);
+	}
+	.kv dd.trunc {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.argv {
+		margin: 0;
+		padding: 12px 14px;
+		white-space: pre-wrap;
+		word-break: break-all;
+		color: var(--fg-2);
+		font-size: 11.5px;
+	}
+	.histbox {
+		border: 1px solid var(--line);
+		border-radius: var(--rad);
+		padding: 14px;
+	}
+	.dr-actions {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+		margin-top: 12px;
+	}
+	.banner {
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+		padding: 9px 11px;
+		border-radius: var(--rad-sm);
+		font-family: var(--jbm);
+		font-size: 11.5px;
+		line-height: 1.5;
+	}
+	.banner.warn {
+		background: var(--warn-soft);
+		border: 1px solid var(--warn-line);
+		color: var(--warn);
+	}
+
+	/* Evals tab (02 Benchmarks.html §evals) — score bar per task column.
+	 * Colour is never the only signal: `.fill.good`/`.fill.bad` pair with a
+	 * numeric 0–1 value and a visually-hidden pass/fail/borderline word
+	 * (see `.sr` below), per evalScoreBucket() in bench-view.mjs. */
+	.evalbar {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.evalbar .track {
+		width: 64px;
+		height: 6px;
+		background: var(--bg-3);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.evalbar .fill {
+		display: block;
+		height: 100%;
+		background: var(--fg-3);
+	}
+	.evalbar .fill.good {
+		background: var(--ok);
+	}
+	.evalbar .fill.bad {
+		background: var(--err);
+	}
+	.eval-mean.ok {
+		color: var(--ok);
+	}
+
+	/* Visually hidden — present for assistive tech, invisible on screen.
+	 * Shared utility: also backs BucketMeter.astro's own `.sr` (scoped
+	 * there so it only applies to elements Astro renders at build time;
+	 * client-built HTML — the evals table, and the leaderboard table after
+	 * the island's first render() pass — needs the unscoped version here). */
+	.sr {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		border: 0;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 
 	/* ── misc surfaces ───────────────────────────────────────────── */

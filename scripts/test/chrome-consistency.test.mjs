@@ -12,6 +12,7 @@ const nav = JSON.parse(await readFile(new URL('../../src/data/nav.json', import.
 const pages = {
   marketing: new URL('../../dist/index.html', import.meta.url),
   starlight: new URL('../../dist/blog/index.html', import.meta.url),
+  benchmarks: new URL('../../dist/benchmarks/index.html', import.meta.url),
 };
 
 const built = await access(pages.marketing).then(() => true, () => false);
@@ -77,4 +78,37 @@ test('hidden forum entry never renders; profiles is now visible in both headers'
   const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
   assert.ok(marketingHeader.includes('href="/profiles"'), 'marketing header missing /profiles');
   assert.ok(starlightNav.includes('href="/profiles"'), 'starlight docnav missing /profiles');
+});
+
+test('benchmarks carries the shared SiteFooter with the full manifest link set', { skip: !built && 'run npm run build first' }, async () => {
+  const html = await readFile(pages.benchmarks, 'utf8');
+  const footer = hrefs(siteFooter(html));
+  const marketingFooter = hrefs(siteFooter(await readFile(pages.marketing, 'utf8')));
+  assert.deepEqual([...footer].sort(), [...marketingFooter].sort(), 'benchmarks footer href set must match marketing');
+});
+
+test('benchmarks carries the shared header with visible manifest links', { skip: !built && 'run npm run build first' }, async () => {
+  const html = await readFile(pages.benchmarks, 'utf8');
+  const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
+  assert.ok(header, 'benchmarks page has a <header>');
+  for (const l of visibleHeader) {
+    assert.ok(header.includes(`href="${l.href}"`), `benchmarks header missing ${l.href}`);
+  }
+});
+
+test('benchmarks never renders the hidden forum link', { skip: !built && 'run npm run build first' }, async () => {
+  const html = await readFile(pages.benchmarks, 'utf8');
+  assert.ok(!html.includes('forum.hal0.dev'), 'benchmarks must not render the hidden forum link');
+});
+
+test('benchmarks renders a real <title> and meta description', { skip: !built && 'run npm run build first' }, async () => {
+  const html = await readFile(pages.benchmarks, 'utf8');
+  const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+  assert.match(title, /Benchmarks/i, `benchmarks <title> should mention "benchmarks", got "${title}"`);
+  const desc = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
+  assert.ok(desc.length > 20, 'benchmarks should have a non-trivial meta description');
+  assert.ok(
+    html.includes('property="og:image" content="https://hal0.dev/og-default.png"'),
+    'benchmarks should fall back to the default OG image',
+  );
 });

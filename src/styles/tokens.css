@@ -43,6 +43,17 @@
 	--hal0-dev-cpu:    #9c9c95; /* CPU fallback */
 	--hal0-dev-npu:    #c896ff; /* AMD XDNA NPU / FLM */
 
+	/* Decode-speed buckets (from ModelRoster.astro) — mid reuses the brand
+	 * accent so there's a single source of truth for "amber" everywhere. */
+	--hal0-fast: #3fb950;
+	--hal0-mid:  var(--hal0-accent);
+	--hal0-slow: #f85149;
+
+	/* Capability glyph tint — cap-mtp reuses --hal0-accent (already a
+	 * token); cap-vision is its own hue per the platform handoff (§2
+	 * Benchmarks, capability glyphs) and had no token home yet. */
+	--hal0-cap-vision: #6cb6ff;
+
 	/* Type stack — 'JBM Fallback' / 'Geist Fallback' are local size-adjusted
 	 * faces (see fonts.css) so the swap from system → webfont is metric-
 	 * neutral and CLS stays low. */
@@ -69,6 +80,10 @@
 
 	/* Elevation */
 	--hal0-shadow-menu: 0 16px 48px -8px rgba(0,0,0,0.7);
+
+	/* Drawers only (README §Elevation) — the 580px right-anchored run/profile
+	 * drawer is the one surface allowed its own shadow beyond --shadow-menu. */
+	--hal0-shadow-drawer: -24px 0 64px -16px rgba(0,0,0,0.6);
 }
 
 /* ── light theme overrides ──────────────────────────────────────
@@ -108,4 +123,9 @@
 	--hal0-dev-vulkan: #1f5fbf;
 	--hal0-dev-npu:    #6b3fbf;
 	--hal0-dev-cpu:    #5c5c58;
+
+	/* Decode-speed buckets — mid still resolves through --hal0-accent's
+	 * light override above. */
+	--hal0-fast: #1a7f37;
+	--hal0-slow: #cf222e;
 }

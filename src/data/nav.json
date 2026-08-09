@@ -13,8 +13,30 @@
         { "label": "releases", "href": "/releases", "match": "/releases" }
       ]
     },
-    { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/", "match": "/docs/reference/model-roster-benchmark" },
-    { "label": "profiles", "href": "/profiles", "match": "/profiles" },
+    {
+      "label": "benchmarks",
+      "href": "/benchmarks/",
+      "match": "/benchmarks",
+      "sub": [
+        { "label": "leaderboard", "href": "/benchmarks/", "match": "/benchmarks" },
+        { "label": "evals", "href": "/benchmarks/#evals" },
+        { "label": "methodology", "href": "/docs/reference/model-roster-benchmark/" },
+        { "label": "profiles", "href": "/profiles", "match": "/profiles" },
+        { "label": "share your results", "href": "/docs/reference/model-roster-benchmark/#sharing-results" }
+      ]
+    },
+    {
+      "label": "profiles",
+      "href": "/profiles",
+      "match": "/profiles",
+      "sub": [
+        { "label": "leaderboard", "href": "/benchmarks/", "match": "/benchmarks" },
+        { "label": "evals", "href": "/benchmarks/#evals" },
+        { "label": "methodology", "href": "/docs/reference/model-roster-benchmark/" },
+        { "label": "profiles", "href": "/profiles", "match": "/profiles" },
+        { "label": "share your results", "href": "/docs/reference/model-roster-benchmark/#sharing-results" }
+      ]
+    },
     { "label": "forum", "href": "https://forum.hal0.dev", "external": true, "hidden": true }
   ],
   "footerColumns": [

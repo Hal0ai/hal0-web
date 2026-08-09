@@ -51,7 +51,7 @@ test('labels are lowercase everywhere, including sub and footer column links', (
 
 test('hidden entries still carry hrefs', () => {
   const hidden = nav.header.filter((l) => l.hidden);
-  assert.ok(hidden.length > 0, 'at least one hidden header entry exists (profiles/forum)');
+  assert.ok(hidden.length > 0, 'at least one hidden header entry exists (forum)');
   for (const link of hidden) {
     assert.match(link.href, /^(\/|https:\/\/|mailto:)/, `${link.label} (hidden) still has a real href`);
   }
@@ -107,8 +107,8 @@ test('isActive: learn/benchmarks mutual exclusion', () => {
   const learn = nav.header.find((l) => l.label === 'learn');
   const bench = nav.header.find((l) => l.label === 'benchmarks');
   assert.ok(isActiveJs('/docs/getting-started/', learn));
-  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', learn), 'bench page must not light learn');
-  assert.ok(isActiveJs('/docs/reference/model-roster-benchmark/', bench));
+  assert.ok(!isActiveJs('/benchmarks/', learn), 'benchmarks route must not light learn');
+  assert.ok(isActiveJs('/benchmarks/', bench));
   assert.ok(!isActiveJs('/docs/getting-started/', bench), 'docs page must not light benchmarks');
 });
 
@@ -117,7 +117,18 @@ test('isActive: learn covers array-match sections (blog/changelog/releases)', ()
   assert.ok(isActiveJs('/blog/some-post/', learn), 'learn is active on /blog/x');
   assert.ok(isActiveJs('/changelog', learn), 'learn is active on /changelog');
   assert.ok(isActiveJs('/releases', learn), 'learn is active on /releases');
-  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', learn), 'learn is NOT active on bench page');
+  // The model-roster-benchmark reference page is explicitly excluded from
+  // "learn" (see nav.json's `exclude`) and, now that benchmarks moved to
+  // /benchmarks/, it's no longer covered by "benchmarks" either — it's only
+  // reachable via the methodology sub-nav link, with no top-level highlight.
+  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', learn), 'learn is NOT active on the excluded methodology docs page');
+  assert.ok(isActiveJs('/kb/', learn), 'learn is active on /kb');
+});
+
+test('isActive: profiles is its own section', () => {
+  const profiles = nav.header.find((l) => l.label === 'profiles');
+  assert.ok(isActiveJs('/profiles', profiles));
+  assert.ok(!isActiveJs('/benchmarks/', profiles), 'benchmarks route must not light profiles');
 });
 
 test('subFor: /blog resolves to learn\'s sub list', () => {
@@ -125,10 +136,62 @@ test('subFor: /blog resolves to learn\'s sub list', () => {
   assert.deepEqual(subForJs('/blog/some-post/'), learn.sub);
 });
 
-test('subFor: bench page (no sub) resolves to null', () => {
-  assert.equal(subForJs('/docs/reference/model-roster-benchmark/'), null);
+test('subFor: /benchmarks/ resolves to benchmarks\' sub list', () => {
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  assert.deepEqual(subForJs('/benchmarks/'), bench.sub);
+});
+
+test('subFor: /profiles resolves to profiles\' sub list (shared with benchmarks)', () => {
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  const profiles = nav.header.find((l) => l.label === 'profiles');
+  assert.deepEqual(subForJs('/profiles'), profiles.sub);
+  assert.deepEqual(profiles.sub, bench.sub, 'benchmarks and profiles share the same sub-nav list');
 });
 
 test('subFor: unrelated path resolves to null', () => {
   assert.equal(subForJs('/contributing'), null);
+});
+
+test('benchmarks sub-nav has the expected entries', () => {
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  const labels = bench.sub.map((l) => l.label);
+  assert.deepEqual(labels, ['leaderboard', 'evals', 'methodology', 'profiles', 'share your results']);
+  assert.equal(bench.sub.find((l) => l.label === 'leaderboard').href, '/benchmarks/');
+  assert.equal(bench.sub.find((l) => l.label === 'evals').href, '/benchmarks/#evals');
+  assert.equal(bench.sub.find((l) => l.label === 'methodology').href, '/docs/reference/model-roster-benchmark/');
+  assert.equal(bench.sub.find((l) => l.label === 'profiles').href, '/profiles');
+  assert.equal(
+    bench.sub.find((l) => l.label === 'share your results').href,
+    '/docs/reference/model-roster-benchmark/#sharing-results',
+  );
+});
+
+test('forum stays hidden; profiles and benchmarks are visible', () => {
+  const forum = nav.header.find((l) => l.label === 'forum');
+  const profiles = nav.header.find((l) => l.label === 'profiles');
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  assert.equal(forum.hidden, true, 'forum stays hidden');
+  assert.ok(!profiles.hidden, 'profiles is not hidden');
+  assert.ok(!bench.hidden, 'benchmarks is not hidden');
+});
+
+test('benchmarks sub-nav entries have correct match fields', () => {
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  const leaderboard = bench.sub.find((l) => l.label === 'leaderboard');
+  const profiles = bench.sub.find((l) => l.label === 'profiles');
+  const evals = bench.sub.find((l) => l.label === 'evals');
+
+  assert.equal(leaderboard.match, '/benchmarks', 'leaderboard sub-entry has match field');
+  assert.equal(profiles.match, '/profiles', 'profiles sub-entry has match field');
+  assert.equal(evals.match, undefined, 'evals sub-entry does not have match field');
+});
+
+test('isActive on sub-nav entries: leaderboard and profiles', () => {
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  const leaderboard = bench.sub.find((l) => l.label === 'leaderboard');
+  const profiles = bench.sub.find((l) => l.label === 'profiles');
+
+  assert.ok(isActiveJs('/benchmarks/', leaderboard), 'leaderboard is active on /benchmarks/');
+  assert.ok(!isActiveJs('/benchmarks/', profiles), 'profiles sub-entry is not active on /benchmarks/');
+  assert.ok(isActiveJs('/profiles', profiles), 'profiles is active on /profiles');
 });

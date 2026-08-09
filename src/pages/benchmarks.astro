@@ -1,0 +1,658 @@
+---
+/**
+ * /benchmarks — model roster leaderboard, server-rendered from the
+ * build-time snapshot (src/data/model-roster.ts). This is the static
+ * shell (Task 4 of the benchmarks/profiles plan): header, context cards,
+ * tabs, filter bar markup, freshness badge and the leaderboard table all
+ * render from `defaultView(normalizeRoster(ROSTER))` — the same reduction
+ * the live API view will use once api.hal0.dev is deployed. The filter
+ * bar is non-functional markup for now (default view IS the snapshot
+ * view); the island (src/scripts/bench-island.ts) wires up live
+ * filter/sort/tab state, the run drawer, and the evals tab (fetched from
+ * GET /v1/evals — API-only, no snapshot equivalent).
+ *
+ * Real-data rule (context-brief.md): every rendered number traces to a
+ * real measurement in ROSTER. Columns the June sweep doesn't cover (TTFT,
+ * trend/history) render "—", never a synthetic placeholder — see
+ * bench-view.mjs's header comment for the same rule on the data layer.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import '../styles/site-data.css';
+import CapGlyphs from '../components/bench/CapGlyphs.astro';
+import BucketMeter from '../components/bench/BucketMeter.astro';
+import RunDrawer from '../components/bench/RunDrawer.astro';
+import { ROSTER, HARDWARE, BINARY, ROSTER_DATE } from '../data/model-roster.ts';
+import BENCH_SNAPSHOT from '../data/bench-snapshot.json';
+import {
+  selectInitialRows,
+  capCounts,
+  DEFAULT_WORKLOAD,
+  DEFAULT_DEPTH,
+  DEFAULT_VARIANT,
+  DEFAULT_LANE,
+} from '../lib/bench-view.mjs';
+
+// scripts/sync-bench.mjs (a prebuild step) writes src/data/bench-snapshot.json
+// from the live /v1/roster API when it's reachable at build time, falling
+// back to `{roster: null}` otherwise (expected until api.hal0.dev is
+// deployed — see that script's header comment). selectInitialRows picks
+// between the two and resolves the freshness-badge date to match — see its
+// header comment in bench-view.mjs.
+const { rows, freshnessDate } = selectInitialRows(ROSTER, { generatedAt: ROSTER_DATE }, BENCH_SNAPSHOT);
+
+// Filter-bar facet catalogs — the UI's filter vocabulary, not measured
+// data. The June snapshot only ever recorded the defaulted cell per model
+// (tg @ 2048, variant default, best lane); the full catalogs are what the
+// live api.hal0.dev/v1/roster surface will fill in once deployed. All rows
+// currently on the page only ever match the default of each facet.
+const WORKLOADS = ['tg', 'pp', 'chat', 'batch', 'embed', 'rerank', 'reuse'];
+const DEPTHS = [512, 2048, 8192, 16384];
+const VARIANTS = ['default', 'b1024', 'kv-q8', 'mtp-off'];
+const LANES = ['best', 'rocm', 'vulkan_radv', 'default'];
+const CAPS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
+
+// The June sweep ran exclusively on the ROCm container (see BINARY above:
+// ghcr.io/hal0ai/amd-strix-halo-toolboxes:rocm-7.2.4-rocmfp4-server) — one
+// real backend, not a per-row measurement, so every snapshot row carries
+// the same lane chip.
+const SNAPSHOT_LANE = 'rocm';
+
+// Pill counts reflect the full corpus, never the filtered set (README
+// §Interactions) — computed server-side from the same `rows` the table
+// renders from, so a no-JS load already shows real counts; the island
+// only recomputes them if the corpus itself changes (snapshot → live).
+const CAP_COUNTS = capCounts(rows, CAPS);
+
+const description =
+  'The hal0 model roster benchmark: decode/prefill throughput, TTFT, MTP accept rate and memory footprint for 26 models measured end to end on one Strix Halo box.';
+---
+
+<MarketingLayout title="Benchmarks — hal0" description={description}>
+  <div class="wrap wide phead">
+    <div class="phead-row">
+      <div>
+        <p class="eyebrow">measured on the reference box · rebuilt on every sweep</p>
+        <h1 class="site-h1 phead-title">benchmarks</h1>
+        <p class="site-body phead-lede">
+          26 models measured end to end on one Strix Halo box: decode and prefill throughput,
+          time to first token, speculative accept rate, and what each run cost in memory, watts
+          and degrees.
+        </p>
+      </div>
+      <div class="phead-actions">
+        <a class="btn ghost" href="/docs/reference/model-roster-benchmark/">methodology</a>
+        <a class="btn" href="/docs/reference/model-roster-benchmark/#sharing-results">share your results</a>
+      </div>
+    </div>
+
+    <div class="ctx">
+      <section class="panel" aria-label="Hardware">
+        <div class="panel-h">
+          <span class="label">hardware</span>
+          <span class="mono dim ctx-meta">exclusive mode</span>
+        </div>
+        <dl class="ctx-dl">
+          {HARDWARE.map((kv) => (
+            <div class="kv">
+              <dt>{kv.label}</dt>
+              <dd title={kv.value}>{kv.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+      <section class="panel" aria-label="Binary and runtime">
+        <div class="panel-h">
+          <span class="label">binary</span>
+          <span class="mono dim ctx-meta">sweep {ROSTER_DATE}</span>
+        </div>
+        <dl class="ctx-dl">
+          {BINARY.map((kv) => (
+            <div class="kv">
+              <dt>{kv.label}</dt>
+              <dd title={kv.value}>{kv.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Benchmark views">
+      <button type="button" class="on" role="tab" aria-selected="true" aria-controls="panel-leaderboard" id="tab-leaderboard">leaderboard</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="panel-evals" id="evals">evals</button>
+    </div>
+
+    <!-- Mobile toolbar (README §Screens 2.10): below the collapse breakpoint
+         the full filter bar hides behind a `filters · N` toggle and sort
+         moves into a `sort · <key>` popover menu, so the leaderboard itself
+         keeps the horizontal-scroll pinned-column treatment instead of
+         losing space to always-visible filter chrome. Hidden on wider
+         viewports via CSS; bench-island.ts wires the toggle + menu and
+         keeps the count/label in sync with `state.filters` / `state.sort`. -->
+    <div class="mobile-toolbar" id="bench-mobile-toolbar">
+      <button
+        type="button"
+        class="btn ghost sm"
+        id="bench-filters-toggle"
+        aria-expanded="false"
+        aria-controls="bench-filters"
+      >
+        filters · <span id="bench-filter-count">0</span>
+      </button>
+      <div class="sort-toggle-wrap">
+        <button
+          type="button"
+          class="btn ghost sm"
+          id="bench-sort-toggle"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="bench-sort-menu"
+        >
+          sort · <span id="bench-sort-label">decode</span>
+        </button>
+        <div class="sort-menu" id="bench-sort-menu" role="menu" aria-label="Sort leaderboard by" hidden>
+          <button type="button" role="menuitem" data-sort-key="dec">decode tok/s</button>
+          <button type="button" role="menuitem" data-sort-key="pf">prefill</button>
+          <button type="button" role="menuitem" data-sort-key="ttftP50">ttft p50</button>
+          <button type="button" role="menuitem" data-sort-key="ttftP95">p95</button>
+          <button type="button" role="menuitem" data-sort-key="acc">accept</button>
+          <button type="button" role="menuitem" data-sort-key="gb">gb</button>
+          <button type="button" role="menuitem" data-sort-key="params">params</button>
+          <button type="button" role="menuitem" data-sort-key="id">model</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filters" role="group" aria-label="Filter the leaderboard" id="bench-filters">
+      <div class="segrow">
+        <span class="label">workload</span>
+        <div class="seg" data-facet="workload">
+          {WORKLOADS.map((w) => (
+            <button type="button" class={w === DEFAULT_WORKLOAD ? 'on' : ''} data-value={w}>{w}</button>
+          ))}
+        </div>
+      </div>
+      <div class="segrow">
+        <span class="label">depth</span>
+        <div class="seg" data-facet="depth">
+          {DEPTHS.map((d) => (
+            <button type="button" class={d === DEFAULT_DEPTH ? 'on' : ''} data-value={d}>{d}</button>
+          ))}
+        </div>
+      </div>
+      <div class="segrow">
+        <span class="label">variant</span>
+        <div class="seg" data-facet="variant">
+          {VARIANTS.map((v) => (
+            <button type="button" class={v === DEFAULT_VARIANT ? 'on' : ''} data-value={v}>{v}</button>
+          ))}
+        </div>
+      </div>
+      <div class="segrow">
+        <span class="label">lane</span>
+        <div class="seg" data-facet="lane">
+          {LANES.map((l) => (
+            <button type="button" class={l === DEFAULT_LANE ? 'on' : ''} data-value={l}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div class="segrow">
+        <span class="label">capability</span>
+        <div class="fbar" data-facet="caps">
+          {CAPS.map((c) => (
+            <button type="button" class="fpill" data-value={c}>
+              <CapGlyphs caps={[c]} />
+              {c}
+              <span class="n num" data-cap-count={c}>{CAP_COUNTS[c] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div class="bottom">
+        <div class="search">
+          <input type="search" id="bench-search" placeholder="filter models" aria-label="Filter models by id" />
+        </div>
+        <span class="mono dim" id="bench-count">{rows.length} of {rows.length} models · best lane per model</span>
+        <button type="button" class="btn ghost sm" id="bench-reset">reset to default view</button>
+        <a href="https://api.hal0.dev/v1/roster" class="mono api-link" rel="noopener">api.hal0.dev/v1/roster ↗</a>
+      </div>
+    </div>
+
+    <div class="tablewrap panel" id="panel-leaderboard" role="tabpanel" aria-labelledby="tab-leaderboard">
+      <div class="panel-h">
+        <span class="label" id="bench-panel-label">leaderboard · tg @ depth {DEFAULT_DEPTH}</span>
+        <span class="fresh snap" id="bench-freshness">
+          <span class="dot stale"></span>
+          <span id="bench-freshness-text">snapshot from {freshnessDate} · live sync coming soon</span>
+        </span>
+      </div>
+
+      <div class="tablescroll">
+        <table class="dtable" id="bench-table">
+          <thead>
+            <tr>
+              <th class="model" data-sort-key="id"><span class="th-label">model</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th>caps</th>
+              <th data-sort-key="params"><span class="th-label">params</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th>kv · spec</th>
+              <th data-sort-key="lane"><span class="th-label">lane</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th class="n" data-sort-key="dec"><span class="th-label">decode tok/s</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th class="n" data-sort-key="pf"><span class="th-label">prefill</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th class="n" data-sort-key="ttftP50"><span class="th-label">ttft p50</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th class="n" data-sort-key="ttftP95"><span class="th-label">p95</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th class="n" data-sort-key="acc"><span class="th-label">accept</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th class="n" data-sort-key="gb"><span class="th-label">gb</span><span class="sort-arrow" aria-hidden="true"></span></th>
+              <th>trend</th>
+            </tr>
+          </thead>
+          <tbody id="bench-tbody">
+            {rows.map((r) => (
+              <tr>
+                <td class="model mid">
+                  <span class="mname">{r.id}</span>
+                  <span class="msub">{r.hfRepo || 'local / auto-scan'}</span>
+                </td>
+                <td><CapGlyphs caps={r.caps} /></td>
+                <td>{r.params}</td>
+                <td>{r.kv}{r.spec && r.spec !== 'none' ? ` · ${r.spec}` : ' · —'}</td>
+                <td><span class="chip dev-rocm">{SNAPSHOT_LANE}</span></td>
+                <td class="n"><BucketMeter dec={r.dec} /></td>
+                <td class="n">{r.pf != null ? r.pf.toFixed(0) : '—'}</td>
+                <td class="n">{r.ttftP50 != null ? `${r.ttftP50} ms` : '—'}</td>
+                <td class="n dim">{r.ttftP95 != null ? r.ttftP95 : '—'}</td>
+                <td class="n">{r.acc != null ? `${r.acc}%` : '—'}</td>
+                <td class="n">{r.gb != null ? r.gb : '—'}</td>
+                <td class="dim trend-cell">—</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bucket-legend">
+        <span><span class="sw sw-fast"></span>≥60 t/s</span>
+        <span><span class="sw sw-mid"></span>25–60</span>
+        <span><span class="sw sw-slow"></span>&lt;25</span>
+        <span class="sep">·</span>
+        <CapGlyphs caps={[]} legend />
+        <span class="sep">·</span>
+        <span>Click any header to sort.</span>
+      </div>
+    </div>
+
+    <!-- Evals tab panel — API-fed only (no snapshot equivalent exists for
+         task scores), so the server can only ever render the honest empty
+         state. bench-island.ts fetches GET /v1/evals alongside the roster
+         upgrade (idle, 5s timeout, silent fail) and swaps in the table
+         (model/caps/decode + one score-bar column per distinct task + mean)
+         if it answers with data. -->
+    <div id="panel-evals" class="tablewrap panel" role="tabpanel" aria-labelledby="evals" hidden>
+      <div class="panel-h">
+        <span class="label">evals · task accuracy against decode speed</span>
+        <span class="mono dim" style="font-size:11px">0–1 per task</span>
+      </div>
+      <div class="tablescroll" id="evals-tablescroll" hidden>
+        <table class="dtable" id="evals-table">
+          <thead id="evals-thead"></thead>
+          <tbody id="evals-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="evals-empty">
+        <p class="mono empty-title">
+          Eval scores come from the live API — snapshot mode shows throughput only.
+        </p>
+      </div>
+    </div>
+
+    <!-- Empty state — hidden until a filter combination the snapshot
+         doesn't cover is selected client-side. -->
+    <div class="empty panel" id="bench-empty" hidden>
+      <p class="mono empty-title">No runs for this combination.</p>
+      <p class="site-sm empty-body">
+        The June sweep covers <span class="mono">tg</span> only; other workloads land in the
+        next one. Drop back to the default view, or ask for it in the forum.
+      </p>
+      <button type="button" class="btn ghost sm" id="bench-empty-reset">reset filters</button>
+    </div>
+  </div>
+
+  <RunDrawer />
+</MarketingLayout>
+
+<script>
+  import '../scripts/bench-island.ts';
+</script>
+
+<style>
+  .phead {
+    padding-block: 34px 20px;
+  }
+  .phead-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .phead-title {
+    margin: 10px 0;
+  }
+  .phead-lede {
+    max-width: 60ch;
+  }
+  .phead-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .ctx {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .ctx-meta {
+    font-size: 11px;
+  }
+  .ctx-dl {
+    margin: 0;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+  }
+  .ctx-dl .kv {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+  }
+  .ctx-dl dt {
+    padding: 6px 14px;
+    color: var(--fg-4);
+    border-top: 1px solid var(--line-soft);
+    margin: 0;
+  }
+  .ctx-dl dd {
+    padding: 6px 14px;
+    margin: 0;
+    color: var(--fg-2);
+    border-top: 1px solid var(--line-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ctx-dl .kv:first-child dt,
+  .ctx-dl .kv:first-child dd {
+    border-top: 0;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
+    margin-top: 24px;
+  }
+  .tabs button {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 10px 14px;
+    font-family: var(--jbm);
+    font-size: 12.5px;
+    color: var(--fg-3);
+    cursor: pointer;
+  }
+  .tabs button.on {
+    color: var(--fg);
+    border-bottom-color: var(--accent);
+  }
+
+  .filters {
+    border: 1px solid var(--line);
+    border-top: 0;
+    border-radius: 0 0 var(--rad-lg) var(--rad-lg);
+    background: var(--bg-1);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .segrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .segrow > .label {
+    width: 74px;
+    flex-shrink: 0;
+  }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-sm);
+    overflow: hidden;
+  }
+  .seg button {
+    background: transparent;
+    border: 0;
+    border-right: 1px solid var(--line);
+    padding: 5px 11px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+    cursor: pointer;
+  }
+  .seg button:last-child {
+    border-right: 0;
+  }
+  .seg button:hover {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+  .seg button.on {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .filters .bottom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 10px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+    flex-wrap: wrap;
+  }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-sm);
+    padding: 0 9px;
+    height: 26px;
+    background: var(--bg);
+  }
+  .search input {
+    border: 0;
+    background: transparent;
+    outline: 0;
+    color: var(--fg);
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    width: 150px;
+  }
+  .api-link {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--fg-3);
+    text-decoration: none;
+  }
+  .api-link:hover {
+    color: var(--accent);
+  }
+
+  .tablewrap {
+    margin-top: 16px;
+    overflow: hidden;
+  }
+  .tablescroll {
+    overflow-x: auto;
+  }
+  .dtable th[data-sort-key] {
+    cursor: pointer;
+    user-select: none;
+  }
+  .dtable th[data-sort-key]:hover {
+    color: var(--fg);
+  }
+  .sort-arrow {
+    margin-left: 3px;
+  }
+  /* Sticky model column (.dtable td/th.model), .mname/.msub and
+   * .trend-cell live in src/styles/site-data.css's "leaderboard row
+   * content" section, not here — see that section's header comment for
+   * why: the <tbody> this table renders is always repainted client-side
+   * by bench-island.ts's render(), so a scoped rule in this <style>
+   * block would only ever match the very first (pre-hydration) paint. */
+
+  .bucket-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 18px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .bucket-legend .sw {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .sw-fast {
+    background: var(--fast);
+  }
+  .sw-mid {
+    background: var(--mid);
+  }
+  .sw-slow {
+    background: var(--slow);
+  }
+  .bucket-legend .sep {
+    color: var(--fg-5);
+  }
+
+  .empty {
+    padding: 56px 24px;
+    text-align: center;
+  }
+  .empty-title {
+    font-size: 13px;
+    color: var(--fg-2);
+  }
+  .empty-body {
+    margin: 8px auto 16px;
+    max-width: 46ch;
+  }
+
+  .fresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 10px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--rad-pill);
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .fresh.snap {
+    border-color: var(--warn-line);
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .mobile-toolbar {
+    display: none;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .sort-toggle-wrap {
+    position: relative;
+  }
+  .sort-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    min-width: 168px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--rad-sm);
+    box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.5);
+    padding: 4px;
+  }
+  .sort-menu button {
+    background: transparent;
+    border: 0;
+    text-align: left;
+    padding: 7px 10px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .sort-menu button:hover {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+  .sort-menu button.on {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* README §Screens 2.10 / §Interactions "Responsive": the leaderboard
+   * itself stays a pinned-column horizontal scroller at every width (never
+   * a card collapse — comparing two models on one metric is the whole
+   * job); only the filter chrome collapses below this breakpoint, behind
+   * the mobile toolbar above. */
+  @media (max-width: 820px) {
+    .ctx {
+      grid-template-columns: 1fr;
+    }
+    .segrow {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .segrow > .label {
+      width: auto;
+    }
+    .seg {
+      overflow-x: auto;
+      max-width: 100%;
+    }
+    .mobile-toolbar {
+      display: flex;
+    }
+    .filters {
+      display: none;
+      margin-top: 8px;
+      border-top: 1px solid var(--line);
+      border-radius: var(--rad-lg);
+    }
+    .filters.open {
+      display: flex;
+    }
+  }
+</style>

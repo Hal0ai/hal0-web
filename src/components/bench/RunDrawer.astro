@@ -1,0 +1,54 @@
+---
+/**
+ * RunDrawer — the /benchmarks run detail drawer (Task 6 of the
+ * benchmarks/profiles plan). 580px, right-anchored, scrim behind, per
+ * docs/design/2026-08-09-platform-handoff/README.md §Screens 2.7 and
+ * "02 Benchmarks.html"'s `RunDrawer` component.
+ *
+ * This file is the STATIC SHELL ONLY: it ships hidden (both the scrim and
+ * the drawer carry the `hidden` attribute) with the dialog semantics
+ * (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`) wired up, plus
+ * the head chrome (eyebrow, title slot, close button) that never changes
+ * per row. The body (#run-drawer-body) starts empty — bench-island.ts owns
+ * populating it from `drawerModel(row)` (src/lib/bench-view.mjs) on row
+ * click or on `?run=<id>` deep-link load, and clearing it on close. See
+ * src/styles/site-data.css's "run drawer" section for why the section
+ * classes (`.dr-metrics`, `.kv`, `.well.argv`, `.banner.warn`, `.histbox`,
+ * `.dr-actions`, …) live in the shared global sheet rather than a scoped
+ * <style> block here: Astro's scoped-style compiler only matches elements
+ * it rendered at build time, and every drawer section is injected by
+ * client JS via innerHTML, so a scoped style here would silently never
+ * match.
+ *
+ * Snapshot rows (no run identity) get the reduced view — headline metrics
+ * + identity + a note that full detail needs the live API. API rows (real
+ * runId) get the full set: metrics, identity, a resolved+copyable flag
+ * string, a throttle banner when `flagged`, a history sparkline section
+ * (only when real history data exists — never synthesized), and
+ * provenance actions linking api.hal0.dev/v1/....
+ */
+---
+
+<div class="scrim" id="run-drawer-scrim" hidden></div>
+<aside
+  class="drawer-run"
+  id="run-drawer"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="run-drawer-title"
+  tabindex="-1"
+  hidden
+>
+  <div class="dr-head">
+    <div>
+      <span class="eyebrow">run detail</span>
+      <div class="mono dr-title" id="run-drawer-title"></div>
+    </div>
+    <button type="button" class="iconbtn" id="run-drawer-close" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M3 3l10 10M13 3L3 13" />
+      </svg>
+    </button>
+  </div>
+  <div class="dr-body" id="run-drawer-body"></div>
+</aside>
