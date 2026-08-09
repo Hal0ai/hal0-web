@@ -65,7 +65,7 @@ const features = [
   {
     tag: 'update',
     title: 'Cosign-keyless self-update',
-    body: 'hal0 update --channel stable|nightly. Verified tarballs swap a /usr/lib/hal0/current symlink. --rollback reverts atomically. Stable + nightly channels.',
+    body: 'hal0 update --channel stable|preview|nightly. Verified tarballs swap a /usr/lib/hal0/current symlink. --rollback reverts atomically. The 1.0 release candidates ship on the preview channel.',
   },
   {
     tag: 'stacks',
@@ -338,7 +338,7 @@ const themes: RoadmapTheme[] = [
     blurb: 'One command. Signed. Resumable.',
     shipped: [
       { t: 'hal0 setup TUI', d: 'A terminal first-run wizard: pick a hardware-anchored tier, storage, extensions, and models, then it provisions a coherent set of slots — or run --auto for recommended defaults.' },
-      { t: 'Cosign-signed self-update', d: 'Atomic version swap with one-flag rollback. Stable + nightly channels, GitHub OIDC-verified release tarballs, manifest proxied at releases.hal0.dev.' },
+      { t: 'Cosign-signed self-update', d: 'Atomic version swap with one-flag rollback. Stable, preview, and nightly channels, GitHub OIDC-verified release tarballs, manifest proxied at releases.hal0.dev.' },
       { t: 'Extensions framework', d: 'Apps and agents (Open WebUI, ComfyUI, Hermes, Pi) packaged as auto-wired extensions: lifecycle-managed, selectable at setup.' },
     ],
     soon: [
@@ -391,30 +391,30 @@ const themes: RoadmapTheme[] = [
 
 const stages = [
   { id: 'shipped', label: 'shipped',    sub: 'running on your box today' },
-  { id: 'soon',    label: 'in flight',  sub: 'targeting v0.9' },
+  { id: 'soon',    label: 'in flight',  sub: 'targeting the 1.0 line' },
   { id: 'later',   label: 'exploring',  sub: 'bets, not promises' },
 ];
 
 const shipNowHighlights = [
   {
-    tag: 'config',
-    title: 'Stacks — declarative config SSOT',
-    body: 'A StackConfig plans into a change set, applies atomically with rollback, and converges the live slot set against it. Content-hash drift detection, an active-stack pointer, and export/import via a checksummed .hal0stack.json envelope.',
+    tag: 'mcp',
+    title: 'The whole platform is agent-reachable',
+    body: 'The admin MCP catalog grew from 92 to 180 tools — services, ComfyUI, updater/doctor/health, telemetry, slots, models, bench, approvals — plus a 26-tool memory surface at feature parity with Hindsight 0.8.4.',
+  },
+  {
+    tag: 'slots',
+    title: 'Slots start when you say so',
+    body: 'A new autoload setting decouples binding a model from boot start, and an eviction priority (0–100) replaces the inert lru opt-in — memory-pressure eviction actually works on a stock box. On-demand capability slots and per-slot profiles round it out.',
   },
   {
     tag: 'voice',
-    title: 'GPU voice: Qwen3-TTS + NPU STT',
-    body: 'A voice.tts switch swaps the tts slot between Kokoro (CPU, 54 voices) and Qwen3-TTS (GPU) with no reconfiguration, while whisper-v3:turbo handles transcription on the XDNA NPU alongside chat + embed.',
+    title: 'Voice is a device-keyed switch',
+    body: 'Moonshine returns as the CPU STT engine in its own toolbox image: cpu runs Moonshine, npu runs whisper-v3:turbo, and GPU honestly resolves to no STT engine instead of silently taking a llama chat profile.',
   },
   {
-    tag: 'memory',
-    title: 'Hindsight memory, now audited',
-    body: 'Every destructive memory op — bank delete, memory/config/document/directive/operation/mental-model deletes — now records a durable, attributable audit row, and the cognition consoles validate the upstream response shape instead of failing silently.',
-  },
-  {
-    tag: 'reliability',
-    title: '72-finding platform-review remediation',
-    body: 'A large reliability pass: honest disable-a-capability semantics, resumable pulls, disk-space preflight, cross-process file locks, and Power/Thermal + per-slot throughput cards on the dashboard by default.',
+    tag: 'hardening',
+    title: 'rc.3 — the hardening candidate',
+    body: '38 changes from the pre-1.0 review, every one a defect fix, dependency bump, or doc correction landed with a red-first test: the update path works end-to-end on real hosting, id-keyed boxes are first-class, and the memory surfaces tell the truth.',
   },
 ];
 
@@ -429,7 +429,7 @@ const shipNowHighlights = [
     <div class="shell-wide hero-grid">
       <div>
         <div class="eyebrow">
-          <span class="blip"></span> {version} shipping now · v0.9 in development
+          <span class="blip"></span> {version} shipping now · 1.0 GA next
         </div>
         <h1 class="h1">
           Your Strix Halo box,<br />
@@ -878,11 +878,11 @@ const shipNowHighlights = [
           <div class="ship-now-banner">
             <span class="ship-now-pulse"><span class="dot"></span> shipping now</span>
             <span class="ship-now-ver">{version}</span>
-            <span class="ship-now-meta">released ~60s after tag · cosign-keyless verified · releases.hal0.dev/stable.json</span>
-            <span class="ship-now-next">v0.9 in development →</span>
+            <span class="ship-now-meta">released ~60s after tag · cosign-keyless verified · releases.hal0.dev/preview.json</span>
+            <span class="ship-now-next">1.0 GA next →</span>
           </div>
           <h3 class="ship-now-headline">
-            Declarative Stacks, GPU voice, and audited agent memory —<br />the v0.9 line is next.
+            180 agent-reachable admin tools, honest slot lifecycle, device-keyed voice —<br />hardened across three release candidates.
           </h3>
         </div>
         <div class="ship-now-grid">
@@ -964,7 +964,7 @@ const shipNowHighlights = [
         <span class="mono accent-mono">※</span>
         <span>
           <strong>Exploring items are bets we believe in, not promises.</strong>{' '}
-          Scope and order will shift release to release — v0.9 is next — as we learn what people actually do with a local platform.
+          Scope and order will shift release to release — 1.0 GA is next — as we learn what people actually do with a local platform.
           <a href="https://github.com/hal0ai/hal0/issues" class="rm-footnote-link">open an issue ↗</a>
         </span>
       </div>
@@ -977,8 +977,8 @@ const shipNowHighlights = [
       <div class="sec-tag cta-tag">/ get hal0</div>
       <h2 class="cta-h">Stop running models<br />from a <span class="accent">chat tab.</span></h2>
       <p class="cta-sub">
-        One command on a fresh Linux box. hal0 is pre-1.0 and moving fast — v0.9 is
-        next — but it installs and runs the whole stack today.
+        One command on a fresh Linux box. hal0's 1.0 line is at release-candidate
+        stage — GA is next — and it installs and runs the whole stack today.
       </p>
       <div class="install cta-holding" id="install-cta">
         <div class="install-head">

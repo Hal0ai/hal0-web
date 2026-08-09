@@ -74,6 +74,8 @@ const description =
             </h2>
             {v.prerelease ? (
               <span class="rounded border border-hal0-accent/40 bg-hal0-accent/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">pre-release</span>
+            ) : v.gaPreview ? (
+              <span class="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">ga · shipping as rc</span>
             ) : (
               <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">stable</span>
             )}

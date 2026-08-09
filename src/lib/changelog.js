@@ -121,7 +121,19 @@ export function parseChangelog(raw) {
       };
     });
 
-  const latestStable = versions.find((v) => v.stable) ?? null;
+  // A GA content section can precede its tag: the CHANGELOG documents the
+  // full 1.0.0 content while the shipped tags are still 1.0.0-rc.N (the rc
+  // sections above it reference it as "the preview snapshot"). Such a block
+  // has a stable version string but a *newer* (earlier-listed) pre-release
+  // of the same base version — flag it so it's never presented as shipped.
+  const baseOf = (v) => v.replace(/^v/i, '').split('-')[0];
+  versions.forEach((v, i) => {
+    v.gaPreview =
+      v.stable &&
+      versions.slice(0, i).some((n) => n.prerelease && baseOf(n.version) === baseOf(v.version));
+  });
+
+  const latestStable = versions.find((v) => v.stable && !v.gaPreview) ?? null;
   const latestPrerelease = versions.find((v) => v.prerelease) ?? null;
 
   return { versions, latest: versions[0] ?? null, latestStable, latestPrerelease };
@@ -129,5 +141,8 @@ export function parseChangelog(raw) {
 
 /** GitHub release tag URL for a given version. */
 export function releaseTagUrl(version) {
-  return `https://github.com/hal0ai/hal0/releases/tag/${version}`;
+  // Git tags are v-prefixed (v1.0.0-rc.3); newer CHANGELOG headers drop the
+  // prefix ([1.0.0-rc.3]), so normalise here.
+  const tag = /^v/i.test(version) ? version : `v${version}`;
+  return `https://github.com/hal0ai/hal0/releases/tag/${tag}`;
 }
