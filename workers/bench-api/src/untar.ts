@@ -5,6 +5,7 @@ const BLOCK = 512;
 function octal(bytes: Uint8Array): number {
   const s = new TextDecoder().decode(bytes).replace(/\0/g, "").trim();
   if (s === "") return 0;
+  if (!/^[0-7]*$/.test(s)) throw new UntarError("bad octal field in tar header");
   const n = parseInt(s, 8);
   if (Number.isNaN(n) || n < 0) throw new UntarError("bad octal field in tar header");
   return n;

@@ -117,4 +117,50 @@ describe("untarGz", () => {
     expect(members.size).toBe(1);
     expect(new TextDecoder().decode(members.get("hello.txt")!)).toBe("hello world\n");
   });
+
+  it("throws 'bad octal field' when size field contains non-octal digit", async () => {
+    const header = ustarHeader("test.txt", 0, "0");
+    const enc = new TextEncoder();
+    // Replace size field (offset 124, 12 bytes) with "18\0..." (8 is an invalid octal digit)
+    const invalidSize = "18\0".padEnd(12, "\0");
+    header.set(enc.encode(invalidSize), 124);
+    const content = new TextEncoder().encode("test");
+    const parts = [header, padToBlock(content), new Uint8Array(BLOCK * 2)];
+    const total = parts.reduce((n, p) => n + p.byteLength, 0);
+    const tar = new Uint8Array(total);
+    let off = 0;
+    for (const p of parts) {
+      tar.set(p, off);
+      off += p.byteLength;
+    }
+    const body = await gzip(tar);
+
+    await expect(untarGz(body, DEFAULT_OPTS)).rejects.toThrow("bad octal field");
+  });
+
+  it("throws 'unsafe member name' when prefix field contains '..' traversal", async () => {
+    // Build a custom header with prefix = ".." and name = "evil"
+    const block = new Uint8Array(BLOCK);
+    const enc = new TextEncoder();
+    block.set(enc.encode("evil"), 0); // name at offset 0
+    const sizeOctal = "0".padStart(11, "0") + "\0";
+    block.set(enc.encode(sizeOctal), 124); // size
+    block.fill(0x20, 148, 156); // checksum: spaces
+    block[156] = "0".charCodeAt(0); // typeflag
+    block.set(enc.encode("ustar\0"), 257);
+    block.set(enc.encode("00"), 263);
+    block.set(enc.encode(".."), 345); // prefix with traversal
+    const content = new TextEncoder().encode("");
+    const parts = [block, padToBlock(content), new Uint8Array(BLOCK * 2)];
+    const total = parts.reduce((n, p) => n + p.byteLength, 0);
+    const tar = new Uint8Array(total);
+    let off = 0;
+    for (const p of parts) {
+      tar.set(p, off);
+      off += p.byteLength;
+    }
+    const body = await gzip(tar);
+
+    await expect(untarGz(body, DEFAULT_OPTS)).rejects.toThrow("unsafe member name");
+  });
 });
