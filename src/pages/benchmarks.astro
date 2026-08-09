@@ -1,0 +1,1349 @@
+---
+/**
+ * /benchmarks — leaderboard + evals, snapshot-first with a live upgrade.
+ *
+ * Server renders the leaderboard from the build-time ROSTER snapshot
+ * (src/data/model-roster.ts) so there is always a table on screen, then a
+ * vanilla-JS island tries `${PUBLIC_BENCH_API}/v1/roster`. On success it
+ * rebuilds the table client-side from live cells (default view: workload
+ * tg, depth 2048, config "default", best lane per model per the comp),
+ * enables the segmented filters, and flips the freshness badge to live. On
+ * failure it stays on the snapshot — the amber badge already reads
+ * "snapshot … api unreachable", which doubles as the degraded state.
+ *
+ * The snapshot has no ttft/lane/depth/trend fields, so the snapshot table
+ * omits those columns rather than inventing them; the full column set only
+ * appears once live cells replace it. Trend (history sparkline) has no
+ * source in the /v1/roster contract at all — see the README note below.
+ *
+ * Pure logic (bucket classification, best-lane reduction, filtering,
+ * sorting) lives in src/lib/bench-view.mjs with node --test coverage in
+ * scripts/test/bench-view.test.mjs; this file only wires the DOM.
+ *
+ * Visual source of truth: docs/design/2026-08-09-community-comps/02 Benchmarks.html
+ * + bench-app.jsx. Capability glyphs and decode buckets are lifted verbatim
+ * from src/components/ModelRoster.astro per the comp handoff README.
+ *
+ * Fidelity gaps against the comp (see PR description for the full list):
+ *  - No trend/sparkline column — /v1/roster carries no per-cell history.
+ *  - No "sort · decode" mobile quick-sort button — the pinned-column
+ *    scroller + full sort-by-header already covers the same job.
+ *  - Evals payload (/v1/evals) has no per-task score bar spec in the
+ *    read contract; scores are pooled by (model, task) and shown as a
+ *    0–1 value with the same bar treatment as the comp.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import '../styles/site-data.css';
+import { ROSTER, HARDWARE, BINARY, ROSTER_DATE } from '../data/model-roster.ts';
+import { rowsFromSnapshot, decodeBucket, decodeBucketFill } from '../lib/bench-view.mjs';
+
+// Capability glyphs — lifted verbatim from src/components/ModelRoster.astro.
+const ICONS: Record<string, { label: string; svg: string }> = {
+  mtp: { label: 'MTP speculative', svg: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.7 1 3 9h3.6l-1 6 6.4-8H9.1z"/></svg>' },
+  vision: { label: 'Vision', svg: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1 8s2.6-4.6 7-4.6S15 8 15 8s-2.6 4.6-7 4.6S1 8 1 8z"/><circle cx="8" cy="8" r="1.9"/></svg>' },
+  tools: { label: 'Tool-calling', svg: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 1.6a3.4 3.4 0 0 0-3.2 4.5L1.7 11.4 4 13.7l5.3-5.4a3.4 3.4 0 0 0 4.5-3.2l-2 2-2-2z"/></svg>' },
+  coding: { label: 'Coding', svg: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 4 1.6 8 5 12"/><polyline points="11 4 14.4 8 11 12"/></svg>' },
+  reasoning: { label: 'Reasoning', svg: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.5 4.3L14 7l-4.5 1.7L8 13l-1.5-4.3L2 7l4.5-1.7z"/></svg>' },
+};
+
+// NB: these build plain strings with '+' concatenation rather than nested
+// template literals — a nested backtick template containing literal HTML
+// tags inside a `${}` substitution trips the Astro frontmatter compiler
+// (misparses the embedded `<tag` as a JSX-like expression boundary).
+function capsMarkup(caps: string[]) {
+  if (!caps.length) return '<span class="capnone">—</span>';
+  var inner = caps
+    .map(function (k) {
+      var icon = ICONS[k];
+      return icon ? '<span class="cap cap-' + k + '" title="' + icon.label + '">' + icon.svg + '</span>' : '';
+    })
+    .join('');
+  return '<span class="caps">' + inner + '</span>';
+}
+
+function meterMarkup(fill: number) {
+  var out = '';
+  for (var i = 0; i < 3; i++) out += '<i class="' + (i < fill ? 'on' : '') + '"></i>';
+  return out;
+}
+
+function decodeMarkup(v: number | null) {
+  if (v == null) return '<span class="num">—</span>';
+  var b = decodeBucket(v);
+  var fill = decodeBucketFill(b);
+  return (
+    '<span class="decode ' +
+    b +
+    '" title="' +
+    b +
+    ' · ' +
+    v +
+    ' tok/s"><span class="meter" aria-hidden="true">' +
+    meterMarkup(fill) +
+    '</span><span class="v num">' +
+    v.toFixed(1) +
+    '</span><span class="sr">' +
+    b +
+    '</span></span>'
+  );
+}
+
+const snapshotRows = rowsFromSnapshot(ROSTER).sort((a, b) => (b.dec ?? -1) - (a.dec ?? -1));
+
+const description =
+  '26 models measured end to end on one Strix Halo box: decode and prefill throughput, time to first token, speculative accept rate, and what each run cost in memory, watts and degrees. Every cell opens the run that produced it.';
+
+const APIBASE = import.meta.env.PUBLIC_BENCH_API ?? 'https://api.hal0.dev';
+
+const WORKLOAD_PLACEHOLDER = ['tg', 'pp', 'chat', 'batch', 'embed', 'rerank', 'reuse'];
+const DEPTH_PLACEHOLDER = [512, 2048, 8192, 16384];
+const VARIANT_PLACEHOLDER = ['default', 'b1024', 'kv-q8', 'mtp-off'];
+const LANE_PLACEHOLDER = ['best', 'rocm', 'vulkan_radv', 'default'];
+const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
+---
+
+<MarketingLayout title="benchmarks — hal0" description={description}>
+  <div class="wrap wide phead">
+    <div class="phead-row">
+      <div>
+        <span class="eyebrow">measured on the reference box · rebuilt on every sweep</span>
+        <h1 class="site-h1" style="margin: 10px 0 10px">benchmarks</h1>
+        <p class="site-body" style="max-width: 60ch">{description}</p>
+      </div>
+      <div style="display:flex; gap:8px">
+        <a class="btn ghost" href="/docs/reference/model-roster-benchmark/">methodology</a>
+        <a class="btn" href="https://github.com/hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md" rel="noopener">share your results</a>
+      </div>
+    </div>
+
+    <div class="ctx">
+      <div class="panel">
+        <div class="panel-h"><span class="label">hardware</span><span class="mono dim" style="font-size:11px">exclusive mode</span></div>
+        <dl>
+          {HARDWARE.map((kv) => (
+            <><dt>{kv.label}</dt><dd title={kv.value}>{kv.value}</dd></>
+          ))}
+        </dl>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="label">binary</span><span class="mono dim" style="font-size:11px">sweep {ROSTER_DATE}</span></div>
+        <dl>
+          {BINARY.map((kv) => (
+            <><dt>{kv.label}</dt><dd title={kv.value}>{kv.value}</dd></>
+          ))}
+        </dl>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" data-bench-tabs>
+      <button type="button" class="on" role="tab" aria-selected="true" data-bench-tab="leaderboard">leaderboard</button>
+      <button type="button" role="tab" aria-selected="false" data-bench-tab="evals">evals</button>
+    </div>
+
+    <section data-bench-panel="leaderboard">
+      <details class="filters" data-bench-filters open>
+        <summary class="filters-summary"><span data-bench-filter-count>filters</span></summary>
+        <div class="filters-body">
+          <div class="segrow">
+            <span class="label">workload</span>
+            <div class="seg" data-seg="kind">
+              {WORKLOAD_PLACEHOLDER.map((o) => (
+                <button type="button" disabled title="needs live data" class={o === 'tg' ? 'on' : ''} data-value={o}>{o}</button>
+              ))}
+            </div>
+          </div>
+          <div class="segrow">
+            <span class="label">depth</span>
+            <div class="seg" data-seg="depth">
+              {DEPTH_PLACEHOLDER.map((o) => (
+                <button type="button" disabled title="needs live data" class={o === 2048 ? 'on' : ''} data-value={o}>{o}</button>
+              ))}
+            </div>
+          </div>
+          <div class="segrow">
+            <span class="label">variant</span>
+            <div class="seg" data-seg="variant">
+              {VARIANT_PLACEHOLDER.map((o) => (
+                <button type="button" disabled title="needs live data" class={o === 'default' ? 'on' : ''} data-value={o}>{o}</button>
+              ))}
+            </div>
+          </div>
+          <div class="segrow">
+            <span class="label">lane</span>
+            <div class="seg" data-seg="lane">
+              {LANE_PLACEHOLDER.map((o) => (
+                <button type="button" disabled title="needs live data" class={o === 'best' ? 'on' : ''} data-value={o}>{o}</button>
+              ))}
+            </div>
+          </div>
+          <div class="segrow">
+            <span class="label">capability</span>
+            <div class="fbar" data-bench-caps>
+              {CAP_KEYS.map((c) => (
+                <button type="button" class="fpill" data-value={c} aria-pressed="false">
+                  <span class="cap" set:html={ICONS[c].svg} />{c}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div class="bottom">
+            <div class="search">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m14 14-3-3"/></svg>
+              <input type="text" placeholder="filter models" data-bench-query />
+            </div>
+            <span class="mono" data-bench-readout style="font-size:11.5px; color:var(--fg-3)">
+              {snapshotRows.length} of {ROSTER.length} models · best lane per model
+            </span>
+            <button type="button" class="btn ghost sm" data-bench-reset>reset to default view</button>
+            <a href={`${APIBASE}/v1/roster`} rel="noopener" class="mono" style="margin-left:auto; font-size:11.5px; color:var(--fg-3)">
+              {new URL(`${APIBASE}/v1/roster`).host}/v1/roster ↗
+            </a>
+          </div>
+        </div>
+      </details>
+
+      <div class="tablewrap" data-bench-wrap>
+        <div class="panel-h">
+          <span class="label" data-bench-caption>leaderboard · snapshot</span>
+          <span class="fresh snap" data-bench-fresh title="api.hal0.dev did not answer at build/hydration time. Showing the build-time snapshot — figures are correct but not live.">
+            <span class="dot stale" aria-hidden="true"></span>
+            <span data-bench-fresh-text>snapshot from {ROSTER_DATE} · api unreachable</span>
+          </span>
+        </div>
+
+        <div class="tablescroll" data-bench-scroll>
+          <table class="dtable" data-bench-table>
+            <thead data-bench-thead>
+              <tr>
+                <th class="model" data-key="id" data-sort-type="string">model</th>
+                <th>caps</th>
+                <th data-key="params" data-sort-type="string">params</th>
+                <th>kv · spec</th>
+                <th class="n sorted" data-key="dec" data-sort-type="number">decode tok/s ▼</th>
+                <th class="n" data-key="pf" data-sort-type="number">prefill</th>
+                <th class="n" data-key="acc" data-sort-type="number">accept</th>
+                <th class="n" data-key="gb" data-sort-type="number">gb</th>
+              </tr>
+            </thead>
+            <tbody data-bench-tbody>
+              {snapshotRows.map((row) => (
+                <tr data-row-id={row.id}>
+                  <td class="model mid"><span class="mname">{row.id}</span><span class="msub">{row.hfRepo || 'local build'}</span></td>
+                  <td set:html={capsMarkup(row.caps)} />
+                  <td>{row.params}</td>
+                  <td>{row.kv} · {row.spec === 'none' ? '—' : row.spec}</td>
+                  <td class="n" set:html={decodeMarkup(row.dec)} />
+                  <td class="n">{row.pf != null ? row.pf.toFixed(0) : '—'}</td>
+                  <td class="n">{row.acc != null ? row.acc + '%' : '—'}</td>
+                  <td class="n">{row.gb ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="empty" data-bench-empty hidden>
+          <div class="mono" style="font-size:13px; color:var(--fg-2)">No runs for this combination.</div>
+          <p class="site-sm" style="margin:8px auto 16px; max-width:46ch">
+            Name the workload and depth you want and the next sweep can cover it.
+          </p>
+          <button type="button" class="btn ghost sm" data-bench-empty-reset>reset filters</button>
+        </div>
+
+        <div class="bucket-legend" data-bench-legend>
+          <span><span class="sw" style="background:var(--fast)" />≥60 t/s</span>
+          <span><span class="sw" style="background:var(--mid)" />25–60</span>
+          <span><span class="sw" style="background:var(--slow)" />&lt;25</span>
+          <span class="sep">·</span>
+          {CAP_KEYS.map((k) => (
+            <span class="lg"><span class="cap" set:html={ICONS[k].svg} />{ICONS[k].label}</span>
+          ))}
+          <span class="sep">·</span>
+          <span>Click any header to sort.</span>
+        </div>
+      </div>
+    </section>
+
+    <section data-bench-panel="evals" hidden>
+      <div class="tablewrap" style="margin-top:16px">
+        <div class="panel-h">
+          <span class="label">evals · task accuracy against decode speed</span>
+          <span class="mono dim" style="font-size:11px">0–1 per task · same build as the leaderboard</span>
+        </div>
+        <div data-bench-evals-empty class="empty">
+          <div class="mono" style="font-size:13px; color:var(--fg-2)">No eval scores yet.</div>
+          <p class="site-sm" style="margin:8px auto 0; max-width:46ch">Evals land with the next sweep upload.</p>
+        </div>
+        <div class="tablescroll" data-bench-evals-scroll hidden>
+          <table class="dtable" data-bench-evals-table>
+            <thead><tr><th class="model">model</th><th class="n">decode</th><th data-bench-evals-task-head></th><th class="n">mean</th></tr></thead>
+            <tbody data-bench-evals-tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="scrim" data-run-scrim hidden></div>
+  <aside class="drawer-run" role="dialog" aria-label="run detail" hidden data-run-drawer>
+    <div class="dr-head">
+      <div>
+        <span class="eyebrow">run detail</span>
+        <div class="mono dr-title" data-run-title></div>
+      </div>
+      <button type="button" class="iconbtn" data-run-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>
+      </button>
+    </div>
+    <div class="dr-body" data-run-body>
+      <div class="mono dim" data-run-loading>loading run…</div>
+    </div>
+  </aside>
+</MarketingLayout>
+
+<script define:vars={{ APIBASE, ROSTER: ROSTER, CAP_KEYS }}>
+  window.__BENCH_API__ = APIBASE;
+  window.__BENCH_ROSTER__ = ROSTER;
+  window.__BENCH_CAPS__ = CAP_KEYS;
+</script>
+
+<script>
+  import {
+    decodeBucket,
+    decodeBucketFill,
+    rowsFromRoster,
+    rowsFromSnapshot,
+    joinSnapshotIdentity,
+    facetOptions,
+    applyCaps,
+    applyQuery,
+    sortRows,
+  } from '../lib/bench-view.mjs';
+
+  declare global {
+    interface Window {
+      __BENCH_API__: string;
+      __BENCH_ROSTER__: any[];
+      __BENCH_CAPS__: string[];
+    }
+  }
+
+  const API = window.__BENCH_API__;
+  const ROSTER = window.__BENCH_ROSTER__;
+
+  // Small typed helpers so DOM lookups carry a real element type instead of
+  // the bare `Element` querySelector returns by default — matches the
+  // pattern already used in src/pages/profiles.astro.
+  const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel);
+  const $$ = <T extends HTMLElement = HTMLElement>(sel: string) => Array.from(document.querySelectorAll<T>(sel));
+
+  const ICON_SVG: Record<string, string> = {
+    mtp: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.7 1 3 9h3.6l-1 6 6.4-8H9.1z"/></svg>',
+    vision: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1 8s2.6-4.6 7-4.6S15 8 15 8s-2.6 4.6-7 4.6S1 8 1 8z"/><circle cx="8" cy="8" r="1.9"/></svg>',
+    tools: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 1.6a3.4 3.4 0 0 0-3.2 4.5L1.7 11.4 4 13.7l5.3-5.4a3.4 3.4 0 0 0 4.5-3.2l-2 2-2-2z"/></svg>',
+    coding: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 4 1.6 8 5 12"/><polyline points="11 4 14.4 8 11 12"/></svg>',
+    reasoning: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.5 4.3L14 7l-4.5 1.7L8 13l-1.5-4.3L2 7l4.5-1.7z"/></svg>',
+  };
+  const CAP_LABEL: Record<string, string> = { mtp: 'MTP speculative', vision: 'Vision', tools: 'Tool-calling', coding: 'Coding', reasoning: 'Reasoning' };
+  const laneChip = (l: string | null) => (l === 'rocm' ? 'dev-rocm' : l === 'vulkan_radv' ? 'dev-vulkan' : 'dev-cpu');
+
+  // See the matching note in the frontmatter above: string concatenation,
+  // not nested template literals, to stay clear of the same class of markup.
+  function capsHtml(caps: string[]) {
+    if (!caps || !caps.length) return '<span class="capnone">—</span>';
+    const inner = caps
+      .map((k) => {
+        const svg = ICON_SVG[k];
+        return svg ? '<span class="cap cap-' + k + '" title="' + CAP_LABEL[k] + '">' + svg + '</span>' : '';
+      })
+      .join('');
+    return '<span class="caps">' + inner + '</span>';
+  }
+  function meterHtml(fill: number) {
+    let out = '';
+    for (let i = 0; i < 3; i++) out += '<i class="' + (i < fill ? 'on' : '') + '"></i>';
+    return out;
+  }
+  function decodeHtml(v: number | null) {
+    if (v == null) return '<span class="num">—</span>';
+    const b = decodeBucket(v);
+    const fill = decodeBucketFill(b);
+    return (
+      '<span class="decode ' + b + '" title="' + b + ' · ' + v + ' tok/s"><span class="meter" aria-hidden="true">' +
+      meterHtml(fill) +
+      '</span><span class="v num">' + v.toFixed(1) + '</span><span class="sr">' + b + '</span></span>'
+    );
+  }
+  const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
+
+  // ── state ────────────────────────────────────────────────────────────
+  const DEFAULT_FILTERS: { kind: string; depth: number; configLabel: string; lane: string } = {
+    kind: 'tg',
+    depth: 2048,
+    configLabel: 'default',
+    lane: 'best',
+  };
+  let filters: Record<string, any> = {
+    ...DEFAULT_FILTERS,
+    caps: [] as string[],
+    q: '',
+  };
+  let sort: { key: string; dir: 1 | -1 } = { key: 'dec', dir: -1 };
+  let live: { models: any[]; generated: string } | null = null;
+
+  const thead = $<HTMLTableSectionElement>('[data-bench-thead]')!;
+  const tbody = $<HTMLTableSectionElement>('[data-bench-tbody]')!;
+  const captionEl = $('[data-bench-caption]')!;
+  const freshEl = $('[data-bench-fresh]')!;
+  const freshText = $('[data-bench-fresh-text]')!;
+  const readout = $('[data-bench-readout]')!;
+  const emptyEl = $('[data-bench-empty]')!;
+  const scrollEl = $('[data-bench-scroll]')!;
+  const legendEl = $('[data-bench-legend]')!;
+  const queryInput = $<HTMLInputElement>('[data-bench-query]');
+  const resetBtn = $<HTMLButtonElement>('[data-bench-reset]');
+  const emptyResetBtn = $<HTMLButtonElement>('[data-bench-empty-reset]');
+  const capButtons = $$<HTMLButtonElement>('[data-bench-caps] .fpill');
+  const filtersDetails = $<HTMLDetailsElement>('[data-bench-filters]');
+  const filterCountEl = $('[data-bench-filter-count]')!;
+
+  const SNAPSHOT_COLS = [
+    { key: 'id', label: 'model', sortType: 'string' },
+    { key: 'caps', label: 'caps' },
+    { key: 'params', label: 'params', sortType: 'string' },
+    { key: 'kvspec', label: 'kv · spec' },
+    { key: 'dec', label: 'decode tok/s', sortType: 'number', n: true },
+    { key: 'pf', label: 'prefill', sortType: 'number', n: true },
+    { key: 'acc', label: 'accept', sortType: 'number', n: true },
+    { key: 'gb', label: 'gb', sortType: 'number', n: true },
+  ];
+  const LIVE_COLS = [
+    { key: 'id', label: 'model', sortType: 'string' },
+    { key: 'caps', label: 'caps' },
+    { key: 'params', label: 'params', sortType: 'string' },
+    { key: 'kvspec', label: 'kv · spec' },
+    { key: 'lane', label: 'lane', sortType: 'string' },
+    { key: 'dec', label: 'decode tok/s', sortType: 'number', n: true },
+    { key: 'pf', label: 'prefill', sortType: 'number', n: true },
+    { key: 'ttftP50', label: 'ttft p50', sortType: 'number', n: true },
+    { key: 'ttftP95', label: 'p95', sortType: 'number', n: true },
+    { key: 'acc', label: 'accept', sortType: 'number', n: true },
+    { key: 'gb', label: 'gb', sortType: 'number', n: true },
+  ];
+
+  function renderThead() {
+    const cols = live ? LIVE_COLS : SNAPSHOT_COLS;
+    thead.innerHTML = `<tr>${cols
+      .map((c) => {
+        const sortedCls = sort.key === c.key ? ' sorted' : '';
+        const arrow = sort.key === c.key ? (sort.dir === -1 ? ' ▼' : ' ▲') : '';
+        const clickable = c.sortType ? ' data-key="' + c.key + '" data-sort-type="' + c.sortType + '"' : '';
+        const modelCls = c.key === 'id' ? ' model' : '';
+        return `<th class="${c.n ? 'n ' : ''}${modelCls}${sortedCls}"${clickable}>${c.label}${arrow}</th>`;
+      })
+      .join('')}</tr>`;
+    $$<HTMLTableCellElement>('[data-bench-thead] th[data-key]').forEach((th) => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key as string;
+        sort = { key, dir: sort.key === key ? (-sort.dir as 1 | -1) : key === 'id' || key === 'params' || key === 'lane' ? 1 : -1 };
+        render();
+      });
+    });
+  }
+
+  function rowHtml(row: any) {
+    const clickable = row.live && row.runId;
+    return `<tr data-row-id="${esc(row.id)}"${row.runId ? ` data-run-id="${esc(row.runId)}"` : ''}${clickable ? ' class="clickable"' : ''}>
+      <td class="model mid"><span class="mname">${esc(row.id)}</span><span class="msub">${esc(row.hfRepo || 'local build')}</span></td>
+      <td>${capsHtml(row.caps)}</td>
+      <td>${esc(row.params ?? '—')}</td>
+      <td>${esc(row.kv ?? '—')} · ${row.spec && row.spec !== 'none' ? esc(row.spec) : '—'}</td>
+      ${live ? `<td><span class="chip ${laneChip(row.lane)}">${esc(row.lane ?? '—')}</span></td>` : ''}
+      <td class="n">${decodeHtml(row.dec)}</td>
+      <td class="n">${row.pf != null ? row.pf.toFixed(0) : '—'}</td>
+      ${live ? `<td class="n">${row.ttftP50 != null ? row.ttftP50 + ' ms' : '—'}</td><td class="n" style="color:var(--fg-4)">${row.ttftP95 ?? '—'}</td>` : ''}
+      <td class="n">${row.acc != null ? row.acc + '%' : '—'}</td>
+      <td class="n">${row.gb ?? '—'}</td>
+    </tr>`;
+  }
+
+  function render() {
+    renderThead();
+    let rows: any[] = live
+      ? joinSnapshotIdentity(rowsFromRoster(live.models, filters), ROSTER)
+      : rowsFromSnapshot(ROSTER);
+    rows = applyCaps(rows, filters.caps);
+    rows = applyQuery(rows, filters.q);
+    rows = sortRows(rows, sort.key, sort.dir);
+
+    tbody.innerHTML = rows.map(rowHtml).join('');
+    $$<HTMLTableRowElement>('[data-bench-tbody] tr[data-run-id]').forEach((tr) => {
+      tr.addEventListener('click', () => openRun(tr.dataset.runId as string));
+    });
+
+    const total = live ? live.models.length : ROSTER.filter((r: any) => r.measured).length;
+    readout.textContent = `${rows.length} of ${total} models${filters.lane === 'best' || !live ? ' · best lane per model' : ''}`;
+    emptyEl.hidden = rows.length !== 0;
+    scrollEl.hidden = rows.length === 0;
+    legendEl.hidden = rows.length === 0;
+    captionEl.textContent = live ? `leaderboard · ${filters.kind} @ depth ${filters.depth}` : 'leaderboard · snapshot';
+
+    const activeCount = filters.caps.length + (filters.q ? 1 : 0);
+    filterCountEl.textContent = activeCount ? `filters · ${activeCount}` : 'filters';
+  }
+
+  function setLiveBadge(generated: string) {
+    freshEl.classList.remove('snap');
+    freshEl.title = '';
+    freshEl.querySelector('.dot')!.className = 'dot serving';
+    const ageMs = Date.now() - new Date(generated).getTime();
+    const ageMin = Math.max(0, Math.round(ageMs / 60000));
+    const host = new URL(API).host;
+    freshText.textContent = `live · ${host}, ${ageMin} min ago`;
+  }
+
+  function enableSegs(opts: { kinds: string[]; depths: number[]; variants: string[]; lanes: string[] }) {
+    const map: Record<string, Array<string | number>> = {
+      kind: opts.kinds,
+      depth: opts.depths,
+      variant: opts.variants,
+      lane: ['best', ...opts.lanes],
+    };
+    for (const [dim, values] of Object.entries(map)) {
+      const seg = $(`[data-seg="${dim}"]`);
+      if (!seg || !values.length) continue;
+      const filterKey = dim === 'kind' ? 'kind' : dim === 'variant' ? 'configLabel' : dim;
+      seg.innerHTML = values
+        .map((v) => `<button type="button" data-value="${esc(v)}" class="${v === filters[filterKey] ? 'on' : ''}">${esc(v)}</button>`)
+        .join('');
+      Array.from(seg.querySelectorAll<HTMLButtonElement>('button')).forEach((btn) => {
+        btn.addEventListener('click', () => {
+          Array.from(seg.querySelectorAll('button')).forEach((b) => b.classList.remove('on'));
+          btn.classList.add('on');
+          const raw = btn.dataset.value;
+          filters[filterKey] = dim === 'depth' ? Number(raw) : raw;
+          render();
+        });
+      });
+    }
+  }
+
+  async function loadLive() {
+    try {
+      const res = await fetch(`${API}/v1/roster`, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const data = await res.json();
+      if (!Array.isArray(data.models)) throw new Error('malformed roster payload');
+      live = { models: data.models, generated: data.generated };
+      setLiveBadge(data.generated);
+      enableSegs(facetOptions(data.models));
+      render();
+    } catch {
+      // stays on the snapshot — badge is already the amber degraded state
+    }
+  }
+
+  // ── caps pills / text query / reset ─────────────────────────────────
+  capButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.value;
+      const on = filters.caps.includes(v);
+      filters.caps = on ? filters.caps.filter((c: string) => c !== v) : [...filters.caps, v];
+      btn.classList.toggle('on', !on);
+      btn.setAttribute('aria-pressed', String(!on));
+      render();
+    });
+  });
+  if (queryInput) {
+    queryInput.addEventListener('input', () => {
+      filters.q = queryInput.value;
+      render();
+    });
+  }
+  function resetFilters() {
+    filters = { ...DEFAULT_FILTERS, caps: [], q: '' };
+    if (queryInput) queryInput.value = '';
+    capButtons.forEach((b) => {
+      b.classList.remove('on');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    if (live) enableSegs(facetOptions(live.models));
+    render();
+  }
+  resetBtn?.addEventListener('click', resetFilters);
+  emptyResetBtn?.addEventListener('click', resetFilters);
+
+  // ── mobile filters collapse ──────────────────────────────────────────
+  if (filtersDetails && window.innerWidth <= 820) filtersDetails.removeAttribute('open');
+
+  // ── tabs ─────────────────────────────────────────────────────────────
+  const tabButtons = $$<HTMLButtonElement>('[data-bench-tab]');
+  const panels = {
+    leaderboard: $<HTMLElement>('[data-bench-panel="leaderboard"]')!,
+    evals: $<HTMLElement>('[data-bench-panel="evals"]')!,
+  };
+  let evalsLoaded = false;
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.benchTab;
+      tabButtons.forEach((b) => {
+        b.classList.toggle('on', b === btn);
+        b.setAttribute('aria-selected', String(b === btn));
+      });
+      panels.leaderboard.hidden = tab !== 'leaderboard';
+      panels.evals.hidden = tab !== 'evals';
+      if (tab === 'evals' && !evalsLoaded) loadEvals();
+    });
+  });
+
+  type EvalRow = { model?: string; task?: string; score?: number };
+
+  async function loadEvals() {
+    evalsLoaded = true;
+    const emptyEvals = $<HTMLElement>('[data-bench-evals-empty]')!;
+    const scrollEvals = $<HTMLElement>('[data-bench-evals-scroll]')!;
+    const tbodyEvals = $<HTMLElement>('[data-bench-evals-tbody]')!;
+    const taskHead = $<HTMLElement>('[data-bench-evals-task-head]')!;
+    try {
+      const res = await fetch(`${API}/v1/evals`, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const data = await res.json();
+      const evals: EvalRow[] = Array.isArray(data.evals) ? data.evals : [];
+      if (!evals.length) return; // honest empty state stays up
+
+      const tasks = [...new Set(evals.map((e) => e.task).filter(Boolean))].sort() as string[];
+      const byModel = new Map<string, Map<string, number | undefined>>();
+      for (const e of evals) {
+        if (!e.model) continue;
+        if (!byModel.has(e.model)) byModel.set(e.model, new Map());
+        byModel.get(e.model)!.set(e.task ?? '', e.score);
+      }
+      taskHead.outerHTML = tasks.map((t) => `<th class="n">${esc(t)}</th>`).join('');
+      tbodyEvals.innerHTML = [...byModel.entries()]
+        .map(([model, scores]) => {
+          const snap = ROSTER.find((r) => r.id === model);
+          const cells = tasks.map((t) => {
+            const s = scores.get(t);
+            if (s == null) return '<td class="n" style="color:var(--fg-5)">—</td>';
+            const cls = s >= 0.75 ? ' good' : s < 0.4 ? ' bad' : '';
+            return `<td class="n"><span class="evalbar"><span class="track"><span class="fill${cls}" style="width:${Math.round(s * 100)}%"></span></span><span class="num" style="font-size:11px">${s.toFixed(2)}</span></span></td>`;
+          });
+          const vals = [...scores.values()].filter((v): v is number => v != null);
+          const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+          return `<tr><td class="model mid"><span class="mname">${esc(model)}</span>${snap ? `<span class="msub">${esc(snap.params)}</span>` : ''}</td><td class="n">${decodeHtml(snap ? snap.dec : null)}</td>${cells.join('')}<td class="n" style="color:${mean == null ? 'var(--fg-5)' : mean >= 0.7 ? 'var(--ok)' : 'var(--fg)'}">${mean != null ? mean.toFixed(2) : '—'}</td></tr>`;
+        })
+        .join('');
+      emptyEvals.hidden = true;
+      scrollEvals.hidden = false;
+    } catch {
+      // API unreachable / no scores yet — the honest empty state stays.
+    }
+  }
+
+  // ── run drawer (focus-contained, deep-linkable ?run=<id>) ───────────
+  const scrim = $<HTMLElement>('[data-run-scrim]')!;
+  const drawer = $<HTMLElement>('[data-run-drawer]')!;
+  const drawerTitle = $<HTMLElement>('[data-run-title]')!;
+  const drawerBody = $<HTMLElement>('[data-run-body]')!;
+  const drawerClose = $<HTMLButtonElement>('[data-run-close]')!;
+  let openRunId: string | null = null;
+  let pushedState = false;
+  const runCache = new Map<string, any>();
+
+  function setShellInert(on: boolean) {
+    for (const el of Array.from(document.body.children)) {
+      if (el.tagName === 'MAIN' || el.tagName === 'SCRIPT') continue;
+      if (on) el.setAttribute('inert', '');
+      else el.removeAttribute('inert');
+    }
+    const mainEl = document.querySelector('main');
+    if (!mainEl) return;
+    for (const child of Array.from(mainEl.children)) {
+      if (child === scrim || child === drawer) continue;
+      if (on) child.setAttribute('inert', '');
+      else child.removeAttribute('inert');
+    }
+  }
+  function focusableIn(container: HTMLElement): HTMLElement[] {
+    return Array.from(container.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(
+      (el) => !el.hasAttribute('inert') && el.getClientRects().length > 0,
+    );
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || !openRunId) return;
+    const focusables = focusableIn(drawer);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  function renderRunBody(run: any) {
+    const rec = run.records?.[run.records.length - 1] ?? run.records?.[0];
+    if (!rec) {
+      drawerBody.innerHTML = '<p class="site-sm">This run has no published records.</p>';
+      return;
+    }
+    const identity = rec.identity ?? {};
+    const telemetry = rec.telemetry ?? {};
+    const host = rec.host ?? {};
+    const kvRow = (k: string, v: unknown) => (v == null || v === '' ? '' : `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`);
+    drawerBody.innerHTML = `
+      <div class="dr-metrics">
+        <div><div class="label">decode</div>${decodeHtml(rec.decode_ts_med)}</div>
+        <div><div class="label">prefill</div><div class="stat">${rec.prefill_ts_med != null ? rec.prefill_ts_med.toFixed(1) : '—'} <span class="u">tok/s</span></div></div>
+        <div><div class="label">ttft p50 / p95</div><div class="stat">${rec.ttft_ms_p50 ?? '—'} <span class="u">/ ${rec.ttft_ms_p95 ?? '—'} ms</span></div></div>
+        <div><div class="label">accept rate</div><div class="stat">${rec.accept_med != null ? rec.accept_med + ' %' : '—'}</div></div>
+      </div>
+      <section>
+        <h4 class="label">identity</h4>
+        <dl class="kv">
+          ${kvRow('model', rec.model_id)}
+          ${kvRow('quant', rec.quant)}
+          ${kvRow('lane', rec.lane)}
+          ${kvRow('variant', rec.config_label)}
+          ${kvRow('workload', rec.kind && rec.depth ? `${rec.kind} · depth ${rec.depth}` : rec.kind)}
+          ${kvRow('engine', identity.engine)}
+          ${kvRow('llama.cpp', identity.llama_cpp_build)}
+          ${kvRow('gguf sha256', identity.gguf_sha256)}
+          ${kvRow('measured', rec.measured_at)}
+        </dl>
+      </section>
+      ${rec.flagged ? '<div class="banner warn">Flagged run — numbers may not reflect a clean sweep.</div>' : ''}
+      <section>
+        <h4 class="label">host · telemetry</h4>
+        ${telemetry.throttled ? `<div class="banner warn">Throttled during this run${telemetry.max_edge_temp_c ? ` — max edge ${telemetry.max_edge_temp_c} °C` : ''}. Numbers are a floor, not a ceiling.</div>` : ''}
+        <dl class="kv">
+          ${kvRow('gpu', host.gpu)}
+          ${kvRow('platform', host.platform)}
+          ${kvRow('rocm', host.rocm)}
+          ${kvRow('ram', host.mem_gb ? `${host.mem_gb} GB unified` : null)}
+          ${kvRow('vram peak', telemetry.vram_peak_gb)}
+          ${kvRow('gtt peak', telemetry.gtt_peak_gb)}
+          ${kvRow('max edge temp', telemetry.max_edge_temp_c)}
+          ${kvRow('avg power', telemetry.avg_power_w)}
+        </dl>
+      </section>
+      <section>
+        <h4 class="label">provenance</h4>
+        <p class="site-sm">Bundle <span class="mono">${esc(run.bundle?.title ?? run.bundle?.id ?? '—')}</span>${run.bundle?.notes ? ` — ${esc(run.bundle.notes)}` : ''}</p>
+        <div class="dr-actions">
+          ${run.bundle?.id ? `<a class="btn ghost" href="${API}/v1/bundles/${encodeURIComponent(run.bundle.id)}">download bundle</a>` : ''}
+          <button type="button" class="btn ghost" data-run-link-copy>link to this run</button>
+        </div>
+      </section>`;
+    drawerBody.querySelector('[data-run-link-copy]')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const url = new URL(window.location.href);
+      url.searchParams.set('run', run.run_id);
+      navigator.clipboard?.writeText(url.toString()).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'copied';
+        setTimeout(() => (btn.textContent = original), 1400);
+      });
+    });
+  }
+
+  async function fetchRun(runId: string) {
+    if (runCache.has(runId)) return runCache.get(runId);
+    const res = await fetch(`${API}/v1/runs/${encodeURIComponent(runId)}`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const data = await res.json();
+    runCache.set(runId, data);
+    return data;
+  }
+
+  async function show(runId: string) {
+    drawer.hidden = false;
+    scrim.hidden = false;
+    document.body.style.overflow = 'hidden';
+    openRunId = runId;
+    setShellInert(true);
+    drawerTitle.textContent = runId;
+    drawerBody.innerHTML = '<div class="mono dim">loading run…</div>';
+    drawerClose.focus();
+    try {
+      const run = await fetchRun(runId);
+      if (openRunId !== runId) return; // closed while loading
+      renderRunBody(run);
+    } catch {
+      if (openRunId !== runId) return;
+      drawerBody.innerHTML = '<p class="site-sm">Could not load this run — the API may be unreachable.</p>';
+    }
+  }
+  function hideAll() {
+    drawer.hidden = true;
+    scrim.hidden = true;
+    document.body.style.overflow = '';
+    setShellInert(false);
+  }
+  function openRun(runId: string) {
+    show(runId);
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('run') !== runId) {
+      url.searchParams.set('run', runId);
+      window.history.pushState({ run: runId }, '', url);
+      pushedState = true;
+    }
+  }
+  function closeRun() {
+    if (!openRunId) return;
+    hideAll();
+    openRunId = null;
+    if (pushedState) {
+      pushedState = false;
+      window.history.back();
+    }
+  }
+  drawerClose.addEventListener('click', closeRun);
+  scrim.addEventListener('click', closeRun);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && openRunId) closeRun();
+  });
+  window.addEventListener('popstate', () => {
+    const runId = new URL(window.location.href).searchParams.get('run');
+    pushedState = false;
+    if (runId) show(runId);
+    else if (openRunId) {
+      hideAll();
+      openRunId = null;
+    }
+  });
+
+  // ── boot ─────────────────────────────────────────────────────────────
+  render();
+  loadLive();
+  const deepLinkRun = new URL(window.location.href).searchParams.get('run');
+  if (deepLinkRun) show(deepLinkRun);
+</script>
+
+<style>
+  .ctx {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .ctx dl {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 0;
+    margin: 0;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+  }
+  .ctx dt {
+    padding: 6px 14px;
+    color: var(--fg-4);
+    border-top: 1px solid var(--line-soft);
+  }
+  .ctx dd {
+    padding: 6px 14px;
+    margin: 0;
+    color: var(--fg-2);
+    border-top: 1px solid var(--line-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ctx dt:nth-of-type(1),
+  .ctx dd:nth-of-type(1) {
+    border-top: 0;
+  }
+  @media (max-width: 820px) {
+    .ctx {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
+    margin-top: 24px;
+  }
+  .tabs button {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 10px 14px;
+    font-family: var(--jbm);
+    font-size: 12.5px;
+    color: var(--fg-3);
+    cursor: pointer;
+  }
+  .tabs button.on {
+    color: var(--fg);
+    border-bottom-color: var(--accent);
+  }
+
+  .filters {
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    padding: 0;
+    margin-top: 16px;
+  }
+  .filters .filters-body {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px;
+  }
+  .filters-summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 10px 16px;
+    font-family: var(--jbm);
+    font-size: 12px;
+    color: var(--fg-3);
+    display: none;
+  }
+  .filters-summary::-webkit-details-marker {
+    display: none;
+  }
+  @media (max-width: 820px) {
+    .filters-summary {
+      display: block;
+    }
+    .filters:not([open]) .filters-body {
+      display: none;
+    }
+  }
+  .segrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .segrow > .label {
+    width: 74px;
+    flex-shrink: 0;
+  }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-sm);
+    overflow: hidden;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .seg button {
+    background: transparent;
+    border: 0;
+    border-right: 1px solid var(--line);
+    padding: 5px 11px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .seg button:last-child {
+    border-right: 0;
+  }
+  .seg button:hover:not(:disabled) {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+  .seg button.on {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .seg button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  .fbar[data-bench-caps] .fpill {
+    text-transform: lowercase;
+  }
+  .fbar[data-bench-caps] .cap {
+    display: inline-flex;
+    width: 12px;
+    height: 12px;
+  }
+  .filters .bottom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 10px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+    flex-wrap: wrap;
+  }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-sm);
+    padding: 0 9px;
+    height: 26px;
+    background: var(--bg);
+  }
+  .search input {
+    border: 0;
+    background: transparent;
+    outline: 0;
+    color: var(--fg);
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    width: 150px;
+  }
+
+  .tablewrap {
+    --fast: #3fb950;
+    --mid: var(--accent);
+    --slow: #f85149;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    overflow: hidden;
+    margin-top: 16px;
+  }
+  :global([data-theme='light']) .tablewrap {
+    --fast: #1a7f37;
+    --slow: #cf222e;
+  }
+  .tablescroll {
+    overflow-x: auto;
+  }
+  .dtable :global(th) {
+    cursor: default;
+    user-select: none;
+    background: var(--bg-1);
+  }
+  .dtable :global(th[data-key]) {
+    cursor: pointer;
+  }
+  .dtable :global(th[data-key]:hover) {
+    color: var(--fg);
+  }
+  .dtable :global(td.model),
+  .dtable :global(th.model) {
+    position: sticky;
+    left: 0;
+    background: var(--bg-1);
+    z-index: 1;
+    border-right: 1px solid var(--line-soft);
+  }
+  .dtable :global(th.model) {
+    z-index: 3;
+  }
+  .dtable :global(tbody tr:hover td.model) {
+    background: var(--bg-2);
+  }
+  .dtable :global(tr.clickable) {
+    cursor: pointer;
+  }
+  .dtable :global(.mname) {
+    color: var(--fg);
+    display: block;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dtable :global(.msub) {
+    color: var(--fg-4);
+    font-size: 10.5px;
+    display: block;
+    margin-top: 2px;
+  }
+  .dtable :global(.capnone) {
+    color: var(--fg-5);
+  }
+  .dtable :global(.caps) {
+    white-space: nowrap;
+  }
+  .dtable :global(.cap) {
+    display: inline-flex;
+    width: 15px;
+    height: 15px;
+    margin-right: 3px;
+    color: var(--fg-2);
+    vertical-align: middle;
+  }
+  .dtable :global(.cap svg) {
+    width: 100%;
+    height: 100%;
+  }
+  .dtable :global(.cap-mtp) {
+    color: var(--accent);
+  }
+  .dtable :global(.cap-vision) {
+    color: #6cb6ff;
+  }
+
+  :global(.decode) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+  :global(.decode .meter) {
+    display: inline-flex;
+    gap: 2px;
+  }
+  :global(.decode .meter i) {
+    display: block;
+    width: 3px;
+    height: 10px;
+    border-radius: 1px;
+    background: var(--line-strong);
+  }
+  :global(.decode.fast .meter i.on) {
+    background: var(--fast);
+  }
+  :global(.decode.mid .meter i.on) {
+    background: var(--mid);
+  }
+  :global(.decode.slow .meter i.on) {
+    background: var(--slow);
+  }
+  :global(.decode .sr) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  :global(.chip.dev-rocm) {
+    color: var(--hal0-dev-rocm);
+    border-color: color-mix(in srgb, var(--hal0-dev-rocm) 40%, transparent);
+    background: color-mix(in srgb, var(--hal0-dev-rocm) 10%, transparent);
+  }
+  :global(.chip.dev-vulkan) {
+    color: var(--hal0-dev-vulkan);
+    border-color: color-mix(in srgb, var(--hal0-dev-vulkan) 40%, transparent);
+    background: color-mix(in srgb, var(--hal0-dev-vulkan) 10%, transparent);
+  }
+  :global(.chip.dev-cpu) {
+    color: var(--hal0-dev-cpu);
+    border-color: color-mix(in srgb, var(--hal0-dev-cpu) 40%, transparent);
+    background: color-mix(in srgb, var(--hal0-dev-cpu) 10%, transparent);
+  }
+
+  .bucket-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    align-items: center;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .bucket-legend .sw {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .bucket-legend .lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bucket-legend .lg .cap {
+    display: inline-flex;
+    width: 13px;
+    height: 13px;
+  }
+  .bucket-legend .sep {
+    color: var(--fg-5);
+  }
+
+  .fresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 10px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--rad-pill);
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .fresh.snap {
+    border-color: var(--hal0-warn-line);
+    background: var(--hal0-warn-soft);
+    color: var(--hal0-warn);
+  }
+  :global(.dot) {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    background: var(--fg-4);
+  }
+  :global(.dot.serving) {
+    background: var(--hal0-ok);
+    box-shadow: 0 0 6px var(--hal0-ok);
+    animation: bench-pulse 1.2s var(--ease) infinite;
+  }
+  :global(.dot.stale) {
+    background: var(--hal0-warn);
+  }
+  @keyframes bench-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.dot.serving) {
+      animation: none;
+    }
+  }
+
+  .empty {
+    padding: 56px 24px;
+    text-align: center;
+  }
+  .banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 11px;
+    border-radius: var(--rad-sm);
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+  .banner.warn {
+    background: var(--hal0-warn-soft);
+    border: 1px solid var(--hal0-warn-line);
+    color: var(--hal0-warn);
+  }
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 60;
+  }
+  .scrim[hidden] {
+    display: none;
+  }
+  .drawer-run {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(580px, 100vw);
+    background: var(--bg-1);
+    border-left: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-menu);
+    z-index: 61;
+    display: flex;
+    flex-direction: column;
+  }
+  .drawer-run[hidden] {
+    display: none;
+  }
+  .dr-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .dr-title {
+    font-size: 14px;
+    margin-top: 6px;
+    color: var(--fg);
+    word-break: break-all;
+  }
+  .dr-body {
+    overflow-y: auto;
+    padding: 18px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .dr-body :global(.dr-metrics) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--rad);
+    padding: 14px;
+  }
+  .dr-body :global(.dr-metrics .stat) {
+    font-size: 14px;
+    margin-top: 4px;
+    color: var(--fg);
+  }
+  .dr-body :global(.u) {
+    color: var(--fg-4);
+    font-size: 11px;
+  }
+  .dr-body :global(.decode) {
+    justify-content: flex-start;
+    margin-top: 4px;
+  }
+  .dr-body :global(.dr-actions) {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .dr-body :global(.kv) {
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    margin: 8px 0 0;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+  }
+  .dr-body :global(.kv dt) {
+    color: var(--fg-4);
+    padding: 5px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .dr-body :global(.kv dd) {
+    color: var(--fg-2);
+    padding: 5px 0;
+    margin: 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .evalbar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .evalbar .track {
+    width: 64px;
+    height: 6px;
+    background: var(--bg-3);
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+  }
+  .evalbar .fill {
+    display: block;
+    height: 100%;
+    background: var(--fg-3);
+  }
+  .evalbar .fill.good {
+    background: var(--hal0-ok);
+  }
+  .evalbar .fill.bad {
+    background: var(--hal0-err);
+  }
+</style>

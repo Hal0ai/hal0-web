@@ -4,16 +4,15 @@
       "label": "learn",
       "href": "/docs/getting-started/",
       "match": ["/docs", "/kb", "/blog", "/changelog", "/releases"],
-      "exclude": ["/docs/reference/model-roster-benchmark"],
       "sub": [
-        { "label": "docs", "href": "/docs/getting-started/", "match": "/docs", "exclude": ["/docs/reference/model-roster-benchmark"] },
+        { "label": "docs", "href": "/docs/getting-started/", "match": "/docs" },
         { "label": "knowledge base", "href": "/kb/", "match": "/kb" },
         { "label": "blog", "href": "/blog", "match": "/blog" },
         { "label": "changelog", "href": "/changelog", "match": "/changelog" },
         { "label": "releases", "href": "/releases", "match": "/releases" }
       ]
     },
-    { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/", "match": "/docs/reference/model-roster-benchmark" },
+    { "label": "benchmarks", "href": "/benchmarks", "match": "/benchmarks" },
     { "label": "profiles", "href": "/profiles", "match": "/profiles" },
     { "label": "forum", "href": "https://forum.hal0.dev", "external": true, "hidden": true }
   ],
@@ -40,7 +39,7 @@
     {
       "heading": "data",
       "links": [
-        { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/" },
+        { "label": "benchmarks", "href": "/benchmarks" },
         { "label": "roadmap", "href": "/#roadmap" }
       ]
     }

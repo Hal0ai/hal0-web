@@ -107,9 +107,13 @@ test('isActive: learn/benchmarks mutual exclusion', () => {
   const learn = nav.header.find((l) => l.label === 'learn');
   const bench = nav.header.find((l) => l.label === 'benchmarks');
   assert.ok(isActiveJs('/docs/getting-started/', learn));
-  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', learn), 'bench page must not light learn');
-  assert.ok(isActiveJs('/docs/reference/model-roster-benchmark/', bench));
+  // The old docs bench page (src/content/docs/docs/reference/model-roster-benchmark.mdx)
+  // stays put and is a plain docs page again now that /benchmarks owns the
+  // "benchmarks" nav entry — it lights "learn" like any other /docs/* page.
+  assert.ok(isActiveJs('/docs/reference/model-roster-benchmark/', learn), 'the retained docs bench page is still a docs page');
+  assert.ok(isActiveJs('/benchmarks', bench));
   assert.ok(!isActiveJs('/docs/getting-started/', bench), 'docs page must not light benchmarks');
+  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', bench), 'the retained docs bench page must not light the new benchmarks nav entry');
 });
 
 test('isActive: learn covers array-match sections (blog/changelog/releases)', () => {
@@ -117,7 +121,6 @@ test('isActive: learn covers array-match sections (blog/changelog/releases)', ()
   assert.ok(isActiveJs('/blog/some-post/', learn), 'learn is active on /blog/x');
   assert.ok(isActiveJs('/changelog', learn), 'learn is active on /changelog');
   assert.ok(isActiveJs('/releases', learn), 'learn is active on /releases');
-  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', learn), 'learn is NOT active on bench page');
 });
 
 test('subFor: /blog resolves to learn\'s sub list', () => {
@@ -125,8 +128,13 @@ test('subFor: /blog resolves to learn\'s sub list', () => {
   assert.deepEqual(subForJs('/blog/some-post/'), learn.sub);
 });
 
-test('subFor: bench page (no sub) resolves to null', () => {
-  assert.equal(subForJs('/docs/reference/model-roster-benchmark/'), null);
+test('subFor: the retained docs bench page resolves to learn\'s sub list, like any other docs page', () => {
+  const learn = nav.header.find((l) => l.label === 'learn');
+  assert.deepEqual(subForJs('/docs/reference/model-roster-benchmark/'), learn.sub);
+});
+
+test('subFor: /benchmarks (no sub) resolves to null', () => {
+  assert.equal(subForJs('/benchmarks'), null);
 });
 
 test('subFor: unrelated path resolves to null', () => {
