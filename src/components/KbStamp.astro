@@ -7,31 +7,43 @@
  * only the surface tag and the stamp differ. Ported from the comp's
  * `.surface-tag` + byline row (`04 Blog and KB.html`).
  *
+ * `category` and `reviewed` are read from the current page's own
+ * frontmatter (`kbCategory` / `reviewed` in content.config.ts's docs
+ * schema extension) via Astro.locals.starlightRoute — not passed as
+ * props — so each is a single source of truth instead of being
+ * hand-typed twice per page (once in frontmatter, once in a prop). The
+ * edit link is derived from the entry's real file path unless overridden.
+ *
  * Usage: drop straight into the top of a kb/**\/*.mdx body (Starlight/MDX
  * files don't get a shared layout slot to inject this from, so each KB
  * page imports and renders it once, right under its H1):
  *
- *   <KbStamp category="hardware notes" reviewed="2026-08-09" editHref="https://github.com/hal0ai/hal0-web/edit/master/src/content/docs/kb/hardware-notes/unified-memory-is-not-vram.mdx" />
+ *   <KbStamp />
  */
 interface Props {
-  category: string;
-  reviewed: string;
   editHref?: string;
 }
 
-const { category, reviewed, editHref } = Astro.props;
+const { editHref } = Astro.props;
+const { entry } = Astro.locals.starlightRoute;
+const { kbCategory: category, reviewed } = entry.data;
+
+if (!category || !reviewed) {
+  throw new Error(
+    `<KbStamp /> used on '${entry.id}', which is missing 'kbCategory' and/or 'reviewed' frontmatter.`,
+  );
+}
+
+const resolvedEditHref =
+  editHref ?? `https://github.com/hal0ai/hal0-web/edit/master/${entry.filePath}`;
 ---
 
 <p class="kb-stamp not-content">
   <span class="kb-surface-tag">knowledge base &middot; {category}</span>
   <span class="kb-stamp-sep">&middot;</span>
   <span>reviewed {reviewed}</span>
-  {editHref && (
-    <>
-      <span class="kb-stamp-sep">&middot;</span>
-      <a href={editHref} rel="noopener">suggest an edit &#8599;</a>
-    </>
-  )}
+  <span class="kb-stamp-sep">&middot;</span>
+  <a href={resolvedEditHref} rel="noopener">suggest an edit &#8599;</a>
 </p>
 
 <style>

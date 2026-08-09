@@ -267,17 +267,20 @@
 	color: var(--hal0-accent);
 }
 
-/* ── 3. blog post + KB article prose ──
- * Deliberately NOT overridden. Starlight's own `.sl-markdown-content`
- * already provides the three-column shell + sticky TOC the comp specs for
- * both post and KB-article pages; the comp additionally widens long-form
- * prose to a 68–74ch measure at 16px/1.68 (vs. Starlight's default docs
- * scale). There's no DOM hook that distinguishes a blog/KB page from a
- * regular docs page in Starlight's shared page shell (all three render
- * through the same `.content-panel .sl-markdown-content`), so a rule
- * targeting that class would resize every docs page's body copy too —
- * out of scope here per the handoff's "do not touch" list and the
- * "one site, not four" chrome invariant (docs shouldn't quietly gain a
- * second, unrequested type scale). Documented as a fidelity gap rather
- * than solved by adding a page-type body class, which would need touching
- * Starlight's shared PageFrame beyond the SiteFooter append already there. */
+/* ── 3. blog post + KB article prose — 68ch measure, comp reading scale ──
+ * Starlight's own `.sl-markdown-content` already provides the three-column
+ * shell + sticky TOC the comp specs for both post and KB-article pages;
+ * this widens the measure and bumps the type scale to match the comp's
+ * long-form spec (68–74ch, 16px/1.68 vs. Starlight's tighter docs default).
+ * Scoped to `[data-longform]` — set by StarlightPageFrame.astro only when
+ * the current page's collection slug starts with `blog/` or `kb/` — so
+ * regular docs pages are pixel-unchanged. See that component's header
+ * comment for why this couldn't be a bare `.sl-markdown-content` rule. */
+[data-longform] .content-panel .sl-markdown-content {
+	--sl-content-width: 68ch;
+}
+[data-longform] .content-panel .sl-markdown-content p,
+[data-longform] .content-panel .sl-markdown-content li {
+	font-size: 16px;
+	line-height: 1.68;
+}
