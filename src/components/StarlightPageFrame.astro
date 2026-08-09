@@ -29,16 +29,26 @@
  * scopes to `[data-docs]` instead. Every Starlight-rendered entry.id is
  * exactly one of docs/blog/kb, so this if/else is exhaustive — no third,
  * attributeless case exists among Starlight routes.
+ *
+ * `data-blog` is an ADDITIONAL attribute (not a branch) on the same
+ * `[data-longform]` wrapper, only for entry.id starting "blog/". It exists
+ * so the docs-shape pass can also polish a few blog-only chrome elements
+ * (page-title mono treatment, TOC/pager styling) that the comp draws
+ * identically for docs/blog/KB, WITHOUT touching KB: `[data-longform]`
+ * itself — and every existing rule scoped to it — is untouched, so KB's
+ * build output stays byte-for-byte identical; only `[data-blog]`-scoped
+ * rules (new, additive) can ever affect blog.
  */
 import Default from '@astrojs/starlight/components/PageFrame.astro';
 import SiteFooter from './SiteFooter.astro';
 
 const { entry } = Astro.locals.starlightRoute;
-const isLongForm = entry.id.startsWith('blog/') || entry.id.startsWith('kb/');
+const isBlog = entry.id.startsWith('blog/');
+const isLongForm = isBlog || entry.id.startsWith('kb/');
 const isDocs = entry.id.startsWith('docs/');
 ---
 {isLongForm ? (
-  <div data-longform>
+  <div data-longform data-blog={isBlog ? true : undefined}>
     <Default>
       <slot name="header" slot="header" />
       <slot name="sidebar" slot="sidebar" />
