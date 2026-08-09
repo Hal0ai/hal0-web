@@ -19,6 +19,10 @@ export const collections = {
 				blogSchema(context).extend({
 					reviewed: z.string().optional(),
 					kbCategory: z.string().optional(),
+					// Docs-only version stamp (comp: "applies to v0.5.x") rendered
+					// by the PageTitle override when present. Optional everywhere;
+					// pages adopt it organically — never backfilled wholesale.
+					appliesTo: z.string().optional(),
 				}),
 		}),
 	}),

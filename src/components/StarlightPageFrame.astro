@@ -56,6 +56,14 @@ const { entry } = Astro.locals.starlightRoute;
 const isBlog = entry.id.startsWith('blog/');
 const isLongForm = isBlog || entry.id.startsWith('kb/');
 const isDocs = entry.id.startsWith('docs/');
+// starlight-blog's index route (and its /blog/2… pagination) renders a
+// virtual entry whose id does NOT start with "blog/" (verified: built
+// /blog/index.html carried neither attribute while /blog/tags/* did),
+// so id-prefix detection alone misses it. Fall back to the URL for that
+// one route family: it gets `data-blog` ONLY (list chrome — the
+// longform prose scale is for articles, not the index).
+const path = Astro.url.pathname.replace(/\/$/, '');
+const isBlogIndex = !isBlog && !isLongForm && !isDocs && (path === '/blog' || /^\/blog\/\d+$/.test(path));
 ---
 {isLongForm ? (
   <div data-longform data-blog={isBlog ? true : undefined}>
@@ -67,6 +75,14 @@ const isDocs = entry.id.startsWith('docs/');
   </div>
 ) : isDocs ? (
   <div data-docs>
+    <Default>
+      <slot name="header" slot="header" />
+      <slot name="sidebar" slot="sidebar" />
+      <slot />
+    </Default>
+  </div>
+) : isBlogIndex ? (
+  <div data-blog>
     <Default>
       <slot name="header" slot="header" />
       <slot name="sidebar" slot="sidebar" />
@@ -86,5 +102,5 @@ const isDocs = entry.id.startsWith('docs/');
   * pages: a head script would land in every page's HTML including
   * dist/kb/** and break the KB byte-parity invariant. Cost: the modal
   * opened FROM a KB page shows untagged rows — accepted, parity wins. */}
-{(isDocs || isBlog) && <script is:inline src="/js/search-source-tags.js" defer />}
+{(isDocs || isBlog || isBlogIndex) && <script is:inline src="/js/search-source-tags.js" defer />}
 <SiteFooter />

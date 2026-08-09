@@ -214,6 +214,30 @@
 	--ec-frm-inlBtnFg: var(--hal0-fg-dim);
 }
 
+/* ── version stamp (08 Docs.html `.vernote` + DocFoot) — rendered by
+ * the PageTitle override when a page declares `appliesTo`. The dot is
+ * the comp's `.dot ready` status (ok green). ── */
+.hal0-vernote {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-family: var(--hal0-font-mono);
+	font-size: 10.5px;
+	color: var(--hal0-fg-faint);
+	border: 1px solid var(--hal0-border);
+	border-radius: var(--hal0-rad-pill, 999px);
+	padding: 3px 10px;
+	margin-top: 10px;
+	vertical-align: middle;
+}
+.hal0-vernote-dot {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--hal0-ok);
+	box-shadow: 0 0 6px var(--hal0-ok);
+}
+
 /* ── mobile drawer site nav (01 Unified Chrome, "header — mobile":
  * `.drawer` rows + `.foot` icon row) ──
  * Rendered by the StarlightSidebar override at the top of the sidebar
