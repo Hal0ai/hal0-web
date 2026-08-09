@@ -175,6 +175,15 @@ present. Do NOT backfill content — pages adopt it organically.
 
 ## 4. Hard constraints
 
+- **LAYOUT BASELINE (operator mandate, 2026-08-09): every page on the site fits
+  the KB page's width/layout system at minimum.** Same content measure,
+  container widths, and gutter rhythm site-wide; sidebars/TOCs are arranged per
+  page type but hang off the same grid — no bespoke per-page frames. Data
+  surfaces (/benchmarks, /profiles) may exceed the reading measure for tables,
+  but their page frame (header block, gutters, alignment) must match the KB
+  geometry. When auditing any surface, put it side-by-side with a KB article in
+  the browser; if it reads as a different layout system, it fails.
+
 - **KB pages stay pixel-frozen** (the standing invariant since PR #70/#84): after
   every commit, verify built `dist/kb/**` is byte-identical (normalize hashed
   asset filenames) against a pre-change build. Same discipline PR #84's review used.
