@@ -141,11 +141,10 @@ test('subFor: /benchmarks/ resolves to benchmarks\' sub list', () => {
   assert.deepEqual(subForJs('/benchmarks/'), bench.sub);
 });
 
-test('subFor: /profiles resolves to profiles\' sub list (shared with benchmarks)', () => {
-  const bench = nav.header.find((l) => l.label === 'benchmarks');
+test('subFor: /profiles resolves to null (profiles has no sub-nav)', () => {
   const profiles = nav.header.find((l) => l.label === 'profiles');
-  assert.deepEqual(subForJs('/profiles'), profiles.sub);
-  assert.deepEqual(profiles.sub, bench.sub, 'benchmarks and profiles share the same sub-nav list');
+  assert.equal(profiles.sub, undefined, 'profiles must not duplicate the benchmarks sub-nav');
+  assert.equal(subForJs('/profiles'), null);
 });
 
 test('subFor: unrelated path resolves to null', () => {
@@ -155,15 +154,11 @@ test('subFor: unrelated path resolves to null', () => {
 test('benchmarks sub-nav has the expected entries', () => {
   const bench = nav.header.find((l) => l.label === 'benchmarks');
   const labels = bench.sub.map((l) => l.label);
-  assert.deepEqual(labels, ['leaderboard', 'evals', 'methodology', 'profiles', 'share your results']);
+  assert.deepEqual(labels, ['leaderboard', 'evals', 'methodology', 'profiles']);
   assert.equal(bench.sub.find((l) => l.label === 'leaderboard').href, '/benchmarks/');
   assert.equal(bench.sub.find((l) => l.label === 'evals').href, '/benchmarks/#evals');
   assert.equal(bench.sub.find((l) => l.label === 'methodology').href, '/docs/reference/model-roster-benchmark/');
   assert.equal(bench.sub.find((l) => l.label === 'profiles').href, '/profiles');
-  assert.equal(
-    bench.sub.find((l) => l.label === 'share your results').href,
-    '/docs/reference/model-roster-benchmark/#sharing-results',
-  );
 });
 
 test('forum stays hidden; profiles and benchmarks are visible', () => {
