@@ -164,6 +164,9 @@ export default defineConfig({
 				// currentColor and leaves the "hal" invisible on dark.
 				SiteTitle: './src/components/StarlightSiteTitle.astro',
 				PageFrame: './src/components/StarlightPageFrame.astro',
+				// Prepends the site nav to the mobile drawer (docs/blog only —
+				// KB is byte-frozen); see the component's header comment.
+				Sidebar: './src/components/StarlightSidebar.astro',
 			},
 			// Sensible OG / social defaults.
 			head: [

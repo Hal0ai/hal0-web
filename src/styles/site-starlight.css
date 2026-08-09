@@ -214,6 +214,67 @@
 	--ec-frm-inlBtnFg: var(--hal0-fg-dim);
 }
 
+/* ── mobile drawer site nav (01 Unified Chrome, "header — mobile":
+ * `.drawer` rows + `.foot` icon row) ──
+ * Rendered by the StarlightSidebar override at the top of the sidebar
+ * pane; hidden ≥56rem where the docnav in the top bar takes over.
+ * Between Starlight's own 50rem drawer breakpoint and the docnav's
+ * 56rem it shows at the top of the regular sidebar, so site links are
+ * never unreachable at any width. KB pages never render the block
+ * (see the component), so no [data-longform]-only surface changes. */
+
+.hal0-drawer-nav {
+	display: none;
+}
+@media (max-width: 55.99rem) {
+	:is([data-docs], [data-blog]) .hal0-drawer-nav {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 16px;
+		border-bottom: 1px solid var(--hal0-border);
+		padding-bottom: 12px;
+	}
+}
+.hal0-drawer-link {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 0;
+	font-family: var(--hal0-font-mono);
+	font-size: 15px;
+	color: var(--hal0-fg-muted);
+	text-decoration: none;
+	border-bottom: 1px solid var(--hal0-border-soft);
+}
+.hal0-drawer-link:hover {
+	color: var(--hal0-fg);
+}
+.hal0-drawer-link.active {
+	color: var(--hal0-accent);
+	box-shadow: inset 2px 0 0 var(--hal0-accent);
+	background: var(--hal0-accent-soft);
+	padding-inline: 10px 6px;
+}
+.hal0-drawer-foot {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 16px 0 0;
+}
+.hal0-drawer-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	border-radius: var(--hal0-rad-sm, 4px);
+	color: var(--hal0-fg-dim);
+}
+.hal0-drawer-icon:hover {
+	color: var(--hal0-fg);
+	background: var(--hal0-bg-2);
+}
+
 /* ── search palette (01 Unified Chrome, `.pal` — "search" spec 06) ──
  * Tier A of handoff item 3.5: restyle Starlight's Pagefind modal in
  * place. The comp: 560px palette on --bg-1 (elevated), 1px

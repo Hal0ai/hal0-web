@@ -53,6 +53,29 @@ const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString()
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0a0a0a" />
 
+    <!-- Theme unification (handoff 3.7): marketing pages read the theme
+         Starlight's toggle persisted (localStorage 'starlight-theme') so
+         the whole site keeps ONE preference. Inline + before any paint to
+         avoid a flash; the static data-theme="dark" above stays as the
+         no-JS / first-visit default (dark-first). 'auto' or unset follows
+         the OS preference, mirroring Starlight's own resolution. -->
+    <script is:inline>
+      (() => {
+        try {
+          var stored = localStorage.getItem('starlight-theme');
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark';
+          document.documentElement.dataset.theme = theme;
+        } catch (_) {
+          /* no storage access — keep the dark default */
+        }
+      })();
+    </script>
+
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
