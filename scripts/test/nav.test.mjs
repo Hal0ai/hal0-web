@@ -62,6 +62,18 @@ test('social entries carry known ids', () => {
   assert.deepEqual(ids, ['discord', 'github']);
 });
 
+test('community footer column github/discord hrefs match the social entries (guards JSON duplication)', () => {
+  const community = nav.footerColumns.find((c) => c.heading === 'community');
+  assert.ok(community, 'a "community" footer column exists');
+  for (const id of ['github', 'discord']) {
+    const social = nav.social.find((s) => s.id === id);
+    const footer = community.links.find((l) => l.label === id);
+    assert.ok(social, `social entry '${id}' exists`);
+    assert.ok(footer, `community footer link '${id}' exists`);
+    assert.equal(footer.href, social.href, `community footer '${id}' href must match social '${id}' href`);
+  }
+});
+
 test('header links that carry match use string or array form (forum has none by design)', () => {
   for (const link of nav.header) {
     if (link.match === undefined) continue;

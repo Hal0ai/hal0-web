@@ -61,3 +61,12 @@ test('SiteFooter renders outside <main> on Starlight pages', { skip: !built && '
   assert.ok(mainClose !== -1 && footerStart !== -1, 'page has </main> and SiteFooter');
   assert.ok(footerStart > mainClose, 'SiteFooter must come after </main> (contentinfo landmark)');
 });
+
+test('hidden nav entries (forum, profiles) never render on either surface', { skip: !built && 'run npm run build first' }, async () => {
+  const marketingHtml = await readFile(pages.marketing, 'utf8');
+  const starlightHtml = await readFile(pages.starlight, 'utf8');
+  for (const html of [marketingHtml, starlightHtml]) {
+    assert.ok(!html.includes('forum.hal0.dev'), 'hidden forum link must not render');
+    assert.ok(!html.includes('href="/profiles"'), 'hidden profiles link must not render');
+  }
+});
