@@ -1,0 +1,15 @@
+---
+/**
+ * PageFrame override: render Starlight's default frame, then append the
+ * shared SiteFooter OUTSIDE <main> so it is a real contentinfo landmark
+ * and spans full width — identical chrome to marketing pages.
+ */
+import Default from '@astrojs/starlight/components/PageFrame.astro';
+import SiteFooter from './SiteFooter.astro';
+---
+<Default>
+  <slot name="header" slot="header" />
+  <slot name="sidebar" slot="sidebar" />
+  <slot />
+</Default>
+<SiteFooter />
