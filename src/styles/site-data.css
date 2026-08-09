@@ -106,6 +106,77 @@
 		height: 56px;
 	}
 
+	/* ── button ──────────────────────────────────────────────────── */
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 6px 12px;
+		background: var(--accent);
+		color: #0a0a0a;
+		font-family: var(--jbm);
+		font-size: 12px;
+		font-weight: 600;
+		border-radius: var(--rad-sm);
+		border: 1px solid var(--accent);
+		cursor: pointer;
+		letter-spacing: -0.005em;
+		white-space: nowrap;
+		height: 30px;
+		transition: filter var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+	}
+	a.btn {
+		text-decoration: none;
+		color: #0a0a0a;
+	}
+	.btn:hover {
+		filter: brightness(1.06);
+	}
+	a.btn:hover {
+		color: #0a0a0a;
+	}
+	.btn.ghost {
+		background: transparent;
+		color: var(--fg);
+		border-color: var(--line);
+	}
+	a.btn.ghost,
+	a.btn.ghost:hover {
+		color: var(--fg);
+	}
+	.btn.ghost:hover {
+		border-color: var(--fg-3);
+		background: var(--bg-2);
+		filter: none;
+	}
+	.btn.sm {
+		height: 26px;
+		padding: 4px 9px;
+		font-size: 11px;
+	}
+
+	/* ── chip / tag ──────────────────────────────────────────────── */
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 2px 7px;
+		border-radius: 3px;
+		font-family: var(--jbm);
+		font-size: 10px;
+		letter-spacing: 0.02em;
+		background: var(--bg-2);
+		color: var(--fg-3);
+		border: 1px solid var(--line);
+		white-space: nowrap;
+		text-transform: lowercase;
+	}
+	.chip.amber {
+		background: var(--accent-soft);
+		color: var(--accent);
+		border-color: var(--accent-line);
+	}
+
 	/* ── filter pills ────────────────────────────────────────────── */
 	.fbar {
 		display: flex;
