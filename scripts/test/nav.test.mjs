@@ -37,3 +37,17 @@ test('header links carry match prefixes for active-state', () => {
     assert.equal(typeof link.match, 'string', `${link.label} needs match`);
   }
 });
+
+test('isActive: docs/benchmarks mutual exclusion', async () => {
+  // nav.ts is TypeScript and can't be imported under node --test, so this
+  // replicates the matcher contract from src/lib/nav.ts's isActive against
+  // the real nav.json data.
+  const matches = (path, prefix) => path === prefix || path.startsWith(prefix.endsWith('/') ? prefix : prefix + '/');
+  const isActiveJs = (path, link) => !!link.match && matches(path, link.match) && !(link.exclude ?? []).some((e) => matches(path, e));
+  const docs = nav.header.find((l) => l.label === 'docs');
+  const bench = nav.header.find((l) => l.label === 'benchmarks');
+  assert.ok(isActiveJs('/docs/getting-started/', docs));
+  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', docs), 'bench page must not light docs');
+  assert.ok(isActiveJs('/docs/reference/model-roster-benchmark/', bench));
+  assert.ok(!isActiveJs('/blog/some-post/', docs));
+});
