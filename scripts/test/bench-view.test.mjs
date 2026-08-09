@@ -219,6 +219,33 @@ test('normalizeApiRoster: kv stays null (never sourced from model.quant), quant 
   assert.ok(rows.filter((r) => r.id === 'model-b').every((r) => r.quant === 'q8'));
 });
 
+test('normalizeApiRoster: reads a live-payload caps array when present (live ids don\'t reliably join to the snapshot)', () => {
+  const rows = normalizeApiRoster({
+    models: [
+      {
+        model_id: 'chadrock-35b-ace-saber-mtp-rocmfpx-moequality',
+        caps: ['mtp', 'vision', 'tools'],
+        cells: [{ lane: 'rocm', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 50 }],
+      },
+    ],
+  });
+  assert.deepEqual(rows[0].caps, ['mtp', 'vision', 'tools']);
+});
+
+test('normalizeApiRoster: missing/malformed model.caps falls back to [], never invented', () => {
+  const rows = normalizeApiRoster({
+    models: [
+      { model_id: 'a', cells: [{ lane: 'rocm', decode_ts_med: 1 }] },
+      { model_id: 'b', caps: 'not-an-array', cells: [{ lane: 'rocm', decode_ts_med: 1 }] },
+      { model_id: 'c', caps: ['mtp', 42, null], cells: [{ lane: 'rocm', decode_ts_med: 1 }] },
+    ],
+  });
+  assert.deepEqual(rows.find((r) => r.id === 'a').caps, []);
+  assert.deepEqual(rows.find((r) => r.id === 'b').caps, []);
+  // Non-string entries are filtered out, real ones kept — never thrown.
+  assert.deepEqual(rows.find((r) => r.id === 'c').caps, ['mtp']);
+});
+
 test('normalizeApiRoster tolerates missing models/cells', () => {
   assert.deepEqual(normalizeApiRoster({}), []);
   assert.deepEqual(normalizeApiRoster({ models: [{ model_id: 'x' }] }), []);
@@ -235,6 +262,106 @@ test('normalizeApiRoster: drops entries with a missing/null/non-string model_id'
     ],
   });
   assert.deepEqual(rows.map((r) => r.id), ['model-ok']);
+});
+
+// Live-shaped fixture matching the CT105 adapter: real lanes 'rocm' and
+// 'vulkan_radv', plus 'default' — the adapter's own mapping of CT105's
+// unlaned '' cells, not a real backend. All cells sit at the tg@2048/default
+// facet defaults so a bare lane-only filter reproduces what the UI sends.
+const LIVE_LANE_FIXTURE = {
+  generated: '2026-08-09T12:00:00Z',
+  models: [
+    {
+      model_id: 'model-a',
+      cells: [
+        { lane: 'rocm', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 50, run_id: 'run-1' },
+        { lane: 'vulkan_radv', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 70, run_id: 'run-2' },
+      ],
+    },
+    {
+      model_id: 'model-b',
+      cells: [
+        { lane: 'default', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 30, run_id: 'run-3' },
+      ],
+    },
+  ],
+};
+
+// --- applyFilters: lane facet against live-shaped data ("best"/"default") -
+
+test('applyFilters+reduceBestLane: lane="best" must never be empty when cells exist (regression: was 0 rows)', () => {
+  const rows = normalizeApiRoster(LIVE_LANE_FIXTURE);
+  const filtered = applyFilters(rows, {
+    workload: DEFAULT_WORKLOAD,
+    depth: DEFAULT_DEPTH,
+    variant: DEFAULT_VARIANT,
+    lane: DEFAULT_LANE, // 'best' — a UI sentinel, never a literal row.lane value
+  });
+  const view = reduceBestLane(filtered);
+  assert.equal(view.length, 2);
+  const a = view.find((r) => r.id === 'model-a');
+  // best of rocm(50)/vulkan_radv(70) is vulkan_radv
+  assert.equal(a.lane, 'vulkan_radv');
+  assert.equal(a.dec, 70);
+  const b = view.find((r) => r.id === 'model-b');
+  // single-lane model: its only (unlaned/'default') cell still shows up
+  assert.equal(b.lane, 'default');
+  assert.equal(b.dec, 30);
+});
+
+test('applyFilters: named-lane filters (rocm/vulkan_radv) still scope to their own subset', () => {
+  const rows = normalizeApiRoster(LIVE_LANE_FIXTURE);
+  const rocm = applyFilters(rows, { workload: DEFAULT_WORKLOAD, depth: DEFAULT_DEPTH, variant: DEFAULT_VARIANT, lane: 'rocm' });
+  assert.deepEqual(rocm.map((r) => r.id), ['model-a']);
+
+  const vulkan = applyFilters(rows, { workload: DEFAULT_WORKLOAD, depth: DEFAULT_DEPTH, variant: DEFAULT_VARIANT, lane: 'vulkan_radv' });
+  assert.deepEqual(vulkan.map((r) => r.id), ['model-a']);
+});
+
+// --- deselectable facets: "off" (null/unset) matches every value of that
+// dimension; the leaderboard's one-row-per-model invariant is kept by
+// letting reduceBestLane collapse whatever the widened filter set surfaces
+// down to the best cell per model — never fragmenting into multiple rows
+// per model. This is the "read honestly" choice documented in the PR body:
+// the table has always shown one row per model (defaultView/currentView
+// both pipe every filtered set through reduceBestLane), and multi-row
+// output would break that invariant (sort, cap counts, "N of M models").
+
+test('applyFilters: an unset (null) facet matches every value of that dimension — "off" is not a value to match, it\'s no filter', () => {
+  const rows = normalizeApiRoster(LIVE_LANE_FIXTURE);
+  const anyLane = applyFilters(rows, { workload: DEFAULT_WORKLOAD, depth: DEFAULT_DEPTH, variant: DEFAULT_VARIANT, lane: null });
+  // All 3 cells (2 for model-a across both lanes, 1 for model-b) survive —
+  // same result as passing DEFAULT_LANE ('best'), just via the generic
+  // null-means-no-filter path rather than the lane-specific sentinel.
+  assert.equal(anyLane.length, 3);
+});
+
+test('applyFilters+reduceBestLane: toggling workload off surfaces every workload\'s cells, collapsed to the best cell per model (never multiple rows per model)', () => {
+  const twoWorkloads = {
+    models: [
+      {
+        model_id: 'model-a',
+        cells: [
+          { lane: 'rocm', kind: 'tg', depth: 2048, config_label: 'default', decode_ts_med: 50, run_id: 'run-1' },
+          { lane: 'rocm', kind: 'pp', depth: 2048, config_label: 'default', decode_ts_med: 900, run_id: 'run-2' },
+        ],
+      },
+    ],
+  };
+  const rows = normalizeApiRoster(twoWorkloads);
+
+  // workload filter active (tg only): one row, the tg cell.
+  const tgOnly = reduceBestLane(applyFilters(rows, { workload: 'tg', depth: DEFAULT_DEPTH, variant: DEFAULT_VARIANT }));
+  assert.equal(tgOnly.length, 1);
+  assert.equal(tgOnly[0].workload, 'tg');
+
+  // workload toggled off (null): both cells are candidates; still exactly
+  // one row per model — reduceBestLane picks the higher-dec cell (pp's 900
+  // here), not both.
+  const workloadOff = reduceBestLane(applyFilters(rows, { workload: null, depth: DEFAULT_DEPTH, variant: DEFAULT_VARIANT }));
+  assert.equal(workloadOff.length, 1);
+  assert.equal(workloadOff[0].workload, 'pp');
+  assert.equal(workloadOff[0].dec, 900);
 });
 
 // --- applyFilters ---------------------------------------------------------
@@ -433,8 +560,17 @@ test('upgradeRows: does not overwrite API-provided hfRepo/params/gb when already
   assert.equal(upgraded[0].hfRepo, 'org/other-repo');
   assert.equal(upgraded[0].params, '99B');
   assert.equal(upgraded[0].gb, 5);
-  // caps is always overlaid from the snapshot since the API never supplies it.
+  // Empty payload caps ([]) falls back to the snapshot join.
   assert.deepEqual(upgraded[0].caps, ['mtp', 'vision']);
+});
+
+test('upgradeRows: prefers non-empty payload caps over the snapshot join (live ids rarely match the curated snapshot ids)', () => {
+  const snapshotRows = normalizeRoster(ROSTER_FIXTURE);
+  const apiRows = [
+    { id: 'model-a', hfRepo: '', params: '—', gb: null, caps: ['tools', 'reasoning'], workload: 'tg', lane: 'rocm', depth: 2048, variant: 'default', dec: 1 },
+  ];
+  const upgraded = upgradeRows(snapshotRows, apiRows);
+  assert.deepEqual(upgraded[0].caps, ['tools', 'reasoning']);
 });
 
 test('upgradeRows: tolerates missing snapshotRows/apiRows', () => {
