@@ -1,7 +1,7 @@
 ---
 /**
- * MarketingLayout — shared chrome for non-docs pages (/, /install,
- * /hardware, /roadmap). Reuses the global stylesheet (which carries
+ * MarketingLayout — shared chrome for non-docs pages (/, /changelog,
+ * /releases, /contributing). Reuses the global stylesheet (which carries
  * both Starlight tokens and the hal0 design system) and provides a
  * thin top nav + footer.
  *
@@ -19,7 +19,7 @@ import '../styles/global.css';
 import Wordmark from '../components/Wordmark.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import DiscordIcon from '../components/DiscordIcon.astro';
-import { header as navHeader, social, isActive } from '../lib/nav';
+import { header as navHeader, getSocial, isActive } from '../lib/nav';
 
 // Preload the two latin web fonts that drive above-the-fold rendering —
 // without these, the FOUT swap from system fallback → real font pushes
@@ -47,8 +47,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').
 const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString();
 
 const path = Astro.url.pathname;
-const github = social.find((s) => s.id === 'github')!;
-const discord = social.find((s) => s.id === 'discord')!;
+const github = getSocial('github');
+const discord = getSocial('discord');
 ---
 
 <!doctype html>

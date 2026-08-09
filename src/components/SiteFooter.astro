@@ -6,17 +6,17 @@
  */
 import Wordmark from './Wordmark.astro';
 import DiscordIcon from './DiscordIcon.astro';
-import { footer, social } from '../lib/nav';
+import { footer, getSocial } from '../lib/nav';
 import rawChangelog from '../data/changelog.md?raw';
 import { parseChangelog } from '../lib/changelog.js';
 
 const { latest } = parseChangelog(rawChangelog);
 const footerVersion = latest?.version ?? '';
-const github = social.find((s) => s.id === 'github')!;
-const discord = social.find((s) => s.id === 'discord')!;
+const github = getSocial('github');
+const discord = getSocial('discord');
 ---
 
-<footer class="border-t border-hal0-border bg-hal0-bg-sunken">
+<footer class="border-t border-hal0-border bg-hal0-bg-sunken" data-site-footer>
   <div class="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-hal0-fg-muted md:flex-row md:items-center md:justify-between">
     <div class="flex items-center gap-3">
       <Wordmark size="text-base" />

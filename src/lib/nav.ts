@@ -26,3 +26,9 @@ export function isActive(path: string, link: NavLink): boolean {
   if (!link.match) return false;
   return matches(path, link.match) && !(link.exclude ?? []).some((e) => matches(path, e));
 }
+
+export function getSocial(id: SocialLink['id']): SocialLink {
+  const link = social.find((s) => s.id === id);
+  if (!link) throw new Error(`nav.json: missing social entry '${id}'`);
+  return link;
+}
