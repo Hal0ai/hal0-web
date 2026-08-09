@@ -16,11 +16,8 @@
  * foot of the block, comp: 01 Unified Chrome "header — mobile" drawer
  * (`.drawer` rows + `.foot` icon row in hal0-site.css).
  *
- * KB pages are excluded (the wrapper renders nothing there): their HTML
- * under dist/kb/** is pixel-frozen/byte-identical by standing invariant,
- * and this block would otherwise appear in every KB page's markup. The
- * KB mobile drawer therefore keeps the stock page tree only — documented
- * trade-off, same reasoning as the search source-tags script.
+ * Renders on every Starlight page, KB included — the 2026-08-09
+ * unification pass retired the KB byte-parity freeze (operator call).
  */
 import Default from '@astrojs/starlight/components/Sidebar.astro';
 import { visibleHeader, social, isActive, ariaCurrent, type NavLink } from '../lib/nav';
@@ -28,7 +25,6 @@ import GithubIcon from './GithubIcon.astro';
 import DiscordIcon from './DiscordIcon.astro';
 
 const path = Astro.url.pathname;
-const isKb = Astro.locals.starlightRoute.entry.id.startsWith('kb/');
 
 const links: NavLink[] = visibleHeader.flatMap((l) =>
 	l.sub && Array.isArray(l.match) ? l.sub : [l],
@@ -36,7 +32,7 @@ const links: NavLink[] = visibleHeader.flatMap((l) =>
 ---
 
 {
-	!isKb && (
+	(
 		<nav class="hal0-drawer-nav" aria-label="Site">
 			{links.map((l) => (
 				<a
