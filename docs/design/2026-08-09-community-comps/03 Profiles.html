@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>profiles — hal0</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.phead{padding-block:34px 20px}
+.phead-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+.pcard{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:18px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.pcard:hover{border-color:var(--line-strong)}
+.pcard .top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pcard .slug{font-family:var(--jbm);font-size:13.5px;color:var(--fg)}
+.pcard .title{font-size:14px;color:var(--fg-2);margin-top:3px}
+.pcard .sum{font-size:13px;line-height:1.55;color:var(--fg-3);margin:0}
+.flags{position:relative;background:var(--bg-sunken);border:1px solid var(--line);border-radius:var(--rad-sm);padding:8px 10px;font-family:var(--jbm);font-size:11px;line-height:1.6;color:var(--fg-2);white-space:pre-wrap;word-break:break-all}
+.flags.clip{max-height:38px;overflow:hidden}
+.flags.clip::after{content:"";position:absolute;inset:auto 0 0 0;height:20px;background:linear-gradient(transparent,var(--bg-sunken))}
+.flagbtn{background:none;border:0;color:var(--fg-4);font-family:var(--jbm);font-size:10.5px;cursor:pointer;padding:0;align-self:flex-start}
+.flagbtn:hover{color:var(--accent)}
+.pcard .meta{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line-soft);padding-top:12px;font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
+.headline{display:flex;align-items:baseline;gap:5px}
+.headline .n{font-family:var(--jbm);font-size:19px;font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features)}
+.headline .u{font-size:10px;color:var(--fg-4)}
+.modellist{display:flex;flex-direction:column;gap:4px}
+.modellist a{font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modellist a:hover{color:var(--accent)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60}
+.drawer-run{position:fixed;top:0;right:0;bottom:0;width:min(620px,100vw);background:var(--bg-1);border-left:1px solid var(--line-strong);box-shadow:var(--shadow-drawer);z-index:61;display:flex;flex-direction:column}
+.dr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dr-body{overflow-y:auto;padding:18px 20px 40px;display:flex;flex-direction:column;gap:22px}
+.dr-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.toml{margin:0;padding:12px 14px;white-space:pre-wrap;word-break:break-word;font-size:11.5px;color:var(--fg-2)}
+.toml .k{color:var(--fg-3)}.toml .s{color:var(--fg)}.toml .n{color:var(--accent)}.toml .c{color:var(--fg-5)}.toml .h{color:var(--fg-4)}
+.dr-actions{display:flex;gap:8px;flex-wrap:wrap}
+.vhist{display:flex;flex-direction:column}
+.vh{display:grid;grid-template-columns:34px 84px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line-soft);font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
+.vh .v{color:var(--accent)}
+.decode{display:inline-flex;align-items:center;gap:6px}
+.decode .meter{display:inline-flex;gap:1.5px}
+.decode .meter i{width:3px;height:11px;background:var(--fg-5);border-radius:1px}
+.decode.fast .meter i.on{background:var(--ok)}.decode.mid .meter i.on{background:var(--fg-2)}.decode.slow .meter i.on{background:var(--fg-4)}
+.decode .v{font-size:13px}
+.decode.fast .v{color:var(--ok)}.decode.mid .v{color:var(--fg)}.decode.slow .v{color:var(--fg-3)}
+.decode .sd{font-size:10px;color:var(--fg-4)}
+.caps{display:inline-flex;gap:6px;color:var(--fg-3)}
+.anat{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
+.anat ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
+.anat ol b{color:var(--accent);margin-right:8px}
+@media(max-width:900px){.anat{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script src="roster-data.js"></script>
+<script src="profiles-data.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel" src="bench-app.jsx"></script>
+<script type="text/babel">
+const { Icon } = window.Hal0DesignSystem_692ad8;
+const P = window.PROFILES, MODELS = window.MODELS;
+const modelOf = (id) => MODELS.find(m => m.id === id);
+const runsFor = (p) => window.BENCH.filter(r => p.models.includes(r.model) && r.variant === "default" && r.depth === 2048 && r.lane === p.lane);
+/* headline is always the best run this profile actually produced */
+const headlineDec = (p) => { const rs = runsFor(p); return rs.length ? Math.max(...rs.map(r => r.dec)) : p.dec; };
+
+function Toml({ text }) {
+  return (
+    <pre className="well toml">{text.split("\n").map((l, i) => {
+      if (l.startsWith("#")) return <div key={i} className="c">{l}</div>;
+      if (l.startsWith("[")) return <div key={i} className="h">{l}</div>;
+      const m = l.match(/^(\s*[\w_]+\s*=\s*)(.*)$/);
+      if (!m) return <div key={i}>{l || "\u00a0"}</div>;
+      const val = m[2];
+      return <div key={i}><span className="k">{m[1]}</span><span className={/^[\d.]+$/.test(val) || val === "true" || val === "false" ? "n" : "s"}>{val}</span></div>;
+    })}</pre>
+  );
+}
+
+function Card({ p, onOpen }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <article className="pcard" onClick={() => onOpen(p)}>
+      <div className="top">
+        <div>
+          <div className="slug">{p.slug}</div>
+          <div className="title">{p.title}</div>
+        </div>
+        <span className="chip amber">{p.intent}</span>
+      </div>
+      <p className="sum">{p.summary}</p>
+      <div className={"flags" + (open ? "" : " clip")}>{p.flags}</div>
+      <button className="flagbtn" onClick={e => { e.stopPropagation(); setOpen(v => !v); }}>{open ? "collapse flags" : "expand flags"}</button>
+      <div className="modellist">
+        <span className="label" style={{ marginBottom: 2 }}>benched with</span>
+        {p.models.slice(0, 2).map(m => <a key={m} href="#" onClick={e => e.stopPropagation()}>{m}</a>)}
+        {p.models.length > 2 && <span className="mono" style={{ fontSize: 11, color: "var(--fg-5)" }}>+{p.models.length - 2} more</span>}
+      </div>
+      <div className="meta">
+        <span className="headline">
+          <Decode v={headlineDec(p)} showSd={false} />
+          <span className="u">tok/s decode</span>
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <Attribution user={p.author} first={p.first} />
+          <span style={{ color: "var(--fg-5)" }}>·</span>v{p.v}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+function ProfileDrawer({ p, onClose }) {
+  const [copied, setCopied] = React.useState(false);
+  if (!p) return null;
+  const runs = runsFor(p);
+  return (
+    <>
+      <div className="scrim" onClick={onClose} />
+      <aside className="drawer-run" role="dialog" aria-label="profile detail">
+        <div className="dr-head">
+          <div>
+            <span className="eyebrow">profile · v{p.v} · {p.updated}</span>
+            <div className="mono" style={{ fontSize: 14, marginTop: 6 }}>{p.slug}</div>
+            <div className="site-sm" style={{ marginTop: 4 }}>{p.title}</div>
+          </div>
+          <button className="iconbtn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button>
+        </div>
+        <div className="dr-body">
+          <div className="dr-actions">
+            <button className="btn">download toml</button>
+            <button className="btn ghost" onClick={() => { navigator.clipboard && navigator.clipboard.writeText(p.flags); setCopied(true); setTimeout(() => setCopied(false), 1400); }}>{copied ? "flags copied" : "copy flags"}</button>
+            <button className="btn ghost">install with hal0</button>
+          </div>
+
+          <section>
+            <h4 className="label">install</h4>
+            <div className="well" style={{ padding: "12px 14px", marginTop: 8 }}>
+              <span className="amber">hal0</span> profile install {p.slug}
+            </div>
+          </section>
+
+          <section>
+            <div className="dr-sec-head"><h4 className="label">config</h4><span className="mono dim" style={{ fontSize: 11 }}>{p.slug}.toml · 1.1 kB</span></div>
+            <Toml text={window.PROFILE_TOML(p)} />
+          </section>
+
+          <section>
+            <div className="dr-sec-head"><h4 className="label">runs produced by this config</h4>
+              <span className="mono dim" style={{ fontSize: 11 }}>tg @ 2048 · {p.lane}</span></div>
+            <div className="panel" style={{ overflow: "hidden" }}>
+              <table className="dtable">
+                <thead><tr><th>model</th><th className="n">decode</th><th className="n">prefill</th><th className="n">ttft</th><th className="n">gb</th></tr></thead>
+                <tbody>
+                  {runs.map(r => (
+                    <tr key={r.id}>
+                      <td className="lead" style={{ maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis" }}>{r.model}</td>
+                      <td className="n"><Decode v={r.dec} showSd={false} /></td>
+                      <td className="n">{r.pf.toFixed(0)}</td>
+                      <td className="n">{r.ttftP50} ms</td>
+                      <td className="n">{r.gb}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="site-sm" style={{ marginTop: 8 }}>Joined by profile slug — these are the same cells the leaderboard shows, filtered to the runs this config produced.</p>
+          </section>
+
+          <section>
+            <h4 className="label">versions</h4>
+            <div className="vhist">
+              {p.history.map(h => (
+                <div className="vh" key={h.v}><span className="v">v{h.v}</span><span>{h.date}</span><span>{h.note}</span></div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function App() {
+  const [intent, setIntent] = React.useState("all");
+  const [lane, setLane] = React.useState("all");
+  const [open, setOpen] = React.useState(null);
+  const intents = ["all", ...new Set(P.map(p => p.intent))];
+  const list = P.filter(p => (intent === "all" || p.intent === intent) && (lane === "all" || p.lane === lane));
+  return (
+    <div className="site">
+      <Header active="profiles" sticky desktop user="lemond" />
+      <SubNav items={["all profiles", "by intent", "submit a profile", "how profiles work"]} active="all profiles" />
+      <div className="wrap wide phead">
+        <div className="phead-row">
+          <div>
+            <span className="eyebrow">shared configs · hal0-profiles</span>
+            <h1 className="site-h1" style={{ margin: "10px 0 10px" }}>profiles</h1>
+            <p className="site-body" style={{ maxWidth: "60ch" }}>
+              A profile is the flag string that produced a number, versioned and downloadable.
+              Install one with the CLI, or read the config and steal the parts you want.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn ghost">how profiles work</button>
+            <button className="btn">submit a profile</button>
+          </div>
+        </div>
+        <div className="fbar" style={{ marginTop: 18, gap: 16 }}>
+          <div className="fbar">
+            <span className="label" style={{ marginRight: 4 }}>intent</span>
+            {intents.map(i => <Fpill key={i} on={intent === i} onClick={() => setIntent(i)}>{i}</Fpill>)}
+          </div>
+          <div className="fbar">
+            <span className="label" style={{ marginRight: 4 }}>lane</span>
+            {["all", "rocm", "vulkan_radv"].map(l => <Fpill key={l} on={lane === l} onClick={() => setLane(l)}>{l}</Fpill>)}
+          </div>
+          <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-3)", marginLeft: "auto" }}>{list.length} of {P.length} profiles</span>
+        </div>
+      </div>
+
+      <div className="wrap wide">
+        <div className="pgrid">{list.map(p => <Card key={p.slug} p={p} onOpen={setOpen} />)}</div>
+
+        <div style={{ marginTop: 48 }}>
+          <span className="eyebrow">component spec</span>
+          <h2 className="site-h2" style={{ margin: "10px 0 16px" }}>profile card anatomy</h2>
+          <div className="anat">
+            <ol>
+              <li><b>1</b>slug in mono, 13.5px — the thing you type into the CLI, so it leads.</li>
+              <li><b>2</b>intent chip, amber, lowercase: chat · moe · coding · agent · vision · draft · embedding.</li>
+              <li><b>3</b>one-sentence summary in Geist. What it trades and what it costs, never a pitch.</li>
+              <li><b>4</b>flag string in a sunken well, clipped to two lines with a fade; expand in place, never a modal.</li>
+              <li><b>5</b>models benched with this profile, mono, first two plus a count. Each links to its leaderboard row.</li>
+              <li><b>6</b>headline decode with the same three-segment bucket meter the leaderboard uses.</li>
+              <li><b>7</b>attribution slot — GitHub avatar + handle, or the amber first-party chip. Community submissions drop in here with no layout change.</li>
+            </ol>
+            <div>
+              <Card p={P[0]} onOpen={setOpen} />
+              <p className="site-sm" style={{ marginTop: 10 }}>Cards stay one column on mobile at full width; nothing is hidden, the flags well just clips a line earlier.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ProfileDrawer p={open} onClose={() => setOpen(null)} />
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

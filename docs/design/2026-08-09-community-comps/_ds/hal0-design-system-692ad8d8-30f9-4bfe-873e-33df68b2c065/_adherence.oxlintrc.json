@@ -1,0 +1,414 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/core/**",
+              "connections_overhaul/**",
+              "dashboard_overhaul/**",
+              "design_handoff_comfyui_combined/design/**",
+              "design_handoff_comfyui_imagegen/design/**",
+              "design_handoff_dashboard/design/**",
+              "design_handoff_inference_memmap/design/**",
+              "design_handoff_inference_slots/src/**",
+              "design_handoff_npu_combined/design/**",
+              "design_handoff_npu_widgets/design/**",
+              "design_handoff_stacks_focus/**",
+              "explorations/agent-cards/**",
+              "explorations/comfyui-row/**",
+              "explorations/inference-row/**",
+              "memory_overhaul/**",
+              "npu_widget/**",
+              "profiles_overhaul/**",
+              "stacks_overhaul/**",
+              "ui_kits/board/**",
+              "ui_kits/dashboard/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Geist|JetBrains Mono|Monomaniac One))/i]",
+        "message": "Font not provided by the design system. Available: Geist, JetBrains Mono, Monomaniac One."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AgentAbility'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|cost|desc|key|ref|className|style|children)$/]",
+        "message": "<AgentAbility> doesn't accept that prop. Declared props: name, cost, desc."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BannerAction'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|primary|onClick|key|ref|className|style|children)$/]",
+        "message": "<BannerAction> doesn't accept that prop. Declared props: label, primary, onClick."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|icon|iconRight|disabled|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, icon, iconRight, disabled."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|ghost|danger)$/]",
+        "message": "<Button> variant must be one of 'primary' | 'ghost' | 'danger'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Button> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|right|padded|bodyClassName|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: title, right, padded, bodyClassName."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Chip'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|outlined|icon|key|ref|className|style|children)$/]",
+        "message": "<Chip> doesn't accept that prop. Declared props: tone, outlined, icon."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Chip'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:default|amber|ok|warn|err|info|gpu-vulkan|vulkan|gpu-rocm|rocm|npu|cpu)$/]",
+        "message": "<Chip> tone must be one of 'default' | 'amber' | 'ok' | 'warn' | 'err' | 'info' | 'gpu-vulkan' | 'vulkan' | 'gpu-rocm' | 'rocm' | 'npu' | 'cpu'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Icon'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|size|sw|fill|stroke|style|key|ref|className|style|children)$/]",
+        "message": "<Icon> doesn't accept that prop. Declared props: name, size, sw, fill, stroke, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Icon'] > JSXAttribute[name.name='name'] > Literal[value!=/^(?:dashboard|slots|models|hardware|backends|logs|connections|agent|settings|bell|search|send|attach|mic|chev|chevR|close|menu|check|warn|plus|ext|download|restart|unload|start|edit|more|cpu|flame|chat)$/]",
+        "message": "<Icon> name must be one of 'dashboard' | 'slots' | 'models' | 'hardware' | 'backends' | 'logs' | 'connections' | 'agent' | 'settings' | 'bell' | 'search' | 'send' | 'attach' | 'mic' | 'chev' | 'chevR' | 'close' | 'menu' | 'check' | 'warn' | 'plus' | 'ext' | 'download' | 'restart' | 'unload' | 'start' | 'edit' | 'more' | 'cpu' | 'flame' | 'chat'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:mono|multiline|rows|key|ref|className|style|children)$/]",
+        "message": "<Input> doesn't accept that prop. Declared props: mono, multiline, rows."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Kbd'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|key|ref|className|style|children)$/]",
+        "message": "<Kbd> doesn't accept that prop. Declared props: children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusDot'] > JSXAttribute > JSXIdentifier[name!=/^(?:state|title|key|ref|className|style|children)$/]",
+        "message": "<StatusDot> doesn't accept that prop. Declared props: state, title."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusDot'] > JSXAttribute[name.name='state'] > Literal[value!=/^(?:serving|ready|recent|idle|stale|warming|starting|pulling|unloading|loading|error|offline|empty|coresident)$/]",
+        "message": "<StatusDot> state must be one of 'serving' | 'ready' | 'recent' | 'idle' | 'stale' | 'warming' | 'starting' | 'pulling' | 'unloading' | 'loading' | 'error' | 'offline' | 'empty' | 'coresident'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Wordmark'] > JSXAttribute > JSXIdentifier[name!=/^(?:size|mono|style|key|ref|className|style|children)$/]",
+        "message": "<Wordmark> doesn't accept that prop. Declared props: size, mono, style."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "AgentAbility": {
+        "replaces": []
+      },
+      "BannerAction": {
+        "replaces": []
+      },
+      "Button": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "Chip": {
+        "replaces": []
+      },
+      "Icon": {
+        "replaces": []
+      },
+      "Input": {
+        "replaces": []
+      },
+      "Kbd": {
+        "replaces": []
+      },
+      "StatusDot": {
+        "replaces": []
+      },
+      "Wordmark": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-bg",
+      "--accent-glow",
+      "--accent-line",
+      "--accent-soft",
+      "--bg",
+      "--bg-1",
+      "--bg-2",
+      "--bg-3",
+      "--bg-4",
+      "--bg-sunken",
+      "--border",
+      "--border-accent",
+      "--border-soft",
+      "--border-strong",
+      "--bw",
+      "--dev-cpu",
+      "--dev-npu",
+      "--dev-rocm",
+      "--dev-vulkan",
+      "--dur",
+      "--dur-fast",
+      "--dur-slow",
+      "--ease",
+      "--el",
+      "--el-glow",
+      "--err",
+      "--err-line",
+      "--err-soft",
+      "--fg",
+      "--fg-2",
+      "--fg-3",
+      "--fg-4",
+      "--fg-5",
+      "--font-body",
+      "--font-display",
+      "--font-mono",
+      "--footer-h",
+      "--fs-body",
+      "--fs-display",
+      "--fs-h1",
+      "--fs-h2",
+      "--fs-h3",
+      "--fs-label",
+      "--fs-lg",
+      "--fs-micro",
+      "--fs-mono",
+      "--fs-nano",
+      "--fs-sm",
+      "--fw-medium",
+      "--fw-regular",
+      "--fw-semi",
+      "--geist",
+      "--geist-features",
+      "--glow-accent",
+      "--glow-ok",
+      "--hal0-accent",
+      "--hal0-accent-glow",
+      "--hal0-accent-hover",
+      "--hal0-accent-muted",
+      "--info",
+      "--info-line",
+      "--info-soft",
+      "--jbm",
+      "--lh-body",
+      "--lh-heading",
+      "--lh-relaxed",
+      "--lh-tight",
+      "--line",
+      "--line-soft",
+      "--line-strong",
+      "--ls-display",
+      "--ls-eyebrow",
+      "--ls-label",
+      "--ls-normal",
+      "--ls-tight",
+      "--ls-title",
+      "--mem-slot-1",
+      "--mem-slot-2",
+      "--mem-slot-3",
+      "--mem-slot-4",
+      "--mem-slot-5",
+      "--mem-slot-6",
+      "--mem-slot-7",
+      "--mem-slot-8",
+      "--mono-features",
+      "--num-features",
+      "--ok",
+      "--ok-line",
+      "--ok-soft",
+      "--rad",
+      "--rad-lg",
+      "--rad-pill",
+      "--rad-sm",
+      "--rad-xl",
+      "--rad-xs",
+      "--shadow-drawer",
+      "--shadow-menu",
+      "--shadow-pane",
+      "--shadow-toast",
+      "--sidebar-w",
+      "--sidebar-w-collapsed",
+      "--sp-1",
+      "--sp-10",
+      "--sp-12",
+      "--sp-16",
+      "--sp-2",
+      "--sp-3",
+      "--sp-4",
+      "--sp-5",
+      "--sp-6",
+      "--sp-7",
+      "--sp-8",
+      "--sp-9",
+      "--topbar-h",
+      "--view-max",
+      "--warn",
+      "--warn-line",
+      "--warn-soft",
+      "--wordmark"
+    ],
+    "tokenKinds": {
+      "--hal0-accent": "color",
+      "--hal0-accent-hover": "color",
+      "--hal0-accent-muted": "color",
+      "--hal0-accent-glow": "color",
+      "--bg": "color",
+      "--bg-1": "color",
+      "--bg-2": "color",
+      "--bg-3": "color",
+      "--bg-4": "color",
+      "--bg-sunken": "color",
+      "--fg": "color",
+      "--fg-2": "color",
+      "--fg-3": "color",
+      "--fg-4": "color",
+      "--fg-5": "color",
+      "--line": "color",
+      "--line-soft": "color",
+      "--line-strong": "color",
+      "--accent": "color",
+      "--accent-soft": "color",
+      "--accent-line": "color",
+      "--accent-bg": "color",
+      "--accent-glow": "color",
+      "--ok": "color",
+      "--ok-soft": "color",
+      "--ok-line": "color",
+      "--warn": "color",
+      "--warn-soft": "color",
+      "--warn-line": "color",
+      "--err": "color",
+      "--err-soft": "color",
+      "--err-line": "color",
+      "--info": "color",
+      "--info-soft": "color",
+      "--info-line": "color",
+      "--dev-rocm": "color",
+      "--dev-vulkan": "color",
+      "--dev-cpu": "color",
+      "--dev-npu": "color",
+      "--mem-slot-1": "color",
+      "--mem-slot-2": "color",
+      "--mem-slot-3": "color",
+      "--mem-slot-4": "color",
+      "--mem-slot-5": "color",
+      "--mem-slot-6": "color",
+      "--mem-slot-7": "color",
+      "--mem-slot-8": "color",
+      "--jbm": "font",
+      "--geist": "font",
+      "--wordmark": "font",
+      "--font-mono": "font",
+      "--font-body": "font",
+      "--font-display": "font",
+      "--geist-features": "font",
+      "--mono-features": "font",
+      "--num-features": "font",
+      "--fs-display": "spacing",
+      "--fs-h1": "spacing",
+      "--fs-h2": "spacing",
+      "--fs-h3": "spacing",
+      "--fs-lg": "spacing",
+      "--fs-body": "spacing",
+      "--fs-sm": "spacing",
+      "--fs-mono": "spacing",
+      "--fs-label": "spacing",
+      "--fs-micro": "spacing",
+      "--fs-nano": "spacing",
+      "--fw-regular": "font",
+      "--fw-medium": "font",
+      "--fw-semi": "font",
+      "--lh-tight": "font",
+      "--lh-heading": "font",
+      "--lh-body": "font",
+      "--lh-relaxed": "font",
+      "--ls-display": "spacing",
+      "--ls-title": "font",
+      "--ls-tight": "font",
+      "--ls-normal": "font",
+      "--ls-label": "spacing",
+      "--ls-eyebrow": "font",
+      "--sp-1": "spacing",
+      "--sp-2": "spacing",
+      "--sp-3": "spacing",
+      "--sp-4": "spacing",
+      "--sp-5": "spacing",
+      "--sp-6": "spacing",
+      "--sp-7": "spacing",
+      "--sp-8": "spacing",
+      "--sp-9": "spacing",
+      "--sp-10": "spacing",
+      "--sp-12": "spacing",
+      "--sp-16": "spacing",
+      "--rad-xs": "spacing",
+      "--rad-sm": "spacing",
+      "--rad": "spacing",
+      "--rad-lg": "spacing",
+      "--rad-xl": "spacing",
+      "--rad-pill": "spacing",
+      "--bw": "spacing",
+      "--border": "color",
+      "--border-soft": "color",
+      "--border-strong": "color",
+      "--border-accent": "color",
+      "--shadow-menu": "shadow",
+      "--shadow-drawer": "shadow",
+      "--shadow-pane": "shadow",
+      "--shadow-toast": "shadow",
+      "--glow-accent": "color",
+      "--glow-ok": "color",
+      "--ease": "other",
+      "--dur-fast": "other",
+      "--dur": "other",
+      "--dur-slow": "other",
+      "--topbar-h": "spacing",
+      "--sidebar-w": "spacing",
+      "--sidebar-w-collapsed": "spacing",
+      "--footer-h": "spacing",
+      "--view-max": "spacing",
+      "--el": "color",
+      "--el-glow": "color"
+    },
+    "fontFamilies": [
+      "Geist",
+      "JetBrains Mono",
+      "Monomaniac One"
+    ]
+  }
+}

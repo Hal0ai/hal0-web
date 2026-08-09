@@ -1,12 +1,17 @@
 ---
 /**
- * SiteFooter — THE footer. Rendered on marketing pages (MarketingLayout)
- * and Starlight pages (StarlightPageFrame override) so every surface ends
- * in byte-identical chrome. Links come from nav.json; version from changelog.
+ * SiteFooter — comp `Footer` (site-chrome.jsx) ported byte-faithful.
+ * Rendered on marketing pages (MarketingLayout, inside `.site`) and
+ * Starlight pages (StarlightPageFrame override, outside any `.site`
+ * wrapper) so every surface ends in byte-identical chrome. The footer
+ * carries its own `site` class so the `.site` alias vars (--bg-sunken,
+ * --fg-3, --line, …) resolve on both surfaces. Links come from
+ * nav.json; version from changelog.
  */
 import Wordmark from './Wordmark.astro';
+import GithubIcon from './GithubIcon.astro';
 import DiscordIcon from './DiscordIcon.astro';
-import { footer, getSocial } from '../lib/nav';
+import { footerColumns, footerBase, getSocial } from '../lib/nav';
 import rawChangelog from '../data/changelog.md?raw';
 import { parseChangelog } from '../lib/changelog.js';
 
@@ -14,29 +19,54 @@ const { latest } = parseChangelog(rawChangelog);
 const footerVersion = latest?.version ?? '';
 const github = getSocial('github');
 const discord = getSocial('discord');
+const rss = footerBase.find((l) => l.label === 'rss');
+const changelogBase = footerBase.find((l) => l.label === 'changelog');
 ---
 
-<footer class="border-t border-hal0-border bg-hal0-bg-sunken" data-site-footer>
-  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-hal0-fg-muted md:flex-row md:items-center md:justify-between">
-    <div class="flex items-center gap-3">
-      <Wordmark size="text-base" />
-      <span class="font-mono text-xs text-hal0-fg-dim">
-        Apache-2.0{footerVersion ? ` · ${footerVersion}` : ''}
+<footer class="site ftr" data-site-footer>
+  <div class="wrap wide">
+    <div class="ftr-cols">
+      <div class="ftr-brand">
+        <Wordmark size="text-xl" />
+        <p class="site-sm" style="margin-top: 12px;">
+          Self-hosted AI inference for the box in your rack. Built and benchmarked by the Strix
+          Halo community.
+        </p>
+        <div style="display: flex; gap: 6px; margin-top: 14px;">
+          <a class="iconbtn" href={github.href} rel="noopener" aria-label="GitHub">
+            <GithubIcon size={16} />
+          </a>
+          <a class="iconbtn" href={discord.href} rel="noopener" aria-label="Discord">
+            <DiscordIcon size={16} />
+          </a>
+          <a class="iconbtn" href={rss?.href} aria-label="RSS">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M2.5 12.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM1 6.5v2.2c3.7 0 6.7 3 6.7 6.8h2.2C9.9 10.6 5.9 6.5 1 6.5zM1 1v2.2c6.4 0 11.6 5.2 11.6 11.6h2.2C14.8 7.2 8.6 1 1 1z" />
+            </svg>
+          </a>
+        </div>
+      </div>
+      {footerColumns.map((col) => (
+        <div class="ftr-col">
+          <h4 class="label">{col.heading}</h4>
+          <ul>
+            {col.links.map((l) => (
+              <li>
+                <a href={l.href} rel={l.external ? 'noopener' : undefined}>
+                  {l.label}
+                  {l.external && <span> ↗</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+    <div class="ftr-base">
+      <span>Apache-2.0{footerVersion ? ` · ${footerVersion}` : ''}</span>
+      <span>
+        <a href={changelogBase?.href}>{changelogBase?.label}</a>
       </span>
     </div>
-    <ul class="flex flex-wrap items-center gap-6 font-mono text-xs">
-      {footer.map((l) => (
-        <li><a class="hover:text-hal0-fg" href={l.href}>{l.label}</a></li>
-      ))}
-      <li>
-        <a class="hover:text-hal0-fg" href={github.href} rel="noopener">{github.label}</a>
-      </li>
-      <li>
-        <a class="inline-flex items-center gap-1.5 hover:text-hal0-fg" href={discord.href} rel="noopener">
-          <DiscordIcon size={14} />
-          {discord.label}
-        </a>
-      </li>
-    </ul>
   </div>
 </footer>

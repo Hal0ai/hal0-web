@@ -1,0 +1,63 @@
+/* hal0 — colors
+ * "sodium amber on graphite." A dark, near-black operator surface lit by a
+ * single warm amber accent (the colour of a sodium-vapour lamp / a warm LED
+ * on a rack). Everything else is a precise neutral graphite ramp. Colour is
+ * rationed: amber means "live / primary / you can act here", never decoration.
+ *
+ * Base tokens first, then semantic aliases. Author against the aliases. */
+
+:root {
+  /* ─── Brand · sodium amber ─────────────────────────────────────── */
+  --hal0-accent:        #FFB000;            /* the one brand colour */
+  --hal0-accent-hover:  #FFC533;            /* lighter — hover/active */
+  --hal0-accent-muted:  #7A5500;            /* dim amber — low-emphasis */
+  --hal0-accent-glow:   rgba(255,176,0,0.18);
+
+  /* ─── Surfaces · graphite ramp (dark, default) ─────────────────── */
+  --bg:    #0A0A0A;   /* app background — near-black */
+  --bg-1:  #111111;   /* cards / panels */
+  --bg-2:  #161616;   /* hover / inset rows */
+  --bg-3:  #1C1C1C;   /* deeper inset (tracks, wells) */
+  --bg-4:  #232323;   /* highest elevation fill */
+  --bg-sunken: #070707; /* log panes / terminal wells */
+
+  /* ─── Foreground · neutral text ramp ───────────────────────────── */
+  --fg:    #F5F5F2;   /* primary text (warm white) */
+  --fg-2:  #C8C8C2;   /* secondary text */
+  --fg-3:  #8A8A85;   /* tertiary / labels */
+  --fg-4:  #5C5C58;   /* quaternary / placeholder, keys */
+  --fg-5:  #3D3D3A;   /* faintest — dividers as text, "·" separators */
+
+  /* ─── Lines ────────────────────────────────────────────────────── */
+  --line:        #262626;  /* default hairline */
+  --line-soft:   #1C1C1C;  /* inner dividers within a card */
+  --line-strong: #3A3A3A;  /* hover border / emphasised edge */
+
+  /* ─── Accent shorthands (tints of amber on dark) ───────────────── */
+  --accent:       var(--hal0-accent);
+  --accent-soft:  rgba(255,176,0,0.10);     /* fill behind amber chips */
+  --accent-line:  rgba(255,176,0,0.34);     /* amber border */
+  --accent-bg:    #2A1D00;                  /* active nav row fill */
+  --accent-glow:  var(--hal0-accent-glow);
+
+  /* ─── Status · semantic ────────────────────────────────────────── */
+  --ok:    #6FCF97;  --ok-soft:   rgba(111,207,151,0.10); --ok-line:   rgba(111,207,151,0.30);
+  --warn:  #E8B94E;  --warn-soft: rgba(232,185,78,0.10);  --warn-line: rgba(232,185,78,0.30);
+  --err:   #EF6B6B;  --err-soft:  rgba(239,107,107,0.10); --err-line:  rgba(239,107,107,0.30);
+  --info:  #7FB8FF;  --info-soft: rgba(127,184,255,0.10); --info-line: rgba(127,184,255,0.30);
+
+  /* ─── Device / runtime colours ─────────────────────────────────── */
+  /* Each inference backend has a stable hue so a slot reads the same in a
+     chip, a snapshot row, and the memory map. */
+  --dev-rocm:    #D76B6B;   /* AMD ROCm */
+  --dev-vulkan:  #7FB8FF;   /* Vulkan (default GPU path) */
+  --dev-cpu:     #9C9C95;   /* CPU fallback */
+  --dev-npu:     #C896FF;   /* AMD XDNA NPU / FLM */
+
+  /* ─── Memory-map per-slot palette (Okabe–Ito, colourblind-safe) ── */
+  /* One stable colour per co-resident model so the unified-memory bar +
+     legend stay distinguishable when several GPU slots share one hue. */
+  --mem-slot-1: #5B9BD5;  --mem-slot-2: #E69F00;  --mem-slot-3: #009E73;
+  --mem-slot-4: #CC79A7;  --mem-slot-5: #F0E442;  --mem-slot-6: #D55E00;
+  --mem-slot-7: #56B4E9;  --mem-slot-8: #B39DDB;
+}

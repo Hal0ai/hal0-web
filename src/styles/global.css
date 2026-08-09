@@ -1,11 +1,24 @@
 /* Tailwind v4 + Starlight token bridge.
  *
- * Order matters: fonts → tailwind → starlight overrides → site rules.
- * starlight-tailwind hooks Starlight's CSS variables to Tailwind's
- * theme so utilities like text-accent map to --sl-color-accent. */
+ * Actual order: fonts → tokens → site → tailwind → starlight overrides.
+ * site.css sits before tailwindcss, but that placement is NOT what keeps it
+ * from clobbering Tailwind utilities: site.css's rules are plain unlayered
+ * CSS, and Tailwind's own utilities live inside `@layer utilities` — an
+ * unlayered rule always beats a layered one regardless of source order or
+ * specificity. That's why site.css can't just be "the ported comp CSS": (a)
+ * every one of its selectors is scoped under `.site` (see site.css) so it
+ * only ever matches inside the site chrome, never a bare marketing/Starlight
+ * utility class elsewhere on the page, and (b) the one rule that still
+ * targets bare elements — the anchor default — additionally guards itself
+ * with `:not(:where([class]))` so it skips any element carrying a
+ * Tailwind-utility class, leaving classed links to Tailwind entirely.
+ * starlight-tailwind hooks Starlight's CSS variables to Tailwind's theme so
+ * utilities like text-accent map to --sl-color-accent; it runs after
+ * tailwindcss because it depends on Tailwind's @theme output. */
 
 @import './fonts.css';
 @import './tokens.css';
+@import './site.css';
 @import 'tailwindcss';
 @import '@astrojs/starlight-tailwind';
 
@@ -34,18 +47,21 @@
 }
 
 [data-theme='light'] {
-	--sl-color-accent:        #b87800;          /* darker for AA on light */
-	--sl-color-accent-low:    #f7d680;
-	--sl-color-accent-high:   #8a5a00;
+	/* Canonical values live in tokens.css's `[data-theme='light']` block —
+	 * referenced here, never re-literaled, so there's a single source of
+	 * truth for the light ramp. */
+	--sl-color-accent:        var(--hal0-accent);          /* darker for AA on light */
+	--sl-color-accent-low:    var(--hal0-accent-muted);
+	--sl-color-accent-high:   var(--hal0-accent-hover);
 
-	--sl-color-bg:            #fafaf9;
-	--sl-color-bg-nav:        #fafaf9;
-	--sl-color-bg-sidebar:    #fafaf9;
-	--sl-color-bg-inline-code: #f0eeea;
+	--sl-color-bg:            var(--hal0-bg);
+	--sl-color-bg-nav:        var(--hal0-bg);
+	--sl-color-bg-sidebar:    var(--hal0-bg);
+	--sl-color-bg-inline-code: var(--hal0-bg-sunken);
 
-	--sl-color-text:          #1c1917;
-	--sl-color-text-accent:   #b87800;
-	--sl-color-hairline:      #e7e5e4;
+	--sl-color-text:          var(--hal0-fg);
+	--sl-color-text-accent:   var(--hal0-accent);
+	--sl-color-hairline:      var(--hal0-border);
 }
 
 /* ---------- base ---------- */

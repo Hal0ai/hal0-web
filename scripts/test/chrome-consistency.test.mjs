@@ -25,12 +25,19 @@ function siteFooter(html) {
   return m[0];
 }
 
+const footerLinks = nav.footerColumns.flatMap((col) => col.links);
+const visibleHeader = nav.header.filter((l) => !l.hidden);
+const footerExtras = nav.footerBase.map((l) => l.href);
+
 test('SiteFooter link set identical across surfaces', { skip: !built && 'run npm run build first' }, async () => {
   const marketing = hrefs(siteFooter(await readFile(pages.marketing, 'utf8')));
   const starlight = hrefs(siteFooter(await readFile(pages.starlight, 'utf8')));
   assert.deepEqual([...marketing].sort(), [...starlight].sort(), 'footer href sets must be equal');
-  for (const l of [...nav.footer, ...nav.social]) {
+  for (const l of [...footerLinks, ...nav.social]) {
     assert.ok(marketing.has(l.href), `footer missing manifest link ${l.href}`);
+  }
+  for (const href of footerExtras) {
+    assert.ok(marketing.has(href), `footer missing expected link ${href}`);
   }
 });
 
@@ -41,8 +48,13 @@ test('header manifest links present in the header of both surfaces', { skip: !bu
   const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
   assert.ok(marketingHeader, 'marketing page has a <header>');
   assert.ok(starlightNav, 'starlight page has the site docnav');
-  for (const l of nav.header) {
+  // Marketing renders the umbrella entries; the Starlight docnav flattens
+  // `sub` lists (StarlightSiteTitle), so assert each surface's actual shape.
+  const flattened = visibleHeader.flatMap((l) => l.sub ?? [l]);
+  for (const l of visibleHeader) {
     assert.ok(marketingHeader.includes(`href="${l.href}"`), `marketing header missing ${l.href}`);
+  }
+  for (const l of flattened) {
     assert.ok(starlightNav.includes(`href="${l.href}"`), `starlight docnav missing ${l.href}`);
   }
 });
@@ -53,4 +65,13 @@ test('SiteFooter renders outside <main> on Starlight pages', { skip: !built && '
   const footerStart = html.search(/<footer[^>]*data-site-footer/);
   assert.ok(mainClose !== -1 && footerStart !== -1, 'page has </main> and SiteFooter');
   assert.ok(footerStart > mainClose, 'SiteFooter must come after </main> (contentinfo landmark)');
+});
+
+test('hidden nav entries (forum, profiles) never render on either surface', { skip: !built && 'run npm run build first' }, async () => {
+  const marketingHtml = await readFile(pages.marketing, 'utf8');
+  const starlightHtml = await readFile(pages.starlight, 'utf8');
+  for (const html of [marketingHtml, starlightHtml]) {
+    assert.ok(!html.includes('forum.hal0.dev'), 'hidden forum link must not render');
+    assert.ok(!html.includes('href="/profiles"'), 'hidden profiles link must not render');
+  }
 });

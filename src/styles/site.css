@@ -1,0 +1,448 @@
+/* hal0.dev — site chrome
+ * Ported near-verbatim from docs/design/2026-08-09-community-comps/hal0-site.css
+ * (Task 1 of chrome v2). Sits on top of the canonical --hal0-* tokens in
+ * tokens.css. Nothing here re-declares a token value — the `.site` block
+ * below is an alias layer only: it maps the comp's unprefixed var names
+ * onto the canonical --hal0-* custom properties so the rest of this file
+ * stays a diffable, near-literal copy of the comp source. Specimen-only
+ * classes (`.deskframe`, `.mobframe`) from the comp are dropped — they
+ * only existed to frame side-by-side desktop/mobile screenshots in the
+ * spec sheet and have no product use. A further batch of comp classes with
+ * zero current usage in src/ (searchbtn, avatar, filter pills, data table,
+ * misc panel/well/stat surfaces, the specimen-sheet chrome, ...) lives in
+ * site-data.css instead, unimported until the pages that need them land.
+ *
+ * Every rule below (besides the alias block and the handful of rules that
+ * are already literally `.site`-prefixed) is nested inside a `.site { }`
+ * block via native CSS nesting, so nothing here can leak onto an element
+ * outside the site chrome — see global.css's header comment for why that
+ * scoping (not import order) is what keeps site.css from beating Tailwind
+ * utilities. */
+
+/* ── alias block: unprefixed comp vars → canonical --hal0-* tokens ── */
+.site {
+	--bg: var(--hal0-bg);
+	--bg-1: var(--hal0-bg-elevated);
+	--bg-2: var(--hal0-bg-2);
+	--bg-3: var(--hal0-bg-3);
+	--bg-sunken: var(--hal0-bg-sunken);
+	--fg: var(--hal0-fg);
+	--fg-2: var(--hal0-fg-muted);
+	--fg-3: var(--hal0-fg-dim);
+	--fg-4: var(--hal0-fg-faint);
+	--fg-5: var(--hal0-fg-ghost);
+	--line: var(--hal0-border);
+	--line-soft: var(--hal0-border-soft);
+	--line-strong: var(--hal0-border-strong);
+	--accent: var(--hal0-accent);
+	--accent-hover: var(--hal0-accent-hover);
+	--accent-muted: var(--hal0-accent-muted);
+	--accent-soft: var(--hal0-accent-soft);
+	--accent-line: var(--hal0-accent-line);
+	--accent-glow: var(--hal0-accent-glow);
+
+	/* font stacks */
+	--jbm: var(--hal0-font-mono);
+	--geist: var(--hal0-font-body);
+	--mono-features: 'zero' 1, 'ss02' 1, 'calt' 0;
+	--num-features: 'zero' 1, 'tnum' 1;
+	--geist-features: 'cv11' 1, 'ss01' 1;
+
+	/* radii / motion / letter-spacing */
+	--rad: var(--hal0-rad);
+	--rad-sm: var(--hal0-rad-sm);
+	--rad-lg: var(--hal0-rad-lg);
+	--rad-pill: var(--hal0-rad-pill);
+	--dur-fast: var(--hal0-dur-fast);
+	--ease: var(--hal0-ease);
+	--shadow-menu: var(--hal0-shadow-menu);
+	--ls-display: var(--hal0-ls-display);
+	--ls-title: var(--hal0-ls-title);
+	--ls-label: var(--hal0-ls-label);
+	--ls-tight: var(--hal0-ls-tight);
+
+	background: var(--bg);
+	color: var(--fg);
+	font-family: var(--geist);
+	font-feature-settings: var(--geist-features);
+	-webkit-font-smoothing: antialiased;
+}
+/* Light theme: the alias vars above already resolve through the
+ * `[data-theme='light']` --hal0-* overrides in tokens.css, so no literal
+ * duplication is needed here — the cascade takes care of it. */
+.site * {
+	box-sizing: border-box;
+}
+/* Only style anchors that carry no class of their own — comp components
+ * (hdr-nav a, drawer a.row, subnav a, ftr-col a, ...) set their own color
+ * and already win on specificity/source order; Tailwind-utility-styled
+ * marketing links (text-hal0-accent, text-hal0-fg-muted, hover:*) carry a
+ * class and are skipped entirely. `:not(:where([class]))` keeps that
+ * functional exclusion while contributing zero specificity, so unclassed
+ * comp anchors like `.hdr-nav a` (same nominal specificity) still win via
+ * normal source order instead of being outranked by this reset rule. */
+.site a:not(:where([class])) {
+	color: var(--fg);
+	text-decoration: none;
+}
+.site a:not(:where([class])):hover {
+	color: var(--accent);
+}
+.site :focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+.site ::selection {
+	background: var(--accent-glow);
+	color: var(--fg);
+}
+
+.site {
+	.mono {
+		font-family: var(--jbm);
+		font-feature-settings: var(--mono-features);
+	}
+	.num {
+		font-variant-numeric: tabular-nums;
+		font-feature-settings: var(--num-features);
+	}
+	.dim {
+		color: var(--fg-3);
+	}
+	.amber {
+		color: var(--accent);
+	}
+
+	/* ── reading type scale (site only; console scale stays dense) ── */
+	.site-h1 {
+		font-family: var(--jbm);
+		font-size: clamp(28px, 4vw, 38px);
+		line-height: 1.12;
+		letter-spacing: var(--ls-display);
+		font-weight: 500;
+		margin: 0;
+	}
+	.site-h2 {
+		font-family: var(--jbm);
+		font-size: 22px;
+		line-height: 1.2;
+		letter-spacing: var(--ls-title);
+		font-weight: 500;
+		margin: 0;
+	}
+	.site-h3 {
+		font-family: var(--geist);
+		font-size: 16px;
+		line-height: 1.3;
+		font-weight: 600;
+		margin: 0;
+	}
+	.site-body {
+		font-size: 15px;
+		line-height: 1.6;
+		color: var(--fg-2);
+		margin: 0;
+		text-wrap: pretty;
+	}
+	.site-sm {
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--fg-3);
+		margin: 0;
+	}
+	.eyebrow {
+		font-family: var(--jbm);
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: var(--ls-label);
+		color: var(--fg-3);
+	}
+	.label {
+		font-family: var(--jbm);
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: var(--ls-label);
+		color: var(--fg-3);
+	}
+
+	/* ── page shell ──────────────────────────────────────────────── */
+	.wrap {
+		width: 100%;
+		max-width: 1280px;
+		margin: 0 auto;
+		padding: 0 24px;
+	}
+	.wrap.wide {
+		max-width: 1440px;
+	}
+	.wrap.read {
+		max-width: 760px;
+	}
+	@media (max-width: 640px) {
+		.wrap {
+			padding: 0 16px;
+		}
+	}
+
+	/* ── header ──────────────────────────────────────────────────── */
+	/* frosted near-black + the "filament" hairline: a 1px line that brightens to
+	 * sodium amber at centre with a faint under-glow. The rack is on. */
+	.hdr {
+		position: relative;
+		z-index: 40;
+		background: rgba(10, 10, 10, 0.85);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+	}
+	.hdr::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 1px;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			var(--line) 18%,
+			color-mix(in srgb, var(--accent) 70%, var(--line)) 50%,
+			var(--line) 82%,
+			transparent 100%
+		);
+		box-shadow: 0 1px 14px rgba(255, 176, 0, 0.09);
+	}
+	.hdr.sticky {
+		position: sticky;
+		top: 0;
+	}
+	.hdr.ontop {
+		background: transparent;
+		backdrop-filter: none;
+	}
+	.hdr.ontop::after {
+		opacity: 0.35;
+	}
+	.hdr-in {
+		display: flex;
+		align-items: center;
+		gap: 24px;
+		height: 56px;
+	}
+	.hdr-brand {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-shrink: 0;
+		color: var(--fg);
+	}
+	.hdr-nav {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+		flex: 1;
+		min-width: 0;
+	}
+	.hdr-nav a {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		height: 56px;
+		padding: 0 11px;
+		font-family: var(--jbm);
+		font-size: 12.5px;
+		letter-spacing: var(--ls-tight);
+		color: var(--fg-3);
+		transition: color var(--dur-fast) var(--ease);
+	}
+	.hdr-nav a:hover {
+		color: var(--fg);
+	}
+	.hdr-nav a.on {
+		color: var(--accent);
+	}
+	.hdr-nav a.on::after {
+		content: '';
+		position: absolute;
+		left: 11px;
+		right: 11px;
+		bottom: -1px;
+		height: 2px;
+		background: var(--accent);
+		box-shadow: 0 0 8px var(--accent-glow);
+	}
+	.hdr-nav a .ext {
+		opacity: 0.5;
+		font-size: 10px;
+	}
+	.hdr-right {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex-shrink: 0;
+	}
+	.iconbtn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: var(--rad-sm);
+		border: 1px solid transparent;
+		background: transparent;
+		color: var(--fg-3);
+		cursor: pointer;
+		position: relative;
+		transition:
+			color var(--dur-fast) var(--ease),
+			background var(--dur-fast) var(--ease),
+			border-color var(--dur-fast) var(--ease);
+	}
+	.iconbtn:hover {
+		color: var(--fg);
+		background: var(--bg-2);
+		border-color: var(--line);
+	}
+	.hdr-burger {
+		display: none;
+	}
+	@media (max-width: 1000px) {
+		.hdr-nav,
+		.hdr-right .desk {
+			display: none;
+		}
+		.hdr-burger {
+			display: inline-flex;
+		}
+	}
+
+	/* mobile drawer */
+	.drawer {
+		position: absolute;
+		inset: 56px 0 auto 0;
+		background: var(--bg);
+		border-bottom: 1px solid var(--line);
+		box-shadow: var(--shadow-menu);
+		padding: 8px 0 20px;
+	}
+	.drawer a.row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 14px 24px;
+		font-family: var(--jbm);
+		font-size: 15px;
+		color: var(--fg-2);
+		border-bottom: 1px solid var(--line-soft);
+	}
+	.drawer a.row.on {
+		color: var(--accent);
+		box-shadow: inset 2px 0 0 var(--accent);
+		background: var(--accent-soft);
+	}
+	.drawer .foot {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 16px 24px 0;
+	}
+
+	/* ── section sub-nav ─────────────────────────────────────────── */
+	.subnav {
+		border-bottom: 1px solid var(--line);
+		background: var(--bg);
+	}
+	.subnav-in {
+		display: flex;
+		align-items: center;
+		gap: 18px;
+		height: 42px;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.subnav-in::-webkit-scrollbar {
+		display: none;
+	}
+	.subnav a {
+		font-family: var(--jbm);
+		font-size: 12px;
+		color: var(--fg-3);
+		white-space: nowrap;
+		padding: 2px 0;
+		border-bottom: 1px solid transparent;
+		margin-bottom: -1px;
+	}
+	.subnav a.on {
+		color: var(--fg);
+		border-bottom-color: var(--accent);
+	}
+
+	/* ── footer ──────────────────────────────────────────────────────
+	 * `&.ftr` matters: on Starlight pages the footer element itself
+	 * carries `class="site ftr"` with no `.site` ancestor, so a plain
+	 * nested `.ftr` (→ `.site .ftr`) would never match it there. */
+	&.ftr,
+	.ftr {
+		border-top: 1px solid var(--line);
+		background: var(--bg-sunken);
+		margin-top: 64px;
+	}
+	.ftr-cols {
+		display: grid;
+		grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+		gap: 40px;
+		padding: 48px 0 40px;
+	}
+	.ftr-brand p {
+		max-width: 34ch;
+	}
+	.ftr-col h4 {
+		margin: 0 0 14px;
+	}
+	.ftr-col ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 9px;
+	}
+	.ftr-col a {
+		font-size: 13px;
+		color: var(--fg-3);
+	}
+	.ftr-col a:hover {
+		color: var(--accent);
+	}
+	.ftr-base {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 16px 0 28px;
+		border-top: 1px solid var(--line-soft);
+		font-family: var(--jbm);
+		font-size: 11px;
+		color: var(--fg-4);
+		flex-wrap: wrap;
+	}
+	.ftr-base a {
+		color: var(--fg-4);
+	}
+	@media (max-width: 820px) {
+		.ftr-cols {
+			grid-template-columns: 1fr 1fr;
+			gap: 32px;
+		}
+	}
+}
+
+/* ── light theme overrides (exception to the nesting rule above: these
+ * stay written out as `[data-theme='light'] .site { ... }` blocks so the
+ * override's extra attribute-selector specificity is unambiguous) ── */
+[data-theme='light'] .site {
+	.hdr {
+		background: rgba(250, 250, 249, 0.85);
+	}
+}

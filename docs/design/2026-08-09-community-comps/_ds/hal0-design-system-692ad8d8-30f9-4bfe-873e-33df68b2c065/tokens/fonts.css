@@ -1,0 +1,14 @@
+/* hal0 — webfonts
+ * Three families, all from Google Fonts:
+ *   · Geist          — body / UI sans (variable, 100–900)
+ *   · JetBrains Mono  — mono / display / wordmark "0", numerals, code
+ *   · Monomaniac One  — the wordmark "hal" letterforms (display only)
+ *
+ * NOTE (font substitution): the upstream hal0 repos self-host Geist +
+ * JetBrains Mono via @fontsource .woff2 bundles. Here they are linked
+ * from Google Fonts so this design system stays portable with no binary
+ * blobs. The faces are identical families. If you need fully offline,
+ * pinned binaries, drop the .woff2 files into tokens/ and replace the
+ * @import below with local @font-face rules. */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400&family=Monomaniac+One&display=swap');

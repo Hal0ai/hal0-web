@@ -170,6 +170,31 @@ merge-triggered rebuilds.
 - VPS backups (Discourse + uploads) to R2 nightly; data repos are inherently
   backed up by git.
 
+## Design comps (visual source of truth)
+
+Approved comps are vendored at `docs/design/2026-08-09-community-comps/`
+(`01 Unified Chrome.html`, `02 Benchmarks.html`, `03 Profiles.html`,
+`hal0-site.css`, `site-chrome.jsx`, data files, `_ds/` token set). The comp
+`.site` ramp matches shipped `tokens.css` values exactly; chrome v2 adoption is
+planned in `docs/superpowers/plans/2026-08-09-chrome-v2.md`.
+
+Data contracts the comps establish for later workstreams:
+
+- **Benchmarks:** runs keyed by workload (`tg`/…), depth, variant, lane
+  (`rocm`/`vulkan_radv`/…); metrics `dec` (+sd), `pf`, `ttftP50/P95`, `acc`,
+  `gb`, sparkline history. Page renders from a build-time snapshot and
+  upgrades live from `api.hal0.dev/v1/bench`, with explicit degraded
+  (amber snapshot badge) / loading (skeleton) / empty states. Mobile keeps the
+  table with a pinned model column, not card collapse.
+- **Profiles:** `slug` (CLI-installable), `intent` chip (chat · moe · coding ·
+  agent · vision · draft · embedding), one-sentence summary, flag string in a
+  clipped sunken well, benched-model list, headline decode, attribution
+  (GitHub avatar or first-party chip), version history with per-version notes.
+  Detail drawer: install command, TOML config, **runs produced by this config**
+  (joined by profile slug — same cells as the leaderboard), version history.
+- **Submission states** map to the PR pipeline: validating · awaiting review ·
+  merged · changes requested.
+
 ## Out of scope (phase 2+)
 
 - Runner image registry / OCI hosting

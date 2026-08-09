@@ -1,0 +1,71 @@
+/* hal0 — typography
+ * Two working faces + one display face. The product is an operator console,
+ * so monospace does most of the heavy lifting: every identifier, number,
+ * state, key, route label and metric is mono. Geist (sans) is reserved for
+ * prose — paragraphs, descriptions, message bodies, help text.
+ *
+ *   --jbm     JetBrains Mono — UI scaffolding, code, numerals, the "0" mark
+ *   --geist   Geist          — body copy, long-form, message bubbles
+ *   --mono-display  the same JBM used at display sizes (view titles)
+ *   --wordmark      Monomaniac One — ONLY the "hal" of the wordmark
+ *
+ * Numerals are tabular everywhere they tick (use .num or --num-features). */
+
+:root {
+  /* ─── Families ─────────────────────────────────────────────────── */
+  --jbm:      "JetBrains Mono", "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace; /* @kind font */
+  --geist:    "Geist", "Geist Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;    /* @kind font */
+  --wordmark: "Monomaniac One", var(--jbm); /* @kind font */
+
+  --font-mono:    var(--jbm);    /* @kind font */
+  --font-body:    var(--geist);  /* @kind font */
+  --font-display: var(--jbm);    /* @kind font */
+
+  /* OpenType features. Geist gets its stylistic alternates (cv11/ss01);
+     mono gets slashed-zero + tabular. Apply --num-features on any ticking
+     number so columns don't jitter. */
+  --geist-features: "cv11" 1, "ss01" 1;        /* @kind font */
+  --mono-features:  "zero" 1, "ss02" 1, "calt" 0; /* @kind font */
+  --num-features:   "zero" 1, "tnum" 1;        /* @kind font */
+
+  /* ─── Type scale (px) ──────────────────────────────────────────── */
+  /* The dashboard runs dense: base body is 13.5px, labels 10–11px mono.
+     This is a console, not a marketing page — small, tight, legible. */
+  --fs-display: 52px;   /* hero / first-run title (clamps down on mobile) */
+  --fs-h1:      22px;   /* view title (route header) */
+  --fs-h2:      18px;   /* card / drawer title */
+  --fs-h3:      16px;   /* sub-heading */
+  --fs-lg:      15.5px; /* prominent row name (e.g. server name) */
+  --fs-body:    13.5px; /* default body / message text */
+  --fs-sm:      12.5px; /* dense rows, secondary */
+  --fs-mono:    12px;   /* mono identifiers in rows */
+  --fs-label:   11px;   /* uppercase section labels */
+  --fs-micro:   10px;   /* eyebrows, chip text, kbd */
+  --fs-nano:    9px;    /* tag pills, axis ticks */
+
+  /* ─── Weights ──────────────────────────────────────────────────── */
+  /* The system tops out at 600. There is no bold-700 in the UI — emphasis
+     comes from colour (amber / --fg) and from mono, not weight. */
+  --fw-regular: 400;   /* @kind font */
+  --fw-medium:  500;   /* @kind font */
+  --fw-semi:    600;   /* @kind font */
+
+  /* ─── Line-heights ─────────────────────────────────────────────── */
+  --lh-tight:   1.1;   /* @kind font */
+  --lh-heading: 1.25;  /* @kind font */
+  --lh-body:    1.5;   /* @kind font */
+  --lh-relaxed: 1.55;  /* @kind font */
+
+  /* ─── Letter-spacing ───────────────────────────────────────────── */
+  --ls-display:  -0.03em;  /* big mono titles tighten @kind font */
+  --ls-title:    -0.02em;  /* @kind font */
+  --ls-tight:    -0.01em;  /* @kind font */
+  --ls-normal:    0;       /* @kind font */
+  --ls-label:     0.1em;   /* UPPERCASE mono section labels open up @kind font */
+  --ls-eyebrow:   0.08em;  /* @kind font */
+}
+
+/* Utility classes mirrored from the product so specimen cards + kits can
+   use them directly. */
+.mono { font-family: var(--jbm); font-feature-settings: var(--mono-features); }
+.num  { font-variant-numeric: tabular-nums; font-feature-settings: var(--num-features); }

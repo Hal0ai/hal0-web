@@ -8,27 +8,76 @@ import nav from '../data/nav.json';
 export interface NavLink {
   label: string;
   href: string;
-  match?: string;
+  match?: string | string[];
   exclude?: string[];
+  sub?: NavLink[];
+  hidden?: boolean;
+  external?: boolean;
 }
 export interface SocialLink extends NavLink {
   id: 'github' | 'discord';
 }
+export interface FooterColumn {
+  heading: string;
+  links: NavLink[];
+}
 
 export const header = nav.header as NavLink[];
-export const footer = nav.footer as NavLink[];
+export const footerColumns = nav.footerColumns as FooterColumn[];
 export const social = nav.social as SocialLink[];
+export const footerBase = nav.footerBase as NavLink[];
+
+export const visibleHeader = header.filter((l) => !l.hidden);
 
 const matches = (path: string, prefix: string) =>
   path === prefix || path.startsWith(prefix.endsWith('/') ? prefix : prefix + '/');
 
 export function isActive(path: string, link: NavLink): boolean {
   if (!link.match) return false;
-  return matches(path, link.match) && !(link.exclude ?? []).some((e) => matches(path, e));
+  const prefixes = Array.isArray(link.match) ? link.match : [link.match];
+  return (
+    prefixes.some((p) => matches(path, p)) &&
+    !(link.exclude ?? []).some((e) => matches(path, e))
+  );
+}
+
+/**
+ * True when `path` and `href` refer to the exact same route, ignoring a
+ * trailing-slash difference (Astro's trailingSlash config, and manifest
+ * hrefs authored either way, can make href and Astro.url.pathname differ
+ * by only a trailing `/`).
+ */
+export function isExactMatch(path: string, href: string): boolean {
+  const norm = (s: string) => (s.length > 1 && s.endsWith('/') ? s.slice(0, -1) : s);
+  return norm(path) === norm(href);
+}
+
+/**
+ * The correct `aria-current` value for a nav link at the current path:
+ * `"page"` when the link's href IS the current page (exact match,
+ * trailing-slash tolerant), `"true"` when the link merely represents the
+ * active section (e.g. an umbrella link whose `match` covers the current
+ * path without being it), and `undefined` otherwise.
+ */
+export function ariaCurrent(path: string, link: NavLink): 'page' | 'true' | undefined {
+  if (isExactMatch(path, link.href)) return 'page';
+  return isActive(path, link) ? 'true' : undefined;
 }
 
 export function getSocial(id: SocialLink['id']): SocialLink {
   const link = social.find((s) => s.id === id);
   if (!link) throw new Error(`nav.json: missing social entry '${id}'`);
   return link;
+}
+
+/**
+ * Returns the `sub` list of the header entry whose section is active for
+ * `path`, restricted to visible header entries. Returns null when no
+ * visible header entry with a sub-nav is active for the given path.
+ */
+export function subFor(path: string): NavLink[] | null {
+  for (const link of visibleHeader) {
+    if (link.sub && isActive(path, link)) return link.sub;
+  }
+  return null;
 }
