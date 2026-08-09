@@ -62,11 +62,19 @@
 .site * {
 	box-sizing: border-box;
 }
-.site a {
+/* Only style anchors that carry no class of their own — comp components
+ * (hdr-nav a, drawer a.row, subnav a, ftr-col a, ...) set their own color
+ * and already win on specificity/source order; Tailwind-utility-styled
+ * marketing links (text-hal0-accent, text-hal0-fg-muted, hover:*) carry a
+ * class and are skipped entirely. `:not(:where([class]))` keeps that
+ * functional exclusion while contributing zero specificity, so unclassed
+ * comp anchors like `.hdr-nav a` (same nominal specificity) still win via
+ * normal source order instead of being outranked by this reset rule. */
+.site a:not(:where([class])) {
 	color: var(--fg);
 	text-decoration: none;
 }
-.site a:hover {
+.site a:not(:where([class])):hover {
 	color: var(--accent);
 }
 .site :focus-visible {
