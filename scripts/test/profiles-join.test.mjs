@@ -3,7 +3,7 @@
 // Unit tests for profile bench join and family derivation.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { familyOf, benchFor, familiesOf } from '../../src/lib/profiles-join.mjs';
+import { familyOf, benchFor, familiesOf, renderProfileToml, tintToml } from '../../src/lib/profiles-join.mjs';
 
 test('familyOf recognizes qwen3-coder prefix (before qwen3)', () => {
   assert.equal(familyOf('qwen3-coder-next-q4kxl'), 'qwen3-coder');
@@ -228,4 +228,61 @@ test('familiesOf handles mixed families', () => {
 
   const families = familiesOf(profile);
   assert.deepEqual(families, ['chadrock', 'hermes', 'qwopus', 'other']);
+});
+
+const SAMPLE_RECORD = {
+  schema: 1,
+  profile: {
+    slug: 'strix-mtp-max',
+    title: 'Max throughput on strix, MTP on',
+    summary: 'Speculative decode via MTP for the biggest wins on strix lanes.',
+    intent: 'coding',
+    author: 'lemond'
+  },
+  runner: {
+    kind: 'llama-server',
+    lane: 'rocm',
+    min_build: 'b9219'
+  },
+  model: {
+    id: 'chadrock3-6-35b-uncensored-mtp-strix-lean',
+    compatible: ['chadrock-35b-ace-saber']
+  },
+  args: { raw: '-ngl 99 -c 8192 -fa 1 --mtp on' },
+  history: [
+    { v: 2, date: '2026-06-19', note: 'bump context' },
+    { v: 1, date: '2026-05-01', note: 'initial' }
+  ]
+};
+
+test('renderProfileToml emits fields in hal0-profiles order', () => {
+  const toml = renderProfileToml(SAMPLE_RECORD);
+  assert.equal(toml.indexOf('schema'), 0);
+  assert.ok(toml.indexOf('[profile]') < toml.indexOf('[runner]'));
+  assert.ok(toml.indexOf('[runner]') < toml.indexOf('[model]'));
+  assert.ok(toml.indexOf('[model]') < toml.indexOf('[args]'));
+  assert.ok(toml.indexOf('[args]') < toml.indexOf('[[history]]'));
+  assert.ok(toml.includes('slug = "strix-mtp-max"'));
+  assert.ok(toml.includes('compatible = ["chadrock-35b-ace-saber"]'));
+  assert.ok(toml.includes('v = 2'));
+  assert.ok(toml.includes('date = "2026-06-19"'));
+  // second history entry present too
+  assert.ok(toml.includes('v = 1'));
+});
+
+test('renderProfileToml omits absent optional fields', () => {
+  const toml = renderProfileToml(SAMPLE_RECORD);
+  assert.ok(!toml.includes('quant'));
+  assert.ok(!toml.includes('image'));
+  assert.ok(!toml.includes('[requires]'));
+  assert.ok(!toml.includes('first_party'));
+});
+
+test('tintToml tints headers, keys, numeric and string values', () => {
+  const tokens = tintToml('[profile]\nslug = "strix-mtp-max"\nv = 2\nfirst_party = true\n');
+  assert.equal(tokens[0].cls, 'h');
+  assert.equal(tokens[1].cls, 'kv');
+  assert.equal(tokens[1].valueCls, 's');
+  assert.equal(tokens[2].valueCls, 'n');
+  assert.equal(tokens[3].valueCls, 'n');
 });
