@@ -378,6 +378,21 @@
 		border-bottom-color: var(--accent);
 	}
 
+	/* ── page head ────────────────────────────────────────────────
+	 * THE nav→content gap. One constant for every section page
+	 * (profiles, benchmarks, /kb, …) so the chrome always opens with
+	 * the same breathing room — do not redefine per page. */
+	.phead {
+		padding-block: 38px 22px;
+	}
+	.phead-row {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 24px;
+		flex-wrap: wrap;
+	}
+
 	/* ── footer ──────────────────────────────────────────────────────
 	 * `&.ftr` matters: on Starlight pages the footer element itself
 	 * carries `class="site ftr"` with no `.site` ancestor, so a plain

@@ -224,24 +224,18 @@ const description =
           </div>
         </article>
       ))}
-    </div>
 
-    <div style="margin-top: 48px">
-      <span class="eyebrow">component spec</span>
-      <h2 class="site-h2" style="margin: 10px 0 16px">profile card anatomy</h2>
-      <div class="anat">
-        <ol>
-          <li><b>1</b>eyebrow: version and lane, so the card states its provenance before anything else.</li>
-          <li><b>2</b>slug in mono at 21px — the thing you type into the CLI, and the card's biggest element.</li>
-          <li><b>3</b>one line of description. The full summary, flags and config live in the drawer, not here.</li>
-          <li><b>4</b>the models this profile actually runs, as chips: family in amber, short model name after it. This is what people scan for, so it sits above the numbers.</li>
-          <li><b>5</b>decode and prefill from the profile's own measured runs — never a number none of its runs produced. Omitted entirely when nothing in the roster matches.</li>
-          <li><b>6</b>a mono footnote naming the exact model and lane the metrics came from. Metrics without this line are unfalsifiable.</li>
-          <li><b>7</b>attribution slot — avatar and handle, or the amber first-party chip — and the affordance that opens the drawer.</li>
-          <li><b>8</b>2px filament along the bottom edge, brightening on hover. Same motif as the header and the OG cards.</li>
-        </ol>
-        <p class="site-sm">Cards stay one column on mobile at full width; the model chips wrap and the metric row keeps its columns.</p>
-      </div>
+      <a class="pcard pcard-empty" href={CONTRIBUTING_URL} rel="noopener">
+        <div class="pc-top">
+          <span class="eyebrow">your profile here</span>
+        </div>
+        <h3 class="pc-title mono">&lt;your-slug&gt;</h3>
+        <p class="site-sm">
+          Found a flag string that makes your box sing? Version it, PR it, and
+          it ships here with the numbers it produced.
+        </p>
+        <span class="pc-open">submit a profile →</span>
+      </a>
     </div>
   </div>
 
@@ -348,16 +342,8 @@ const description =
 </MarketingLayout>
 
 <style>
-  .phead-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
-  }
-  .phead {
-    padding-block: 34px 20px;
-  }
+  /* .phead / .phead-row spacing is global (src/styles/site.css) so every
+   * section page opens with the same breathing room under the chrome. */
   .pgrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
@@ -539,31 +525,19 @@ const description =
     flex-shrink: 0;
     padding-top: 6px;
   }
-  .anat {
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 24px;
-    align-items: start;
+  /* Empty template card — the standing invitation at the end of the grid. */
+  .pcard-empty {
+    border-style: dashed;
+    background: transparent;
+    text-decoration: none;
+    justify-content: space-between;
   }
-  .anat ol {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    font-family: var(--jbm);
-    font-size: 11.5px;
+  .pcard-empty .pc-title {
     color: var(--fg-3);
   }
-  .anat ol b {
+  .pcard-empty:hover .pc-title,
+  .pcard-empty:hover .pc-open {
     color: var(--accent);
-    margin-right: 8px;
-  }
-  @media (max-width: 900px) {
-    .anat {
-      grid-template-columns: 1fr;
-    }
   }
   [data-profile-card][hidden] {
     display: none;

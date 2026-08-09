@@ -42,16 +42,8 @@
 /* ── 1. /kb landing (marketing page, inside `.site`) ── */
 
 .site {
-	.phead {
-		padding-block: 38px 22px;
-	}
-	.phead-row {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 24px;
-		flex-wrap: wrap;
-	}
+	/* .phead / .phead-row now global in site.css — this file was their
+	 * origin; the values there (38px 22px) are the ones this page set. */
 	.surface-tag {
 		display: inline-flex;
 		align-items: center;
