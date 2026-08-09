@@ -5,12 +5,13 @@
   "scripts": {
     "dev": "node scripts/sync-changelog.mjs && node scripts/sync-profiles.mjs && astro dev",
     "start": "astro dev",
-    "prebuild": "node scripts/sync-changelog.mjs && node scripts/sync-profiles.mjs",
+    "prebuild": "node scripts/sync-changelog.mjs && node scripts/sync-profiles.mjs && node scripts/build-og.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "sync:changelog": "node scripts/sync-changelog.mjs",
     "sync:profiles": "node scripts/sync-profiles.mjs",
+    "build:og": "node scripts/build-og.mjs",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
     "test": "node --test 'scripts/test/**/*.mjs'"
   },
@@ -33,7 +34,10 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@fontsource/geist-sans": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
     "playwright": "^1.50.1",
+    "satori": "^0.29.0",
     "typescript": "^6.0.3"
   },
   "overrides": {
