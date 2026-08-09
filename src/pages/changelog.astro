@@ -67,35 +67,33 @@ const description =
 
 <MarketingLayout title="Changelog — hal0" description={description}>
   <div class="site">
-    <div class="wrap wide phead">
-      <div class="phead-row">
-        <div>
-          <span class="surface-tag">release history &middot; derived from CHANGELOG.md</span>
-          <h1 class="site-h1" style="margin: 12px 0 10px;">changelog</h1>
-          <p class="site-body" style="max-width: 58ch;">
-            Every hal0 release, newest first — breaking changes, new features, and fixes, straight
-            from
-            <a class="amber" href="https://github.com/hal0ai/hal0/blob/main/CHANGELOG.md" rel="noopener">CHANGELOG.md</a>.
-            No hand-maintained second copy to drift.
-          </p>
-        </div>
-      </div>
-    </div>
-
     <div class="clshell">
-        <nav class="clside" data-cl-side aria-label="Releases">
-          {versions.map((v) => (
-            <a href={`#${v.slug}`}>
-              <span class="clside-version">
-                {v.version}
-                {v.prerelease && <span class="clside-dot" aria-hidden="true" />}
-              </span>
-              {v.date && <span class="clside-date">{v.date}</span>}
-            </a>
-          ))}
-        </nav>
+        <aside class="clpane">
+          <nav class="clside" data-cl-side aria-label="Releases">
+            <span class="label clside-label">releases</span>
+            {versions.map((v) => (
+              <a href={`#${v.slug}`}>
+                <span class="clside-version">
+                  {v.version}
+                  {v.prerelease && <span class="clside-dot" aria-hidden="true" />}
+                </span>
+                {v.date && <span class="clside-date">{v.date}</span>}
+              </a>
+            ))}
+          </nav>
+        </aside>
 
         <div class="cl-content">
+          <header class="cl-head">
+            <span class="surface-tag">release history &middot; derived from CHANGELOG.md</span>
+            <h1 class="site-h1" style="margin: 12px 0 10px;">changelog</h1>
+            <p class="site-body" style="max-width: 58ch;">
+              Every hal0 release, newest first — breaking changes, new features, and fixes, straight
+              from
+              <a class="amber" href="https://github.com/hal0ai/hal0/blob/main/CHANGELOG.md" rel="noopener">CHANGELOG.md</a>.
+              No hand-maintained second copy to drift.
+            </p>
+          </header>
           <section class="cl-get">
             <h2 class="site-h2" style="margin: 0 0 4px;">Get hal0</h2>
             <p class="site-sm" style="margin-bottom: 16px;">
@@ -165,7 +163,7 @@ const description =
                   ) : (
                     <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">stable</span>
                   )}
-                  {v.date && <span class="cl-entry-date">{v.date}</span>}
+                  {v.date && <span class="cl-entry-date">{v.date}{v.dateNote && ` · ${v.dateNote}`}</span>}
                   <a class="cl-entry-gh" href={RELEASES_URL} rel="noopener">on github &#8599;</a>
                 </div>
 
@@ -211,20 +209,29 @@ const description =
   .clshell {
     display: grid;
     grid-template-columns: 300px 1fr;
-    padding-block: 28px 64px;
+  }
+  /* The pane column — mirrors Starlight's .sidebar-pane (full-height
+   * hairline on the right, sidebar bg), so the rail reads as the same
+   * chrome as a docs/KB article's sidebar, not a floating list. */
+  .clpane {
+    border-right: 1px solid var(--line);
+    background: var(--bg);
   }
   .clside {
     position: sticky;
-    top: 78px;
-    align-self: start;
+    top: 112px;
     font-family: var(--jbm);
     font-size: 11.5px;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: calc(100vh - 100px);
+    max-height: calc(100vh - 140px);
     overflow-y: auto;
-    padding-inline: 1.5rem;
+    padding: 28px 1.5rem 24px;
+  }
+  .clside-label {
+    padding-left: 10px;
+    margin-bottom: 8px;
   }
   .clside a {
     display: flex;
@@ -263,6 +270,10 @@ const description =
   .cl-content {
     max-width: 68ch;
     padding-inline: 1.5rem;
+    padding-block: 28px 64px;
+  }
+  .cl-head {
+    padding-bottom: 28px;
   }
 
   /* ── "Get hal0" block — the old /releases page's headline + install/
@@ -455,7 +466,7 @@ const description =
     .clshell {
       grid-template-columns: 1fr;
     }
-    .clside {
+    .clpane {
       display: none;
     }
   }

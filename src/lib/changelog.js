@@ -83,7 +83,8 @@ export function isPrerelease(version) {
  * @typedef {Object} ChangelogVersion
  * @property {string} version
  * @property {string} slug
- * @property {string|null} date
+ * @property {string|null} date       ISO date only (annotation split off)
+ * @property {string|null} dateNote   parenthesised header annotation, if any
  * @property {boolean} prerelease
  * @property {boolean} stable
  * @property {boolean} [gaPreview]
@@ -119,9 +120,16 @@ export function parseChangelog(raw) {
       const lines = block.split('\n');
       const header = lines.shift() ?? '';
       // ## [v0.5.1-alpha.1] — 2026-06-15
+      // Some headers annotate the date: "## [1.0.0-rc.1] — 2026-08-01
+      // (R5 · the rework release)". Split the ISO date from the note so
+      // the sidebar's date column never wraps into free text; the note
+      // rides separately as `dateNote`.
       const m = header.match(/^##\s*\[([^\]]+)\]\s*(?:[—–-]\s*(.+))?$/);
       const version = m?.[1]?.trim() ?? header.replace(/^##\s*/, '').trim();
-      const date = m?.[2]?.trim() ?? null;
+      const dateRaw = m?.[2]?.trim() ?? null;
+      const dm = dateRaw?.match(/^(\d{4}-\d{2}-\d{2})\s*(?:\((.+)\))?\s*$/);
+      const date = dm ? dm[1] : dateRaw;
+      const dateNote = dm?.[2]?.trim() ?? null;
 
       const rest = lines.join('\n');
       const introMd = rest.split(/\n### /)[0].trim();
@@ -139,6 +147,7 @@ export function parseChangelog(raw) {
         version,
         slug: version.replace(/[^a-z0-9.-]/gi, '-').toLowerCase(),
         date,
+        dateNote,
         prerelease: pre,
         stable: !pre,
         intro: introMd ? marked.parse(introMd) : '',
