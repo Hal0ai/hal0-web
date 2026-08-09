@@ -1,0 +1,35 @@
+/* hal0 design tokens — the single source of truth for brand values.
+ *
+ * Consumed by global.css (site-wide) and synced verbatim into the
+ * Discourse theme component. Keep this file dependency-free: plain
+ * CSS custom properties on :root, nothing Tailwind- or Starlight-
+ * specific. Change brand values HERE and nowhere else. */
+
+:root {
+	/* Brand */
+	--hal0-accent:        #ffb000; /* sodium amber */
+	--hal0-accent-hover:  #ffc533;
+	--hal0-accent-muted:  #7a5500;
+	--hal0-accent-glow:   rgba(255, 176, 0, 0.18);
+
+	/* Dark surfaces (default theme) */
+	--hal0-bg:           #0a0a0a;
+	--hal0-bg-elevated: #141414;
+	--hal0-bg-sunken:   #050505;
+	--hal0-fg:          #f5f5f4;
+	--hal0-fg-muted:    #c8c2bd; /* ≥7:1 on bg-elevated */
+	--hal0-fg-dim:      #a3a09c; /* ≥4.5:1 on bg-elevated */
+	--hal0-border:      #262626;
+	--hal0-border-strong: #3a3a3a;
+
+	/* Type stack — 'JBM Fallback' / 'Geist Fallback' are local size-adjusted
+	 * faces (see fonts.css) so the swap from system → webfont is metric-
+	 * neutral and CLS stays low. */
+	--hal0-font-mono:    'JetBrains Mono', 'JBM Fallback', ui-monospace, 'SF Mono', Menlo, monospace;
+	--hal0-font-body:    'Geist Variable', 'Geist', 'Geist Fallback', system-ui, -apple-system, BlinkMacSystemFont,
+	                      'Segoe UI', Roboto, sans-serif;
+	--hal0-font-display: var(--hal0-font-mono);
+
+	/* Motion */
+	--hal0-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
