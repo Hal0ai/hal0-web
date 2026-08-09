@@ -769,3 +769,151 @@ export function evalTable(rows, evals) {
 
   return { tasks, rows: outRows, hasEvals: true };
 }
+
+// ── run drawer decode-history graph ────────────────────────────────────
+//
+// Ported from the hal0 dashboard's Benchmarks.tsx (Sparkline/laneColor/
+// laneMarkerFor) — visual language only, not the React code. Two
+// conventions from there are load-bearing and preserved exactly:
+//  - lane identity is color EVERYWHERE plus a fixed marker shape (never
+//    color alone) — circle=rocm, square=vulkan_radv, triangle for anything
+//    else so an unexpected lane still shows up rather than vanishing.
+//  - decode is a solid line, prefill a dashed line in the SAME lane color,
+//    each on its OWN vertical scale (prefill runs 10-100x decode's
+//    magnitude on this hardware; a shared scale would flatten decode to a
+//    near-flat line).
+//
+// The lane hexes below are hardcoded rather than reusing the site's
+// --dev-rocm/--dev-vulkan tokens: the dashboard's own convention (rocm =
+// blue, vulkan_radv = gold) diverges from what those tokens mean on this
+// site (--dev-rocm is red, --dev-vulkan is blue — see tokens.css) — porting
+// the dashboard's graph exactly as designed there takes precedence over
+// reusing tokens that carry a different meaning here. Everything else in
+// the drawer keeps using the site's existing --dev-rocm/--dev-vulkan chip
+// colors; only this graph uses these.
+
+const LANE_GRAPH_COLOR = { rocm: '#7fb8ff', vulkan_radv: '#f9d884' };
+const LANE_MARKER_SHAPE = { rocm: 'circle', vulkan_radv: 'square' };
+
+/**
+ * @param {string|null|undefined} lane
+ * @returns {string}
+ */
+export function laneGraphColor(lane) {
+  return (lane && LANE_GRAPH_COLOR[lane]) || '#9c9c95';
+}
+
+/**
+ * @param {string|null|undefined} lane
+ * @returns {'circle'|'square'|'triangle'}
+ */
+export function laneMarkerShape(lane) {
+  return (lane && LANE_MARKER_SHAPE[lane]) || 'triangle';
+}
+
+/**
+ * Parse the proposed `GET /v1/history?model=<id>&lane=<lane>` response (an
+ * adapter-only endpoint today — no production worker route yet; see
+ * bench-live-adapter.mjs's /v1/history passthrough and this repo's PR body
+ * for the proposed worker contract addition) into a validated points array
+ * for the drawer's decode-history graph.
+ *
+ * Filtered server-side by DISPLAY DIMS (model, lane — kind='tg', outcome
+ * 'ok') rather than by cell_key: a cell_key is a content-addressed
+ * identity, so an engine/image provenance bump between two sweeps forks the
+ * key and turns what should be one continuous history into several
+ * one-point series — the hal0 dashboard hit exactly this and moved its own
+ * trend view off cell_key for the same reason (see Benchmarks.tsx's
+ * sweepSeries). This function only validates the already-filtered response
+ * shape; it does no dim filtering of its own.
+ *
+ * Malformed points (neither metric present as a real number) are dropped,
+ * never invented; `ts` is passed through as-is (an opaque sort/display key,
+ * not necessarily parsed as a date).
+ *
+ * @param {*} json
+ * @returns {Array<{ts: *, decode: number|null, prefill: number|null, lane: string|null}>}
+ */
+export function normalizeHistoryPoints(json) {
+  const points = Array.isArray(json?.points) ? json.points : [];
+  const out = [];
+  for (const p of points) {
+    if (!p || typeof p !== 'object') continue;
+    const decode = typeof p.decode_ts_med === 'number' && !Number.isNaN(p.decode_ts_med) ? p.decode_ts_med : null;
+    const prefill = typeof p.prefill_ts_med === 'number' && !Number.isNaN(p.prefill_ts_med) ? p.prefill_ts_med : null;
+    if (decode === null && prefill === null) continue;
+    out.push({ ts: p.ts ?? null, decode, prefill, lane: typeof p.lane === 'string' ? p.lane : null });
+  }
+  return out;
+}
+
+/**
+ * @typedef {Object} SparkPoint
+ * @property {number} x
+ * @property {number} y
+ * @property {number} v
+ */
+
+/**
+ * Pure SVG geometry for the drawer's decode-history sparkline — no DOM, no
+ * markup, just the numbers a caller turns into an <svg>. Ported from the
+ * dashboard's Sparkline component:
+ *  - 0 usable points on both metrics → `{empty: true}` (caller omits the
+ *    graph section entirely — no chart, no placeholder).
+ *  - exactly 1 point → `{single: true, decode, prefill}`: a lone sweep still
+ *    gets plotted (a centered marker), not withheld until a second sweep
+ *    exists.
+ *  - 2+ points → full path/marker geometry, decode and prefill each scaled
+ *    independently (see this section's header comment).
+ *
+ * @param {Array<{decode: number|null, prefill: number|null}>} points
+ * @param {{width?: number, height?: number, pad?: number}} [opts]
+ * @returns {{width:number,height:number,empty:true}
+ *  | {width:number,height:number,single:true,decode:SparkPoint|null,prefill:SparkPoint|null}
+ *  | {width:number,height:number,decodePath:string,prefillPath:string,decodeMarkers:SparkPoint[],prefillMarkers:SparkPoint[],decodeMax:number|null,decodeMin:number|null}}
+ */
+export function sparklineGeometry(points, opts = {}) {
+  const width = opts.width ?? 260;
+  const height = opts.height ?? 54;
+  const pad = opts.pad ?? 6;
+  const rows = points ?? [];
+  const decodePts = rows.map((p, i) => ({ i, v: p.decode })).filter((p) => typeof p.v === 'number');
+  const prefillPts = rows.map((p, i) => ({ i, v: p.prefill })).filter((p) => typeof p.v === 'number');
+
+  if (decodePts.length === 0 && prefillPts.length === 0) {
+    return { width, height, empty: true };
+  }
+
+  if (rows.length === 1) {
+    const centered = (pts) => (pts.length === 1 ? { x: width / 2, y: height / 2, v: pts[0].v } : null);
+    return { width, height, single: true, decode: centered(decodePts), prefill: centered(prefillPts) };
+  }
+
+  const n = rows.length;
+  const x = (i) => pad + (i * (width - 2 * pad)) / (n - 1);
+  const scaleFor = (vals) => {
+    if (!vals.length) return null;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const span = max - min || 1;
+    return { min, max, y: (v) => height - pad - ((v - min) / span) * (height - 2 * pad) };
+  };
+  const decodeScale = scaleFor(decodePts.map((p) => p.v));
+  const prefillScale = scaleFor(prefillPts.map((p) => p.v));
+  const path = (pts, scale) =>
+    scale ? pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${scale.y(p.v).toFixed(1)}`).join(' ') : '';
+
+  return {
+    width,
+    height,
+    decodePath: decodeScale ? path(decodePts, decodeScale) : '',
+    // Prefill only draws as a line with 2+ of its own points — a single
+    // prefill sample among many decode samples has no line to draw, only
+    // the marker (decodeMarkers/prefillMarkers below still carry it).
+    prefillPath: prefillScale && prefillPts.length >= 2 ? path(prefillPts, prefillScale) : '',
+    decodeMarkers: decodeScale ? decodePts.map((p) => ({ x: x(p.i), y: decodeScale.y(p.v), v: p.v })) : [],
+    prefillMarkers: prefillScale ? prefillPts.map((p) => ({ x: x(p.i), y: prefillScale.y(p.v), v: p.v })) : [],
+    decodeMax: decodeScale ? decodeScale.max : null,
+    decodeMin: decodeScale ? decodeScale.min : null,
+  };
+}

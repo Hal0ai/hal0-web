@@ -17,6 +17,10 @@ import {
   liveAgeMinutes,
   liveBadgeText,
   snapshotBadgeText,
+  laneGraphColor,
+  laneMarkerShape,
+  normalizeHistoryPoints,
+  sparklineGeometry,
   selectInitialRows,
   evalTable,
   evalScoreBucket,
@@ -1073,4 +1077,133 @@ test('snapshotBadgeText: "unreachable" and "invalid" reasons render distinct, ho
   const invalid = snapshotBadgeText('2026-06-19', 'invalid');
   assert.equal(invalid.text, 'snapshot from 2026-06-19 · live data invalid');
   assert.match(invalid.title, /could not render/);
+});
+
+// --- laneGraphColor / laneMarkerShape --------------------------------------
+
+test('laneGraphColor: known lanes get the dashboard-ported hexes (rocm blue, vulkan_radv gold)', () => {
+  assert.equal(laneGraphColor('rocm'), '#7fb8ff');
+  assert.equal(laneGraphColor('vulkan_radv'), '#f9d884');
+});
+
+test('laneGraphColor: unknown/null lane gets a neutral fallback, never invented', () => {
+  assert.equal(laneGraphColor('default'), '#9c9c95');
+  assert.equal(laneGraphColor(null), '#9c9c95');
+  assert.equal(laneGraphColor(undefined), '#9c9c95');
+});
+
+test('laneMarkerShape: circle=rocm, square=vulkan_radv, triangle for anything else (never invisible)', () => {
+  assert.equal(laneMarkerShape('rocm'), 'circle');
+  assert.equal(laneMarkerShape('vulkan_radv'), 'square');
+  assert.equal(laneMarkerShape('default'), 'triangle');
+  assert.equal(laneMarkerShape(null), 'triangle');
+});
+
+// --- normalizeHistoryPoints -------------------------------------------------
+
+test('normalizeHistoryPoints: keeps points with at least one real metric', () => {
+  const points = normalizeHistoryPoints({
+    points: [
+      { ts: '2026-08-01', decode_ts_med: 50.2, prefill_ts_med: 900.1, lane: 'rocm' },
+      { ts: '2026-08-05', decode_ts_med: 52.0, lane: 'rocm' },
+    ],
+  });
+  assert.equal(points.length, 2);
+  assert.deepEqual(points[0], { ts: '2026-08-01', decode: 50.2, prefill: 900.1, lane: 'rocm' });
+  assert.deepEqual(points[1], { ts: '2026-08-05', decode: 52.0, prefill: null, lane: 'rocm' });
+});
+
+test('normalizeHistoryPoints: drops points with neither metric as a real number, never invents', () => {
+  const points = normalizeHistoryPoints({
+    points: [
+      { ts: 'a', decode_ts_med: null, prefill_ts_med: null },
+      { ts: 'b', decode_ts_med: 'not-a-number' },
+      { ts: 'c' },
+      null,
+      { ts: 'd', decode_ts_med: 40 },
+    ],
+  });
+  assert.deepEqual(points.map((p) => p.ts), ['d']);
+});
+
+test('normalizeHistoryPoints: tolerates a missing/malformed points array', () => {
+  assert.deepEqual(normalizeHistoryPoints({}), []);
+  assert.deepEqual(normalizeHistoryPoints({ points: 'not-an-array' }), []);
+  assert.deepEqual(normalizeHistoryPoints(null), []);
+  assert.deepEqual(normalizeHistoryPoints(undefined), []);
+});
+
+test('normalizeHistoryPoints: a non-string lane is dropped to null rather than kept as garbage', () => {
+  const points = normalizeHistoryPoints({ points: [{ ts: 'a', decode_ts_med: 1, lane: 42 }] });
+  assert.equal(points[0].lane, null);
+});
+
+// --- sparklineGeometry -------------------------------------------------
+
+test('sparklineGeometry: no usable points on either metric → empty', () => {
+  const geo = sparklineGeometry([{ decode: null, prefill: null }]);
+  assert.deepEqual(geo, { width: 260, height: 54, empty: true });
+});
+
+test('sparklineGeometry: empty input array → empty', () => {
+  assert.deepEqual(sparklineGeometry([]), { width: 260, height: 54, empty: true });
+});
+
+test('sparklineGeometry: a single point is still plotted (centered marker), not withheld', () => {
+  const geo = sparklineGeometry([{ decode: 50, prefill: 900 }]);
+  assert.equal(geo.single, true);
+  assert.deepEqual(geo.decode, { x: 130, y: 27, v: 50 });
+  assert.deepEqual(geo.prefill, { x: 130, y: 27, v: 900 });
+});
+
+test('sparklineGeometry: a single point with only one metric leaves the other null', () => {
+  const geo = sparklineGeometry([{ decode: 50, prefill: null }]);
+  assert.ok(geo.decode);
+  assert.equal(geo.prefill, null);
+});
+
+test('sparklineGeometry: 2+ points produce a decode path, markers, and a min/max scale', () => {
+  const geo = sparklineGeometry([
+    { decode: 40, prefill: 800 },
+    { decode: 60, prefill: 900 },
+    { decode: 50, prefill: 810 },
+  ]);
+  assert.match(geo.decodePath, /^M6\.0,/);
+  assert.equal(geo.decodeMarkers.length, 3);
+  assert.equal(geo.decodeMin, 40);
+  assert.equal(geo.decodeMax, 60);
+  // decode and prefill markers carry their own raw values (v), never mixed —
+  // the shared `v` is what a caller renders as the plotted number/tooltip.
+  assert.deepEqual(geo.decodeMarkers.map((m) => m.v), [40, 60, 50]);
+  assert.deepEqual(geo.prefillMarkers.map((m) => m.v), [800, 900, 810]);
+  // decode and prefill scale independently: prefill's 3rd point (810) sits
+  // near ITS series' min (800), while decode's 3rd point (50) sits at the
+  // midpoint of ITS series (40-60) — a shared scale would put both at the
+  // same normalized position; independent scales don't.
+  assert.notEqual(geo.decodeMarkers[2].y, geo.prefillMarkers[2].y);
+});
+
+test('sparklineGeometry: prefill draws a path only with 2+ of its own points (a lone prefill sample still gets a marker)', () => {
+  const geo = sparklineGeometry([
+    { decode: 40, prefill: 800 },
+    { decode: 60, prefill: null },
+  ]);
+  assert.equal(geo.prefillPath, '');
+  assert.equal(geo.prefillMarkers.length, 1);
+});
+
+test('sparklineGeometry: flat series (all equal values) doesn\'t divide by zero — span falls back to 1', () => {
+  const geo = sparklineGeometry([
+    { decode: 50, prefill: null },
+    { decode: 50, prefill: null },
+  ]);
+  assert.ok(Number.isFinite(geo.decodeMarkers[0].y));
+  assert.ok(Number.isFinite(geo.decodeMarkers[1].y));
+});
+
+test('sparklineGeometry: respects custom width/height/pad', () => {
+  const geo = sparklineGeometry([{ decode: 1, prefill: null }], { width: 100, height: 20, pad: 2 });
+  assert.equal(geo.width, 100);
+  assert.equal(geo.height, 20);
+  assert.deepEqual(geo.decode, { x: 50, y: 10, v: 1 });
 });

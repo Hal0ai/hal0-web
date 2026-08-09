@@ -33,6 +33,10 @@ import {
   liveAgeMinutes,
   liveBadgeText,
   snapshotBadgeText,
+  laneGraphColor,
+  laneMarkerShape,
+  normalizeHistoryPoints,
+  sparklineGeometry,
   evalTable,
   evalScoreBucket,
   selectInitialRows,
@@ -108,6 +112,13 @@ const API_URL = `${API_BASE}/v1/roster`;
 const EVALS_API_URL = `${API_BASE}/v1/evals`;
 const RUN_API_BASE = `${API_BASE}/v1/runs`;
 const BUNDLE_API_BASE = `${API_BASE}/v1/bundles`;
+// /v1/history is NOT part of the production worker contract yet — proposed
+// addition, currently served only by the dev-preview adapter
+// (bench-live-adapter.mjs) as a passthrough to CT105's own
+// /api/benchmarks/history. See fetchRunHistory: a 404/network failure here
+// degrades silently (the graph section is simply never inserted), not an
+// error state.
+const HISTORY_API_BASE = `${API_BASE}/v1/history`;
 // The roster live-upgrade fetch is the visible, above-the-fold promise (the
 // leaderboard itself) — a tight 4s budget keeps a slow/unreachable API from
 // leaving the page looking stalled. Evals and the run drawer's supplementary
@@ -296,7 +307,7 @@ function drawerMetricsHtml(metrics: NonNullable<DrawerModel>['metrics']): string
   </div>`;
 }
 
-function drawerIdentityHtml(identity: NonNullable<DrawerModel>['identity']): string {
+function drawerIdentityHtml(identity: NonNullable<DrawerModel>['identity'], cellKey: string | null): string {
   const workload =
     identity.workload != null
       ? `${escapeHtml(identity.workload)}${identity.depth != null ? ` · depth ${identity.depth}` : ''}`
@@ -313,7 +324,16 @@ function drawerIdentityHtml(identity: NonNullable<DrawerModel>['identity']): str
     ['params', identity.params ? escapeHtml(identity.params) : '—'],
     ['hf repo', identity.hfRepo ? escapeHtml(identity.hfRepo) : '—'],
   ];
-  return `<section>
+  // cell_key (the dedup key a run's records are keyed by — see
+  // runDetail's header comment) truncated to ~16 chars per the dashboard's
+  // own RunDetail chip convention (Benchmarks.tsx), full value in `title`
+  // since it's the thing "link to this run" / the bundle API actually key
+  // off of.
+  if (cellKey) {
+    const short = cellKey.length > 16 ? `${cellKey.slice(0, 16)}…` : cellKey;
+    rows.push(['cell', `<span title="${escapeHtml(cellKey)}">${escapeHtml(short)}</span>`]);
+  }
+  return `<section id="run-drawer-identity">
     <h4 class="label">identity</h4>
     <dl class="kv">${rows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${v}</dd>`).join('')}</dl>
   </section>`;
@@ -342,11 +362,81 @@ function drawerThrottleHtml(): string {
   </section>`;
 }
 
-// drawerHistoryHtml/sparkSvg (history sparkline section) were removed as
-// dead code: drawerModel.hasHistory is only ever true when a row carries
-// real `history` data, and no data path populates it yet (see bench-view.mjs
-// BenchRow typedef — "history: never populated from real sources yet").
-// Re-add both once the live API surfaces per-run history.
+// drawerModel.hasHistory/row.history stay unused — no data path populates
+// BenchRow.history yet (see bench-view.mjs's typedef). The graph below is a
+// SEPARATE data path: a per-request fetch of the proposed
+// `/v1/history?model=&lane=` endpoint (see fetchRunHistory), not
+// drawerModel's `history` field.
+
+const SPARK_ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const svgEsc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => SPARK_ESC_MAP[c]);
+
+// Marker shape ported verbatim from the dashboard's Marker component —
+// circle=rocm, square=vulkan_radv, triangle for anything else (see
+// laneMarkerShape's header comment: color is never the only lane signal).
+function markerSvg(shape: 'circle' | 'square' | 'triangle', cx: number, cy: number, r: number, fill: string, title: string): string {
+  const t = `<title>${svgEsc(title)}</title>`;
+  if (shape === 'square') {
+    return `<rect x="${(cx - r).toFixed(1)}" y="${(cy - r).toFixed(1)}" width="${(r * 2).toFixed(1)}" height="${(r * 2).toFixed(1)}" fill="${fill}">${t}</rect>`;
+  }
+  if (shape === 'triangle') {
+    const pts = `${cx.toFixed(1)},${(cy - r * 1.3).toFixed(1)} ${(cx - r * 1.15).toFixed(1)},${(cy + r).toFixed(1)} ${(cx + r * 1.15).toFixed(1)},${(cy + r).toFixed(1)}`;
+    return `<polygon points="${pts}" fill="${fill}">${t}</polygon>`;
+  }
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}">${t}</circle>`;
+}
+
+// Ported from the dashboard's Sparkline component (see bench-view.mjs's
+// sparklineGeometry for the full rationale): decode solid, prefill dashed,
+// both in the lane's color, lane identity backed by marker shape too. Every
+// interpolation here is a number that already passed
+// normalizeHistoryPoints'/sparklineGeometry's own validation (never a raw
+// API string), consistent with the rest of the drawer's escape-everything
+// discipline — svgEsc still wraps the one text value (the tooltip title).
+function drawerGraphHtml(geometry: ReturnType<typeof sparklineGeometry>, lane: string | null): string {
+  const color = laneGraphColor(lane);
+  const shape = laneMarkerShape(lane);
+  const { width, height } = geometry;
+  let body: string;
+  if ('empty' in geometry) {
+    return ''; // caller never inserts this — see fetchRunHistory
+  } else if ('single' in geometry) {
+    const parts: string[] = [];
+    if (geometry.prefill) {
+      parts.push(markerSvg(shape, geometry.prefill.x, geometry.prefill.y, 4, 'none', `prefill ${fmtNum(geometry.prefill.v)} t/s`));
+    }
+    if (geometry.decode) {
+      parts.push(markerSvg(shape, geometry.decode.x, geometry.decode.y, 2.5, color, `decode ${fmtNum(geometry.decode.v)} t/s`));
+      parts.push(
+        `<text x="${(width / 2).toFixed(1)}" y="${(height / 2 - 9).toFixed(1)}" text-anchor="middle" fill="var(--fg-3)" font-size="9">${svgEsc(geometry.decode.v.toFixed(1))}</text>`,
+      );
+    }
+    body = parts.join('');
+  } else {
+    const decodeMarkers = geometry.decodeMarkers
+      .map((m) => markerSvg(shape, m.x, m.y, 1.7, color, `${fmtNum(m.v)} t/s`))
+      .join('');
+    const prefillPath = geometry.prefillPath
+      ? `<path d="${geometry.prefillPath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.75" />`
+      : '';
+    const decodePath = geometry.decodePath ? `<path d="${geometry.decodePath}" fill="none" stroke="${color}" stroke-width="1.5" />` : '';
+    const scaleLabels =
+      geometry.decodeMax != null && geometry.decodeMin != null
+        ? `<text x="6" y="10" fill="var(--fg-4)" font-size="8">${svgEsc(fmtNum(geometry.decodeMax))}</text><text x="6" y="${(height - 1).toFixed(1)}" fill="var(--fg-4)" font-size="8">${svgEsc(fmtNum(geometry.decodeMin))}</text>`
+        : '';
+    body = `${prefillPath}${decodePath}${decodeMarkers}${scaleLabels}`;
+  }
+  return `<section id="run-drawer-graph">
+    <h4 class="label">decode history${lane ? ` · ${escapeHtml(lane)} lane` : ''}</h4>
+    <div class="well" style="padding:8px 10px">
+      <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" role="img" aria-label="decode throughput history">${body}</svg>
+    </div>
+  </section>`;
+}
+
+function fmtNum(v: number): string {
+  return Number.isFinite(v) ? v.toFixed(1) : '—';
+}
 
 // Profile-TOML download is dropped: the API's GET /v1/runs/{run_id} payload
 // carries `{run_id, records, bundle: {id, title, notes}}` — no profile
@@ -371,7 +461,7 @@ function drawerProvenanceHtml(model: NonNullable<DrawerModel>): string {
 }
 
 function drawerBodyHtml(model: NonNullable<DrawerModel>): string {
-  const parts = [drawerMetricsHtml(model.metrics), drawerIdentityHtml(model.identity)];
+  const parts = [drawerMetricsHtml(model.metrics), drawerIdentityHtml(model.identity, model.cellKey)];
   if (model.mode === 'api') {
     parts.push(drawerFlagsHtml(model.flagString));
     if (model.flagged) parts.push(drawerThrottleHtml());
@@ -821,6 +911,9 @@ function init() {
     if (model.mode === 'api' && model.runId) {
       void resolveBundleLink(model.runId, model.cellKey);
     }
+    if (model.mode === 'api' && model.identity.lane) {
+      void fetchRunHistory(id, model.identity.lane);
+    }
 
     if (opts.pushState !== false) {
       const url = new URL(window.location.href);
@@ -880,6 +973,41 @@ function init() {
         statusEl.textContent = runFailureMessage(null);
         statusEl.hidden = false;
       }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // Decode-history graph: fetches the proposed /v1/history?model=&lane=
+  // endpoint (adapter-only today, see HISTORY_API_BASE's header comment)
+  // and, only on a fully successful + non-empty response, inserts the graph
+  // section right after #run-drawer-identity. Any failure — network error,
+  // non-2xx (including a 404 on a production API that doesn't have this
+  // route yet), non-JSON body, or a shape that normalizes to zero usable
+  // points — degrades silently: no section, no skeleton, no error text, per
+  // the same "the snapshot/existing content stays, nothing looks broken"
+  // principle the rest of this file follows for optional enhancements.
+  async function fetchRunHistory(modelId: string, lane: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const url = `${HISTORY_API_BASE}?model=${encodeURIComponent(modelId)}&lane=${encodeURIComponent(lane)}`;
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) return;
+      const json = await res.json();
+      const points = normalizeHistoryPoints(json);
+      if (points.length === 0) return;
+      // The drawer may have moved on to a different run while this fetch
+      // was in flight — bail rather than inserting a graph for a model
+      // that's no longer the one on screen.
+      if (openRunId !== modelId || !drawerBody) return;
+      const identitySection = drawerBody.querySelector('#run-drawer-identity');
+      if (!identitySection) return;
+      const geometry = sparklineGeometry(points.map((p) => ({ decode: p.decode, prefill: p.prefill })));
+      if ('empty' in geometry) return;
+      identitySection.insertAdjacentHTML('afterend', drawerGraphHtml(geometry, lane));
+    } catch {
+      // Network error, abort, or non-JSON body — no graph, silently.
     } finally {
       clearTimeout(timeoutId);
     }
