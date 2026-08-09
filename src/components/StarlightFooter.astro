@@ -1,0 +1,11 @@
+---
+/**
+ * Starlight Footer override: keep Starlight's own footer content
+ * (pagination, edit links) and append the shared SiteFooter so docs,
+ * blog, and KB pages end in the exact same chrome as marketing pages.
+ */
+import Default from '@astrojs/starlight/components/Footer.astro';
+import SiteFooter from './SiteFooter.astro';
+---
+<Default><slot /></Default>
+<SiteFooter />

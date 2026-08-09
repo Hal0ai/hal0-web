@@ -95,6 +95,7 @@ export default defineConfig({
 				// Starlight's default loads the SVG as <img>, which traps
 				// currentColor and leaves the "hal" invisible on dark.
 				SiteTitle: './src/components/StarlightSiteTitle.astro',
+				Footer: './src/components/StarlightFooter.astro',
 			},
 			// Sensible OG / social defaults.
 			head: [
