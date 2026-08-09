@@ -3,8 +3,9 @@
  * Override Starlight's default SiteTitle so the docs/blog chrome carries the
  * same site nav as the marketing apex — otherwise the Starlight section is an
  * island. Renders the inline-SVG wordmark (theme-aware via currentColor; the
- * amber "0" stays accented) followed by a shared nav: Docs · Blog · Changelog ·
- * Releases. The active section is highlighted. The wordmark links home (`/`).
+ * amber "0" stays accented) followed by a shared nav from src/data/nav.json:
+ * docs · benchmarks · blog · changelog · releases. The active section is
+ * highlighted. The wordmark links home (`/`).
  *
  * Changelog + Releases live on the marketing side; Docs + Blog are here in
  * Starlight — so this nav is the seam that stitches the two halves together.
@@ -12,24 +13,12 @@
  * is covered here.
  */
 import config from 'virtual:starlight/user-config';
+import { header as links, isActive } from '../lib/nav';
 import Wordmark from './Wordmark.astro';
 
 const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 
 const path = Astro.url.pathname;
-const BENCH = '/docs/reference/model-roster-benchmark';
-const links = [
-  // Docs matches all of /docs/* EXCEPT the Benchmarks page, which gets its
-  // own top-nav item below — otherwise both would highlight on that page.
-  { label: 'Docs', href: '/docs/getting-started/', match: '/docs', exclude: [BENCH] },
-  { label: 'Benchmarks', href: `${BENCH}/`, match: BENCH },
-  { label: 'Blog', href: '/blog', match: '/blog' },
-  { label: 'Changelog', href: '/changelog', match: '/changelog' },
-  { label: 'Releases', href: '/releases', match: '/releases' },
-];
-const matches = (m: string) => path === m || path.startsWith(m + '/');
-const isActive = (l: { match: string; exclude?: string[] }) =>
-  matches(l.match) && !(l.exclude ?? []).some(matches);
 ---
 
 <div class="hal0-sitetitle sl-flex">
@@ -44,8 +33,8 @@ const isActive = (l: { match: string; exclude?: string[] }) =>
     {links.map((l) => (
       <a
         href={l.href}
-        class:list={['hal0-docnav-link', { active: isActive(l) }]}
-        aria-current={isActive(l) ? 'page' : undefined}
+        class:list={['hal0-docnav-link', { active: isActive(path, l) }]}
+        aria-current={isActive(path, l) ? 'page' : undefined}
       >{l.label}</a>
     ))}
   </nav>
