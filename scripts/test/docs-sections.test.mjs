@@ -23,12 +23,21 @@ const INDEX_MDX = fileURLToPath(
 );
 const DOCS_ROOT = fileURLToPath(new URL('../../src/content/docs/docs/', import.meta.url));
 
+// Section listing pages (concepts/guides/operate/reference index.mdx,
+// added by the category-listing pass) carry `sidebar: hidden: true` and
+// are navigational chrome, not content pages — they don't count toward
+// the "N pages" a section card advertises.
+async function isHiddenListing(file) {
+  const src = await readFile(file, 'utf8');
+  return /^\s*hidden:\s*true\s*$/m.test(src);
+}
+
 async function countMdxFiles(dir) {
   let count = 0;
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) count += await countMdxFiles(full);
-    else if (entry.name.endsWith('.mdx')) count += 1;
+    else if (entry.name.endsWith('.mdx') && !(await isHiddenListing(full))) count += 1;
   }
   return count;
 }

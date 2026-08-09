@@ -1,0 +1,38 @@
+---
+/**
+ * Numbered page listing for a docs section — the comp's Category view
+ * (docs/design/2026-08-09-community-comps/08 Docs.html, `.plist`/`.prow`:
+ * ordinal, mono title + description, right-aligned source filename).
+ * Rows derive from the content collection (never hand-maintained); the
+ * ordering/exclusion logic lives in src/lib/section-pages.mjs so it is
+ * unit-testable. Styles in site-docs.css under `[data-docs]`.
+ */
+import { getCollection } from 'astro:content';
+import { deriveSectionRows } from '../lib/section-pages.mjs';
+
+interface Props {
+	section: string;
+}
+const { section } = Astro.props;
+
+const entries = await getCollection('docs');
+const rows = deriveSectionRows(
+	entries.map((e) => ({ id: e.id, filePath: e.filePath, data: e.data })),
+	section,
+);
+---
+
+<div class="plist not-content">
+	{
+		rows.map((r) => (
+			<a class="prow" href={r.href}>
+				<span class="ord">{r.ord}</span>
+				<span>
+					<span class="t">{r.title}</span>
+					{r.description && <span class="d">{r.description}</span>}
+				</span>
+				<span class="f">{r.filename}</span>
+			</a>
+		))
+	}
+</div>
