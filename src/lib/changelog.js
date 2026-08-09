@@ -70,7 +70,30 @@ export function isPrerelease(version) {
   return false;
 }
 
-/** Parse the raw changelog markdown into structured version blocks. */
+/**
+ * @typedef {Object} ChangelogSection
+ * @property {string} title
+ * @property {'breaking'|'added'|'changed'|'removed'|'fixed'|'note'} kind
+ * @property {string} html
+ */
+
+/**
+ * @typedef {Object} ChangelogVersion
+ * @property {string} version
+ * @property {string} slug
+ * @property {string|null} date
+ * @property {boolean} prerelease
+ * @property {boolean} stable
+ * @property {boolean} [gaPreview]
+ * @property {string} intro
+ * @property {ChangelogSection[]} sections
+ */
+
+/**
+ * Parse the raw changelog markdown into structured version blocks.
+ * @param {string} raw
+ * @returns {{versions: ChangelogVersion[], latest: ChangelogVersion|null, latestStable: ChangelogVersion|null, latestPrerelease: ChangelogVersion|null}}
+ */
 export function parseChangelog(raw) {
   const body = stripLinkRefs(raw);
   // Everything from the first version header onward; drop the file preamble.
