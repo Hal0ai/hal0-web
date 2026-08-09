@@ -26,6 +26,42 @@ Cloudflare Pages.
 Merges to the data repos trigger a Cloudflare Pages rebuild via webhook, so charts
 and the gallery stay current without manual deploys.
 
+## 0. Unified design system (cross-cutting, strict)
+
+The platform must read as one site, not four stitched together. Every surface —
+landing, docs, blog, KB, bench charts, profile gallery, and the Discourse forum —
+shares identical header, footer, nav contents, colors, and typography.
+
+- **Single source of truth.** hal0-web owns a small shared artifact:
+  `src/styles/tokens.css` (colors from NOTES.md — sodium amber `#FFB000`,
+  near-black backgrounds, accent hover/muted — plus Geist / JetBrains Mono and
+  spacing) and `src/data/nav.json` (the exact header/footer link set, order, and
+  icons). No surface hardcodes its own copy.
+- **Branding assets are part of the artifact.** Canonical logo set lives in
+  hal0-web (`src/assets/brand/`): full wordmark, mark-only glyph (slashed-zero),
+  monochrome/inverse variants, favicon, touch icons, and OG/social-card
+  template. Discourse logo slots (logo, mobile logo, favicon, large icon,
+  OG image) are filled from these same files — never redrawn or approximated.
+  Blog/KB post cards, bench pages, and the profile gallery use the same OG
+  template so shared links look identical regardless of which surface they
+  point to.
+- **Astro surfaces** (landing, docs, blog, KB, bench, gallery) all render through
+  the shared Starlight/site chrome. Bench and gallery pages use the same layout
+  wrapper as the rest of the site — no one-off page shells.
+- **Discourse** gets a custom theme component (its own git repo, installed via
+  Discourse's remote-theme mechanism) that imports the same tokens and renders
+  the same header/footer markup. Discourse-native controls (search, user menu,
+  notifications) sit inside that header where site nav affordances would be.
+  This is a theme component, not a plugin — the "stock install" decision stands
+  operationally.
+- **Behavioral consistency:** identical link set and order everywhere;
+  active-section highlighting works across domains (Forum on forum.hal0.dev,
+  Docs on /docs, …); dark-first with the same theme-toggle behavior; footer
+  identical on every surface.
+- **Drift prevention:** token/nav changes land only in hal0-web; CI (or a sync
+  script) rebuilds the Discourse theme from the shared artifact so the forum
+  cannot silently diverge.
+
 ## 1. Discourse forum
 
 - **Hosting:** 4 GB cloud VPS (Hetzner CX-class, ~€8–15/mo), official Docker
@@ -33,10 +69,11 @@ and the gallery stay current without manual deploys.
 - **Auth:** GitHub OAuth primary, Discord OAuth secondary. Email/password left
   enabled as fallback. When custom site features arrive later, Discourse becomes
   the identity provider via DiscourseConnect SSO.
-- **Stock at launch.** No custom plugins beyond OAuth and the Discord bridge.
-  Heavy customization is explicitly deferred; the hybrid path (custom structured
-  layers on hal0.dev authenticated against Discourse) is preserved by the SSO
-  choice.
+- **Stock install at launch** — no custom plugins beyond OAuth and the Discord
+  bridge — but with the shared brand theme component from section 0 (header,
+  footer, tokens) applied from day one. Heavy functional customization is
+  deferred; the hybrid path (custom structured layers on hal0.dev authenticated
+  against Discourse) is preserved by the SSO choice.
 - **Launch categories:** Announcements, Strix Halo, NPU / XDNA, Runners &
   Backends, Benchmarks, Setups & Profiles, Gorgon Halo, Site / Meta.
 - **Discord bridge:** announcements webhook in both directions. Discord remains
@@ -115,12 +152,13 @@ merge-triggered rebuilds.
 
 ## 5. Build order
 
-1. Bench schema + `hal0-bench-data` repo + CI (everything references this schema)
-2. Discourse VPS launch (independent; can run in parallel)
-3. hal0-web: expanded bench charts consuming community data
-4. `hal0 bench --share` (main hal0 repo) + web upload door (Worker + GitHub App)
-5. `hal0-profiles` + gallery
-6. Blog/KB restructure + seed posts
+1. Design tokens + nav manifest extraction in hal0-web (section 0 foundation)
+2. Bench schema + `hal0-bench-data` repo + CI (everything references this schema)
+3. Discourse VPS launch + brand theme component (forum ships already unified)
+4. hal0-web: expanded bench charts consuming community data
+5. `hal0 bench --share` (main hal0 repo) + web upload door (Worker + GitHub App)
+6. `hal0-profiles` + gallery
+7. Blog/KB restructure + seed posts
 
 ## Error handling & operational notes
 
@@ -138,4 +176,5 @@ merge-triggered rebuilds.
 - Custom profile pages and structured community features on hal0.dev via
   DiscourseConnect SSO
 - CLI direct-upload API (bypassing PRs)
-- Discourse theming/customization beyond brand colors
+- Discourse *functional* customization (plugins, custom features) — brand
+  theming per section 0 IS in phase 1 scope
