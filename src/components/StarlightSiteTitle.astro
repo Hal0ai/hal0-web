@@ -16,7 +16,7 @@
  *
  * SubNav renders the same `sub` lists again, scoped to whichever section is
  * active — this component's flattened list is the *global* nav (every
- * section, always visible ≥56rem), SubNav's is the *contextual* one (only
+ * section, always visible ≥1000px, the comp breakpoint), SubNav's is the *contextual* one (only
  * the active section's siblings, only when a section is active). Blog/
  * changelog all roll up under `learn` in the manifest; benchmarks
  * is its own top-level entry (mutually exclusive with `learn` via nav.json's
@@ -86,7 +86,7 @@ const links: NavLink[] = visibleHeader.flatMap((l) =>
     .hal0-docnav {
       display: none;
     }
-    @media (min-width: 56rem) {
+    @media (min-width: 62.5rem) {
       .hal0-docnav {
         display: flex;
         align-items: center;

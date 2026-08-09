@@ -1,0 +1,96 @@
+---
+/**
+ * ThemeSelect override: the comp's 2-state ThemeToggle iconbtn
+ * (site-chrome.jsx `ThemeToggle`) in place of Starlight's 3-state
+ * Auto/Light/Dark select — the last piece of header variance between
+ * the two renderers (the marketing SiteHeader ships the identical
+ * button). Clicking flips documentElement's data-theme and persists to
+ * the same 'starlight-theme' localStorage key Starlight's pre-paint
+ * script reads, so the preference stays ONE preference site-wide.
+ *
+ * Trade-off (documented): the explicit "Auto" choice is gone — an
+ * untouched visitor still gets OS-preference resolution from
+ * Starlight's own ThemeProvider; the first click pins an explicit
+ * theme. That is exactly the comp's model.
+ */
+---
+
+<button class="hal0-theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+	<svg
+		class="icon-sun"
+		width="15"
+		height="15"
+		viewBox="0 0 16 16"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="1.4"
+		stroke-linecap="round"
+		aria-hidden="true"
+	>
+		<circle cx="8" cy="8" r="3.4"></circle>
+		<path
+			d="M8 .9v2M8 13.1v2M.9 8h2M13.1 8h2M2.98 2.98l1.41 1.41M11.61 11.61l1.41 1.41M13.02 2.98l-1.41 1.41M4.39 11.61l-1.41 1.41"
+		></path>
+	</svg>
+	<svg class="icon-moon is-hidden" width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+		<path d="M13.5 9.8A6 6 0 0 1 6.2 2.5 6 6 0 1 0 13.5 9.8Z"></path>
+	</svg>
+</button>
+
+<script>
+	// Same behavior as SiteHeader's toggle (they can't share a module —
+	// different layout systems load different bundles): flip, persist,
+	// reflect. Starlight's own attribute may be set to 'auto'-resolved
+	// values by its ThemeProvider; reading the attribute (not the store)
+	// keeps the icon honest either way.
+	(() => {
+		const btn = document.querySelector<HTMLButtonElement>('.hal0-theme-toggle');
+		if (!btn) return;
+		const sun = btn.querySelector('.icon-sun');
+		const moon = btn.querySelector('.icon-moon');
+		const syncIcon = () => {
+			const dark = document.documentElement.dataset.theme !== 'light';
+			sun?.classList.toggle('is-hidden', dark === false);
+			moon?.classList.toggle('is-hidden', dark === true);
+		};
+		btn.addEventListener('click', () => {
+			const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+			document.documentElement.dataset.theme = next;
+			try {
+				localStorage.setItem('starlight-theme', next);
+			} catch {
+				/* no storage — theme still flips for this page */
+			}
+			syncIcon();
+		});
+		syncIcon();
+	})();
+</script>
+
+<style>
+	/* comp .iconbtn — restated here (Starlight pages sit outside `.site`) */
+	.hal0-theme-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: var(--hal0-rad-sm, 4px);
+		border: 1px solid transparent;
+		background: transparent;
+		color: var(--hal0-fg-dim);
+		cursor: pointer;
+		transition:
+			color 0.12s var(--hal0-ease, ease),
+			background 0.12s var(--hal0-ease, ease),
+			border-color 0.12s var(--hal0-ease, ease);
+	}
+	.hal0-theme-toggle:hover {
+		color: var(--hal0-fg);
+		background: var(--hal0-bg-2);
+		border-color: var(--hal0-border);
+	}
+	.is-hidden {
+		display: none;
+	}
+</style>

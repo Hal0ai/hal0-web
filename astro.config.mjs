@@ -170,6 +170,9 @@ export default defineConfig({
 				// Default title + the "applies to vX.Y" stamp when frontmatter
 				// declares `appliesTo`; byte-identical passthrough otherwise.
 				PageTitle: './src/components/StarlightPageTitle.astro',
+				// Comp's 2-state ThemeToggle instead of the 3-state select —
+				// identical button to the marketing SiteHeader's.
+				ThemeSelect: './src/components/StarlightThemeSelect.astro',
 			},
 			// Sensible OG / social defaults.
 			head: [
