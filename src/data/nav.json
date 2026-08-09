@@ -13,7 +13,7 @@
       ]
     },
     { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/", "match": "/docs/reference/model-roster-benchmark" },
-    { "label": "profiles", "href": "/profiles", "match": "/profiles", "hidden": true },
+    { "label": "profiles", "href": "/profiles", "match": "/profiles" },
     { "label": "forum", "href": "https://forum.hal0.dev", "external": true, "hidden": true }
   ],
   "footerColumns": [

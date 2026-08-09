@@ -1,0 +1,926 @@
+---
+/**
+ * /profiles — community profile gallery.
+ *
+ * Renders every profile ingested from Hal0ai/hal0-profiles (src/data/profiles.json,
+ * refreshed by scripts/sync-profiles.mjs on prebuild) as a card, with a
+ * vanilla-JS filter island (family / intent / lane pills, AND across facets,
+ * OR within a facet). Bench numbers on the card come only from `benchFor`
+ * (src/lib/profiles-join.mjs) joining the profile's models against the
+ * first-party ROSTER — a card never shows a number none of its own models
+ * produced, and the metric row is omitted entirely when the join is empty.
+ *
+ * Visual source of truth: docs/design/2026-08-09-community-comps/03 Profiles.html
+ * (Card component + the on-page card-anatomy spec). The detail drawer from
+ * that comp is Task 4 — cards render inert here (no drawer, no onclick).
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import '../styles/site-data.css';
+import profilesSnapshot from '../data/profiles.json';
+import { benchFor, familiesOf, familyOf, renderProfileToml, tintToml } from '../lib/profiles-join.mjs';
+import { ROSTER } from '../data/model-roster.ts';
+
+const CONTRIBUTING_URL = 'https://github.com/Hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md';
+const PROFILES_REPO_RAW = 'https://github.com/Hal0ai/hal0-profiles/blob/main/profiles';
+
+const profiles = profilesSnapshot.profiles;
+
+// Strip the noise short() clips from a roster model id down to a short,
+// scannable display name (ported from the comp's `short()` helper).
+function shortName(id) {
+  return id
+    .replace(/-(rocmfp4|strix-lean|mtp|dynamic|it)(?=-|$)/g, '')
+    .replace(/-(q\d[\w-]*|f16|mxfp4)$/i, '')
+    .replace(/-+$/, '');
+}
+
+function modelIdsOf(profile) {
+  return [profile.model.id, ...(profile.model.compatible ?? [])];
+}
+
+// Per-profile derived view data, computed once at build time.
+const cards = profiles.map((record) => {
+  const { profile, runner, history } = record;
+  const models = modelIdsOf(record);
+  const families = familiesOf(record);
+  const bench = benchFor(record, ROSTER);
+  const latest = history[0];
+  const toml = tintToml(renderProfileToml(record));
+  return {
+    record,
+    profile,
+    runner,
+    latest,
+    models,
+    families,
+    bench,
+    toml,
+  };
+});
+
+// Static, full-corpus facet counts + option lists (derived from the data,
+// not hardcoded — a new profile in a new family/intent/lane shows up here
+// for free on the next sync).
+function countBy(getValues) {
+  const counts = new Map();
+  for (const c of cards) {
+    for (const v of getValues(c)) {
+      counts.set(v, (counts.get(v) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+const familyCounts = countBy((c) => c.families);
+const intentCounts = countBy((c) => [c.profile.intent]);
+const laneCounts = countBy((c) => [c.runner.lane]);
+
+const familyOptions = [...familyCounts.keys()].sort();
+const intentOptions = [...intentCounts.keys()].sort();
+const laneOptions = [...laneCounts.keys()].sort();
+
+const total = cards.length;
+
+const description =
+  "A profile is the flag string that produced a number, versioned and downloadable. Find the one for your model, install it with the CLI, or read the config and steal the parts you want.";
+---
+
+<MarketingLayout title="profiles — hal0" description={description}>
+  <div class="wrap wide phead">
+    <div class="phead-row">
+      <div>
+        <span class="eyebrow">shared configs · hal0-profiles</span>
+        <h1 class="site-h1" style="margin: 10px 0 10px">profiles</h1>
+        <p class="site-body" style="max-width: 60ch">
+          A profile is the flag string that produced a number, versioned and downloadable.
+          Find the one for your model, install it with the CLI, or read the config and steal the
+          parts you want.
+        </p>
+      </div>
+      <div style="display: flex; gap: 8px">
+        <a class="btn ghost" href={CONTRIBUTING_URL} rel="noopener">how profiles work</a>
+        <a class="btn" href={CONTRIBUTING_URL} rel="noopener">submit a profile</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap wide">
+    <div class="filterbar" data-profile-filters>
+      <div class="frow">
+        <span class="label">model</span>
+        <div class="fbar">
+          <button type="button" class="fpill on" data-facet="family" data-value="__all__" aria-pressed="true">
+            all<span class="n num">{total}</span>
+          </button>
+          {familyOptions.map((f) => (
+            <button type="button" class="fpill" data-facet="family" data-value={f} aria-pressed="false">
+              {f}<span class="n num">{familyCounts.get(f)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div class="frow">
+        <span class="label">intent</span>
+        <div class="fbar">
+          <button type="button" class="fpill on" data-facet="intent" data-value="__all__" aria-pressed="true">
+            all<span class="n num">{total}</span>
+          </button>
+          {intentOptions.map((i) => (
+            <button type="button" class="fpill" data-facet="intent" data-value={i} aria-pressed="false">
+              {i}<span class="n num">{intentCounts.get(i)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div class="frow">
+        <span class="label">lane</span>
+        <div class="fbar">
+          <button type="button" class="fpill on" data-facet="lane" data-value="__all__" aria-pressed="true">
+            all<span class="n num">{total}</span>
+          </button>
+          {laneOptions.map((l) => (
+            <button type="button" class="fpill" data-facet="lane" data-value={l} aria-pressed="false">
+              {l}<span class="n num">{laneCounts.get(l)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; border-top:1px solid var(--line-soft); padding-top:11px; flex-wrap:wrap">
+        <span class="mono" style="font-size:11.5px; color:var(--fg-3)" data-profile-readout>
+          {total} of {total} profiles
+        </span>
+        <button type="button" class="btn ghost sm" data-profile-clear hidden>clear</button>
+      </div>
+    </div>
+
+    <div class="pgrid" data-profile-grid>
+      {cards.map(({ profile, runner, latest, models, families, bench }) => (
+        <article
+          class="pcard"
+          data-profile-card
+          data-profile-open={profile.slug}
+          data-intent={profile.intent}
+          data-lane={runner.lane}
+          data-families={families.join(' ')}
+          role="button"
+          tabindex="0"
+        >
+          <div class="pc-top">
+            <span class="eyebrow">profile · v{latest.v} · {runner.lane}</span>
+            <span class="chip amber">{profile.intent}</span>
+          </div>
+          <div>
+            <h3 class="pc-title mono">{profile.slug}</h3>
+            <p class="pc-desc">{profile.title}</p>
+          </div>
+
+          <div class="pc-models">
+            <span class="label">runs these models</span>
+            <div class="fbar">
+              {models.slice(0, 2).map((m) => (
+                <span class="mchip" title={m}>
+                  <span class="fam">{familyOf(m)}</span>{shortName(m)}
+                </span>
+              ))}
+              {models.length > 2 && <span class="mchip more">+{models.length - 2}</span>}
+            </div>
+          </div>
+
+          {bench.headline && (
+            <div>
+              <div class="pc-metrics">
+                <div class="m">
+                  <div class="v">{bench.headline.dec.toFixed(1)}<u>tok/s</u></div>
+                  <div class="k">decode tok/s</div>
+                </div>
+                <div class="m">
+                  <div class="v">{bench.headline.pf.toFixed(0)}<u>tok/s</u></div>
+                  <div class="k">prefill</div>
+                </div>
+              </div>
+              <div class="pc-src mono">
+                measured on <b>{bench.headline.modelId}</b> · {runner.lane}
+              </div>
+            </div>
+          )}
+
+          <div class="pc-foot">
+            {profile.first_party ? (
+              <span class="chip amber" title="First-party run on hal0 reference hardware">first-party</span>
+            ) : (
+              <span style="display:inline-flex; align-items:center; gap:6px">
+                <img
+                  src={`https://github.com/${profile.author}.png?size=32`}
+                  loading="lazy"
+                  alt={`@${profile.author}`}
+                  width="16"
+                  height="16"
+                  style="border-radius: var(--rad-sm)"
+                />
+                <span class="mono" style="font-size:11.5px; color:var(--fg-3)">@{profile.author}</span>
+              </span>
+            )}
+            <span class="pc-open">config &amp; flags →</span>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <div style="margin-top: 48px">
+      <span class="eyebrow">component spec</span>
+      <h2 class="site-h2" style="margin: 10px 0 16px">profile card anatomy</h2>
+      <div class="anat">
+        <ol>
+          <li><b>1</b>eyebrow: version and lane, so the card states its provenance before anything else.</li>
+          <li><b>2</b>slug in mono at 21px — the thing you type into the CLI, and the card's biggest element.</li>
+          <li><b>3</b>one line of description. The full summary, flags and config live in the drawer, not here.</li>
+          <li><b>4</b>the models this profile actually runs, as chips: family in amber, short model name after it. This is what people scan for, so it sits above the numbers.</li>
+          <li><b>5</b>decode and prefill from the profile's own measured runs — never a number none of its runs produced. Omitted entirely when nothing in the roster matches.</li>
+          <li><b>6</b>a mono footnote naming the exact model and lane the metrics came from. Metrics without this line are unfalsifiable.</li>
+          <li><b>7</b>attribution slot — avatar and handle, or the amber first-party chip — and the affordance that opens the drawer.</li>
+          <li><b>8</b>2px filament along the bottom edge, brightening on hover. Same motif as the header and the OG cards.</li>
+        </ol>
+        <p class="site-sm">Cards stay one column on mobile at full width; the model chips wrap and the metric row keeps its columns.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="scrim" data-profile-scrim hidden></div>
+
+  {cards.map(({ record, profile, latest, bench, toml }) => (
+    <aside class="drawer-run" role="dialog" aria-label="profile detail" hidden data-profile={profile.slug}>
+      <div class="dr-head">
+        <div>
+          <span class="eyebrow">profile · v{latest.v} · {latest.date}</span>
+          <div class="mono" style="font-size:14px; margin-top:6px">{profile.slug}</div>
+          <div class="site-sm" style="margin-top:4px">{profile.title}</div>
+        </div>
+        <button type="button" class="iconbtn" data-profile-close aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 3l10 10M13 3L3 13" />
+          </svg>
+        </button>
+      </div>
+      <div class="dr-body">
+        <p class="site-body" style="font-size:14px">{profile.summary}</p>
+
+        <div class="dr-actions">
+          <button type="button" class="btn ghost" data-profile-copy-flags data-flags={record.args.raw}>copy flags</button>
+          <a class="btn ghost" href={`${PROFILES_REPO_RAW}/${profile.slug}.toml`} rel="noopener">install with hal0</a>
+        </div>
+
+        <section>
+          <h4 class="label">install</h4>
+          <div class="well" style="padding:12px 14px; margin-top:8px">
+            <span class="amber">hal0</span> profile install {profile.slug}
+          </div>
+        </section>
+
+        <section>
+          <div class="dr-sec-head">
+            <h4 class="label">flags</h4>
+            <span class="mono dim" style="font-size:11px">{record.runner.kind}</span>
+          </div>
+          <pre class="well toml" style="white-space:pre-wrap; word-break:break-all">{record.args.raw}</pre>
+        </section>
+
+        <section>
+          <div class="dr-sec-head">
+            <h4 class="label">config</h4>
+            <span class="mono dim" style="font-size:11px">{profile.slug}.toml</span>
+          </div>
+          <pre class="well toml">
+            {toml.map((line) => {
+              if (line.cls === 'c') return <div class="c">{line.text}</div>;
+              if (line.cls === 'h') return <div class="h">{line.text}</div>;
+              if (line.cls === 'kv') return (
+                <div><span class="k">{line.key}</span><span class={line.valueCls}>{line.value}</span></div>
+              );
+              return <div>{line.text}</div>;
+            })}
+          </pre>
+        </section>
+
+        <section>
+          <div class="dr-sec-head">
+            <h4 class="label">runs produced by this config</h4>
+            <span class="mono dim" style="font-size:11px">{record.runner.lane}</span>
+          </div>
+          {bench.runs.length > 0 ? (
+            <div class="panel" style="overflow:hidden">
+              <table class="dtable">
+                <thead>
+                  <tr>
+                    <th>model</th>
+                    <th class="n">decode</th>
+                    <th class="n">prefill</th>
+                    <th class="n">gb</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bench.runs.map((r) => (
+                    <tr>
+                      <td class="lead" style="max-width:210px; overflow:hidden; text-overflow:ellipsis">{r.modelId}</td>
+                      <td class="n">{r.dec.toFixed(1)}</td>
+                      <td class="n">{r.pf.toFixed(0)}</td>
+                      <td class="n">{r.gb}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p class="site-sm">no measured runs yet — numbers appear when a sweep covers this config</p>
+          )}
+        </section>
+
+        <section>
+          <h4 class="label">versions</h4>
+          <div class="vhist">
+            {record.history.map((h) => (
+              <div class="vh"><span class="v">v{h.v}</span><span>{h.date}</span><span>{h.note}</span></div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </aside>
+  ))}
+</MarketingLayout>
+
+<style>
+  .phead-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .phead {
+    padding-block: 34px 20px;
+  }
+  .pgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .pcard {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    padding: 20px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease);
+  }
+  .pcard:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .pcard::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--line) 18%,
+      color-mix(in srgb, var(--accent) 65%, var(--line)) 50%,
+      var(--line) 82%,
+      transparent
+    );
+    opacity: 0.5;
+    transition: opacity var(--dur-fast) var(--ease);
+  }
+  .pcard:hover {
+    border-color: var(--line-strong);
+  }
+  .pcard:hover::after {
+    opacity: 1;
+  }
+  .pc-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .pc-title {
+    font-size: 21px;
+    line-height: 1.15;
+    letter-spacing: var(--ls-title);
+    color: var(--fg);
+    margin: 0;
+    word-break: break-word;
+  }
+  .pc-desc {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--fg-3);
+    margin: 6px 0 0;
+  }
+  .pc-models {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 13px;
+  }
+  .mchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-sm);
+    background: var(--bg);
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-2);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mchip .fam {
+    color: var(--accent);
+    opacity: 0.85;
+  }
+  .mchip.more {
+    color: var(--fg-4);
+    border-style: dashed;
+  }
+  .pc-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 13px;
+  }
+  .pc-metrics .m .v {
+    font-family: var(--jbm);
+    font-size: 20px;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: var(--num-features);
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .pc-metrics .m .v u {
+    font-size: 10px;
+    color: var(--fg-4);
+    text-decoration: none;
+  }
+  .pc-metrics .m .k {
+    font-family: var(--jbm);
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+    color: var(--fg-4);
+    margin-top: 5px;
+  }
+  .pc-src {
+    font-size: 10.5px;
+    color: var(--fg-4);
+    margin-top: 11px;
+    line-height: 1.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pc-src b {
+    color: var(--fg-3);
+    font-weight: 400;
+  }
+  .pc-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 13px;
+  }
+  .pc-open {
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pcard:hover .pc-open {
+    color: var(--accent);
+  }
+  .filterbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .frow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .frow > .label {
+    width: 64px;
+    flex-shrink: 0;
+    padding-top: 6px;
+  }
+  .anat {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+    align-items: start;
+  }
+  .anat ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+  }
+  .anat ol b {
+    color: var(--accent);
+    margin-right: 8px;
+  }
+  @media (max-width: 900px) {
+    .anat {
+      grid-template-columns: 1fr;
+    }
+  }
+  [data-profile-card][hidden] {
+    display: none;
+  }
+
+  /* ── detail drawer (ported from ProfileDrawer / .drawer-run in the comp) ── */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 60;
+  }
+  .scrim[hidden] {
+    display: none;
+  }
+  .drawer-run {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(620px, 100vw);
+    background: var(--bg-1);
+    border-left: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-menu);
+    z-index: 61;
+    display: flex;
+    flex-direction: column;
+  }
+  .drawer-run[hidden] {
+    display: none;
+  }
+  .dr-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .dr-body {
+    overflow-y: auto;
+    padding: 18px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .dr-sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .toml {
+    margin: 0;
+    padding: 12px 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 11.5px;
+    color: var(--fg-2);
+  }
+  .toml .k {
+    color: var(--fg-3);
+  }
+  .toml .s {
+    color: var(--fg);
+  }
+  .toml .n {
+    color: var(--accent);
+  }
+  .toml .c {
+    color: var(--fg-5);
+  }
+  .toml .h {
+    color: var(--fg-4);
+  }
+  .dr-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .vhist {
+    display: flex;
+    flex-direction: column;
+  }
+  .vh {
+    display: grid;
+    grid-template-columns: 34px 84px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+  }
+  .vh .v {
+    color: var(--accent);
+  }
+  @media (max-width: 640px) {
+    .drawer-run {
+      width: 100vw;
+    }
+  }
+</style>
+
+<script>
+  // Vanilla filter island — no framework. Cards carry data-intent / data-lane
+  // / data-families (space-separated); pills carry data-facet + data-value.
+  // Selecting several pills within one facet is OR ("chat" or "coding");
+  // selecting pills across facets is AND (family match AND intent match).
+  // Server renders every card up front, so no-JS visitors still get the
+  // full gallery — filtering here is purely a display toggle.
+  const root = document.querySelector('[data-profile-filters]');
+  const grid = document.querySelector('[data-profile-grid]');
+  if (root && grid) {
+    const cards = Array.from(grid.querySelectorAll('[data-profile-card]'));
+    const readout = root.querySelector('[data-profile-readout]');
+    const clearBtn = root.querySelector('[data-profile-clear]');
+    const pills = Array.from(root.querySelectorAll('.fpill[data-facet]'));
+    const facets = ['family', 'intent', 'lane'];
+    /** @type {Record<string, Set<string>>} */
+    const active = { family: new Set(), intent: new Set(), lane: new Set() };
+
+    function syncPillClasses() {
+      let anyActive = false;
+      for (const facet of facets) {
+        const isAll = active[facet].size === 0;
+        if (!isAll) anyActive = true;
+        for (const pill of pills) {
+          if (pill.dataset.facet !== facet) continue;
+          const isAllPill = pill.dataset.value === '__all__';
+          const on = isAllPill ? isAll : active[facet].has(pill.dataset.value);
+          pill.classList.toggle('on', on);
+          pill.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+      }
+      if (clearBtn) clearBtn.hidden = !anyActive;
+    }
+
+    function applyFilters() {
+      let visible = 0;
+      for (const card of cards) {
+        const matches = facets.every((facet) => {
+          if (active[facet].size === 0) return true;
+          if (facet === 'family') {
+            const cardFamilies = (card.dataset.families ?? '').split(' ').filter(Boolean);
+            return cardFamilies.some((f) => active.family.has(f));
+          }
+          return active[facet].has(card.dataset[facet]);
+        });
+        card.hidden = !matches;
+        if (matches) visible += 1;
+      }
+      if (readout) readout.textContent = `${visible} of ${cards.length} profiles`;
+    }
+
+    for (const pill of pills) {
+      pill.addEventListener('click', () => {
+        const facet = pill.dataset.facet;
+        const value = pill.dataset.value;
+        if (!facet || !value) return;
+        if (value === '__all__') {
+          active[facet].clear();
+        } else if (active[facet].has(value)) {
+          active[facet].delete(value);
+        } else {
+          active[facet].add(value);
+        }
+        syncPillClasses();
+        applyFilters();
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        for (const facet of facets) active[facet].clear();
+        syncPillClasses();
+        applyFilters();
+      });
+    }
+  }
+</script>
+
+<script>
+  // Detail drawer island — no framework. Every profile's <aside class="drawer-run">
+  // is pre-rendered hidden; a card click (or Enter/Space, since cards are
+  // role="button" tabindex="0") opens its drawer, pushes `?p=<slug>` so the
+  // view is deep-linkable, and locks body scroll. Scrim click / close button
+  // / Escape closes it, walking history back only when we're the ones who
+  // pushed the state (a page load that already carries ?p=<slug> just shows
+  // the drawer without adding a redundant history entry).
+  (() => {
+    const scrim = document.querySelector<HTMLElement>('[data-profile-scrim]');
+    const drawers = Array.from(document.querySelectorAll<HTMLElement>('.drawer-run[data-profile]'));
+    const triggers = Array.from(document.querySelectorAll<HTMLElement>('[data-profile-open]'));
+    if (!scrim || drawers.length === 0) return;
+
+    const bySlug = new Map<string, HTMLElement>(
+      drawers.map((d) => [d.dataset.profile ?? '', d]).filter(([slug]) => slug),
+    );
+    const triggerBySlug = new Map<string, HTMLElement>(
+      triggers.map((t) => [t.dataset.profileOpen ?? '', t]).filter(([slug]) => slug),
+    );
+    let openSlug: string | null = null;
+    let pushedState = false;
+
+    // Focus containment: while a drawer is open, everything outside it
+    // (header/subnav, the page's own content, footer) is made `inert` —
+    // the browser removes it from both the tab order and AT navigation,
+    // so Tab can no longer walk out through the scrim onto an obscured
+    // card behind it. `inert` cascades to descendants and can't be
+    // "opted back in" on a child, so we inert body's other top-level
+    // regions plus main's other children individually — never `<main>`
+    // itself, since the drawers/scrim are its children too.
+    function setShellInert(on: boolean) {
+      for (const el of Array.from(document.body.children)) {
+        if (el.tagName === 'MAIN' || el.tagName === 'SCRIPT') continue;
+        if (on) el.setAttribute('inert', '');
+        else el.removeAttribute('inert');
+      }
+      const mainEl = document.querySelector('main');
+      if (!mainEl) return;
+      for (const child of Array.from(mainEl.children)) {
+        if (child === scrim || child.classList.contains('drawer-run')) continue;
+        if (on) child.setAttribute('inert', '');
+        else child.removeAttribute('inert');
+      }
+    }
+
+    function focusableIn(container: HTMLElement): HTMLElement[] {
+      return Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('inert') && el.getClientRects().length > 0);
+    }
+
+    // Belt-and-braces Tab cycling on top of `inert`: once the rest of the
+    // page is inert, a Tab off either end of the drawer's focusables has
+    // nowhere else to land, so wrap explicitly rather than trust browser
+    // fallback behavior.
+    document.addEventListener('keydown', (e) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key !== 'Tab' || !openSlug) return;
+      const drawer = bySlug.get(openSlug);
+      if (!drawer) return;
+      const focusables = focusableIn(drawer);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (ke.shiftKey && document.activeElement === first) {
+        ke.preventDefault();
+        last.focus();
+      } else if (!ke.shiftKey && document.activeElement === last) {
+        ke.preventDefault();
+        first.focus();
+      }
+    });
+
+    function show(slug: string) {
+      for (const [s, drawer] of bySlug) drawer.hidden = s !== slug;
+      if (scrim) scrim.hidden = false;
+      document.body.style.overflow = 'hidden';
+      openSlug = slug;
+      setShellInert(true);
+      bySlug.get(slug)?.querySelector<HTMLElement>('[data-profile-close]')?.focus();
+    }
+
+    function hideAll() {
+      for (const drawer of bySlug.values()) drawer.hidden = true;
+      if (scrim) scrim.hidden = true;
+      document.body.style.overflow = '';
+      setShellInert(false);
+    }
+
+    function openDrawer(slug: string) {
+      if (!bySlug.has(slug)) return;
+      show(slug);
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('p') !== slug) {
+        url.searchParams.set('p', slug);
+        window.history.pushState({ profile: slug }, '', url);
+        pushedState = true;
+      }
+    }
+
+    function closeDrawer() {
+      if (!openSlug) return;
+      const trigger = triggerBySlug.get(openSlug);
+      hideAll();
+      openSlug = null;
+      if (pushedState) {
+        pushedState = false;
+        window.history.back();
+      }
+      trigger?.focus();
+    }
+
+    for (const trigger of triggers) {
+      const slug = trigger.dataset.profileOpen;
+      if (!slug) continue;
+      trigger.addEventListener('click', () => openDrawer(slug));
+      trigger.addEventListener('keydown', (e) => {
+        const key = (e as KeyboardEvent).key;
+        if (key === 'Enter' || key === ' ') {
+          e.preventDefault();
+          openDrawer(slug);
+        }
+      });
+    }
+
+    for (const drawer of drawers) {
+      drawer.querySelector('[data-profile-close]')?.addEventListener('click', () => closeDrawer());
+    }
+
+    scrim.addEventListener('click', () => closeDrawer());
+
+    document.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape' && openSlug) closeDrawer();
+    });
+
+    window.addEventListener('popstate', () => {
+      const slug = new URL(window.location.href).searchParams.get('p');
+      pushedState = false;
+      if (slug && bySlug.has(slug)) {
+        show(slug);
+      } else if (openSlug) {
+        const trigger = triggerBySlug.get(openSlug);
+        hideAll();
+        openSlug = null;
+        trigger?.focus();
+      }
+    });
+
+    for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-profile-copy-flags]')) {
+      const original = btn.textContent;
+      btn.addEventListener('click', async () => {
+        if (!navigator.clipboard) return;
+        const flags = btn.dataset.flags ?? '';
+        try {
+          await navigator.clipboard.writeText(flags);
+        } catch {
+          // clipboard denied/unavailable — no swap, so the button never
+          // claims a copy that didn't happen
+          return;
+        }
+        btn.textContent = 'flags copied';
+        setTimeout(() => {
+          btn.textContent = original;
+        }, 1400);
+      });
+    }
+
+    // Honor a deep link on load: `?p=<slug>` opens that profile's drawer
+    // without pushing a new history entry (the URL already carries it).
+    const initialSlug = new URL(window.location.href).searchParams.get('p');
+    if (initialSlug && bySlug.has(initialSlug)) show(initialSlug);
+  })();
+</script>
+</MarketingLayout>
