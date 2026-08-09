@@ -66,6 +66,9 @@
 	/* Motion */
 	--hal0-ease:     cubic-bezier(0.22, 1, 0.36, 1);
 	--hal0-dur-fast: 0.12s;
+
+	/* Elevation */
+	--hal0-shadow-menu: 0 16px 48px -8px rgba(0,0,0,0.7);
 }
 
 /* ── light theme overrides ──────────────────────────────────────
@@ -88,6 +91,8 @@
 	--hal0-border-soft:   #f0eeec;
 	--hal0-border-strong: #cfccc8;
 	--hal0-accent:        #b87800;
+	--hal0-accent-hover:  #8a5a00;
+	--hal0-accent-muted:  #f7d680;
 	--hal0-accent-soft:   rgba(184, 120, 0, 0.09);
 	--hal0-accent-line:   rgba(184, 120, 0, 0.34);
 	--hal0-accent-glow:   rgba(184, 120, 0, 0.16);
