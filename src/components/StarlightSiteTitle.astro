@@ -3,14 +3,20 @@
  * Override Starlight's default SiteTitle so the docs/blog chrome carries the
  * same site nav as the marketing apex — otherwise the Starlight section is an
  * island. Renders the inline-SVG wordmark (theme-aware via currentColor; the
- * amber "0" stays accented) followed by a shared nav from src/data/nav.json:
- * docs · benchmarks · blog · changelog · releases. The active section is
- * highlighted. The wordmark links home (`/`).
+ * amber "0" stays accented) followed by `visibleHeader` from src/data/nav.json
+ * (the learn IA manifest, filtered for `hidden` entries): `learn` (an
+ * umbrella whose `match` array covers /docs, /blog, /changelog, /releases —
+ * so it highlights active on docs, blog, changelog, and releases pages alike)
+ * and `benchmarks`. `learn`'s per-page sub-links (docs/blog/changelog/
+ * releases) render separately via SubNav, not here. The wordmark links
+ * home (`/`).
  *
- * Changelog + Releases live on the marketing side; Docs + Blog are here in
- * Starlight — so this nav is the seam that stitches the two halves together.
- * starlight-blog's own header link is disabled (navigation: 'none') since Blog
- * is covered here.
+ * Blog/changelog/releases all roll up under `learn` here on the Starlight
+ * side; benchmarks is its own top-level entry (mutually exclusive with
+ * `learn` via nav.json's `exclude`) — so this nav is the seam that stitches
+ * the marketing and Starlight halves together under one manifest.
+ * starlight-blog's own header link is disabled (navigation: 'none') since
+ * Blog is covered here.
  */
 import config from 'virtual:starlight/user-config';
 import { visibleHeader as links, isActive } from '../lib/nav';

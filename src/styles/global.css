@@ -1,8 +1,14 @@
 /* Tailwind v4 + Starlight token bridge.
  *
- * Order matters: fonts → tailwind → starlight overrides → site rules.
- * starlight-tailwind hooks Starlight's CSS variables to Tailwind's
- * theme so utilities like text-accent map to --sl-color-accent. */
+ * Actual order: fonts → tokens → site → tailwind → starlight overrides.
+ * site.css sits before tailwindcss so its `.site` scope is declared near
+ * the tokens it aliases, but that placement is not load-bearing: every
+ * rule in site.css that could compete with a Tailwind utility is written
+ * `:not(:where([class]))` (zero specificity — see `.site a:not(...)` in
+ * site.css), so it always loses to any classed utility regardless of
+ * import order. starlight-tailwind hooks Starlight's CSS variables to
+ * Tailwind's theme so utilities like text-accent map to --sl-color-accent;
+ * it runs after tailwindcss because it depends on Tailwind's @theme output. */
 
 @import './fonts.css';
 @import './tokens.css';
