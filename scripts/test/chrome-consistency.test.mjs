@@ -1,6 +1,8 @@
-// Guards the "one site, not four" invariant: the footer link set and the
-// header manifest links must be identical on a marketing page and a
-// Starlight page. Requires a fresh `npm run build` (skips if dist/ absent).
+// scripts/test/chrome-consistency.test.mjs
+//
+// Guards the "one site, not four" invariant. Requires a fresh
+// `npm run build` (skips with a visible message when dist/ is absent —
+// CI always builds first, see .github/workflows/ci.yml).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
@@ -14,25 +16,41 @@ const pages = {
 
 const built = await access(pages.marketing).then(() => true, () => false);
 
-function hrefs(html, sectionRe) {
-  const section = html.match(sectionRe)?.[0] ?? '';
-  return new Set([...section.matchAll(/href="([^"]+)"/g)].map((m) => m[1]));
+const hrefs = (fragment) =>
+  new Set([...fragment.matchAll(/href="([^"]+)"/g)].map((m) => m[1]));
+
+function siteFooter(html) {
+  const m = html.match(/<footer[^>]*data-site-footer[^>]*>[\s\S]*?<\/footer>/);
+  assert.ok(m, 'page contains the shared SiteFooter (data-site-footer)');
+  return m[0];
 }
 
-test('footer link set identical across surfaces', { skip: !built && 'run npm run build first' }, async () => {
-  const marketing = hrefs(await readFile(pages.marketing, 'utf8'), /<footer[\s\S]*?<\/footer>/);
-  const starlight = hrefs(await readFile(pages.starlight, 'utf8'), /<footer[\s\S]*<\/footer>/);
+test('SiteFooter link set identical across surfaces', { skip: !built && 'run npm run build first' }, async () => {
+  const marketing = hrefs(siteFooter(await readFile(pages.marketing, 'utf8')));
+  const starlight = hrefs(siteFooter(await readFile(pages.starlight, 'utf8')));
+  assert.deepEqual([...marketing].sort(), [...starlight].sort(), 'footer href sets must be equal');
   for (const l of [...nav.footer, ...nav.social]) {
-    assert.ok(marketing.has(l.href), `marketing footer missing ${l.href}`);
-    assert.ok(starlight.has(l.href), `starlight footer missing ${l.href}`);
+    assert.ok(marketing.has(l.href), `footer missing manifest link ${l.href}`);
   }
 });
 
-test('header manifest links present on both surfaces', { skip: !built && 'run npm run build first' }, async () => {
-  for (const [name, url] of Object.entries(pages)) {
-    const html = await readFile(url, 'utf8');
-    for (const l of nav.header) {
-      assert.ok(html.includes(`href="${l.href}"`), `${name} header missing ${l.href}`);
-    }
+test('header manifest links present in the header of both surfaces', { skip: !built && 'run npm run build first' }, async () => {
+  const marketingHtml = await readFile(pages.marketing, 'utf8');
+  const starlightHtml = await readFile(pages.starlight, 'utf8');
+  const marketingHeader = marketingHtml.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
+  const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
+  assert.ok(marketingHeader, 'marketing page has a <header>');
+  assert.ok(starlightNav, 'starlight page has the site docnav');
+  for (const l of nav.header) {
+    assert.ok(marketingHeader.includes(`href="${l.href}"`), `marketing header missing ${l.href}`);
+    assert.ok(starlightNav.includes(`href="${l.href}"`), `starlight docnav missing ${l.href}`);
   }
+});
+
+test('SiteFooter renders outside <main> on Starlight pages', { skip: !built && 'run npm run build first' }, async () => {
+  const html = await readFile(pages.starlight, 'utf8');
+  const mainClose = html.lastIndexOf('</main>');
+  const footerStart = html.search(/<footer[^>]*data-site-footer/);
+  assert.ok(mainClose !== -1 && footerStart !== -1, 'page has </main> and SiteFooter');
+  assert.ok(footerStart > mainClose, 'SiteFooter must come after </main> (contentinfo landmark)');
 });
