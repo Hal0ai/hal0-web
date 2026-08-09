@@ -167,6 +167,9 @@ export default defineConfig({
 				// Prepends the site nav to the mobile drawer (docs/blog only —
 				// KB is byte-frozen); see the component's header comment.
 				Sidebar: './src/components/StarlightSidebar.astro',
+				// Default title + the "applies to vX.Y" stamp when frontmatter
+				// declares `appliesTo`; byte-identical passthrough otherwise.
+				PageTitle: './src/components/StarlightPageTitle.astro',
 			},
 			// Sensible OG / social defaults.
 			head: [

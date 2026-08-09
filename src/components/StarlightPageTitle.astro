@@ -1,0 +1,24 @@
+---
+/**
+ * PageTitle override: the default title, plus the comp's version stamp
+ * ("applies to v0.5.x" — 08 Docs.html `.vernote`) when a page declares
+ * `appliesTo` in frontmatter (schema seam in src/content.config.ts,
+ * following the `reviewed`/`kbCategory` precedent). Pages without the
+ * field render byte-identically to stock — KB stays frozen, nothing is
+ * backfilled.
+ */
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+
+const { entry } = Astro.locals.starlightRoute;
+const appliesTo: string | undefined = entry.data.appliesTo;
+---
+
+<Default><slot /></Default>
+{
+	appliesTo && (
+		<span class="hal0-vernote">
+			<span class="hal0-vernote-dot" aria-hidden="true" />
+			applies to {appliesTo}
+		</span>
+	)
+}

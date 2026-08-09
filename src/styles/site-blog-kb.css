@@ -237,8 +237,109 @@
 	}
 }
 
+/* ── 2b. post-row link/meta idiom — comp `.post-row` (04 Blog and KB.html
+ * lines 20-27): titles are plain fg, amber only on hover, meta mono
+ * faint, tag links read as chips. #70 shipped the grid; these finish the
+ * colors starlight-blog/global.css were still winning on (accent link
+ * color + prose underline). Same unscoped `.posts` chain as above — the
+ * markup only exists on starlight-blog list routes, never KB. ── */
+.content-panel .sl-markdown-content .posts .preview .preview-link,
+.content-panel .sl-markdown-content .posts .preview .preview-link h2 {
+	color: var(--hal0-fg);
+	text-decoration: none;
+}
+.content-panel .sl-markdown-content .posts .preview .preview-link:hover h2 {
+	color: var(--hal0-accent);
+}
+/* the .name div carries starlight-blog's own scoped color/size — hit it
+ * directly, not just the anchor it inherits from */
+.content-panel .sl-markdown-content .posts .preview .metadata .authors,
+.content-panel .sl-markdown-content .posts .preview .metadata .authors a,
+.content-panel .sl-markdown-content .posts .preview .metadata .authors .author .name {
+	font-family: var(--hal0-font-mono);
+	font-size: 11px;
+	font-weight: 400;
+	color: var(--hal0-fg-faint);
+	text-decoration: none;
+}
+.content-panel .sl-markdown-content .posts .preview .metadata .authors a:hover .name {
+	color: var(--hal0-fg);
+}
+.content-panel .sl-markdown-content .posts .preview footer {
+	font-family: var(--hal0-font-mono);
+	font-size: 10.5px;
+	color: var(--hal0-fg-dim);
+}
+.content-panel .sl-markdown-content .posts .preview footer a {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 7px;
+	border-radius: 3px;
+	font-size: 10px;
+	letter-spacing: 0.02em;
+	text-transform: lowercase;
+	background: var(--hal0-bg-2);
+	color: var(--hal0-fg-dim);
+	border: 1px solid var(--hal0-border);
+	text-decoration: none;
+}
+.content-panel .sl-markdown-content .posts .preview footer a:hover {
+	color: var(--hal0-accent);
+	border-color: var(--hal0-accent-line);
+	background: var(--hal0-accent-soft);
+}
+
+/* ── 2c. blog index title panel ──
+ * starlight-blog's Blog.astro hides Starlight's whole title panel
+ * (`:global(.content-panel:first-of-type){display:none}`) — the comp
+ * wants the header (tag + h1 + intro + rss). Restore it on the index
+ * only: the index wrapper carries data-blog WITHOUT data-longform
+ * (posts/tags/authors carry both), so this can't touch anything else. */
+[data-blog]:not([data-longform]) .content-panel:first-of-type {
+	display: block;
+}
+
 /* Progressive-enhancement RSS button injected by blog-rss-button.js —
  * styled here so the script only handles DOM insertion. */
+/* ── blog index header — comp `phead` (04 Blog and KB.html lines 16-17,
+ * 59-62): surface tag over the title, intro under it, RSS right-aligned.
+ * Elements injected by /js/blog-rss-button.js; scoped to [data-blog],
+ * which the PageFrame override now sets on the index route too. ── */
+[data-blog] .blog-phead-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 24px;
+	flex-wrap: wrap;
+}
+[data-blog] .blog-surface-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-family: var(--hal0-font-mono);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: var(--hal0-ls-label);
+	color: var(--hal0-accent);
+	margin-bottom: 12px;
+}
+[data-blog] .blog-surface-tag::before {
+	content: '';
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--hal0-accent);
+	box-shadow: 0 0 6px var(--hal0-accent);
+}
+[data-blog] .blog-intro {
+	font-size: 15px;
+	line-height: 1.6;
+	color: var(--hal0-fg-muted);
+	max-width: 58ch;
+	margin: 10px 0 0;
+	text-wrap: pretty;
+}
+
 .blog-rss-btn {
 	display: inline-flex;
 	align-items: center;
