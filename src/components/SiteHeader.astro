@@ -1,0 +1,144 @@
+---
+/**
+ * SiteHeader — Astro port of the comp's Header/Drawer (site-chrome.jsx,
+ * variant="site"). 56px bar: wordmark left, visibleHeader nav centre,
+ * GitHub/Discord iconbtns + burger right. Below 1000px the nav collapses
+ * into a burger-triggered `.drawer` with the same links + icon foot.
+ *
+ * Props:
+ *   tone? – "solid" (default) | "transparent". Transparent starts with
+ *           the `.ontop` class (bare, for a full-bleed hero) and promotes
+ *           to solid once scrolled past 80% of the viewport height — see
+ *           the inline scroll watcher below.
+ */
+import Wordmark from './Wordmark.astro';
+import DiscordIcon from './DiscordIcon.astro';
+import { visibleHeader, isActive, getSocial } from '../lib/nav';
+
+interface Props {
+  tone?: 'solid' | 'transparent';
+}
+
+const { tone = 'solid' } = Astro.props;
+
+const path = Astro.url.pathname;
+const github = getSocial('github');
+const discord = getSocial('discord');
+
+const githubPath =
+  'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z';
+---
+
+<header class:list={['hdr', 'sticky', { ontop: tone === 'transparent' }]} data-tone={tone}>
+  <div class="wrap wide hdr-in">
+    <a class="hdr-brand" href="/" aria-label="hal0 home">
+      <Wordmark size="text-xl" />
+    </a>
+    <nav class="hdr-nav">
+      {visibleHeader.map((l) => {
+        const active = isActive(path, l);
+        return (
+          <a
+            href={l.href}
+            class:list={[{ on: active }]}
+            aria-current={active ? 'page' : undefined}
+            rel={l.external ? 'noopener' : undefined}
+          >
+            {l.label}
+            {l.external && <span class="ext">↗</span>}
+          </a>
+        );
+      })}
+    </nav>
+    <div class="hdr-right">
+      <a class="iconbtn" href={github.href} rel="noopener" aria-label="GitHub">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d={githubPath} /></svg>
+      </a>
+      <a class="iconbtn" href={discord.href} rel="noopener" aria-label="Discord">
+        <DiscordIcon size={15} />
+      </a>
+      <button class="iconbtn hdr-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-drawer" id="site-drawer-toggle">
+        <svg class="icon-menu" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M2 4.5h12M2 8h12M2 11.5h12" />
+        </svg>
+        <svg class="icon-close" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" hidden>
+          <path d="M3 3l10 10M13 3L3 13" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="drawer" id="site-drawer" hidden>
+    {visibleHeader.map((l) => {
+      const active = isActive(path, l);
+      return (
+        <a href={l.href} class:list={['row', { on: active }]} rel={l.external ? 'noopener' : undefined}>
+          <span>{l.label}</span>
+          <span class="mono" style="font-size: 11px; color: var(--fg-4);">{l.external ? '↗' : ''}</span>
+        </a>
+      );
+    })}
+    <div class="foot">
+      <a class="iconbtn" href={github.href} rel="noopener" aria-label="GitHub">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d={githubPath} /></svg>
+      </a>
+      <a class="iconbtn" href={discord.href} rel="noopener" aria-label="Discord">
+        <DiscordIcon size={15} />
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Burger toggle — no framework. Opens/closes the drawer, syncs aria,
+  // closes on Escape / link click, and resets if the viewport grows back
+  // past the 1000px breakpoint where the drawer is hidden anyway.
+  (() => {
+    const btn = document.getElementById('site-drawer-toggle');
+    const drawer = document.getElementById('site-drawer');
+    if (!btn || !drawer) return;
+    const menuIcon = btn.querySelector('.icon-menu');
+    const closeIcon = btn.querySelector('.icon-close');
+    const setOpen = (open) => {
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      drawer.hidden = !open;
+      menuIcon?.toggleAttribute('hidden', open);
+      closeIcon?.toggleAttribute('hidden', !open);
+    };
+    btn.addEventListener('click', () => setOpen(drawer.hidden));
+    drawer.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    });
+    window.matchMedia('(min-width: 1000px)').addEventListener('change', (m) => {
+      if (m.matches) setOpen(false);
+    });
+  })();
+</script>
+
+<script>
+  // Scroll-aware promotion of a transparent (hero) header to solid —
+  // mirrors the comp's `.hdr.ontop` state. Only wired up for headers
+  // whose data-tone is "transparent"; solid headers are inert here.
+  // Tiny + passive, rAF-throttled so it stays cheap on long scrolls.
+  (() => {
+    const hdr = document.querySelector('header.hdr[data-tone="transparent"]');
+    if (!hdr) return;
+    const threshold = () => window.innerHeight * 0.8;
+    let ticking = false;
+    const sync = () => {
+      ticking = false;
+      hdr.classList.toggle('ontop', window.scrollY <= threshold());
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(sync);
+    };
+    sync();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', sync, { passive: true });
+  })();
+</script>
