@@ -1,0 +1,546 @@
+---
+/**
+ * /profiles/submit — web door for submitting a hal0 profile.
+ *
+ * Adapted from door B of the wireframe (docs/design/2026-08-09-community-comps/
+ * 09 Profile Submission.html + README.md §9): upload-or-paste a TOML file,
+ * validate it entirely client-side (src/lib/profile-validate.mjs, a
+ * dependency-free port of hal0-profiles/lib/validate.mjs), then open a
+ * pre-filled "new file" page on GitHub — GitHub itself handles the
+ * fork/branch/PR for non-writers, so the visitor never runs a git command.
+ *
+ * Deliberate scope cut from the wireframe: there is no GitHub App/Worker
+ * yet to open a pull request on the visitor's behalf, so the wireframe's
+ * sign-in step and "PR opened on your behalf" copy are replaced by an
+ * honest "continue on GitHub" button and copy that says exactly what
+ * happens (see the PR body for the full pending-backend list). No
+ * /profiles/mine status page exists yet either — that needs the same
+ * identity piece.
+ *
+ * All four wireframe validation states are implemented: pass, schema
+ * error (line-railed, blocking), missing required fields (intent,
+ * model.id, args.raw — blocking), and unknown model (a warning, not an
+ * error — continue with an "unverified" chip). The duplicate-slug edge
+ * state offers "submit as v<next>" before "rename mine", per the comp.
+ */
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import '../../styles/site-data.css';
+import GithubIcon from '../../components/GithubIcon.astro';
+import profilesSnapshot from '../../data/profiles.json';
+
+const CONTRIBUTING_URL = 'https://github.com/Hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md';
+const profileCount = profilesSnapshot.profiles.length;
+
+const SAMPLE_TOML = `schema = 1
+
+[profile]
+slug = "your-slug-here"
+title = "Short title"
+summary = "One sentence: what this config is tuned for and why."
+intent = "chat"
+author = "your-github-handle"
+
+[runner]
+kind = "llama-server"
+lane = "rocm"
+min_build = "b9219"
+
+[model]
+id = "the-roster-model-id"
+
+[args]
+raw = "-ngl 99 -c 16384 -fa 1 -ctk q4_0 -ctv q4_0 --parallel 1 -b 512"
+
+[[history]]
+v = 1
+date = "2026-08-09"
+note = "initial"
+`;
+
+const description =
+  'Submit a hal0 profile — a TOML config validated in your browser, then opened as a pre-filled pull request on GitHub.';
+---
+
+<MarketingLayout title="submit a profile — hal0" description={description} ogImage="/og-default.png">
+  <div class="wrap wide phead">
+    <span class="eyebrow">profiles · submit</span>
+    <h1 class="site-h1" style="margin: 10px 0 12px">submit a profile</h1>
+    <p class="site-body" style="max-width: 66ch">
+      A profile is a TOML file in <span class="mono">hal0ai/hal0-profiles</span>. Add yours below —
+      it is checked in your browser before anything leaves the page — then GitHub opens a pre-filled
+      file: press &ldquo;Propose changes&rdquo; and the PR lands in our review queue. We don't submit
+      it for you and there's no sign-in; you stay the author on GitHub.
+    </p>
+    <p class="site-sm" style="margin-top: 10px">
+      Prefer to do it by hand? <a href={CONTRIBUTING_URL} rel="noopener">read CONTRIBUTING.md →</a>
+    </p>
+  </div>
+
+  <div class="wrap wide">
+    <div data-submit-root>
+      <div class="rail" data-submit-rail role="tablist" aria-label="Submission steps">
+        <button type="button" data-step="0" class="on" aria-current="step"><span class="n">1</span>add the file</button>
+        <button type="button" data-step="1"><span class="n">2</span>validate</button>
+        <button type="button" data-step="2"><span class="n">3</span>continue on github</button>
+      </div>
+
+      <div class="wf-b" data-step-panel="0">
+        <h2 class="site-h2" style="margin: 0 0 12px">add your profile</h2>
+        <div class="tabs2" role="tablist" aria-label="Input mode">
+          <button type="button" class="on" data-mode-tab="paste" role="tab" aria-selected="true">paste it</button>
+          <button type="button" data-mode-tab="upload" role="tab" aria-selected="false">upload the file</button>
+        </div>
+
+        <div class="drop" data-dropzone hidden>
+          <span class="big">drop your .toml here, or click to browse</span>
+          <span class="sm" data-filename-badge>no file selected yet</span>
+          <input
+            id="profile-file-input"
+            type="file"
+            accept=".toml,text/plain"
+            data-file-input
+            class="visually-hidden"
+            aria-label="Profile TOML file"
+          />
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="profile-toml-input">profile TOML</label>
+          <textarea
+            id="profile-toml-input"
+            class="tin"
+            rows="16"
+            spellcheck="false"
+            data-toml-input>{SAMPLE_TOML}</textarea
+          >
+          <span class="hint">Paste the file the CLI wrote, or edit this starting template directly.</span>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="profile-flag-override">flag string — optional, overrides args.raw</label>
+          <input id="profile-flag-override" class="input mono" type="text" data-flag-override placeholder="-ngl 99 -c 16384 -fa 1 …" />
+          <span class="hint">Paste what you actually ran. Leave blank to use args.raw from the file as-is.</span>
+        </div>
+
+        <div class="fbar">
+          <button type="button" class="btn" data-validate-btn>validate</button>
+        </div>
+      </div>
+
+      <div class="wf-b" data-step-panel="1" hidden>
+        <h2 class="site-h2" style="margin: 0 0 12px">validation</h2>
+        <p class="site-sm" style="margin: -4px 0 14px">Runs in the browser — nothing is sent anywhere yet.</p>
+        <div data-validation-live aria-live="polite" class="visually-hidden"></div>
+
+        <div class="vpanel" data-vpanel="pass" hidden>
+          <div class="vhead ok">valid — parsed profile summary</div>
+          <div class="vbody">
+            <dl style="margin:0">
+              <div class="vrow"><dt>slug</dt><dd data-v-slug></dd></div>
+              <div class="vrow"><dt>intent</dt><dd data-v-intent></dd></div>
+              <div class="vrow"><dt>model</dt><dd><span data-v-model></span> <span class="chip ok" data-v-model-chip style="margin-left:8px">in roster</span></dd></div>
+              <div class="vrow"><dt>lane · min build</dt><dd data-v-lane></dd></div>
+              <div class="vrow"><dt>flags</dt><dd><span data-v-flags></span> flags</dd></div>
+              <div class="vrow"><dt>linked runs</dt><dd><span data-v-runs></span> benchmark run(s) already carry this slug</dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="vpanel" data-vpanel="schema-error" hidden>
+          <div class="vhead err" data-v-headline>schema error</div>
+          <div class="vbody">
+            <div class="codeline" data-v-codeline></div>
+            <p class="site-sm" style="margin-top:12px" data-v-cause></p>
+            <div class="fbar" style="margin-top:12px">
+              <button type="button" class="btn ghost sm" data-revalidate-btn>re-validate</button>
+            </div>
+            <div class="note">Blocking. Continue stays disabled until every error clears.</div>
+          </div>
+        </div>
+
+        <div class="vpanel" data-vpanel="missing-fields" hidden>
+          <div class="vhead err">required keys missing</div>
+          <div class="vbody">
+            <ul class="fixlist" data-v-missing-list></ul>
+            <p class="site-sm" style="margin-top:12px">Edit the file above, then re-validate.</p>
+            <div class="fbar" style="margin-top:12px">
+              <button type="button" class="btn ghost sm" data-revalidate-btn>re-validate</button>
+            </div>
+            <div class="note">Recoverable in place — edit the pasted text directly, no separate form.</div>
+          </div>
+        </div>
+
+        <div class="vpanel" data-vpanel="warning" hidden>
+          <div class="vhead warn">model id not in the roster</div>
+          <div class="vbody">
+            <p class="site-sm" style="margin:0">
+              <span class="mono" data-v-warn-model></span> is not in the June sweep. That is allowed —
+              the roster lags what people run — but the profile will show
+              <span class="chip warn" style="margin:0 6px">unverified</span> until a benchmark run
+              carries the slug.
+            </p>
+            <div class="note">Warning, not an error. Never block a submission on data the site itself is behind on.</div>
+          </div>
+        </div>
+
+        <div class="vpanel" data-vpanel="duplicate-slug" hidden>
+          <div class="vhead err"><span data-v-dup-slug></span> already exists</div>
+          <div class="vbody">
+            <p class="site-sm" style="margin:0">
+              Published by <span class="mono">@<span data-v-dup-author></span></span>, currently at
+              v<span data-v-dup-version></span>. Slugs are unique across the registry.
+            </p>
+            <div class="fbar" style="margin-top:14px; flex-direction:column; align-items:stretch; gap:8px">
+              <button type="button" class="btn sm" data-accept-bump>prefill v<span data-v-dup-next></span> of that profile</button>
+              <button type="button" class="btn ghost sm" data-rename-hint>rename mine instead</button>
+            </div>
+            <div class="note">Offered first because most duplicates are someone improving a config, not colliding with it.</div>
+          </div>
+        </div>
+
+        <div class="fbar" style="margin-top:16px">
+          <button type="button" class="btn" data-continue-btn disabled>continue</button>
+          <button type="button" class="btn ghost" data-back-0>back</button>
+        </div>
+      </div>
+
+      <div class="wf-b" data-step-panel="2" hidden>
+        <h2 class="site-h2" style="margin: 0 0 12px">continue on github</h2>
+        <div style="display:grid; grid-template-columns: 1fr 300px; gap:24px; align-items:start" data-confirm-summary>
+          <div>
+            <p class="site-body" style="max-width:52ch">
+              GitHub opens a pre-filled file at <span class="mono" data-confirm-file></span> in a new
+              tab — press <b>&ldquo;Propose changes&rdquo;</b> there and it becomes a pull request in
+              our review queue. You stay the author; we never touch your GitHub account.
+            </p>
+            <ul class="fixlist" style="margin-top:16px">
+              <li><span class="key">✓</span><span class="why">Opens under your own GitHub identity — nothing is posted on your behalf.</span></li>
+              <li><span class="key">✓</span><span class="why">You can edit the file on GitHub before proposing changes, or cancel entirely.</span></li>
+            </ul>
+            <div class="fbar" style="margin-top:18px">
+              <a class="btn" data-github-btn target="_blank" rel="noopener" hidden><GithubIcon size={14} /> continue on github ↗</a>
+              <a class="btn ghost" href="/profiles/submitted" rel="noopener">I've opened it — what happens next?</a>
+              <button type="button" class="btn ghost" data-back-1>back</button>
+            </div>
+            <div class="banner warn" data-github-fallback hidden style="margin-top:16px; display:flex; gap:8px; padding:10px 12px">
+              <span>
+                This profile's TOML makes the pre-filled link too long for some browsers. Copy the file
+                below, then open the
+                <a data-fallback-link href="#" rel="noopener">blank new-file page on GitHub ↗</a>
+                and paste it in.
+              </span>
+            </div>
+            <div class="fbar" style="margin-top:10px">
+              <button type="button" class="btn ghost sm" data-copy-toml>copy TOML</button>
+            </div>
+          </div>
+          <div>
+            <span class="label">what this opens</span>
+            <div class="well" style="padding:12px 14px; margin-top:8px">
+              <div style="color:var(--fg-4)"># hal0ai/hal0-profiles</div>
+              <div>+ profiles/<span data-confirm-slug></span>.toml</div>
+            </div>
+            <div class="note">GitHub's own "new file" flow forks the repo and opens the PR for you — the standard way non-writers contribute.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="site-sm" style="margin-top:24px; color:var(--fg-4)">
+      {profileCount} profiles are already in the registry — every one of them went through this same
+      validator.
+    </p>
+  </div>
+
+  <script>
+    import '../../scripts/profile-submit-island.ts';
+  </script>
+</MarketingLayout>
+
+<style>
+  /* Wireframe-fidelity component styles ported from
+   * docs/design/2026-08-09-community-comps/09 Profile Submission.html —
+   * scoped to this page, since these are submission-specific shapes
+   * (rail, tabs, drop zone, validation panel, code-line rail) that don't
+   * exist elsewhere in the site yet. */
+  [data-submit-root] {
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .rail {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--bg);
+    flex-wrap: wrap;
+  }
+  .rail button {
+    flex: 1;
+    min-width: 140px;
+    background: none;
+    border: 0;
+    border-right: 1px solid var(--line-soft);
+    padding: 11px 12px;
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rail button:last-child {
+    border-right: 0;
+  }
+  .rail button:hover {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+  .rail button.on {
+    color: var(--accent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .rail .n {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9.5px;
+    flex-shrink: 0;
+  }
+  .rail button.on .n {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #0a0a0a;
+  }
+  .rail button.done .n {
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+  .wf-b {
+    padding: 24px 26px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 18px;
+  }
+  .field .lbl,
+  .lbl {
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-2);
+  }
+  .hint {
+    font-family: var(--jbm);
+    font-size: 10.5px;
+    color: var(--fg-4);
+    line-height: 1.5;
+  }
+  .tin {
+    width: 100%;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--rad);
+    color: var(--fg-2);
+    font-family: var(--jbm);
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+  .tin:focus,
+  .input:focus {
+    outline: 0;
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .input {
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--rad);
+    color: var(--fg-2);
+    font-size: 12.5px;
+    padding: 9px 12px;
+    box-sizing: border-box;
+  }
+  .input.mono {
+    font-family: var(--jbm);
+  }
+  .drop {
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--rad);
+    background: var(--bg-sunken);
+    padding: 30px 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin-bottom: 18px;
+  }
+  .drop.hot {
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+  }
+  .drop .big {
+    font-family: var(--jbm);
+    font-size: 13px;
+    color: var(--fg-2);
+  }
+  .drop .sm {
+    font-family: var(--jbm);
+    font-size: 10.5px;
+    color: var(--fg-4);
+  }
+  .tabs2 {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-sm);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .tabs2 button {
+    background: none;
+    border: 0;
+    border-right: 1px solid var(--line);
+    padding: 6px 13px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+    cursor: pointer;
+  }
+  .tabs2 button:last-child {
+    border-right: 0;
+  }
+  .tabs2 button.on {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .vpanel {
+    border: 1px solid var(--line);
+    border-radius: var(--rad);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .vhead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    font-family: var(--jbm);
+    font-size: 12px;
+  }
+  .vhead.ok {
+    background: var(--ok-soft);
+    border-bottom: 1px solid var(--ok-line);
+    color: var(--ok);
+  }
+  .vhead.err {
+    background: var(--err-soft);
+    border-bottom: 1px solid var(--err-line);
+    color: var(--err);
+  }
+  .vhead.warn {
+    background: var(--warn-soft);
+    border-bottom: 1px solid var(--warn-line);
+    color: var(--warn);
+  }
+  .vbody {
+    padding: 14px;
+  }
+  .vrow {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 12px;
+    padding: 7px 0;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--jbm);
+    font-size: 11.5px;
+  }
+  .vrow:first-child {
+    border-top: 0;
+  }
+  .vrow dt {
+    color: var(--fg-4);
+  }
+  .vrow dd {
+    color: var(--fg-2);
+    margin: 0;
+  }
+  .codeline {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    line-height: 1.85;
+  }
+  .codeline .ln {
+    color: var(--fg-5);
+    text-align: right;
+    padding-right: 12px;
+  }
+  .codeline .bad {
+    background: var(--err-soft);
+    box-shadow: inset 2px 0 0 var(--err);
+    color: var(--fg);
+  }
+  .fixlist {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fixlist li {
+    display: flex;
+    gap: 10px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-2);
+    align-items: flex-start;
+  }
+  .fixlist .key {
+    color: var(--err);
+  }
+  .fixlist .why {
+    color: var(--fg-4);
+  }
+  .note {
+    font-family: var(--jbm);
+    font-size: 10.5px;
+    color: var(--accent);
+    opacity: 0.85;
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  input[type='file'].visually-hidden {
+    position: absolute;
+  }
+  @media (max-width: 900px) {
+    [data-confirm-summary] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
