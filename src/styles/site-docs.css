@@ -193,3 +193,56 @@
 	font-size: 10.5px;
 	color: var(--hal0-fg-faint);
 }
+
+/* ── section listing pages — comp's Category view `.plist`/`.prow`
+ * (08 Docs.html lines 67–73), rendered by SectionPageList.astro on each
+ * section's index.mdx. The comp's --fg-5 maps to --hal0-fg-ghost
+ * (identical light value #bfbab3). ── */
+[data-docs] .plist {
+	border-top: 1px solid var(--hal0-border);
+	margin-top: 26px;
+}
+[data-docs] .prow {
+	display: grid;
+	grid-template-columns: 32px 1fr 210px;
+	gap: 18px;
+	align-items: baseline;
+	padding: 16px 0;
+	border-bottom: 1px solid var(--hal0-border-soft);
+	text-decoration: none;
+}
+[data-docs] .prow .ord {
+	font-family: var(--hal0-font-mono);
+	font-size: 11px;
+	color: var(--hal0-fg-ghost);
+}
+[data-docs] .prow .t {
+	font-family: var(--hal0-font-mono);
+	font-size: 15px;
+	color: var(--hal0-fg);
+}
+[data-docs] .prow:hover .t {
+	color: var(--hal0-accent);
+}
+[data-docs] .prow .d {
+	display: block;
+	font-size: 13.5px;
+	line-height: 1.55;
+	color: var(--hal0-fg-dim);
+	margin-top: 5px;
+	max-width: 60ch;
+}
+[data-docs] .prow .f {
+	font-family: var(--hal0-font-mono);
+	font-size: 10.5px;
+	color: var(--hal0-fg-ghost);
+	text-align: right;
+}
+@media (max-width: 900px) {
+	[data-docs] .prow {
+		grid-template-columns: 1fr;
+	}
+	[data-docs] .prow .f {
+		text-align: left;
+	}
+}
