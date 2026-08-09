@@ -489,7 +489,17 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     const flagMark = row.live && row.flagged
       ? '<span class="flag-mark" title="Flagged run — numbers may not reflect a clean sweep.">⚠</span>'
       : '';
-    return `<tr data-row-id="${esc(row.id)}"${row.runId ? ` data-run-id="${esc(row.runId)}"` : ''}${row.cellKey ? ` data-cell-key="${esc(row.cellKey)}"` : ''}${clickable ? ' class="clickable"' : ''}>
+    // A clickable row IS the page's primary interaction (open the run that
+    // produced a cell) — it must be reachable and operable from the
+    // keyboard, not just a mouse target with a pointer cursor. role=button
+    // + tabindex=0 + a labelled purpose puts it in the tab order and gives
+    // it an accessible name distinct from the raw cell text; Enter/Space
+    // activation is wired in bindRows below (native <tr> has no built-in
+    // activation behavior the way <button>/<a> do).
+    const rowAttrs = clickable
+      ? ` class="clickable" role="button" tabindex="0" aria-label="Open run detail for ${esc(row.id)}"`
+      : '';
+    return `<tr data-row-id="${esc(row.id)}"${row.runId ? ` data-run-id="${esc(row.runId)}"` : ''}${row.cellKey ? ` data-cell-key="${esc(row.cellKey)}"` : ''}${rowAttrs}>
       <td class="model mid"><span class="mname">${flagMark}${esc(row.id)}</span><span class="msub">${esc(row.hfRepo || 'local build')}</span>${quantLine}</td>
       <td>${capsHtml(row.caps)}</td>
       <td>${esc(row.params ?? '—')}</td>
@@ -535,7 +545,17 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     bindThead();
     tbody.innerHTML = bodyHtml;
     $$<HTMLTableRowElement>('[data-bench-tbody] tr[data-run-id]').forEach((tr) => {
-      tr.addEventListener('click', () => openRun(tr.dataset.runId as string, tr, tr.dataset.cellKey));
+      const open = () => openRun(tr.dataset.runId as string, tr, tr.dataset.cellKey);
+      tr.addEventListener('click', open);
+      // role="button" gives no free activation behavior the way a native
+      // <button>/<a> does — Enter/Space must be wired explicitly for the
+      // row to be keyboard-operable, not just keyboard-*focusable*.
+      tr.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      });
     });
 
     const total = live ? live.models.length : ROSTER_MEASURED;
@@ -620,14 +640,28 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   }
 
   async function loadLive() {
+    // Stage 1: network/HTTP. A failure here is genuinely "the API didn't
+    // answer" — the honest 'unreachable' badge.
+    let data: any;
     try {
       const res = await fetch(`${API}/v1/roster`, { signal: AbortSignal.timeout(4000) });
       if (!res.ok) throw new Error(`status ${res.status}`);
-      const data = await res.json();
+      data = await res.json();
+    } catch {
+      setSnapshotBadge('unreachable');
+      return;
+    }
+
+    // Stage 2: the response arrived — now validate its shape. facetOptions
+    // walks every model/cell and throws on a malformed entry (e.g. a null
+    // in `models`), so `live` is assigned only once the payload has proven
+    // usable — a shape failure here is a live-data problem, not an
+    // unreachable API, and must read as such (not the stage-1 badge).
+    try {
       if (!Array.isArray(data.models)) throw new Error('malformed roster payload');
+      const opts = facetOptions(data.models);
       live = { models: data.models, generated: data.generated };
       setLiveBadge(data.generated);
-      const opts = facetOptions(data.models);
       // Default-view fallback: the comp's default (tg @ 2048, default
       // config) may not exist in a given sweep (e.g. a partial or
       // in-progress run). Fall back to the first available value per
@@ -640,8 +674,8 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
       enableSegs(opts);
       render();
     } catch {
-      // stays on the snapshot
-      setSnapshotBadge('unreachable');
+      live = null;
+      setSnapshotBadge('parse-error');
     }
   }
 
@@ -689,6 +723,38 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   };
   let evalsLoaded = false;
 
+  // The SSR-rendered SubNav (src/components/SubNav.astro) highlights
+  // "leaderboard" unconditionally — Astro.url.pathname carries no query
+  // string, so the server can't know which tab ?tab=evals asks for. Tab
+  // switches happen client-side with no page reload, so the subnav's "on"
+  // class/aria-current has to be kept in sync here instead of via nav.ts's
+  // path-only matching.
+  function syncSubnavTab(tab: string | undefined) {
+    for (const a of $$<HTMLAnchorElement>('.subnav a[href^="/benchmarks"]')) {
+      const isEvalsLink = a.getAttribute('href') === '/benchmarks?tab=evals';
+      const on = tab === 'evals' ? isEvalsLink : !isEvalsLink;
+      a.classList.toggle('on', on);
+      if (on) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    }
+  }
+
+  // Keeps ?tab= in sync with the active tab via replaceState (no history
+  // entry per tab click) — evals gets ?tab=evals so it's a real deep link,
+  // switching back to leaderboard clears the param rather than leaving a
+  // stale ?tab=evals pointing at a tab that's no longer showing.
+  function syncTabUrl(tab: string | undefined) {
+    const url = new URL(window.location.href);
+    if (tab === 'evals') {
+      if (url.searchParams.get('tab') === 'evals') return;
+      url.searchParams.set('tab', 'evals');
+    } else {
+      if (!url.searchParams.has('tab')) return;
+      url.searchParams.delete('tab');
+    }
+    window.history.replaceState(window.history.state, '', url);
+  }
+
   function activateTab(btn: HTMLButtonElement, focus = false) {
     const tab = btn.dataset.benchTab;
     tabButtons.forEach((b) => {
@@ -701,6 +767,8 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
     panels.evals.hidden = tab !== 'evals';
     if (focus) btn.focus();
     if (tab === 'evals' && !evalsLoaded) loadEvals();
+    syncSubnavTab(tab);
+    syncTabUrl(tab);
   }
 
   tabButtons.forEach((btn) => {
@@ -742,25 +810,34 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
         if (!byModel.has(e.model)) byModel.set(e.model, new Map());
         byModel.get(e.model)!.set(e.task ?? '', e.score);
       }
-      taskHead.outerHTML = tasks.map((t) => `<th class="n">${esc(t)}</th>`).join('');
-      tbodyEvals.innerHTML = [...byModel.entries()]
+
+      // C3 pattern: build the new head and body markup fully before
+      // mutating either DOM node — a score that violates the number
+      // contract throwing mid-row must not leave a stale tbody column
+      // count under a freshly replaced task head.
+      const headHtml = tasks.map((t) => `<th class="n">${esc(t)}</th>`).join('');
+      const bodyHtml = [...byModel.entries()]
         .map(([model, scores]) => {
           const snap = ROSTER.find((r) => r.id === model);
           const cells = tasks.map((t) => {
             const s = scores.get(t);
-            if (s == null) return '<td class="n" style="color:var(--fg-5)">—</td>';
+            if (s == null || typeof s !== 'number' || Number.isNaN(s)) return '<td class="n" style="color:var(--fg-5)">—</td>';
             const cls = s >= 0.75 ? ' good' : s < 0.4 ? ' bad' : '';
             return `<td class="n"><span class="evalbar"><span class="track"><span class="fill${cls}" style="width:${esc(Math.round(s * 100))}%"></span></span><span class="num" style="font-size:11px">${esc(s.toFixed(2))}</span></span></td>`;
           });
-          const vals = [...scores.values()].filter((v): v is number => v != null);
+          const vals = [...scores.values()].filter((v): v is number => typeof v === 'number' && !Number.isNaN(v));
           const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
           return `<tr><td class="model mid"><span class="mname">${esc(model)}</span>${snap ? `<span class="msub">${esc(snap.params)}</span>` : ''}</td><td class="n">${decodeHtml(snap ? snap.dec : null)}</td>${cells.join('')}<td class="n" style="color:${mean == null ? 'var(--fg-5)' : mean >= 0.7 ? 'var(--ok)' : 'var(--fg)'}">${mean != null ? esc(mean.toFixed(2)) : '—'}</td></tr>`;
         })
         .join('');
+
+      taskHead.outerHTML = headHtml;
+      tbodyEvals.innerHTML = bodyHtml;
       emptyEvals.hidden = true;
       scrollEvals.hidden = false;
     } catch {
-      // API unreachable / no scores yet — the honest empty state stays.
+      // API unreachable / no scores yet / malformed payload — the honest
+      // empty state stays.
     }
   }
 
@@ -1226,6 +1303,10 @@ const CAP_KEYS = ['mtp', 'vision', 'tools', 'coding', 'reasoning'];
   }
   .dtable :global(tr.clickable) {
     cursor: pointer;
+  }
+  .dtable :global(tr.clickable:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
   .dtable :global(.mname) {
     color: var(--fg);
