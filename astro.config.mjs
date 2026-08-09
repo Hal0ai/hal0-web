@@ -1,10 +1,14 @@
 // @ts-check
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import starlightBlog from 'starlight-blog';
 import sitemap from '@astrojs/sitemap';
 import icon from 'astro-icon';
 import tailwindcss from '@tailwindcss/vite';
+
+const nav = JSON.parse(readFileSync(new URL('./src/data/nav.json', import.meta.url), 'utf8'));
+const socialHref = (id) => nav.social.find((s) => s.id === id).href;
 
 export default defineConfig({
 	site: 'https://hal0.dev',
@@ -49,12 +53,12 @@ export default defineConfig({
 				{
 					icon: 'github',
 					label: 'GitHub',
-					href: 'https://github.com/hal0ai/hal0',
+					href: socialHref('github'),
 				},
 				{
 					icon: 'discord',
 					label: 'Discord',
-					href: 'https://discord.gg/7M4y6dcUyq',
+					href: socialHref('discord'),
 				},
 			],
 			// Dark-first; the toggle still lives in the top bar.
@@ -95,6 +99,7 @@ export default defineConfig({
 				// Starlight's default loads the SVG as <img>, which traps
 				// currentColor and leaves the "hal" invisible on dark.
 				SiteTitle: './src/components/StarlightSiteTitle.astro',
+				PageFrame: './src/components/StarlightPageFrame.astro',
 			},
 			// Sensible OG / social defaults.
 			head: [

@@ -10,7 +10,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "sync:changelog": "node scripts/sync-changelog.mjs",
-    "capture:screenshots": "node scripts/capture-screenshots.mjs"
+    "capture:screenshots": "node scripts/capture-screenshots.mjs",
+    "test": "node --test 'scripts/test/**/*.mjs'"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
