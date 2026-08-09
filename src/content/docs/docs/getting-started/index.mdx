@@ -6,6 +6,55 @@ sidebar:
 ---
 
 import { Card, CardGrid, LinkCard, Aside } from '@astrojs/starlight/components';
+import { Icon } from 'astro-icon/components';
+
+// Page counts below are literals, not derived at build time — deriving
+// them via `getCollection()` broke (MDX's compiled output splits
+// `export const`-visible bindings from same-file helper consts into
+// separate chunks, so a `.filter().length` helper read as "not defined"
+// at render; an inline `await` IIFE in the `export const` initializer
+// fails to parse at all). The honest fix is a guardrail instead:
+// scripts/test/docs-sections.test.mjs recounts each group directory
+// under src/content/docs/docs/ and fails if a count below goes stale.
+// `reference`'s count (13) includes its `api/` subgroup (4 pages).
+
+export const SECTIONS = [
+  {
+    title: 'getting started',
+    icon: 'lucide:rocket',
+    description: 'Install, first model, first chat. Bare metal, Proxmox, WSL.',
+    count: 8,
+    href: '/docs/getting-started/',
+  },
+  {
+    title: 'concepts',
+    icon: 'lucide:layers',
+    description: 'Slots, stacks, profiles, memory, agents, and the Strix Halo itself.',
+    count: 8,
+    href: '/docs/concepts/architecture/',
+  },
+  {
+    title: 'guides',
+    icon: 'lucide:compass',
+    description: 'Task by task: pull models, manage slots, wire MCP, roll back.',
+    count: 12,
+    href: '/docs/guides/manage-slots/',
+  },
+  {
+    title: 'operate',
+    icon: 'lucide:server',
+    description: 'Services, auth, and error reporting for a box you actually run.',
+    count: 3,
+    href: '/docs/operate/auth/',
+  },
+  {
+    title: 'reference',
+    icon: 'lucide:terminal',
+    description: 'CLI, config schema, slot lifecycle, env vars, and the API.',
+    count: 13,
+    href: '/docs/reference/cli/',
+  },
+];
 
 **hal0** turns a Linux box into a polished, OpenAI-compatible inference
 appliance. It is built for the AMD Ryzen AI Max+ 395 ("Strix Halo") —
@@ -104,3 +153,16 @@ by network reachability — the right posture for a trusted LAN appliance.
 If hal0 is reachable from anywhere you do not control, front it with a
 reverse proxy that owns auth and TLS.
 </Aside>
+
+## Sections
+
+<div class="seccards">
+  {SECTIONS.map((s) => (
+    <a class="seccard" href={s.href}>
+      <span class="seccard-icon"><Icon name={s.icon} width={16} height={16} /></span>
+      <h3>{s.title}</h3>
+      <p>{s.description}</p>
+      <span class="seccard-count">{s.count} pages &rarr;</span>
+    </a>
+  ))}
+</div>

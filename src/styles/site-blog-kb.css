@@ -276,3 +276,14 @@
 	font-size: 16px;
 	line-height: 1.68;
 }
+
+/* ── 4. blog post chrome — mono page title / TOC / pager ──
+ * These rules now live in site-docs.css, shared with docs via
+ * `:is([data-docs], [data-blog])` selectors — the comp draws the same
+ * mono `.site-h1` / `.toc` / pager idiom for docs and blog post alike
+ * (04 Blog and KB.html's Post renders the same `h1 className="site-h1"`
+ * and mono `.toc` as 08 Docs.html), so one rule set serves both instead
+ * of two near-identical copies. `[data-blog]` (set by StarlightPageFrame
+ * only for entry.id starting "blog/") is what keeps any of it from
+ * reaching KB, which shares the `[data-longform]` wrapper below but never
+ * carries `data-blog`. */

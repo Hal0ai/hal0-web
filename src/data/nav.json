@@ -7,8 +7,7 @@
         "/docs",
         "/kb",
         "/blog",
-        "/changelog",
-        "/releases"
+        "/changelog"
       ],
       "exclude": [
         "/docs/reference/model-roster-benchmark"
@@ -36,11 +35,6 @@
           "label": "changelog",
           "href": "/changelog",
           "match": "/changelog"
-        },
-        {
-          "label": "releases",
-          "href": "/releases",
-          "match": "/releases"
         }
       ]
     },

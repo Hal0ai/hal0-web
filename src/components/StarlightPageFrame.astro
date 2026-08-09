@@ -20,15 +20,45 @@
  * for everyone else — so a docs page's DOM is byte-identical to before
  * this wrapper existed (verified: `dist/docs/**` diffs clean against the
  * pre-wrapper build; no incidental extra `<div>` on every Starlight page).
+ *
+ * `data-docs` is the mirror-image seam added for the docs-shape pass (see
+ * docs/design/2026-08-09-community-comps/08 Docs.html): the comp's docs
+ * article PROSE (paragraph/list text and reading measure — not the h1) is
+ * a denser scale than blog/KB's (15.5px/1.68 @ 74ch vs. 16px/1.68 @ 68ch)
+ * — different enough that reusing `[data-longform]` for that would be a
+ * lie, so docs pages get their own attribute and site-docs.css scopes its
+ * prose rules to `[data-docs]` instead. Every Starlight-rendered entry.id
+ * is exactly one of docs/blog/kb, so this if/else is exhaustive — no
+ * third, attributeless case exists among Starlight routes.
+ *
+ * `data-blog` is an ADDITIONAL attribute (not a branch) on the same
+ * `[data-longform]` wrapper, only for entry.id starting "blog/". It exists
+ * so the docs-shape pass can also polish a few blog-only chrome elements
+ * (page-title, TOC, pager) that the comp draws IDENTICALLY for docs and
+ * blog (unlike prose, where they diverge) — site-docs.css shares those
+ * rules via `:is([data-docs], [data-blog])` — WITHOUT touching KB:
+ * `[data-longform]` itself, and every existing rule scoped to it, is
+ * untouched, so KB's build output stays byte-for-byte identical; only
+ * `[data-blog]`-scoped selectors (new, additive) can ever affect blog.
  */
 import Default from '@astrojs/starlight/components/PageFrame.astro';
 import SiteFooter from './SiteFooter.astro';
 
 const { entry } = Astro.locals.starlightRoute;
-const isLongForm = entry.id.startsWith('blog/') || entry.id.startsWith('kb/');
+const isBlog = entry.id.startsWith('blog/');
+const isLongForm = isBlog || entry.id.startsWith('kb/');
+const isDocs = entry.id.startsWith('docs/');
 ---
 {isLongForm ? (
-  <div data-longform>
+  <div data-longform data-blog={isBlog ? true : undefined}>
+    <Default>
+      <slot name="header" slot="header" />
+      <slot name="sidebar" slot="sidebar" />
+      <slot />
+    </Default>
+  </div>
+) : isDocs ? (
+  <div data-docs>
     <Default>
       <slot name="header" slot="header" />
       <slot name="sidebar" slot="sidebar" />

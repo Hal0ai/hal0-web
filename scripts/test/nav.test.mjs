@@ -112,11 +112,13 @@ test('isActive: learn/benchmarks mutual exclusion', () => {
   assert.ok(!isActiveJs('/docs/getting-started/', bench), 'docs page must not light benchmarks');
 });
 
-test('isActive: learn covers array-match sections (blog/changelog/releases)', () => {
+test('isActive: learn covers array-match sections (blog/changelog)', () => {
   const learn = nav.header.find((l) => l.label === 'learn');
   assert.ok(isActiveJs('/blog/some-post/', learn), 'learn is active on /blog/x');
+  // /changelog and /releases were merged into one page at /changelog;
+  // /releases is now a build-time redirect (astro.config.mjs) with no
+  // chrome of its own, so it's no longer in nav.json's match list.
   assert.ok(isActiveJs('/changelog', learn), 'learn is active on /changelog');
-  assert.ok(isActiveJs('/releases', learn), 'learn is active on /releases');
   // The model-roster-benchmark reference page is explicitly excluded from
   // "learn" (see nav.json's `exclude`) and, now that benchmarks moved to
   // /benchmarks/, it's no longer covered by "benchmarks" either — it's only

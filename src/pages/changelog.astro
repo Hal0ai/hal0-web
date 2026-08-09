@@ -1,20 +1,48 @@
 ---
 /**
- * /changelog — human-readable release history.
+ * /changelog — the unified release surface (was two pages: /changelog and
+ * /releases, merged per the operator directive to give docs/blog the KB
+ * page's shape, extended to changelog: combine the two into one page in
+ * that shape. /releases now 301s here via astro.config.mjs's `redirects`
+ * map, same pattern as the existing '/docs' → '/docs/getting-started/'
+ * entry.
  *
- * DERIVED, never hand-maintained: the content comes from hal0's
- * CHANGELOG.md (synced to src/data/changelog.md by scripts/sync-changelog.mjs
- * at build time) so it can't drift from what shipped. Rendered newest-first,
- * grouped by version, with the source's Breaking / Added / Changed / Removed
- * sections preserved.
+ * DERIVED, never hand-maintained: content comes from hal0's CHANGELOG.md
+ * (synced to src/data/changelog.md by scripts/sync-changelog.mjs at build
+ * time) via src/lib/changelog.js's parseChangelog — the same function both
+ * predecessor pages called, so nothing about the data model changed.
+ *
+ * Shape: the KB article shell (docs/design/2026-08-09-community-comps/04
+ * Blog and KB.html's `.kbshell`/`.kbside` idiom, ported here as
+ * `.clshell`/`.clside` since this is a plain MarketingLayout page, not a
+ * Starlight route — there's no `.sl-markdown-content`/right-sidebar seam
+ * to hook here). Release list in the sticky left sidebar (newest first,
+ * version + date, mono), full history in the center column at the KB
+ * article's reading measure (68ch, 16px/1.68 — see .cl-content below).
+ * Selecting a sidebar entry smooth-scrolls the center column to that
+ * version's section (native anchor href as the no-JS fallback), updates
+ * the URL hash, and the active sidebar item tracks scroll position via
+ * IntersectionObserver — same amber `.on` idiom as the KB sidebar
+ * (`box-shadow: inset 2px 0 0 var(--accent)`). `prefers-reduced-motion`
+ * downgrades the click-triggered scroll to an instant jump; deep links
+ * (`/changelog#v1-0-0-rc-3`) land correctly on load via the plain anchor
+ * href — no JS required for that part.
+ *
+ * The old /releases page's download/asset affordances (latest
+ * stable/pre-release headline, install one-liner, upgrade channel
+ * commands) are folded into a "Get hal0" block at the top of the center
+ * column, above the full version list, rather than duplicated per
+ * version — install/upgrade commands don't change per release, so
+ * repeating them in every section would be noise, not signal.
  *
  * This is unrelated to the machine-readable updater manifest at
  * releases.hal0.dev (functions/_middleware.ts) — do not conflate the two.
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
+import CodeBlock from '../components/CodeBlock.astro';
 import CTA from '../components/CTA.astro';
 import rawChangelog from '../data/changelog.md?raw';
-import { parseChangelog } from '../lib/changelog.js';
+import { parseChangelog, releaseTagUrl } from '../lib/changelog.js';
 
 const { versions, latestStable, latestPrerelease } = parseChangelog(rawChangelog);
 
@@ -34,81 +62,339 @@ const KIND_CLASS = {
 };
 
 const description =
-  'Every hal0 release, newest first. Derived from the product CHANGELOG so it never drifts from what actually shipped. Breaking changes, new features, and fixes per version.';
+  'Every hal0 release, newest first, with the install and upgrade commands. Derived from the product CHANGELOG so it never drifts from what actually shipped.';
 ---
 
 <MarketingLayout title="Changelog — hal0" description={description}>
-  <section class="mx-auto max-w-3xl px-6 pt-16 pb-10">
-    <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">release history</p>
-    <h1 class="mt-3 text-4xl font-semibold tracking-tight text-hal0-fg md:text-5xl">Changelog</h1>
-    <p class="mt-4 text-pretty text-hal0-fg-muted">
-      Derived directly from the project's
-      <a class="text-hal0-accent hover:text-hal0-accent-hover" href="https://github.com/hal0ai/hal0/blob/main/CHANGELOG.md" rel="noopener">CHANGELOG.md</a>
-      — no hand-maintained second copy to drift. Newest first.
-    </p>
-
-    <div class="mt-6 flex flex-wrap gap-3 font-mono text-xs">
-      {latestStable && (
-        <a href={`#${latestStable.slug}`} class="inline-flex items-center gap-2 rounded-md border border-hal0-border bg-hal0-bg-elevated px-3 py-1.5 text-hal0-fg-muted transition hover:text-hal0-fg">
-          <span class="rounded bg-emerald-500/15 px-1.5 py-0.5 text-emerald-300">stable</span>
-          {latestStable.version}
-        </a>
-      )}
-      {latestPrerelease && (
-        <a href={`#${latestPrerelease.slug}`} class="inline-flex items-center gap-2 rounded-md border border-hal0-border bg-hal0-bg-elevated px-3 py-1.5 text-hal0-fg-muted transition hover:text-hal0-fg">
-          <span class="rounded bg-hal0-accent/15 px-1.5 py-0.5 text-hal0-accent">pre-release</span>
-          {latestPrerelease.version}
-        </a>
-      )}
-      <a href="/releases" class="inline-flex items-center rounded-md border border-hal0-border px-3 py-1.5 text-hal0-fg-muted transition hover:text-hal0-fg hover:border-hal0-border-strong">releases →</a>
+  <div class="site">
+    <div class="wrap wide phead">
+      <div class="phead-row">
+        <div>
+          <span class="surface-tag">release history &middot; derived from CHANGELOG.md</span>
+          <h1 class="site-h1" style="margin: 12px 0 10px;">changelog</h1>
+          <p class="site-body" style="max-width: 58ch;">
+            Every hal0 release, newest first — breaking changes, new features, and fixes, straight
+            from
+            <a class="amber" href="https://github.com/hal0ai/hal0/blob/main/CHANGELOG.md" rel="noopener">CHANGELOG.md</a>.
+            No hand-maintained second copy to drift.
+          </p>
+        </div>
+      </div>
     </div>
-  </section>
 
-  <section class="mx-auto max-w-3xl px-6 pb-20">
-    <ol class="space-y-12">
-      {versions.map((v) => (
-        <li id={v.slug} class="scroll-mt-24 border-t border-hal0-border pt-8">
-          <div class="flex flex-wrap items-baseline gap-3">
-            <h2 class="text-2xl font-semibold tracking-tight text-hal0-fg">
-              <a class="hover:text-hal0-accent" href={`#${v.slug}`}>{v.version}</a>
-            </h2>
-            {v.prerelease ? (
-              <span class="rounded border border-hal0-accent/40 bg-hal0-accent/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">pre-release</span>
-            ) : v.gaPreview ? (
-              <span class="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">ga · shipping as rc</span>
-            ) : (
-              <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">stable</span>
-            )}
-            {v.date && <span class="font-mono text-xs text-hal0-fg-dim">{v.date}</span>}
-            <a class="ml-auto font-mono text-xs text-hal0-fg-dim hover:text-hal0-accent" href={RELEASES_URL} rel="noopener">on github ↗</a>
-          </div>
-
-          {v.intro && <div class="cl-prose mt-4 text-sm text-hal0-fg-muted" set:html={v.intro} />}
-
-          {v.sections.map((s) => (
-            <div class="mt-5">
-              <span class={`inline-block rounded border px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider ${KIND_CLASS[s.kind]}`}>{s.title}</span>
-              <div class="cl-prose mt-2 text-sm text-hal0-fg-muted" set:html={s.html} />
-            </div>
+    <div class="wrap wide">
+      <div class="clshell">
+        <nav class="clside" data-cl-side aria-label="Releases">
+          {versions.map((v) => (
+            <a href={`#${v.slug}`}>
+              <span class="clside-version">
+                {v.version}
+                {v.prerelease && <span class="clside-dot" aria-hidden="true" />}
+              </span>
+              {v.date && <span class="clside-date">{v.date}</span>}
+            </a>
           ))}
-        </li>
-      ))}
-    </ol>
-  </section>
+        </nav>
 
-  <CTA
-    title="Install the current line"
-    subtitle="One command. Pre-release labelling is honest — see the releases page for the stable vs. next split."
-    eyebrow="get hal0"
-    ctaPrimary={{ href: '/releases', label: 'releases →' }}
-    ctaSecondary={{ href: '/docs/getting-started/install', label: 'install guide' }}
-  />
+        <div class="cl-content">
+          <section class="cl-get">
+            <h2 class="site-h2" style="margin: 0 0 4px;">Get hal0</h2>
+            <p class="site-sm" style="margin-bottom: 16px;">
+              hal0's 1.0 line is at <strong style="color: var(--fg);">release-candidate</strong>{' '}
+              stage — RCs ship on the preview channel ahead of GA.
+            </p>
+
+            <div class="cl-get-grid">
+              {latestPrerelease && (
+                <article class="cl-get-card">
+                  <span class="cl-get-tag amber">1.0 release candidate</span>
+                  <div class="cl-get-version">{latestPrerelease.version}</div>
+                  {latestPrerelease.date && <p class="cl-get-date">released {latestPrerelease.date}</p>}
+                  <div class="cl-get-links">
+                    <a href={`#${latestPrerelease.slug}`}>what's new &rarr;</a>
+                    <a href={releaseTagUrl(latestPrerelease.version)} rel="noopener">github release &#8599;</a>
+                  </div>
+                </article>
+              )}
+              {latestStable && (
+                <article class="cl-get-card">
+                  <span class="cl-get-tag ok">last stable</span>
+                  <div class="cl-get-version">{latestStable.version}</div>
+                  {latestStable.date && <p class="cl-get-date">released {latestStable.date}</p>}
+                  <div class="cl-get-links">
+                    <a href={`#${latestStable.slug}`}>what's new &rarr;</a>
+                    <a href={RELEASES_URL} rel="noopener">all releases &#8599;</a>
+                  </div>
+                </article>
+              )}
+            </div>
+
+            <div class="cl-get-install">
+              <p class="site-sm" style="margin-bottom: 8px;">
+                One command on a fresh Linux x86_64 host (Python &ge;3.12). AMD (ROCm/Vulkan) is the
+                first-class path; NVIDIA/CUDA is experimental.
+              </p>
+              <CodeBlock lang="sh" title="fresh install">curl -fsSL https://hal0.dev/install.sh | bash</CodeBlock>
+
+              <p class="site-sm" style="margin: 16px 0 8px;">
+                Self-update verifies a cosign-signed tarball and swaps the <code>current</code> symlink
+                atomically. Three channels — the 1.0 release candidates ship on <code>preview</code>:
+              </p>
+              <div class="cl-get-channels">
+                <CodeBlock lang="sh" title="stable channel">hal0 update --channel stable</CodeBlock>
+                <CodeBlock lang="sh" title="preview channel (1.0 RCs)">hal0 update --channel preview</CodeBlock>
+                <CodeBlock lang="sh" title="nightly channel">hal0 update --channel nightly</CodeBlock>
+              </div>
+              <p class="site-sm" style="margin-top: 12px;">
+                Reverts in one step: <code>hal0 update --rollback</code>. See the{' '}
+                <a class="amber" href="/docs/guides/update-and-rollback">update &amp; rollback guide</a>.
+              </p>
+            </div>
+          </section>
+
+          <ol class="cl-list">
+            {versions.map((v) => (
+              <li id={v.slug} data-cl-section class="cl-entry">
+                <div class="cl-entry-head">
+                  <h2 class="cl-entry-version">
+                    <a href={`#${v.slug}`}>{v.version}</a>
+                  </h2>
+                  {v.prerelease ? (
+                    <span class="rounded border border-hal0-accent/40 bg-hal0-accent/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">pre-release</span>
+                  ) : v.gaPreview ? (
+                    <span class="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">ga &middot; shipping as rc</span>
+                  ) : (
+                    <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">stable</span>
+                  )}
+                  {v.date && <span class="cl-entry-date">{v.date}</span>}
+                  <a class="cl-entry-gh" href={RELEASES_URL} rel="noopener">on github &#8599;</a>
+                </div>
+
+                {v.intro && <div class="cl-prose" set:html={v.intro} />}
+
+                {v.sections.map((s) => (
+                  <div class="cl-section">
+                    <span class={`inline-block rounded border px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider ${KIND_CLASS[s.kind]}`}>{s.title}</span>
+                    <div class="cl-prose" set:html={s.html} />
+                  </div>
+                ))}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <CTA
+      title="Read the docs"
+      subtitle="Every guide, concept, and reference page for running hal0."
+      eyebrow="learn more"
+      ctaPrimary={{ href: '/docs/getting-started/', label: 'docs →' }}
+      ctaSecondary={{ href: 'https://github.com/hal0ai/hal0/releases', label: 'all github releases ↗' }}
+    />
+  </div>
 </MarketingLayout>
 
 <style>
+  /* ── shell — KB article's sidebar+content idiom, ported for a plain
+   * MarketingLayout page (see file header). Sidebar hides below 900px,
+   * same breakpoint/behavior as the KB article's `.kbside` in the comp —
+   * content keeps its own scroll, no secondary nav needed on mobile. */
+  .clshell {
+    display: grid;
+    grid-template-columns: 216px 1fr;
+    gap: 40px;
+    padding-block: 28px 64px;
+  }
+  .clside {
+    position: sticky;
+    top: 78px;
+    align-self: start;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+  }
+  .clside a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--fg-3);
+    padding: 5px 0 5px 10px;
+    line-height: 1.3;
+  }
+  .clside a:hover {
+    color: var(--fg);
+  }
+  .clside a.on {
+    color: var(--accent);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .clside-version {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .clside-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+  }
+  .clside-date {
+    font-size: 10px;
+    color: var(--fg-5);
+    white-space: nowrap;
+  }
+
+  .cl-content {
+    max-width: 68ch;
+  }
+
+  /* ── "Get hal0" block — the old /releases page's headline + install/
+   * upgrade affordances, folded above the full version history. ── */
+  .cl-get {
+    padding-bottom: 32px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+  }
+  .cl-get-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .cl-get-card {
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    padding: 14px 16px;
+  }
+  .cl-get-tag {
+    font-family: var(--jbm);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+  }
+  .cl-get-tag.amber {
+    color: var(--accent);
+  }
+  .cl-get-tag.ok {
+    color: var(--ok);
+  }
+  .cl-get-version {
+    font-family: var(--jbm);
+    font-size: 18px;
+    color: var(--fg);
+    margin-top: 8px;
+  }
+  .cl-get-date {
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-4);
+    margin: 2px 0 0;
+  }
+  .cl-get-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 10px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+  }
+  .cl-get-links a {
+    color: var(--accent);
+  }
+  .cl-get-links a:hover {
+    color: var(--accent-hover);
+  }
+  .cl-get-install :global(code) {
+    font-family: var(--jbm);
+    font-size: 0.85em;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.05rem 0.3rem;
+  }
+  .cl-get-channels {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  @media (min-width: 640px) {
+    .cl-get-channels {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* ── full version list ── */
+  .cl-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .cl-entry {
+    scroll-margin-top: 96px;
+    border-top: 1px solid var(--line);
+    padding-top: 28px;
+    margin-top: 40px;
+  }
+  .cl-entry:first-child {
+    margin-top: 0;
+  }
+  .cl-entry-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .cl-entry-version {
+    font-family: var(--jbm);
+    font-size: 21px;
+    font-weight: 500;
+    letter-spacing: var(--ls-tight);
+    color: var(--fg);
+    margin: 0;
+  }
+  .cl-entry-version a {
+    color: inherit;
+  }
+  .cl-entry-version a:hover {
+    color: var(--accent);
+  }
+  .cl-entry-date {
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-4);
+  }
+  .cl-entry-gh {
+    margin-left: auto;
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-4);
+  }
+  .cl-entry-gh:hover {
+    color: var(--accent);
+  }
+
+  .cl-section {
+    margin-top: 18px;
+  }
+
   /* Style the marked-rendered changelog bodies (injected via set:html, so
    * reached with :global under the .cl-prose wrapper). Kept tight to match
    * the operator-tool voice — no decorative bullets. */
+  .cl-prose {
+    font-size: 16px;
+    line-height: 1.68;
+    color: var(--fg-2);
+    margin-top: 8px;
+  }
   .cl-prose :global(ul) {
     margin: 0;
     padding: 0;
@@ -117,43 +403,100 @@ const description =
   .cl-prose :global(li) {
     position: relative;
     padding-left: 1.1rem;
-    margin: 0.35rem 0;
-    line-height: 1.6;
+    margin: 0.4rem 0;
+    line-height: 1.68;
   }
   .cl-prose :global(li)::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0.65em;
+    top: 0.7em;
     width: 0.35rem;
     height: 1px;
-    background: var(--hal0-accent);
+    background: var(--accent);
   }
   .cl-prose :global(li > ul) {
     margin-top: 0.25rem;
   }
   .cl-prose :global(p) {
     margin: 0.5rem 0;
-    line-height: 1.6;
   }
   .cl-prose :global(strong) {
-    color: var(--hal0-fg);
+    color: var(--fg);
     font-weight: 600;
   }
   .cl-prose :global(a) {
-    color: var(--hal0-accent);
+    color: var(--accent);
     text-decoration: none;
   }
   .cl-prose :global(a:hover) {
-    color: var(--hal0-accent-hover);
+    color: var(--accent-hover);
     text-decoration: underline;
   }
   .cl-prose :global(code) {
-    font-family: var(--hal0-font-mono);
+    font-family: var(--jbm);
     font-size: 0.85em;
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-border);
-    border-radius: 0.25rem;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 4px;
     padding: 0.05rem 0.3rem;
   }
+
+  @media (max-width: 900px) {
+    .clshell {
+      grid-template-columns: 1fr;
+    }
+    .clside {
+      display: none;
+    }
+  }
 </style>
+
+<script>
+  // Progressive enhancement over the plain `href="#slug"` anchors: smooth
+  // scroll on click (honoring prefers-reduced-motion), and the active
+  // sidebar item tracks scroll position via IntersectionObserver — same
+  // amber `.on` idiom as the KB sidebar. Deep links land correctly on load
+  // without any of this: the browser's native anchor-jump already handles
+  // `/changelog#v1-0-0-rc-3` before this script runs.
+  const links = document.querySelectorAll('[data-cl-side] a[href^="#"]');
+  const sections = document.querySelectorAll('[data-cl-section]');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function setActive(slug = '') {
+    links.forEach((a) => {
+      a.classList.toggle('on', a.getAttribute('href') === `#${slug}`);
+    });
+  }
+
+  links.forEach((a) => {
+    a.addEventListener('click', (event) => {
+      const href = a.getAttribute('href');
+      if (!href) return;
+      const slug = href.slice(1);
+      const target = document.getElementById(slug);
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      history.pushState(null, '', `#${slug}`);
+      setActive(slug);
+    });
+  });
+
+  if (sections.length && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length === 0) return;
+        const slug = visible[0].target.id;
+        setActive(slug);
+        const hash = `#${slug}`;
+        if (location.hash !== hash) history.replaceState(null, '', hash);
+      },
+      { rootMargin: '-96px 0px -70% 0px', threshold: 0 },
+    );
+    sections.forEach((section) => observer.observe(section));
+  }
+</script>
