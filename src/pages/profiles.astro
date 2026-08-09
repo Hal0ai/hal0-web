@@ -770,11 +770,65 @@ const description =
     let openSlug: string | null = null;
     let pushedState = false;
 
+    // Focus containment: while a drawer is open, everything outside it
+    // (header/subnav, the page's own content, footer) is made `inert` —
+    // the browser removes it from both the tab order and AT navigation,
+    // so Tab can no longer walk out through the scrim onto an obscured
+    // card behind it. `inert` cascades to descendants and can't be
+    // "opted back in" on a child, so we inert body's other top-level
+    // regions plus main's other children individually — never `<main>`
+    // itself, since the drawers/scrim are its children too.
+    function setShellInert(on: boolean) {
+      for (const el of Array.from(document.body.children)) {
+        if (el.tagName === 'MAIN' || el.tagName === 'SCRIPT') continue;
+        if (on) el.setAttribute('inert', '');
+        else el.removeAttribute('inert');
+      }
+      const mainEl = document.querySelector('main');
+      if (!mainEl) return;
+      for (const child of Array.from(mainEl.children)) {
+        if (child === scrim || child.classList.contains('drawer-run')) continue;
+        if (on) child.setAttribute('inert', '');
+        else child.removeAttribute('inert');
+      }
+    }
+
+    function focusableIn(container: HTMLElement): HTMLElement[] {
+      return Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('inert') && el.getClientRects().length > 0);
+    }
+
+    // Belt-and-braces Tab cycling on top of `inert`: once the rest of the
+    // page is inert, a Tab off either end of the drawer's focusables has
+    // nowhere else to land, so wrap explicitly rather than trust browser
+    // fallback behavior.
+    document.addEventListener('keydown', (e) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key !== 'Tab' || !openSlug) return;
+      const drawer = bySlug.get(openSlug);
+      if (!drawer) return;
+      const focusables = focusableIn(drawer);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (ke.shiftKey && document.activeElement === first) {
+        ke.preventDefault();
+        last.focus();
+      } else if (!ke.shiftKey && document.activeElement === last) {
+        ke.preventDefault();
+        first.focus();
+      }
+    });
+
     function show(slug: string) {
       for (const [s, drawer] of bySlug) drawer.hidden = s !== slug;
       if (scrim) scrim.hidden = false;
       document.body.style.overflow = 'hidden';
       openSlug = slug;
+      setShellInert(true);
       bySlug.get(slug)?.querySelector<HTMLElement>('[data-profile-close]')?.focus();
     }
 
@@ -782,6 +836,7 @@ const description =
       for (const drawer of bySlug.values()) drawer.hidden = true;
       if (scrim) scrim.hidden = true;
       document.body.style.overflow = '';
+      setShellInert(false);
     }
 
     function openDrawer(slug: string) {
@@ -846,13 +901,14 @@ const description =
     for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-profile-copy-flags]')) {
       const original = btn.textContent;
       btn.addEventListener('click', async () => {
+        if (!navigator.clipboard) return;
         const flags = btn.dataset.flags ?? '';
-        if (navigator.clipboard) {
-          try {
-            await navigator.clipboard.writeText(flags);
-          } catch {
-            // clipboard denied/unavailable — the swap below still gives feedback
-          }
+        try {
+          await navigator.clipboard.writeText(flags);
+        } catch {
+          // clipboard denied/unavailable — no swap, so the button never
+          // claims a copy that didn't happen
+          return;
         }
         btn.textContent = 'flags copied';
         setTimeout(() => {
