@@ -62,7 +62,7 @@
     {
       "heading": "data",
       "links": [
-        { "label": "benchmarks", "href": "/docs/reference/model-roster-benchmark/" },
+        { "label": "benchmarks", "href": "/benchmarks/" },
         { "label": "roadmap", "href": "/#roadmap" }
       ]
     }
