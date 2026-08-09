@@ -4,18 +4,18 @@
  * of whichever visible header entry is active for the current path (see
  * subFor in ../lib/nav); renders nothing when no section is active.
  */
-import { subFor, isActive } from '../lib/nav';
+import { subFor, isActive, ariaCurrent } from '../lib/nav';
 
 const path = Astro.url.pathname;
 const items = subFor(path);
 ---
 
 {items && (
-  <div class="subnav">
+  <nav class="subnav" aria-label="Section">
     <div class="wrap wide subnav-in">
       {items.map((l) => (
-        <a href={l.href} class:list={[{ on: isActive(path, l) }]}>{l.label}</a>
+        <a href={l.href} class:list={[{ on: isActive(path, l) }]} aria-current={ariaCurrent(path, l)}>{l.label}</a>
       ))}
     </div>
-  </div>
+  </nav>
 )}

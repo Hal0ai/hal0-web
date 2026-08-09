@@ -41,6 +41,29 @@ export function isActive(path: string, link: NavLink): boolean {
   );
 }
 
+/**
+ * True when `path` and `href` refer to the exact same route, ignoring a
+ * trailing-slash difference (Astro's trailingSlash config, and manifest
+ * hrefs authored either way, can make href and Astro.url.pathname differ
+ * by only a trailing `/`).
+ */
+export function isExactMatch(path: string, href: string): boolean {
+  const norm = (s: string) => (s.length > 1 && s.endsWith('/') ? s.slice(0, -1) : s);
+  return norm(path) === norm(href);
+}
+
+/**
+ * The correct `aria-current` value for a nav link at the current path:
+ * `"page"` when the link's href IS the current page (exact match,
+ * trailing-slash tolerant), `"true"` when the link merely represents the
+ * active section (e.g. an umbrella link whose `match` covers the current
+ * path without being it), and `undefined` otherwise.
+ */
+export function ariaCurrent(path: string, link: NavLink): 'page' | 'true' | undefined {
+  if (isExactMatch(path, link.href)) return 'page';
+  return isActive(path, link) ? 'true' : undefined;
+}
+
 export function getSocial(id: SocialLink['id']): SocialLink {
   const link = social.find((s) => s.id === id);
   if (!link) throw new Error(`nav.json: missing social entry '${id}'`);

@@ -14,7 +14,7 @@
 import Wordmark from './Wordmark.astro';
 import DiscordIcon from './DiscordIcon.astro';
 import GithubIcon from './GithubIcon.astro';
-import { visibleHeader, isActive, getSocial } from '../lib/nav';
+import { visibleHeader, isActive, ariaCurrent, getSocial } from '../lib/nav';
 
 interface Props {
   tone?: 'solid' | 'transparent';
@@ -43,14 +43,14 @@ const hostOf = (href: string) => {
     <a class="hdr-brand" href="/" aria-label="hal0 home">
       <Wordmark size="text-xl" />
     </a>
-    <nav class="hdr-nav">
+    <nav class="hdr-nav" aria-label="Site">
       {visibleHeader.map((l) => {
         const active = isActive(path, l);
         return (
           <a
             href={l.href}
             class:list={[{ on: active }]}
-            aria-current={active ? 'page' : undefined}
+            aria-current={ariaCurrent(path, l)}
             rel={l.external ? 'noopener' : undefined}
             title={l.external ? hostOf(l.href) : undefined}
           >
@@ -71,18 +71,23 @@ const hostOf = (href: string) => {
         <svg class="icon-menu" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
           <path d="M2 4.5h12M2 8h12M2 11.5h12" />
         </svg>
-        <svg class="icon-close" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" hidden>
+        <svg class:list={['icon-close', 'is-hidden']} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
           <path d="M3 3l10 10M13 3L3 13" />
         </svg>
       </button>
     </div>
   </div>
 
-  <div class="drawer" id="site-drawer" hidden>
+  <nav class="drawer" id="site-drawer" aria-label="Menu" hidden>
     {visibleHeader.map((l) => {
       const active = isActive(path, l);
       return (
-        <a href={l.href} class:list={['row', { on: active }]} rel={l.external ? 'noopener' : undefined}>
+        <a
+          href={l.href}
+          class:list={['row', { on: active }]}
+          aria-current={ariaCurrent(path, l)}
+          rel={l.external ? 'noopener' : undefined}
+        >
           <span>{l.label}</span>
           <span class="mono" style="font-size: 11px; color: var(--fg-4);">{l.external ? '↗' : ''}</span>
         </a>
@@ -96,31 +101,46 @@ const hostOf = (href: string) => {
         <DiscordIcon size={15} />
       </a>
     </div>
-  </div>
+  </nav>
 </header>
+
+<style>
+  .is-hidden {
+    display: none;
+  }
+</style>
 
 <script>
   // Burger toggle — no framework. Opens/closes the drawer, syncs aria,
-  // closes on Escape / link click, and resets if the viewport grows back
-  // past the 1000px breakpoint where the drawer is hidden anyway.
+  // locks body scroll while open, closes on Escape / link click / an
+  // outside click (there's no scrim to click, so any click landing
+  // outside the header dismisses it), and resets if the viewport grows
+  // back past the 1000px breakpoint where the drawer is hidden anyway.
+  // Focus trapping is explicitly out of scope for this pass.
   (() => {
+    const header = document.querySelector('header.hdr');
     const btn = document.getElementById('site-drawer-toggle');
     const drawer = document.getElementById('site-drawer');
-    if (!btn || !drawer) return;
+    if (!header || !btn || !drawer) return;
     const menuIcon = btn.querySelector('.icon-menu');
     const closeIcon = btn.querySelector('.icon-close');
-    const setOpen = (open) => {
+    const setOpen = (open: boolean) => {
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
       drawer.hidden = !open;
-      menuIcon?.toggleAttribute('hidden', open);
-      closeIcon?.toggleAttribute('hidden', !open);
+      menuIcon?.classList.toggle('is-hidden', open);
+      closeIcon?.classList.toggle('is-hidden', !open);
+      document.body.style.overflow = open ? 'hidden' : '';
     };
-    btn.addEventListener('click', () => setOpen(drawer.hidden));
+    btn.addEventListener('click', () => setOpen(Boolean(drawer.hidden)));
     drawer.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('a')) setOpen(false);
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') setOpen(false);
+    });
+    document.addEventListener('click', (e) => {
+      if (drawer.hidden) return;
+      if (!header.contains(e.target as Node)) setOpen(false);
     });
     window.matchMedia('(min-width: 1000px)').addEventListener('change', (m) => {
       if (m.matches) setOpen(false);
