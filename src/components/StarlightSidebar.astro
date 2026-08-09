@@ -1,0 +1,66 @@
+---
+/**
+ * Sidebar override: prepend the SITE nav to Starlight's mobile drawer.
+ *
+ * Known gap this closes (handoff item 3.6): below 56rem the docnav in
+ * StarlightSiteTitle is hidden, so Starlight pages carried no site-level
+ * links (benchmarks, profiles, …) on mobile at all. The drawer is the
+ * sidebar pane below 50em, and Sidebar is the smallest overridable seam
+ * that renders inside it (checked against Starlight 0.41's overridable
+ * components list) — so the site links render here, hidden ≥50rem where
+ * the docnav takes over (site-starlight.css owns the media query).
+ *
+ * Links come from the same flattened `visibleHeader` manifest as the
+ * docnav (hub entries with array `match` contribute their sub links) —
+ * one source of truth, no hardcoded hrefs. GitHub/Discord round out the
+ * foot of the block, comp: 01 Unified Chrome "header — mobile" drawer
+ * (`.drawer` rows + `.foot` icon row in hal0-site.css).
+ *
+ * KB pages are excluded (the wrapper renders nothing there): their HTML
+ * under dist/kb/** is pixel-frozen/byte-identical by standing invariant,
+ * and this block would otherwise appear in every KB page's markup. The
+ * KB mobile drawer therefore keeps the stock page tree only — documented
+ * trade-off, same reasoning as the search source-tags script.
+ */
+import Default from '@astrojs/starlight/components/Sidebar.astro';
+import { visibleHeader, social, isActive, ariaCurrent, type NavLink } from '../lib/nav';
+import GithubIcon from './GithubIcon.astro';
+import DiscordIcon from './DiscordIcon.astro';
+
+const path = Astro.url.pathname;
+const isKb = Astro.locals.starlightRoute.entry.id.startsWith('kb/');
+
+const links: NavLink[] = visibleHeader.flatMap((l) =>
+	l.sub && Array.isArray(l.match) ? l.sub : [l],
+);
+---
+
+{
+	!isKb && (
+		<nav class="hal0-drawer-nav" aria-label="Site">
+			{links.map((l) => (
+				<a
+					href={l.href}
+					class:list={['hal0-drawer-link', { active: isActive(path, l) }]}
+					aria-current={ariaCurrent(path, l)}
+				>
+					{l.label}
+				</a>
+			))}
+			<div class="hal0-drawer-foot">
+				{social.map((s) =>
+					s.id === 'github' ? (
+						<a href={s.href} aria-label={s.label} class="hal0-drawer-icon">
+							<GithubIcon size={18} />
+						</a>
+					) : (
+						<a href={s.href} aria-label={s.label} class="hal0-drawer-icon">
+							<DiscordIcon size={18} />
+						</a>
+					),
+				)}
+			</div>
+		</nav>
+	)
+}
+<Default><slot /></Default>
