@@ -41,6 +41,31 @@
 	--accent-line: var(--hal0-accent-line);
 	--accent-glow: var(--hal0-accent-glow);
 
+	/* status · semantic */
+	--ok: var(--hal0-ok);
+	--ok-soft: var(--hal0-ok-soft);
+	--ok-line: var(--hal0-ok-line);
+	--warn: var(--hal0-warn);
+	--warn-soft: var(--hal0-warn-soft);
+	--warn-line: var(--hal0-warn-line);
+	--err: var(--hal0-err);
+	--err-soft: var(--hal0-err-soft);
+	--err-line: var(--hal0-err-line);
+	--info: var(--hal0-info);
+	--info-soft: var(--hal0-info-soft);
+	--info-line: var(--hal0-info-line);
+
+	/* device / runtime hues */
+	--dev-rocm: var(--hal0-dev-rocm);
+	--dev-vulkan: var(--hal0-dev-vulkan);
+	--dev-cpu: var(--hal0-dev-cpu);
+	--dev-npu: var(--hal0-dev-npu);
+
+	/* decode-speed buckets */
+	--fast: var(--hal0-fast);
+	--mid: var(--hal0-mid);
+	--slow: var(--hal0-slow);
+
 	/* font stacks */
 	--jbm: var(--hal0-font-mono);
 	--geist: var(--hal0-font-body);
@@ -56,6 +81,7 @@
 	--dur-fast: var(--hal0-dur-fast);
 	--ease: var(--hal0-ease);
 	--shadow-menu: var(--hal0-shadow-menu);
+	--shadow-drawer: var(--hal0-shadow-drawer);
 	--ls-display: var(--hal0-ls-display);
 	--ls-title: var(--hal0-ls-title);
 	--ls-label: var(--hal0-ls-label);
@@ -96,6 +122,15 @@
 .site ::selection {
 	background: var(--accent-glow);
 	color: var(--fg);
+}
+
+/* The only animation loop in the design system, reserved for live-state
+ * dots (`.dot.serving`, `.dot.warming`, `.dot.loading`). Not `.site`-scoped
+ * because a @keyframes declaration has no selector of its own to leak;
+ * `prefers-reduced-motion` is already handled globally in global.css. */
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
 }
 
 .site {

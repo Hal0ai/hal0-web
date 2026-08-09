@@ -1,0 +1,43 @@
+---
+/**
+ * BucketMeter — decode-speed bucket for the /benchmarks leaderboard: a
+ * three-segment meter (3/2/1 filled for fast/mid/slow) plus a
+ * visually-hidden bucket word, so the bucket is never colour-alone (per
+ * docs/design/2026-08-09-platform-handoff/README.md "Accessibility").
+ * Bucket thresholds come from `bucket()` in src/lib/bench-view.mjs — the
+ * same source ModelRoster.astro's decClass and the roster legend use
+ * (fast >=60, mid >=25, slow <25). A null decode (no real measurement)
+ * renders "—", never a synthetic bucket.
+ *
+ * Styling (`.decode`, `.meter`, `.sr`, …) lives in src/styles/site-data.css
+ * rather than a scoped <style> block here: bench-island.ts's
+ * bucketMeterHtml() reproduces this exact markup client-side (the
+ * leaderboard's <tbody> is always repainted by the island's render() pass,
+ * even on first load), and Astro's scoped-style compiler only tags
+ * elements it rendered at build time — a scoped rule here would match the
+ * SSR paint and then silently stop matching the moment the island
+ * hydrates. See site-data.css's "leaderboard row content" section.
+ */
+import { bucket } from '../../lib/bench-view.mjs';
+
+export interface Props {
+  dec: number | null;
+}
+
+const { dec } = Astro.props;
+const b = bucket(dec);
+const fill: Record<string, number> = { fast: 3, mid: 2, slow: 1 };
+const filled = b ? fill[b] : 0;
+---
+
+{dec === null || dec === undefined ? (
+  <span class="num dim">—</span>
+) : (
+  <span class={`decode ${b}`} title={`${b} · ${dec} tok/s`}>
+    <span class="meter" aria-hidden="true">
+      {[0, 1, 2].map((i) => <i class={i < filled ? 'on' : ''} />)}
+    </span>
+    <span class="v num">{dec.toFixed(1)}</span>
+    <span class="sr">{b}</span>
+  </span>
+)}
