@@ -230,4 +230,45 @@ describe("POST /v1/bundles", () => {
     expect(json.errors.join(" ")).toContain("already published");
     expect(json.errors.join(" ")).toContain(firstBody.bundle_id);
   });
+
+  it("ingests a 120-record bundle (collision check spans multiple D1 batches) and reports a truthful duplicate count", async () => {
+    const members = await loadFixtureMembers();
+
+    const lines: string[] = [];
+    for (let i = 0; i < 120; i++) {
+      const cellKey = "sha256:" + (await sha256hex(new TextEncoder().encode(`fixture-cell-${i}`)));
+      lines.push(
+        JSON.stringify({
+          run_id: `2026-08-09T01:00:00Z-big${String(i).padStart(4, "0")}`,
+          cell_key: cellKey,
+          suite: "roster",
+          trigger: "manual",
+          identity: {
+            model: { id: "qwen3-30b", quant: "Q4_K_M" },
+            lane: "rocm",
+            workload: { kind: "tg", depth: 2048 },
+          },
+          host: { name: "fixture-box", gpu: "AMD Strix Halo", mem_gb: 128, hal0_version: "1.0.0" },
+          outcome: "ok",
+          summary: { decode_ts_med: 42.5, prefill_ts_med: 700.0, ttft_ms_p50: 120.0, ttft_ms_p95: 180.0 },
+          telemetry: { vram_peak_mb: 30000, gpu_power_avg_w: 90 },
+          schema: 2,
+        }),
+      );
+    }
+    members.set("records.jsonl", new TextEncoder().encode(lines.join("\n") + "\n"));
+    await rehash(members);
+
+    const first = await post(await buildBody(members), "test-admin-token");
+    expect(first.status).toBe(200);
+    const firstBody = await first.json<{ bundle_id: string; records: number }>();
+    expect(firstBody.records).toBe(120);
+
+    const second = await post(await buildBody(members), "test-admin-token");
+    expect(second.status).toBe(200);
+    const secondBody = await second.json<{ bundle_id: string; records: number; duplicate?: boolean }>();
+    expect(secondBody.duplicate).toBe(true);
+    expect(secondBody.bundle_id).toBe(firstBody.bundle_id);
+    expect(secondBody.records).toBe(120);
+  });
 });
