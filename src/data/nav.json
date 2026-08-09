@@ -3,14 +3,45 @@
     {
       "label": "learn",
       "href": "/docs/getting-started/",
-      "match": ["/docs", "/kb", "/blog", "/changelog", "/releases"],
-      "exclude": ["/docs/reference/model-roster-benchmark"],
+      "match": [
+        "/docs",
+        "/kb",
+        "/blog",
+        "/changelog",
+        "/releases"
+      ],
+      "exclude": [
+        "/docs/reference/model-roster-benchmark"
+      ],
       "sub": [
-        { "label": "docs", "href": "/docs/getting-started/", "match": "/docs", "exclude": ["/docs/reference/model-roster-benchmark"] },
-        { "label": "knowledge base", "href": "/kb/", "match": "/kb" },
-        { "label": "blog", "href": "/blog", "match": "/blog" },
-        { "label": "changelog", "href": "/changelog", "match": "/changelog" },
-        { "label": "releases", "href": "/releases", "match": "/releases" }
+        {
+          "label": "docs",
+          "href": "/docs/getting-started/",
+          "match": "/docs",
+          "exclude": [
+            "/docs/reference/model-roster-benchmark"
+          ]
+        },
+        {
+          "label": "knowledge base",
+          "href": "/kb/",
+          "match": "/kb"
+        },
+        {
+          "label": "blog",
+          "href": "/blog",
+          "match": "/blog"
+        },
+        {
+          "label": "changelog",
+          "href": "/changelog",
+          "match": "/changelog"
+        },
+        {
+          "label": "releases",
+          "href": "/releases",
+          "match": "/releases"
+        }
       ]
     },
     {
@@ -18,61 +49,121 @@
       "href": "/benchmarks/",
       "match": "/benchmarks",
       "sub": [
-        { "label": "leaderboard", "href": "/benchmarks/", "match": "/benchmarks" },
-        { "label": "evals", "href": "/benchmarks/#evals" },
-        { "label": "methodology", "href": "/docs/reference/model-roster-benchmark/" },
-        { "label": "profiles", "href": "/profiles", "match": "/profiles" },
-        { "label": "share your results", "href": "/docs/reference/model-roster-benchmark/#sharing-results" }
+        {
+          "label": "leaderboard",
+          "href": "/benchmarks/",
+          "match": "/benchmarks"
+        },
+        {
+          "label": "evals",
+          "href": "/benchmarks/#evals"
+        },
+        {
+          "label": "methodology",
+          "href": "/docs/reference/model-roster-benchmark/"
+        },
+        {
+          "label": "profiles",
+          "href": "/profiles",
+          "match": "/profiles"
+        }
       ]
     },
     {
       "label": "profiles",
       "href": "/profiles",
-      "match": "/profiles",
-      "sub": [
-        { "label": "leaderboard", "href": "/benchmarks/", "match": "/benchmarks" },
-        { "label": "evals", "href": "/benchmarks/#evals" },
-        { "label": "methodology", "href": "/docs/reference/model-roster-benchmark/" },
-        { "label": "profiles", "href": "/profiles", "match": "/profiles" },
-        { "label": "share your results", "href": "/docs/reference/model-roster-benchmark/#sharing-results" }
-      ]
+      "match": "/profiles"
     },
-    { "label": "forum", "href": "https://forum.hal0.dev", "external": true, "hidden": true }
+    {
+      "label": "forum",
+      "href": "https://forum.hal0.dev",
+      "external": true,
+      "hidden": true
+    }
   ],
   "footerColumns": [
     {
       "heading": "learn",
       "links": [
-        { "label": "docs", "href": "/docs/getting-started/" },
-        { "label": "knowledge base", "href": "/kb/" },
-        { "label": "blog", "href": "/blog" },
-        { "label": "changelog", "href": "/changelog" },
-        { "label": "releases", "href": "/releases" }
+        {
+          "label": "docs",
+          "href": "/docs/getting-started/"
+        },
+        {
+          "label": "knowledge base",
+          "href": "/kb/"
+        },
+        {
+          "label": "blog",
+          "href": "/blog"
+        },
+        {
+          "label": "changelog",
+          "href": "/changelog"
+        },
+        {
+          "label": "releases",
+          "href": "/releases"
+        }
       ]
     },
     {
       "heading": "community",
       "links": [
-        { "label": "discord", "href": "https://discord.gg/7M4y6dcUyq", "external": true },
-        { "label": "github", "href": "https://github.com/hal0ai/hal0", "external": true },
-        { "label": "contributing", "href": "/contributing" },
-        { "label": "hello@hal0.dev", "href": "mailto:hello@hal0.dev" }
+        {
+          "label": "discord",
+          "href": "https://discord.gg/7M4y6dcUyq",
+          "external": true
+        },
+        {
+          "label": "github",
+          "href": "https://github.com/hal0ai/hal0",
+          "external": true
+        },
+        {
+          "label": "contributing",
+          "href": "/contributing"
+        },
+        {
+          "label": "hello@hal0.dev",
+          "href": "mailto:hello@hal0.dev"
+        }
       ]
     },
     {
       "heading": "data",
       "links": [
-        { "label": "benchmarks", "href": "/benchmarks/" },
-        { "label": "roadmap", "href": "/#roadmap" }
+        {
+          "label": "benchmarks",
+          "href": "/benchmarks/"
+        },
+        {
+          "label": "roadmap",
+          "href": "/#roadmap"
+        }
       ]
     }
   ],
   "social": [
-    { "id": "github", "label": "github", "href": "https://github.com/hal0ai/hal0" },
-    { "id": "discord", "label": "discord", "href": "https://discord.gg/7M4y6dcUyq" }
+    {
+      "id": "github",
+      "label": "github",
+      "href": "https://github.com/hal0ai/hal0"
+    },
+    {
+      "id": "discord",
+      "label": "discord",
+      "href": "https://discord.gg/7M4y6dcUyq"
+    }
   ],
   "footerBase": [
-    { "label": "changelog", "href": "/changelog" },
-    { "label": "rss", "href": "/blog/rss.xml" }
+    {
+      "label": "changelog",
+      "href": "/changelog"
+    },
+    {
+      "label": "rss",
+      "href": "/blog/rss.xml"
+    }
   ]
 }

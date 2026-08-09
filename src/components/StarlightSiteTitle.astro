@@ -31,9 +31,15 @@ const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 
 const path = Astro.url.pathname;
 
-// Flatten: entries with a `sub` list contribute their sub links instead of
-// the umbrella itself; entries without one pass through unchanged.
-const links: NavLink[] = visibleHeader.flatMap((l) => (l.sub ? l.sub : [l]));
+// Flatten ONLY hub entries (array `match`, i.e. `learn`) into their sub
+// links — learn has no page of its own, so its children are the reachable
+// units. Section entries with a real page (`benchmarks`, `profiles`) render
+// as their umbrella link; their `sub` lists belong to the contextual SubNav
+// bar, not this global nav — flattening them here duplicated the bench
+// sub-nav across the top bar.
+const links: NavLink[] = visibleHeader.flatMap((l) =>
+  l.sub && Array.isArray(l.match) ? l.sub : [l],
+);
 ---
 
 <div class="hal0-sitetitle sl-flex">
