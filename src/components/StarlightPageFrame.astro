@@ -72,4 +72,11 @@ const isDocs = entry.id.startsWith('docs/');
     <slot />
   </Default>
 )}
+{/* Search-palette source tags (handoff 3.5 Tier B) — annotates Pagefind
+  * result rows with a docs/kb/blog tag; see public/js/search-source-tags.js.
+  * Rendered from HERE, not the global `head` config, and only on docs/blog
+  * pages: a head script would land in every page's HTML including
+  * dist/kb/** and break the KB byte-parity invariant. Cost: the modal
+  * opened FROM a KB page shows untagged rows — accepted, parity wins. */}
+{(isDocs || isBlog) && <script is:inline src="/js/search-source-tags.js" defer />}
 <SiteFooter />
