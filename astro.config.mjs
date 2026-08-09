@@ -54,7 +54,46 @@ export default defineConfig({
 				replacesTitle: true,
 			},
 			favicon: '/favicon.svg',
-			customCss: ['./src/styles/global.css', './src/styles/site-blog-kb.css', './src/styles/site-docs.css'],
+			customCss: [
+				'./src/styles/global.css',
+				'./src/styles/site-blog-kb.css',
+				'./src/styles/site-docs.css',
+				'./src/styles/site-starlight.css',
+			],
+			// Code blocks read as the comp's `.well` terminal idiom (hal0-site.css
+			// `.well`: bg-sunken, 1px border, mono 12.5px/1.7) — themed through
+			// Expressive Code's own hooks instead of fighting its emitted CSS.
+			// Values are CSS custom properties so both themes resolve from
+			// tokens.css automatically; Starlight's default dual syntax themes
+			// (and their dark/light switching) stay in place.
+			expressiveCode: {
+				styleOverrides: {
+					borderColor: 'var(--hal0-border)',
+					borderRadius: 'var(--hal0-rad, 6px)',
+					borderWidth: '1px',
+					codeBackground: 'var(--hal0-bg-sunken)',
+					codeFontFamily: 'var(--hal0-font-mono)',
+					codeFontSize: '12.5px',
+					codeLineHeight: '1.7',
+					uiFontFamily: 'var(--hal0-font-mono)',
+					// NOTE: a handful of frame settings (terminal + active-tab
+					// backgrounds, titlebar, dots, copy-button foreground) CANNOT
+					// be set here — Starlight's two built-in syntax themes carry
+					// their own per-theme styleOverrides for those keys, and EC
+					// gives theme-level overrides precedence over this global
+					// block. Those live as `--ec-frm-*` CSS variables in
+					// site-starlight.css instead (EC's documented variable layer).
+					frames: {
+						frameBoxShadowCssValue: 'none',
+						editorTabBarBackground: 'var(--hal0-bg-elevated)',
+						editorTabBarBorderBottomColor: 'var(--hal0-border)',
+						editorActiveTabForeground: 'var(--hal0-fg)',
+						editorActiveTabIndicatorTopColor: 'var(--hal0-accent)',
+						editorActiveTabIndicatorBottomColor: 'transparent',
+						inlineButtonBorder: 'var(--hal0-border)',
+					},
+				},
+			},
 			social: [
 				{
 					icon: 'github',

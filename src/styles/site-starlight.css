@@ -1,0 +1,229 @@
+/* Starlight chrome theming — sidebar, asides, badges, tabs, inline code.
+ *
+ * Visual source of truth: docs/design/2026-08-09-community-comps/08
+ * Docs.html (`.dside` sidebar, `.aside` callouts, `.prose code`) and
+ * 01 Unified Chrome.html (chip row). Complements site-docs.css (title,
+ * cards, TOC, pager, tables) — this file owns the chrome that sits
+ * OUTSIDE `.sl-markdown-content` (the sidebar pane) plus the remaining
+ * in-content primitives the docs-shape pass left stock.
+ *
+ * Scoping follows the established seams from StarlightPageFrame.astro:
+ * `[data-docs]` for the docs surface, `:is([data-docs], [data-blog])`
+ * where the comp draws docs and blog identically. KB pages carry only
+ * `[data-longform]` and are pixel-frozen (PR #70/#84 invariant), so no
+ * selector here can ever reach them. The sidebar pane renders inside the
+ * PageFrame override's wrapper div, so `[data-docs] #starlight__sidebar`
+ * matches — no global sidebar restyle leaks onto KB routes.
+ *
+ * Like site-docs.css, every rule targets Starlight core markup from
+ * unlayered CSS, so it wins over `@layer starlight.*` on layer order. */
+
+/* ── sidebar (comp `.dside`) — mono ramp, tight rows, amber rail ── */
+
+[data-docs] #starlight__sidebar {
+	font-family: var(--hal0-font-mono);
+	font-size: 11.5px;
+}
+
+/* Group labels — the comp's `.label` idiom (11px mono uppercase). The
+ * comp indents labels to the same 10px inset as the rows. */
+[data-docs] #starlight__sidebar .group-label .large {
+	font-family: var(--hal0-font-mono);
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: var(--hal0-ls-label);
+	color: var(--hal0-fg-dim);
+}
+
+/* Collapse carets subdued. */
+[data-docs] #starlight__sidebar summary .caret {
+	color: var(--hal0-fg-faint);
+}
+
+/* Rows — comp: 11.5px mono, fg-3, 2px block padding at a 10px inset,
+ * line-height 1.45. Kill Starlight's pill treatment (rounded bg on
+ * hover/current) so the active state is the rail, not a lozenge. */
+[data-docs] #starlight__sidebar .top-level a {
+	font-family: var(--hal0-font-mono);
+	font-size: 11.5px;
+	font-weight: 400;
+	line-height: 1.45;
+	color: var(--hal0-fg-dim);
+	background: transparent;
+	border-radius: 0;
+	padding: 2px 0 2px 10px;
+}
+[data-docs] #starlight__sidebar .top-level a:hover {
+	color: var(--hal0-fg);
+	background: transparent;
+}
+
+/* Active row — comp `.dside a.on` plus the drawer's `.on` fill
+ * (site.css `.drawer a.row.on`): amber text, 2px inset rail, soft fill. */
+[data-docs] #starlight__sidebar .top-level a[aria-current='page'],
+[data-docs] #starlight__sidebar .top-level a[aria-current='page']:hover {
+	color: var(--hal0-accent);
+	background: var(--hal0-accent-soft);
+	box-shadow: inset 2px 0 0 var(--hal0-accent);
+	font-weight: 400;
+}
+
+/* ── asides (comp `.aside`) — full 1px border, soft fill, mono title ──
+ * Token mapping per the status ramp in tokens.css: note→info,
+ * caution→warn (the comp's docs article shows exactly this pairing),
+ * danger→err. Tip follows the comp's `.aside.tip` rule (08 Docs.html
+ * line 44: accent-line/accent-soft/accent) — amber, not --hal0-ok; the
+ * comp CSS wins over the handoff prose where they disagree. */
+
+:is([data-docs], [data-blog]) .starlight-aside {
+	border: 1px solid var(--hal0-info-line);
+	background: var(--hal0-info-soft);
+	border-radius: var(--hal0-rad, 6px);
+	padding: 13px 15px;
+	color: var(--hal0-fg-muted);
+}
+:is([data-docs], [data-blog]) .starlight-aside__title {
+	font-family: var(--hal0-font-mono);
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: var(--hal0-ls-label);
+	gap: 7px;
+	margin-bottom: 7px;
+	color: var(--hal0-info);
+}
+:is([data-docs], [data-blog]) .starlight-aside__title .starlight-aside__icon {
+	font-size: 13px;
+}
+:is([data-docs], [data-blog]) .starlight-aside__content {
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--hal0-fg-muted);
+}
+
+:is([data-docs], [data-blog]) .starlight-aside--tip {
+	border-color: var(--hal0-accent-line);
+	background: var(--hal0-accent-soft);
+}
+:is([data-docs], [data-blog]) .starlight-aside--tip .starlight-aside__title {
+	color: var(--hal0-accent);
+}
+:is([data-docs], [data-blog]) .starlight-aside--caution {
+	border-color: var(--hal0-warn-line);
+	background: var(--hal0-warn-soft);
+}
+:is([data-docs], [data-blog]) .starlight-aside--caution .starlight-aside__title {
+	color: var(--hal0-warn);
+}
+:is([data-docs], [data-blog]) .starlight-aside--danger {
+	border-color: var(--hal0-err-line);
+	background: var(--hal0-err-soft);
+}
+:is([data-docs], [data-blog]) .starlight-aside--danger .starlight-aside__title {
+	color: var(--hal0-err);
+}
+
+/* ── badges — the chip idiom (01 Unified Chrome, "chips + status";
+ * values mirror site-data.css `.chip`, restated on --hal0-* vars since
+ * Starlight pages sit outside `.site`). ── */
+
+:is([data-docs], [data-blog]) .sl-badge {
+	font-family: var(--hal0-font-mono);
+	font-size: 10px;
+	font-weight: 400;
+	letter-spacing: 0.02em;
+	text-transform: lowercase;
+	border-radius: 3px;
+	padding: 2px 7px;
+	background: var(--hal0-bg-2);
+	color: var(--hal0-fg-dim);
+	border: 1px solid var(--hal0-border);
+}
+:is([data-docs], [data-blog]) .sl-badge.note {
+	background: var(--hal0-info-soft);
+	color: var(--hal0-info);
+	border-color: var(--hal0-info-line);
+}
+:is([data-docs], [data-blog]) .sl-badge.tip {
+	background: var(--hal0-accent-soft);
+	color: var(--hal0-accent);
+	border-color: var(--hal0-accent-line);
+}
+:is([data-docs], [data-blog]) .sl-badge.caution {
+	background: var(--hal0-warn-soft);
+	color: var(--hal0-warn);
+	border-color: var(--hal0-warn-line);
+}
+:is([data-docs], [data-blog]) .sl-badge.danger {
+	background: var(--hal0-err-soft);
+	color: var(--hal0-err);
+	border-color: var(--hal0-err-line);
+}
+:is([data-docs], [data-blog]) .sl-badge.success {
+	background: var(--hal0-ok-soft);
+	color: var(--hal0-ok);
+	border-color: var(--hal0-ok-line);
+}
+
+/* ── tabs — the sub-nav idiom (hal0-site.css `.subnav`): mono lowercase
+ * labels on a hairline, current tab underlined in amber with plain fg
+ * text (amber stays reserved for the active marker, not the label). ── */
+
+:is([data-docs], [data-blog]) .tablist-wrapper [role='tablist'] {
+	border-bottom: 1px solid var(--hal0-border);
+}
+/* Starlight draws the tab underline as a 2px box-shadow (`--sl-tab-color-
+ * border`), not a border — override the same property, thinned to the
+ * comp's 1px. */
+:is([data-docs], [data-blog]) .tablist-wrapper [role='tab'] {
+	font-family: var(--hal0-font-mono);
+	font-size: 12px;
+	font-weight: 400;
+	text-transform: lowercase;
+	color: var(--hal0-fg-dim);
+	padding: 4px 14px 6px;
+	box-shadow: 0 1px 0 transparent;
+}
+:is([data-docs], [data-blog]) .tablist-wrapper [role='tab']:hover {
+	color: var(--hal0-fg);
+}
+:is([data-docs], [data-blog]) .tablist-wrapper [role='tab'][aria-selected='true'] {
+	color: var(--hal0-fg);
+	font-weight: 400;
+	box-shadow: 0 1px 0 var(--hal0-accent);
+}
+
+/* ── Expressive Code frame vars ──
+ * Most of the `.well` treatment comes from the expressiveCode
+ * styleOverrides in astro.config.mjs, but Starlight's two built-in
+ * syntax themes ship their OWN per-theme styleOverrides for a handful of
+ * frame settings (terminal + active-tab backgrounds, titlebar, dots),
+ * and in EC theme-level overrides beat global ones. EC's documented
+ * escape hatch is its CSS variable layer — re-declare just those vars
+ * here so they resolve from tokens in both themes. */
+.expressive-code {
+	--ec-frm-edBg: var(--hal0-bg-sunken);
+	--ec-frm-edActTabBg: var(--hal0-bg-sunken);
+	--ec-frm-trmBg: var(--hal0-bg-sunken);
+	--ec-frm-trmTtbBg: var(--hal0-bg-elevated);
+	--ec-frm-trmTtbFg: var(--hal0-fg-dim);
+	--ec-frm-trmTtbBrdBtmCol: var(--hal0-border);
+	/* comp `.well` has no macOS dots */
+	--ec-frm-trmTtbDotsOpa: 0;
+	--ec-frm-inlBtnFg: var(--hal0-fg-dim);
+}
+
+/* ── inline code (comp `.prose code`, 08 Docs.html line 34) ──
+ * EC blocks style themselves via the expressiveCode config in
+ * astro.config.mjs; the :not() guard keeps this off their internals. */
+
+:is([data-docs], [data-blog]) .sl-markdown-content code:not(:where(.expressive-code *)) {
+	font-family: var(--hal0-font-mono);
+	font-size: 13px;
+	background: var(--hal0-bg-2);
+	border: 1px solid var(--hal0-border);
+	border-radius: 3px;
+	padding: 1px 5px;
+	color: var(--hal0-fg);
+}
