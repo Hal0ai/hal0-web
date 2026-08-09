@@ -259,20 +259,28 @@
 	color: var(--hal0-accent);
 }
 
-/* ── 3. blog post + KB article prose — 68ch measure, comp reading scale ──
- * Starlight's own `.sl-markdown-content` already provides the three-column
- * shell + sticky TOC the comp specs for both post and KB-article pages;
- * this widens the measure and bumps the type scale to match the comp's
- * long-form spec (68–74ch, 16px/1.68 vs. Starlight's tighter docs default).
- * Scoped to `[data-longform]` — set by StarlightPageFrame.astro only when
- * the current page's collection slug starts with `blog/` or `kb/` — so
- * regular docs pages are pixel-unchanged. See that component's header
- * comment for why this couldn't be a bare `.sl-markdown-content` rule. */
-[data-longform] .content-panel .sl-markdown-content {
+/* ── 3. blog post + KB article + docs prose — 68ch measure, comp reading
+ * scale, shared across ALL THREE Starlight surfaces ── Starlight's own
+ * `.sl-markdown-content` already provides the three-column shell + sticky
+ * TOC the comp specs for docs/blog/KB alike; this widens the measure and
+ * bumps the type scale to the comp's long-form spec (68ch, 16px/1.68)
+ * everywhere, per the operator's site-wide baseline: docs, blog and KB
+ * must share one content measure/container geometry, not each their own.
+ * (An earlier pass here kept docs at a denser 74ch/15.5px, reading the
+ * comp's docs-article CSS specimen literally — that measurement is real,
+ * but the operator's later, broader instruction supersedes it: "at
+ * MINIMUM, all pages must fit the same width/layout system as the KB
+ * page — same content measure, container widths, and gutter rhythm.")
+ * Scoped to `:is([data-longform], [data-docs])` — set by
+ * StarlightPageFrame.astro for every entry.id under docs/blog/kb, i.e.
+ * every Starlight route — so this rule now reaches all three and KB's
+ * rendering is unaffected either way (KB only ever carried
+ * `[data-longform]`, whose rule here is unchanged). */
+:is([data-longform], [data-docs]) .content-panel .sl-markdown-content {
 	--sl-content-width: 68ch;
 }
-[data-longform] .content-panel .sl-markdown-content p,
-[data-longform] .content-panel .sl-markdown-content li {
+:is([data-longform], [data-docs]) .content-panel .sl-markdown-content p,
+:is([data-longform], [data-docs]) .content-panel .sl-markdown-content li {
 	font-size: 16px;
 	line-height: 1.68;
 }
