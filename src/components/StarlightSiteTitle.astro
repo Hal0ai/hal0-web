@@ -9,15 +9,16 @@
  * `learn`) contribute their sub links instead of the umbrella link itself,
  * and entries without a `sub` (currently `benchmarks`) pass through as-is.
  * That flattening is what keeps this nav reachable per-page — docs, blog,
- * changelog, releases, benchmarks — matching the pre-v2 docnav instead of
- * collapsing docs/blog/changelog/releases behind one `learn` link. The
- * wordmark links home (`/`).
+ * changelog, benchmarks — matching the pre-v2 docnav instead of collapsing
+ * docs/blog/changelog behind one `learn` link. The wordmark links home
+ * (`/`). (/releases was folded into /changelog and is now a redirect —
+ * see astro.config.mjs's `redirects` map and src/pages/changelog.astro.)
  *
  * SubNav renders the same `sub` lists again, scoped to whichever section is
  * active — this component's flattened list is the *global* nav (every
  * section, always visible ≥56rem), SubNav's is the *contextual* one (only
  * the active section's siblings, only when a section is active). Blog/
- * changelog/releases all roll up under `learn` in the manifest; benchmarks
+ * changelog all roll up under `learn` in the manifest; benchmarks
  * is its own top-level entry (mutually exclusive with `learn` via nav.json's
  * `exclude`) — so this nav is the seam that stitches the marketing and
  * Starlight halves together under one manifest. starlight-blog's own header

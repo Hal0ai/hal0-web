@@ -16,8 +16,14 @@ export default defineConfig({
 	// The docs root has no index page (Starlight autogenerates groups under
 	// /docs/<group>). Send /docs and /docs/ to the first tutorial so the
 	// long-standing nav link to /docs/ resolves instead of 404ing.
+	//
+	// /changelog and /releases were merged into one page (the KB-shaped
+	// unified release history, src/pages/changelog.astro) that lives at
+	// /changelog — /releases now redirects there so old links/bookmarks
+	// keep working, same pattern as the /docs entry above.
 	redirects: {
 		'/docs': '/docs/getting-started/',
+		'/releases': '/changelog',
 	},
 
 	integrations: [
