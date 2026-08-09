@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>docs — hal0</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.shell{display:grid;grid-template-columns:236px 1fr 196px;gap:44px;align-items:start;padding-block:30px 0}
+.shell.nolist{grid-template-columns:236px 1fr}
+.dside{position:sticky;top:112px;align-self:start;font-family:var(--jbm);font-size:11.5px;display:flex;flex-direction:column;gap:20px;max-height:calc(100vh - 140px);overflow-y:auto;padding-right:8px}
+.dside .grp{display:flex;flex-direction:column;gap:6px}
+.dside .grp>.label{margin-bottom:3px}
+.dside a{color:var(--fg-3);padding:2px 0 2px 10px;line-height:1.45}
+.dside a:hover{color:var(--fg)}
+.dside a.on{color:var(--accent);box-shadow:inset 2px 0 0 var(--accent)}
+.dside .grp>.label{padding-left:10px}
+.dside .sub{padding-left:11px;border-left:1px solid var(--line-soft);display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.crumbs{display:flex;align-items:center;gap:8px;font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
+.crumbs a{color:var(--fg-4)}
+.crumbs a:hover{color:var(--accent)}
+.prose{max-width:74ch}
+.prose h2{font-family:var(--geist);font-size:21px;font-weight:600;letter-spacing:var(--ls-tight);margin:36px 0 12px;color:var(--fg);scroll-margin-top:110px}
+.prose h3{font-size:16px;font-weight:600;margin:24px 0 8px;color:var(--fg)}
+.prose p{font-size:15.5px;line-height:1.68;color:var(--fg-2);margin:0 0 16px;text-wrap:pretty}
+.prose li{font-size:15.5px;line-height:1.68;color:var(--fg-2);margin-bottom:7px}
+.prose code{font-family:var(--jbm);font-size:13px;background:var(--bg-2);border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--fg)}
+.prose pre{background:var(--bg-sunken);border:1px solid var(--line);border-radius:var(--rad);padding:14px 16px;overflow-x:auto;font-family:var(--jbm);font-size:12.5px;line-height:1.7;color:var(--fg-2);margin:0 0 20px}
+.prose pre code{background:none;border:0;padding:0}
+.prose table{width:100%;border-collapse:collapse;margin:0 0 20px;font-size:13px}
+.prose th{text-align:left;font-family:var(--jbm);font-size:10px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--fg-3);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
+.prose td{padding:8px 10px;border-bottom:1px solid var(--line-soft);color:var(--fg-2);vertical-align:top}
+.prose td code{white-space:nowrap}
+.aside{border:1px solid var(--warn-line);background:var(--warn-soft);border-radius:var(--rad);padding:13px 15px;margin:0 0 20px}
+.aside .t{font-family:var(--jbm);font-size:11px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--warn);display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.aside p{font-size:14px;color:var(--fg-2);margin:0}
+.aside.tip{border-color:var(--accent-line);background:var(--accent-soft)}
+.aside.tip .t{color:var(--accent)}
+.toc{position:sticky;top:112px;align-self:start;font-family:var(--jbm);font-size:11.5px;display:flex;flex-direction:column;gap:9px}
+.toc a{color:var(--fg-4)}
+.toc a.on{color:var(--accent)}
+.pager{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:44px 0 0;padding-top:22px;border-top:1px solid var(--line)}
+.pg{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:14px 16px}
+.pg .d{font-family:var(--jbm);font-size:10px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--fg-4)}
+.pg .t{font-family:var(--jbm);font-size:13px;color:var(--fg-2);margin-top:6px;display:block}
+.pg:hover .t{color:var(--accent)}
+.pg.next{text-align:right}
+.dfoot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:20px;font-family:var(--jbm);font-size:11px;color:var(--fg-4);flex-wrap:wrap}
+.lcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:12px;margin:0 0 28px}
+.lcard{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:15px 16px;display:block;position:relative;transition:border-color var(--dur-fast) var(--ease)}
+.lcard:hover{border-color:var(--accent-line)}
+.lcard .t{font-family:var(--jbm);font-size:13px;color:var(--fg);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lcard:hover .t{color:var(--accent)}
+.lcard .d{font-size:13px;line-height:1.5;color:var(--fg-3);margin-top:7px}
+.seccards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.seccard{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:16px}
+.seccard h3{font-family:var(--jbm);font-size:13px;margin:10px 0 6px;color:var(--fg)}
+.seccard p{font-size:13px;line-height:1.5;color:var(--fg-3);margin:0 0 12px}
+.seccard .n{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4)}
+.plist{border-top:1px solid var(--line)}
+.prow{display:grid;grid-template-columns:32px 1fr 210px;gap:18px;align-items:baseline;padding:16px 0;border-bottom:1px solid var(--line-soft)}
+.prow .ord{font-family:var(--jbm);font-size:11px;color:var(--fg-5)}
+.prow .t{font-family:var(--jbm);font-size:15px;color:var(--fg)}
+.prow:hover .t{color:var(--accent)}
+.prow .d{font-size:13.5px;line-height:1.55;color:var(--fg-3);margin-top:5px;max-width:60ch}
+.prow .f{font-family:var(--jbm);font-size:10.5px;color:var(--fg-5);text-align:right}
+.vernote{display:inline-flex;align-items:center;gap:8px;font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);border:1px solid var(--line);border-radius:var(--rad-pill);padding:3px 10px}
+@media(max-width:1180px){.shell{grid-template-columns:216px 1fr;gap:32px}.toc{display:none}}
+@media(max-width:900px){.shell,.shell.nolist{grid-template-columns:1fr}.dside{display:none}.prow{grid-template-columns:1fr}.prow .f{text-align:left}.pager{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel">
+const { Icon } = window.Hal0DesignSystem_692ad8;
+
+/* sidebar mirrors src/content/docs/docs/ */
+const TREE = [
+  { g: "getting started", items: ["hal0 documentation", "Install hal0", "Load your first model", "Send your first chat", "Install on bare metal", "Install on Proxmox", "WSL (experimental)", "GPU drivers and memory"] },
+  { g: "concepts", items: ["Architecture", "Slots", "Capabilities and profiles", "Stacks", "Memory", "Agents", "Security", "Strix Halo"] },
+  { g: "guides", items: ["Choose models", "Pull and register models", "Manage slots", "Configure", "Run agents", "Enable memory", "Connect MCP", "Connect external providers", "Voice — STT and TTS", "Generate images", "Logs and activity", "Update and rollback"] },
+  { g: "operate", items: ["Services", "Auth", "Sentry"] },
+  { g: "reference", items: ["CLI", "Config schema", "Slot lifecycle", "Providers, profiles, devices", "Env vars", "Paths and files", "MCP tools", "Hardware matrix", "Model roster benchmark"], sub: { after: "MCP tools", label: "api", items: ["OpenAI compat", "REST API", "Slot as model", "Streaming"] } },
+];
+
+const START = [
+  ["Install hal0", "One-line install: fetch, verify, unpack, and bring up the API."],
+  ["Load your first model", "Pull a model from Hugging Face and assign it to a slot."],
+  ["Send your first chat", "Chat from OpenWebUI or curl the OpenAI-compatible endpoint."],
+  ["Install on bare metal", "Run the installer directly on a Linux host, no container layer."],
+  ["Install on Proxmox", "Quick-path CT script or the full GPU/NPU passthrough recipe."],
+  ["WSL (experimental)", "Run hal0 under Windows Subsystem for Linux, CPU-only."],
+  ["GPU drivers and memory", "Kernel/firmware requirements, GTT sizing, and render-group gids."],
+];
+
+const GETTING_STARTED = [
+  ["hal0 documentation", "What hal0 is, what hardware it runs on, and what you get.", "index.mdx"],
+  ["Install hal0", "One-line install: fetch, verify, unpack, and bring up the API.", "install.mdx"],
+  ["Load your first model", "Pull a model from Hugging Face and assign it to a slot.", "first-model.mdx"],
+  ["Send your first chat", "Chat from OpenWebUI or curl the OpenAI-compatible endpoint.", "first-chat.mdx"],
+  ["Install on bare metal", "Run the installer directly on a Linux host, no container layer.", "bare-metal.mdx"],
+  ["Install on Proxmox", "Quick-path CT script or the full GPU/NPU passthrough recipe.", "proxmox.mdx"],
+  ["WSL (experimental)", "Run hal0 under Windows Subsystem for Linux, CPU-only.", "wsl.mdx"],
+  ["GPU drivers and memory", "Kernel/firmware requirements, GTT sizing, and render-group gids.", "drivers.mdx"],
+];
+
+function Sidebar({ active }) {
+  return (
+    <nav className="dside">
+      {TREE.map(g => (
+        <div className="grp" key={g.g}>
+          <span className="label">{g.g}</span>
+          {g.items.map(i => (
+            <React.Fragment key={i}>
+              <a href="#" className={i === active ? "on" : ""}>{i}</a>
+              {g.sub && g.sub.after === i && (
+                <div className="sub"><span className="label" style={{ fontSize: 9.5 }}>{g.sub.label}</span>
+                  {g.sub.items.map(s => <a href="#" key={s}>{s}</a>)}</div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function Crumbs({ parts }) {
+  return (
+    <div className="crumbs">
+      {parts.map((p, i) => (
+        <React.Fragment key={p[0]}>
+          {i > 0 && <span style={{ color: "var(--fg-5)" }}>/</span>}
+          {p[1] ? <a href="#" onClick={e => { e.preventDefault(); p[1](); }}>{p[0]}</a> : <span>{p[0]}</span>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function DocFoot() {
+  return (
+    <div className="dfoot">
+      <span className="vernote"><span className="dot ready" />applies to v0.5.x · reviewed for 1.0.0-RC.3</span>
+      <span style={{ display: "flex", gap: 16 }}>
+        <a href="#">edit this page ↗</a>
+        <a href="#">ask in the forum ↗</a>
+      </span>
+    </div>
+  );
+}
+
+function Landing({ go }) {
+  return (
+    <div className="wrap wide shell nolist">
+      <Sidebar active="hal0 documentation" />
+      <article className="prose">
+        <Crumbs parts={[["docs"]]} />
+        <h1 className="site-h1" style={{ margin: "14px 0 16px" }}>hal0 documentation</h1>
+        <p style={{ fontSize: 17.5 }}>
+          <b>hal0</b> turns a Linux box into a polished, OpenAI-compatible inference appliance. It is
+          built for the AMD Ryzen AI Max+ 395 ("Strix Halo") — iGPU + XDNA NPU + 128 GB of unified
+          memory — and falls back to portable hardware parsers on every other host.
+        </p>
+        <p>
+          Every inference workload runs as its own podman container, supervised by a
+          <code> hal0-slot@&lt;name&gt;.service</code> systemd unit. A single control plane,
+          <code> hal0-api</code> on port <code>8080</code>, owns the slot state machines, dispatches
+          OpenAI-compatible <code>/v1/*</code> requests to the right slot, and serves the dashboard.
+          There is no shared inference daemon to babysit.
+        </p>
+
+        <h2 id="start">Start here</h2>
+        <div className="lcards">
+          {START.map(([t, d]) => (
+            <a className="lcard" href="#" key={t} onClick={e => { e.preventDefault(); go("article"); }}>
+              <span className="t">{t}<Icon name="chevR" size={13} /></span>
+              <span className="d">{d}</span>
+            </a>
+          ))}
+        </div>
+
+        <div className="aside">
+          <div className="t"><Icon name="warn" size={13} />caution · no built-in auth or TLS</div>
+          <p><code>hal0-api</code> binds <code>0.0.0.0:8080</code> and treats every request as
+          authenticated by network reachability — the right posture for a trusted LAN appliance. If
+          hal0 is reachable from anywhere you do not control, front it with a reverse proxy that owns
+          auth and TLS.</p>
+        </div>
+
+        <h2 id="sections">Sections</h2>
+        <div className="seccards">
+          {[["getting-started", "start", "Install, first model, first chat. Bare metal, Proxmox, WSL.", 8],
+            ["concepts", "models", "Slots, stacks, profiles, memory, agents, and the Strix Halo itself.", 8],
+            ["guides", "settings", "Task by task: pull models, manage slots, wire MCP, roll back.", 12],
+            ["operate", "hardware", "Services, auth, and error reporting for a box you actually run.", 3],
+            ["reference", "logs", "CLI, config schema, slot lifecycle, env vars, and the API.", 13]
+          ].map(([t, icon, d, n]) => (
+            <a className="seccard" href="#" key={t} onClick={e => { e.preventDefault(); go("category"); }}>
+              <span style={{ color: "var(--accent)" }}><Icon name={icon} size={16} /></span>
+              <h3>{t}</h3>
+              <p>{d}</p>
+              <span className="n">{n} pages →</span>
+            </a>
+          ))}
+        </div>
+        <DocFoot />
+      </article>
+    </div>
+  );
+}
+
+function Category({ go }) {
+  return (
+    <div className="wrap wide shell nolist">
+      <Sidebar active="hal0 documentation" />
+      <article className="prose">
+        <Crumbs parts={[["docs", () => go("landing")], ["getting started"]]} />
+        <h1 className="site-h1" style={{ margin: "14px 0 14px" }}>Getting started</h1>
+        <p style={{ maxWidth: "62ch" }}>
+          From a bare Linux box to a slot answering <code>/v1/chat/completions</code>. Read in order
+          the first time; after that these are reference pages like any other.
+        </p>
+        <div className="plist" style={{ marginTop: 26 }}>
+          {GETTING_STARTED.map(([t, d, f], i) => (
+            <a className="prow" href="#" key={t} onClick={e => { e.preventDefault(); go("article"); }}>
+              <span className="ord">{String(i).padStart(2, "0")}</span>
+              <span><span className="t">{t}</span><span className="d">{d}</span></span>
+              <span className="f">getting-started/{f}</span>
+            </a>
+          ))}
+        </div>
+        <DocFoot />
+      </article>
+    </div>
+  );
+}
+
+const STATES = [
+  ["OFFLINE", "Not running. No systemd unit active."],
+  ["PULLING", "Model files are being downloaded or verified. systemd unit not yet started."],
+  ["STARTING", "systemd unit has been started; waiting for the container to come up."],
+  ["WARMING", "Container is up; the health probe is returning non-ready responses while the model loads into VRAM/GTT."],
+  ["READY", "Passed the full health probe (non-empty /v1/models plus a sentinel completion). Ready to serve."],
+  ["SERVING", "An inference request is actively in-flight on this slot."],
+  ["IDLE", "Process up but /v1/models empty, or no request for longer than the idle timeout — an eviction candidate."],
+  ["UNLOADING", "Graceful shutdown in progress. systemd stop issued; waiting for the container to exit."],
+  ["ERROR", "Failed. Details in state.json and journald."],
+];
+const TRANSITIONS = [
+  ["OFFLINE", "PULLING, STARTING"],
+  ["PULLING", "STARTING, ERROR, OFFLINE"],
+  ["STARTING", "WARMING, ERROR, OFFLINE"],
+  ["WARMING", "READY, IDLE, ERROR, OFFLINE"],
+  ["READY", "SERVING, IDLE, UNLOADING, ERROR"],
+  ["SERVING", "READY, IDLE, ERROR"],
+  ["IDLE", "SERVING, UNLOADING, READY"],
+  ["UNLOADING", "OFFLINE, ERROR"],
+  ["ERROR", "OFFLINE, PULLING, STARTING"],
+];
+
+function Article({ go }) {
+  return (
+    <div className="wrap wide shell">
+      <Sidebar active="Slot lifecycle" />
+      <article className="prose">
+        <Crumbs parts={[["docs", () => go("landing")], ["reference", () => go("category")], ["slot lifecycle"]]} />
+        <h1 className="site-h1" style={{ margin: "14px 0 14px" }}>Slot lifecycle reference</h1>
+        <p style={{ fontSize: 17 }}>
+          The slot state machine — every state, every legal transition, dispatch ranking and typed
+          errors. The canonical implementation lives in <code>hal0.slots.state</code> and is used by
+          <code> SlotManager</code>, the dashboard SSE stream, and the <code>state.json</code>
+          persistence layer.
+        </p>
+
+        <h2 id="states">States</h2>
+        <table>
+          <thead><tr><th>state</th><th>meaning</th></tr></thead>
+          <tbody>{STATES.map(([s, m]) => <tr key={s}><td><code>{s.toLowerCase()}</code></td><td>{m}</td></tr>)}</tbody>
+        </table>
+        <pre><code>{`offline → pulling → starting → warming → ready ←──┐
+                                   │      ↑       │
+                                   │      ↓       │
+                                   └──→ idle ←──serving
+                                          │
+                                          ↓
+                                      unloading → offline
+                                          ↑
+                                        error`}</code></pre>
+
+        <h2 id="legal">Legal transitions</h2>
+        <p><code>LEGAL_TRANSITIONS</code> is the authoritative map <code>SlotManager</code> enforces.</p>
+        <table>
+          <thead><tr><th>from</th><th>legal next states</th></tr></thead>
+          <tbody>{TRANSITIONS.map(([f, t]) => <tr key={f}><td><code>{f.toLowerCase()}</code></td><td className="mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>{t.toLowerCase()}</td></tr>)}</tbody>
+        </table>
+
+        <h2 id="dispatch">Dispatchable states</h2>
+        <p>
+          <code>DISPATCHABLE_STATES = &#123;READY, SERVING, IDLE&#125;</code> — the single source of truth
+          used by <code>SlotManager</code>, the GPU arbiter, stack-apply, the Prometheus renderer and
+          the slot-view aggregator to decide whether a slot can take a request right now.
+        </p>
+        <h3>Selection ranking</h3>
+        <ol>
+          <li>Dispatchable (ready / serving / idle) — answers now.</li>
+          <li>warming, starting, pulling — will answer shortly.</li>
+          <li>offline, unloading — needs a cold load.</li>
+          <li>error — last resort, it already failed once.</li>
+        </ol>
+
+        <h2 id="eviction">Eviction priority</h2>
+        <p>
+          Every non-pinned slot is an eviction candidate. <code>priority</code> (0–100, default 50)
+          orders the victims: the lowest priority is unloaded first, with least-recently-used as the
+          tie-break inside a tier. A slot with a request in flight is never a victim, and only
+          resident slots are considered at all.
+        </p>
+        <div className="aside">
+          <div className="t"><Icon name="warn" size={13} />caution</div>
+          <p>The old <code>lru = true</code> eviction opt-in is retired. The key is still accepted in
+          slot TOML but ignored, with a one-time <code>slot.lru_flag_retired</code> warning per slot —
+          remove it and use <code>priority</code> / <code>pinned</code> instead.</p>
+        </div>
+
+        <div className="pager">
+          <a className="pg" href="#"><span className="d">← previous</span><span className="t">Config schema</span></a>
+          <a className="pg next" href="#"><span className="d">next →</span><span className="t">Providers, profiles, devices</span></a>
+        </div>
+        <DocFoot />
+      </article>
+      <nav className="toc">
+        <span className="label">on this page</span>
+        <a href="#states" className="on">states</a>
+        <a href="#legal">legal transitions</a>
+        <a href="#dispatch">dispatchable states</a>
+        <a href="#eviction">eviction priority</a>
+        <hr className="hairline" style={{ margin: "6px 0" }} />
+        <span className="label">related</span>
+        <a href="#">CLI → hal0 slot</a>
+        <a href="#">Capabilities and profiles</a>
+      </nav>
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = React.useState("landing");
+  return (
+    <div className="site">
+      <Header active="learn" sticky user="lemond" />
+      <div className="subnav">
+        <div className="wrap wide subnav-in">
+          <a href="#" className="on" onClick={e => { e.preventDefault(); setView("landing"); }}>docs</a>
+          <a href={window.P_WRITE}>knowledge base</a>
+          <a href={window.P_WRITE}>blog</a>
+          <a href="#">changelog</a>
+          <span style={{ marginLeft: "auto", display: "flex", gap: 14, alignItems: "center" }}>
+            <span className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>v0.5.x</span>
+            <a href="#" className="mono" style={{ fontSize: 11 }}>github ↗</a>
+          </span>
+        </div>
+      </div>
+      {view === "landing" && <Landing go={setView} />}
+      {view === "category" && <Category go={setView} />}
+      {view === "article" && <Article go={setView} />}
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

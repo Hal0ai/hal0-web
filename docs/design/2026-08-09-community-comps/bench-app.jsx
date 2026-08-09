@@ -5,23 +5,49 @@
 const { Icon } = window.Hal0DesignSystem_692ad8;
 const BENCH = window.BENCH, MODELS = window.MODELS, bucket = window.bucket;
 
-/* ── capability glyphs — same family as the hal0 icon set ─────── */
-const CAP_GLYPH = {
-  mtp: <g><path d="M2 4l4 4-4 4" /><path d="M8 4l4 4-4 4" /></g>,
-  vision: <g><path d="M1 8s2.5-4 7-4 7 4 7 4-2.5 4-7 4-7-4-7-4z" /><circle cx="8" cy="8" r="1.8" /></g>,
-  tools: <path d="M10.5 2a3.5 3.5 0 0 0-3.2 4.9L2 12.2 3.8 14l5.3-5.3A3.5 3.5 0 1 0 10.5 2z" />,
-  coding: <g><path d="M5.5 4.5L2 8l3.5 3.5" /><path d="M10.5 4.5L14 8l-3.5 3.5" /></g>,
-  reasoning: <g><circle cx="4" cy="4" r="1.6" /><circle cx="12" cy="6" r="1.6" /><circle cx="6" cy="12" r="1.6" /><path d="M5.4 4.9l5.2.6M4.8 5.5l1 5" /></g>,
+/* ── capability glyphs — lifted verbatim from src/components/ModelRoster.astro ─── */
+const CAP_ICONS = {
+  mtp: { label: "MTP speculative", fill: true, d: "M8.7 1 3 9h3.6l-1 6 6.4-8H9.1z" },
+  vision: { label: "Vision", d: "M1 8s2.6-4.6 7-4.6S15 8 15 8s-2.6 4.6-7 4.6S1 8 1 8z", circle: true },
+  tools: { label: "Tool-calling", d: "M10.3 1.6a3.4 3.4 0 0 0-3.2 4.5L1.7 11.4 4 13.7l5.3-5.4a3.4 3.4 0 0 0 4.5-3.2l-2 2-2-2z" },
+  coding: { label: "Coding", polylines: ["5 4 1.6 8 5 12", "11 4 14.4 8 11 12"] },
+  reasoning: { label: "Reasoning", fill: true, d: "M8 1l1.5 4.3L14 7l-4.5 1.7L8 13l-1.5-4.3L2 7l4.5-1.7z" },
 };
-function Cap({ name, size = 13 }) {
+function Cap({ name, size = 16 }) {
+  const g = CAP_ICONS[name];
+  if (!g) return null;
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"
-         strokeLinecap="round" strokeLinejoin="round" role="img" aria-label={name}><title>{name}</title>{CAP_GLYPH[name]}</svg>
+    <span className={"cap cap-" + name} style={{ width: size, height: size }} title={g.label}>
+      <svg viewBox="0 0 16 16" width={size} height={size} role="img" aria-label={g.label}
+           fill={g.fill ? "currentColor" : "none"} stroke={g.fill ? "none" : "currentColor"}
+           strokeWidth={g.fill ? undefined : 1.4} strokeLinecap="round" strokeLinejoin="round">
+        {g.d && <path d={g.d} />}
+        {g.circle && <circle cx="8" cy="8" r="1.9" />}
+        {g.polylines && g.polylines.map(p => <polyline key={p} points={p} />)}
+      </svg>
+    </span>
   );
 }
 function Caps({ caps }) {
-  if (!caps.length) return <span style={{ color: "var(--fg-5)" }}>—</span>;
+  if (!caps.length) return <span className="capnone">—</span>;
   return <span className="caps">{caps.map(c => <Cap key={c} name={c} />)}</span>;
+}
+
+/* legend — the roster's own wording, kept so the two surfaces agree */
+function BucketLegend() {
+  return (
+    <div className="bucket-legend">
+      <span><span className="sw" style={{ background: "var(--fast)" }} />≥60 t/s</span>
+      <span><span className="sw" style={{ background: "var(--mid)" }} />25–60</span>
+      <span><span className="sw" style={{ background: "var(--slow)" }} />&lt;25</span>
+      <span className="sep">·</span>
+      {Object.keys(CAP_ICONS).map(k => (
+        <span className="lg" key={k}><Cap name={k} size={14} />{CAP_ICONS[k].label}</span>
+      ))}
+      <span className="sep">·</span>
+      <span>Click any header to sort.</span>
+    </div>
+  );
 }
 
 /* ── decode bucket: meter + number, never colour alone ────────── */
@@ -69,7 +95,7 @@ const ARGV = (r) => `llama-server -m /mnt/ai-models/${r.model}.gguf -ngl 99 -c $
   -b ${r.variant === "b1024" ? 1024 : 512} --temp 0.7 --top-p 0.8 --min-p 0.05 \\
   ${r.spec === "draft-mtp" && r.variant !== "mtp-off" ? "--draft-max 4 --draft-min 1 --mtp on \\\n  " : ""}--host 0.0.0.0 --port 8080`;
 
-function Drawer({ run, onClose }) {
+function RunDrawer({ run, onClose }) {
   const [copied, setCopied] = React.useState(false);
   if (!run) return null;
   const hi = Math.max(...run.history), lo = Math.min(...run.history);
@@ -160,4 +186,4 @@ function Drawer({ run, onClose }) {
 }
 const laneChip = (l) => (l === "rocm" ? "dev-rocm" : l === "vulkan_radv" ? "dev-vulkan" : "dev-cpu");
 
-Object.assign(window, { Cap, Caps, Decode, Spark, Seg, Drawer, laneChip, ARGV });
+Object.assign(window, { Cap, Caps, CAP_ICONS, BucketLegend, Decode, Spark, Seg, RunDrawer, laneChip, ARGV });

@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>forum.hal0.dev</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.phead{padding-block:26px 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.shell{display:grid;grid-template-columns:1fr 292px;gap:28px;align-items:start;padding-bottom:8px}
+.ctlbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tlist{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden}
+.tlist-h{display:grid;grid-template-columns:1fr 118px 62px 62px 82px;gap:14px;padding:9px 16px;border-bottom:1px solid var(--line);font-family:var(--jbm);font-size:10px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--fg-3)}
+.tlist-h span:not(:first-child){text-align:right}
+.trow{display:grid;grid-template-columns:1fr 118px 62px 62px 82px;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer}
+.trow:last-child{border-bottom:0}
+.trow:hover{background:var(--bg-2)}
+.tmain{min-width:0}
+.ttitle{font-size:14.5px;line-height:1.35;color:var(--fg-2);display:flex;align-items:baseline;gap:8px}
+.trow:hover .ttitle{color:var(--accent)}
+.trow.unread .ttitle{color:var(--fg)}
+.tmeta{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+.cat{display:inline-flex;align-items:center;gap:6px;font-family:var(--jbm);font-size:10.5px;color:var(--fg-3)}
+.cat i{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+a.cat:hover{color:var(--accent)}
+.tag{font-family:var(--jbm);font-size:10px;color:var(--fg-4);border:1px solid var(--line);border-radius:3px;padding:1px 6px}
+.pin,.solved{display:inline-flex;align-items:center;gap:4px;font-family:var(--jbm);font-size:10px;flex-shrink:0}
+.pin{color:var(--fg-4)}
+.solved{color:var(--ok)}
+.posters{display:flex;justify-content:flex-end}
+.posters .avatar{margin-left:-6px;border:1px solid var(--bg-1)}
+.posters .avatar:first-child{margin-left:0}
+.tnum{text-align:right;font-family:var(--jbm);font-size:12.5px;color:var(--fg-3);font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features)}
+.tnum.hot{color:var(--fg)}
+.tnum .new{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 5px;border-radius:var(--rad-pill);background:var(--accent);color:#0a0a0a;font-size:10.5px}
+.tage{text-align:right;font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
+.side{display:flex;flex-direction:column;gap:16px;position:sticky;top:112px}
+.scard{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden}
+.scard-h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line-soft)}
+.scard-b{padding:12px 14px;display:flex;flex-direction:column;gap:11px}
+.xlink{display:block}
+.xlink .t{font-size:13px;line-height:1.4;color:var(--fg-2)}
+.xlink:hover .t{color:var(--accent)}
+.xlink .m{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);margin-top:4px;display:block}
+.catrow{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-3)}
+.catrow:hover{color:var(--accent)}
+.catrow .n{color:var(--fg-5);font-size:10.5px}
+.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+/* category view */
+.cathead{display:flex;align-items:flex-start;gap:16px;padding-block:24px 18px}
+.cathead .bar{width:4px;align-self:stretch;border-radius:2px;flex-shrink:0}
+.cathead h1{font-family:var(--jbm);font-size:30px;letter-spacing:var(--ls-title);margin:6px 0 8px;font-weight:400;color:var(--fg)}
+.catstats{display:flex;gap:20px;font-family:var(--jbm);font-size:11px;color:var(--fg-4);margin-top:12px}
+.catstats b{color:var(--fg-2);font-weight:400}
+/* topic view */
+.tshell{display:grid;grid-template-columns:1fr 268px;gap:28px;align-items:start;padding-block:24px 0}
+.thead h1{font-size:27px;line-height:1.25;letter-spacing:var(--ls-tight);margin:12px 0 10px;color:var(--fg);font-weight:500}
+.thead .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.post{display:grid;grid-template-columns:44px 1fr;gap:14px;padding:20px 0;border-top:1px solid var(--line-soft)}
+.post:first-of-type{border-top:0}
+.post.answer{background:linear-gradient(90deg,var(--ok-soft),transparent 60%);box-shadow:inset 2px 0 0 var(--ok);padding-left:14px;border-radius:0 var(--rad) var(--rad) 0}
+.post-head{display:flex;align-items:center;gap:10px;font-family:var(--jbm);font-size:11.5px;color:var(--fg-4);flex-wrap:wrap}
+.post-head .who{color:var(--fg);font-size:12.5px}
+.role{font-size:9.5px;text-transform:uppercase;letter-spacing:var(--ls-label);border:1px solid var(--accent-line);color:var(--accent);border-radius:3px;padding:1px 5px}
+.role.op{border-color:var(--line-strong);color:var(--fg-3)}
+.post-body{font-size:15px;line-height:1.65;color:var(--fg-2);margin-top:10px}
+.post-body p{margin:0 0 13px}
+.post-body code{font-family:var(--jbm);font-size:12.5px;background:var(--bg-2);border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--fg)}
+.post-body pre{background:var(--bg-sunken);border:1px solid var(--line);border-radius:var(--rad);padding:12px 14px;overflow-x:auto;font-family:var(--jbm);font-size:12px;line-height:1.65;margin:0 0 13px;color:var(--fg-2)}
+.post-body blockquote{margin:0 0 13px;padding:10px 14px;border-left:2px solid var(--line-strong);background:var(--bg-2);color:var(--fg-3);font-size:14px}
+.post-acts{display:flex;align-items:center;gap:14px;margin-top:12px;font-family:var(--jbm);font-size:11px;color:var(--fg-3)}
+.post-acts button{background:none;border:0;color:inherit;font:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:0}
+.post-acts button:hover{color:var(--accent)}
+.answered{display:inline-flex;align-items:center;gap:6px;font-family:var(--jbm);font-size:10.5px;color:var(--ok)}
+.timeline{position:sticky;top:112px;display:flex;flex-direction:column;gap:16px}
+.tl{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:14px}
+.tl .n{font-family:var(--jbm);font-size:12px;color:var(--fg-2)}
+.tl .track{height:3px;background:var(--bg-3);border-radius:2px;margin:10px 0 8px;overflow:hidden}
+.tl .track i{display:block;height:100%;background:var(--accent)}
+.tl .t{font-family:var(--jbm);font-size:10.5px;color:var(--fg-3);display:flex;justify-content:space-between}
+.parts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.replybar{display:flex;align-items:center;gap:12px;padding:16px 0 8px;border-top:1px solid var(--line);margin-top:8px}
+@media(max-width:1080px){.shell{grid-template-columns:1fr}.side{position:static}.tlist-h{display:none}.trow{grid-template-columns:1fr 54px 64px}.trow .posters,.trow .tnum.views{display:none}.notes{grid-template-columns:1fr}.tshell{grid-template-columns:1fr}.timeline{position:static}}
+.note{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:16px}
+.note h3{font-family:var(--jbm);font-size:12.5px;margin:0 0 8px;color:var(--fg)}
+.note p{font-size:13px;line-height:1.55;color:var(--fg-3);margin:0}
+.note code{font-family:var(--jbm);font-size:11.5px;color:var(--fg-2)}
+/* categories index (Discourse's two-column /categories) */
+.cindex{display:grid;grid-template-columns:1.05fr .95fr;gap:32px;align-items:start;padding-block:20px 0}
+.cix-h{display:flex;align-items:baseline;justify-content:space-between;padding:0 0 8px;border-bottom:1px solid var(--line);font-family:var(--jbm);font-size:10px;text-transform:uppercase;letter-spacing:var(--ls-label);color:var(--fg-3)}
+.crow{display:grid;grid-template-columns:1fr 92px;gap:18px;padding:16px 0 16px 16px;border-bottom:1px solid var(--line-soft);position:relative;cursor:pointer}
+.crow::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:2px;background:var(--rail)}
+.crow:hover{background:var(--bg-2)}
+.crow .nm{font-family:var(--jbm);font-size:15.5px;color:var(--fg)}
+.crow:hover .nm{color:var(--accent)}
+.crow .ds{font-size:13px;line-height:1.55;color:var(--fg-3);margin:7px 0 0;max-width:52ch}
+.crow .subs{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:11px}
+.crow .sub{display:inline-flex;align-items:center;gap:6px;font-family:var(--jbm);font-size:11px;color:var(--fg-3)}
+.crow .sub i{width:7px;height:7px;border-radius:2px}
+.crow .sub b{color:var(--fg-5);font-weight:400;font-size:10px}
+.crow .cnt{text-align:right;font-family:var(--jbm);font-size:12.5px;color:var(--fg-2);font-variant-numeric:tabular-nums}
+.crow .cnt u{color:var(--fg-4);font-size:10px;text-decoration:none}
+.crow .cnt .new{display:block;color:var(--accent);font-size:10.5px;margin-top:5px}
+.lrow{display:grid;grid-template-columns:28px 1fr 46px 56px;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line-soft);cursor:pointer}
+.lrow .t{font-size:13.5px;line-height:1.4;color:var(--fg-2)}
+.lrow:hover .t{color:var(--accent)}
+.lrow .m{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.lrow .r{text-align:right;font-family:var(--jbm);font-size:12px;color:var(--fg-3);font-variant-numeric:tabular-nums}
+.lrow .r.hot{color:var(--accent)}
+.lrow .a{text-align:right;font-family:var(--jbm);font-size:10.5px;color:var(--fg-4)}
+.dsel{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px;border:1px solid var(--line);border-radius:var(--rad-sm);background:var(--bg-1);font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);cursor:pointer}
+.dsel:hover{border-color:var(--line-strong);color:var(--fg)}
+.dtabs{display:flex;align-items:center;gap:2px}
+.dtabs button{background:none;border:0;padding:5px 11px;border-radius:var(--rad-sm);font-family:var(--jbm);font-size:12px;color:var(--fg-3);cursor:pointer}
+.dtabs button:hover{color:var(--fg);background:var(--bg-2)}
+.dtabs button.on{background:var(--accent);color:#0a0a0a}
+@media(max-width:1080px){.notes{grid-template-columns:1fr}.cindex{grid-template-columns:1fr;gap:24px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel">
+const { Icon } = window.Hal0DesignSystem_692ad8;
+
+const CATS = [
+  ["install", "var(--accent)", 148],
+  ["hardware", "var(--mem-slot-1)", 212],
+  ["runtime", "var(--mem-slot-8)", 96],
+  ["benchmarks", "var(--mem-slot-3)", 74],
+  ["profiles", "var(--mem-slot-2)", 41],
+  ["showcase", "var(--mem-slot-4)", 63],
+  ["meta", "var(--fg-4)", 19],
+];
+const catColor = (c) => (CATS.find(x => x[0] === c) || [, "var(--fg-4)"])[1];
+
+const TOPICS = [
+  { t: "Read this first: what to include in a hardware post", cat: "meta", tags: ["guidelines"], posters: ["hal0-ci", "kyuz0"], replies: 3, views: "12.4k", age: "pinned", pin: true },
+  { t: "Draft-mtp accept rate collapses past 8k context", cat: "runtime", tags: ["mtp", "llama.cpp"], posters: ["kyuz0", "jcbtc", "lhl"], replies: 34, views: "2.1k", age: "2 h", unread: 6, hot: true },
+  { t: "HX 370 32 GB: what actually fits alongside embed?", cat: "hardware", tags: ["hx-370", "unified-memory"], posters: ["nx-void", "mrpotato"], replies: 21, views: "980", age: "5 h", unread: 2 },
+  { t: "ROCm 7.2.4 LXC passthrough — working config", cat: "install", tags: ["proxmox", "rocm"], posters: ["ratchet", "lhl", "deadbeef7"], replies: 58, views: "6.7k", age: "1 d", solved: true, hot: true },
+  { t: "Anyone reproduced the 4.9 tok/s gap on 27B dense?", cat: "benchmarks", tags: ["sweep-june", "27b"], posters: ["lhl", "hal0-ci"], replies: 12, views: "614", age: "1 d" },
+  { t: "Profile: 16k context on a 35B MoE without eviction", cat: "profiles", tags: ["kv-q8", "moe"], posters: ["jcbtc", "kyuz0"], replies: 27, views: "1.9k", age: "2 d" },
+  { t: "Whisper on the NPU keeps falling back to CPU after suspend", cat: "runtime", tags: ["xdna", "stt"], posters: ["donutloop"], replies: 9, views: "402", age: "2 d" },
+  { t: "Built a 2U Strix Halo node — parts list and thermals", cat: "showcase", tags: ["build-log"], posters: ["deadbeef7", "ratchet", "nx-void"], replies: 46, views: "5.2k", age: "3 d", hot: true },
+  { t: "Vulkan lane prefill is 29 % behind ROCm now — expected?", cat: "benchmarks", tags: ["vulkan", "prefill"], posters: ["mrpotato", "lhl"], replies: 18, views: "1.1k", age: "4 d" },
+  { t: "install.sh fails on Ubuntu 24.04 with kernel 7.1", cat: "install", tags: ["install.sh"], posters: ["sirrus", "hal0-ci"], replies: 7, views: "338", age: "5 d", solved: true },
+];
+
+function TopicRow({ t, onOpen, onCat }) {
+  return (
+    <div className={"trow" + (t.unread ? " unread" : "")} onClick={() => onOpen(t)}>
+      <div className="tmain">
+        <div className="ttitle">
+          {t.pin && <span className="pin"><Icon name="check" size={11} />pinned</span>}
+          <span>{t.t}</span>
+          {t.solved && <span className="solved"><Icon name="check" size={11} />solved</span>}
+        </div>
+        <div className="tmeta">
+          <a className="cat" href="#" onClick={e => { e.preventDefault(); e.stopPropagation(); onCat(t.cat); }}><i style={{ background: catColor(t.cat) }} />{t.cat}</a>
+          {t.tags.map(g => <span className="tag" key={g}>{g}</span>)}
+        </div>
+      </div>
+      <div className="posters">{t.posters.map(p => <GhAvatar key={p} user={p} size={22} />)}</div>
+      <div className={"tnum" + (t.hot ? " hot" : "")}>{t.unread ? <span className="new">{t.unread}</span> : t.replies}</div>
+      <div className="tnum views">{t.views}</div>
+      <div className="tage">{t.age}</div>
+    </div>
+  );
+}
+
+function TopicList({ list, onOpen, onCat }) {
+  return (
+    <div className="tlist">
+      <div className="tlist-h"><span>topic</span><span>posters</span><span>replies</span><span>views</span><span>activity</span></div>
+      {list.map(t => <TopicRow key={t.t} t={t} onOpen={onOpen} onCat={onCat} />)}
+    </div>
+  );
+}
+
+const CAT_BLURB = {
+  install: "install.sh, drivers, Proxmox and bare metal. Post your kernel, ROCm version and what the probe printed.",
+  hardware: "Boxes, memory, thermals. Strix Halo first, but every host that runs hal0 is on topic.",
+  runtime: "llama.cpp builds, lanes, speculative decode, the NPU. The deep end.",
+  benchmarks: "Numbers and how they were taken. Link the run, not a screenshot.",
+  profiles: "Flag bundles that worked. Say which model and which box before the config.",
+  showcase: "What you built and what it cost.",
+  meta: "About the forum itself.",
+};
+
+function CategoryView({ cat, onOpen, onCat, onBack }) {
+  const list = TOPICS.filter(t => t.cat === cat);
+  const count = (CATS.find(c => c[0] === cat) || [, , 0])[2];
+  return (
+    <div className="wrap wide">
+      <div className="cathead">
+        <span className="bar" style={{ background: catColor(cat) }} />
+        <div style={{ flex: 1 }}>
+          <a className="mono" href="#" style={{ fontSize: 11, color: "var(--fg-4)" }} onClick={e => { e.preventDefault(); onBack(); }}>← all categories</a>
+          <h1>{cat}</h1>
+          <p className="site-body" style={{ maxWidth: "62ch" }}>{CAT_BLURB[cat]}</p>
+          <div className="catstats">
+            <span><b>{count}</b> topics</span>
+            <span><b>{list.reduce((a, t) => a + t.replies, 0)}</b> replies here this week</span>
+            <span><b>18</b> following</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn ghost sm">following</button>
+          <button className="btn sm">new topic</button>
+        </div>
+      </div>
+      <div className="ctlbar">
+        <div className="fbar">
+          <Fpill on>latest</Fpill><Fpill>top</Fpill><Fpill>unsolved</Fpill><Fpill>my posts</Fpill>
+        </div>
+        <div className="fbar" style={{ marginLeft: "auto" }}>
+          <span className="label" style={{ marginRight: 4 }}>tags</span>
+          {[...new Set(list.flatMap(t => t.tags))].map(g => <Fpill key={g}>{g}</Fpill>)}
+        </div>
+      </div>
+      <TopicList list={list} onOpen={onOpen} onCat={onCat} />
+    </div>
+  );
+}
+
+const POSTS = [
+  {
+    who: "kyuz0", role: "op", when: "2 h", n: 1,
+    body: (
+      <>
+        <p>Accept rate on <code>chadrock3-6-35b-uncensored-mtp-strix-lean</code> sits at 86 % up to about 4k context, then falls off a cliff. At 8k I am seeing 41 %, and past 12k it is not worth having speculation on at all — decode drops below the non-speculative run.</p>
+        <pre><code>{`hal0 bench --model chadrock3-6-35b-uncensored-mtp-strix-lean \\
+  --depth 2048,8192,16384 --reps 3 --lane rocm
+
+depth   accept%   decode t/s
+2048     86.0      102.1
+8192     41.2       71.4
+16384    28.7       58.9`}</code></pre>
+        <p>Same box, same build (<code>b9219-1faa48eef</code>), exclusive mode. Is this expected behaviour for draft-mtp or is the draft cache the problem?</p>
+      </>
+    ),
+    likes: 12, replies: 4,
+  },
+  {
+    who: "jcbtc", role: "maintainer", when: "1 h", n: 2, answer: true,
+    body: (
+      <>
+        <p>Expected, and fixable. The draft head runs with its own KV cache, and the profile you are using leaves it at <code>q4_0</code> to save memory. That is fine at short context — past about 6k the draft diverges from the target model faster than it can be corrected, so you pay for the draft tokens and throw most of them away.</p>
+        <p>Two changes, in order of effect:</p>
+        <pre><code>{`--cache-type-draft f16     # stop quantising the draft cache
+--draft-p-min 0.6          # bail out of a draft early when confidence drops`}</code></pre>
+        <p>On my 395 that puts 8k back to 71 % accept and 94 tok/s. <code>strix-mtp-max v4</code> ships both, which is why its 2048 number holds — it was never measured past that depth, and I should fix the profile description to say so.</p>
+        <blockquote>Below roughly 60 % accept the draft model costs more than it saves, and you are better off turning speculation off entirely.</blockquote>
+      </>
+    ),
+    likes: 34, replies: 2,
+  },
+  {
+    who: "lhl", role: null, when: "38 min", n: 3,
+    body: (
+      <>
+        <p>Reproduced on a 385 / 64 GB, smaller effect but the same shape: 79 % → 52 % between 2k and 8k, and <code>--cache-type-draft f16</code> recovers most of it. The f16 draft cache costs about 1.4 GB at 16k here, which is affordable on 64 GB but would not be on the 370.</p>
+        <p>Worth putting in the KB page on speculative pairs rather than leaving it in a thread.</p>
+      </>
+    ),
+    likes: 8, replies: 0,
+  },
+];
+
+function TopicView({ t, onBack, onCat }) {
+  return (
+    <div className="wrap wide tshell">
+      <div>
+        <div className="thead">
+          <a className="mono" href="#" style={{ fontSize: 11, color: "var(--fg-4)" }} onClick={e => { e.preventDefault(); onBack(); }}>← latest</a>
+          <h1>{t.t}</h1>
+          <div className="row">
+            <a className="cat" href="#" onClick={e => { e.preventDefault(); onCat(t.cat); }}><i style={{ background: catColor(t.cat) }} />{t.cat}</a>
+            {t.tags.map(g => <span className="tag" key={g}>{g}</span>)}
+            {t.solved
+              ? <span className="answered"><Icon name="check" size={12} />answered by @jcbtc</span>
+              : <span className="mono" style={{ fontSize: 10.5, color: "var(--fg-3)" }}>no accepted answer yet</span>}
+          </div>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          {POSTS.map(p => {
+            const isAnswer = p.answer && t.solved;
+            return (
+            <article className={"post" + (isAnswer ? " answer" : "")} key={p.n}>
+              <GhAvatar user={p.who} size={40} />
+              <div>
+                <div className="post-head">
+                  <span className="who">@{p.who}</span>
+                  {p.role === "maintainer" && <span className="role">maintainer</span>}
+                  {p.role === "op" && <span className="role op">original poster</span>}
+                  <span>{p.when} ago</span>
+                  <span style={{ marginLeft: "auto" }}>#{p.n}</span>
+                </div>
+                {isAnswer && <div className="answered" style={{ marginTop: 8 }}><Icon name="check" size={12} />accepted answer</div>}
+                <div className="post-body">{p.body}</div>
+                <div className="post-acts">
+                  <button><Icon name="flame" size={13} />{p.likes}</button>
+                  <button><Icon name="chat" size={13} />reply</button>
+                  <button><Icon name="edit" size={13} />quote</button>
+                  <button><Icon name="ext" size={13} />share</button>
+                  {p.replies > 0 && <button style={{ marginLeft: "auto" }}>{p.replies} replies <Icon name="chev" size={12} /></button>}
+                </div>
+              </div>
+            </article>
+            );
+          })}
+        </div>
+        <div className="replybar">
+          <button className="btn">reply</button>
+          <span className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>markdown, code blocks and <span style={{ color: "var(--fg-2)" }}>hal0.dev</span> links unfurl inline</span>
+        </div>
+      </div>
+
+      <aside className="timeline">
+        <div className="tl">
+          <div className="n">3 / {t.replies} posts</div>
+          <div className="track"><i style={{ width: "9%" }} /></div>
+          <div className="t"><span>created 2 h ago</span><span>last reply 38 min</span></div>
+          <div className="parts">{["kyuz0", "jcbtc", "lhl", "nx-void", "donutloop", "ratchet"].map(u => <GhAvatar key={u} user={u} size={22} />)}</div>
+        </div>
+        <div className="scard">
+          <div className="scard-h"><span className="label">referenced here</span></div>
+          <div className="scard-b">
+            <a className="xlink" href={window.P_PROF}><span className="t">strix-mtp-max</span><span className="m">profile v4 · 102.1 tok/s decode</span></a>
+            <a className="xlink" href={window.P_BENCH}><span className="t">chadrock3-6-35b-uncensored-mtp-strix-lean</span><span className="m">benchmark · tg @ 2048 · rocm</span></a>
+            <a className="xlink" href={window.P_WRITE}><span className="t">Draft models for speculative pairs</span><span className="m">knowledge base · models &amp; quants</span></a>
+          </div>
+        </div>
+        <div className="scard">
+          <div className="scard-h"><span className="label">suggested topics</span></div>
+          <div className="scard-b">
+            {TOPICS.filter(x => x.t !== t.t).slice(0, 3).map(x => (
+              <a className="xlink" href="#" key={x.t}><span className="t">{x.t}</span><span className="m">{x.cat} · {x.replies} replies</span></a>
+            ))}
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+const CAT_META = {
+  install: { month: 31, nw: 4, subs: [["proxmox", "var(--mem-slot-6)"], ["bare-metal", "var(--mem-slot-5)"], ["wsl", "var(--fg-4)"]] },
+  hardware: { month: 44, nw: 6, subs: [["strix-halo", "var(--mem-slot-1)"], ["hx-370", "var(--mem-slot-7)"], ["discrete-gpu", "var(--dev-rocm)"]] },
+  runtime: { month: 22, nw: 3, subs: [["llama.cpp", "var(--mem-slot-8)"], ["npu", "var(--dev-npu)"], ["vulkan", "var(--dev-vulkan)"]] },
+  benchmarks: { month: 17, nw: 2, subs: [["sweeps", "var(--mem-slot-3)"], ["methodology", "var(--fg-4)"]] },
+  profiles: { month: 12, nw: 1, subs: [["chat", "var(--mem-slot-2)"], ["coding", "var(--mem-slot-4)"]] },
+  showcase: { month: 9, nw: 0, subs: [] },
+  meta: { month: 3, nw: 0, subs: [] },
+};
+
+function CategoryIndex({ onOpen, onCat }) {
+  return (
+    <div className="wrap wide">
+      <div className="phead">
+        <div>
+          <span className="eyebrow">forum.hal0.dev · discourse</span>
+          <h1 className="site-h1" style={{ margin: "10px 0 0", fontSize: 30 }}>categories</h1>
+        </div>
+        <div className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>1,204 topics · 312 members · 47 online</div>
+      </div>
+
+      <div className="cindex">
+        <div>
+          <div className="cix-h"><span>category</span><span>topics</span></div>
+          {CATS.map(([c, col]) => {
+            const m = CAT_META[c];
+            return (
+              <div className="crow" key={c} style={{ "--rail": col }} onClick={() => onCat(c)}>
+                <div>
+                  <div className="nm">{c}</div>
+                  <p className="ds">{CAT_BLURB[c]}</p>
+                  {m.subs.length > 0 && (
+                    <div className="subs">
+                      {m.subs.map(([s, sc]) => <span className="sub" key={s}><i style={{ background: sc }} />{s}</span>)}
+                    </div>
+                  )}
+                </div>
+                <div className="cnt">
+                  {m.month}<u> / month</u>
+                  {m.nw > 0 && <span className="new">{m.nw} new</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div>
+          <div className="cix-h"><span>latest</span><span>replies</span></div>
+          {TOPICS.filter(t => !t.pin).map(t => (
+            <div className="lrow" key={t.t} onClick={() => onOpen(t)}>
+              <GhAvatar user={t.posters[0]} size={26} />
+              <div>
+                <span className="t">{t.t}</span>
+                <span className="m">
+                  <a className="cat" href="#" onClick={e => { e.preventDefault(); e.stopPropagation(); onCat(t.cat); }}><i style={{ background: catColor(t.cat) }} />{t.cat}</a>
+                  {t.tags.map(g => <span className="tag" key={g}>{g}</span>)}
+                </span>
+              </div>
+              <span className={"r" + (t.unread ? " hot" : "")}>{t.replies}</span>
+              <span className="a">{t.age}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = React.useState({ name: "list" });
+  const [cat, setCat] = React.useState("all");
+  const list = TOPICS.filter(t => cat === "all" || t.cat === cat);
+  const openTopic = (t) => { setView({ name: "topic", t }); window.scrollTo(0, 0); };
+  const openCat = (c) => { setView({ name: "cat", cat: c }); window.scrollTo(0, 0); };
+  const go = (n) => { setView({ name: n }); window.scrollTo(0, 0); };
+  const TABS = [["latest", "list"], ["top", "list"], ["categories", "catindex"], ["my posts", "list"]];
+  return (
+    <div className="site">
+      <Header active="forum" variant="forum" sticky />
+      <div className="subnav">
+        <div className="wrap wide subnav-in">
+          {TABS.map(([label, v]) => (
+            <a key={label} href="#" className={(view.name === v && (v !== "list" || label === "latest")) ? "on" : ""}
+               onClick={e => { e.preventDefault(); go(v); }}>{label}</a>
+          ))}
+          <a href={window.P_HOME}>hal0.dev ↗</a>
+        </div>
+      </div>
+
+      {view.name === "catindex" && <CategoryIndex onOpen={openTopic} onCat={openCat} />}
+      {view.name === "cat" && <CategoryView cat={view.cat} onOpen={openTopic} onCat={openCat} onBack={() => go("catindex")} />}
+      {view.name === "topic" && <TopicView t={view.t} onCat={openCat} onBack={() => go("list")} />}
+
+      {view.name === "list" && (
+      <div className="wrap wide">
+        <div className="phead">
+          <div>
+            <span className="eyebrow">forum.hal0.dev · discourse</span>
+            <h1 className="site-h1" style={{ margin: "10px 0 0", fontSize: 30 }}>latest</h1>
+          </div>
+          <div className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>1,204 topics · 312 members · 47 online</div>
+        </div>
+
+        <div className="shell">
+          <div>
+            <div className="ctlbar">
+              <button className="dsel">all categories <Icon name="chev" size={11} /></button>
+              <button className="dsel">all tags <Icon name="chev" size={11} /></button>
+              <div className="dtabs">
+                <button className="on">latest</button>
+                <button>new · 5</button>
+                <button>unread · 8</button>
+                <button>top</button>
+                <button onClick={() => go("catindex")}>categories</button>
+              </div>
+              <span style={{ marginLeft: "auto" }}>
+                <button className="btn sm">new topic</button>
+              </span>
+            </div>
+            <div className="ctlbar">
+              <div className="fbar">
+                <Fpill on={cat === "all"} onClick={() => setCat("all")}>all categories</Fpill>
+                {CATS.map(([c, col, n]) => (
+                  <Fpill key={c} on={cat === c} onClick={() => setCat(c)} count={n}>
+                    <i style={{ width: 8, height: 8, borderRadius: 2, background: col, display: "inline-block" }} />{c}
+                  </Fpill>
+                ))}
+              </div>
+            </div>
+
+            <TopicList list={list} onOpen={openTopic} onCat={openCat} />
+          </div>
+
+          <aside className="side">
+            <div className="scard">
+              <div className="scard-h"><span className="label">from hal0.dev</span><a href="#" className="mono" style={{ fontSize: 10.5, color: "var(--fg-4)" }}>all ↗</a></div>
+              <div className="scard-b">
+                <a className="xlink" href={window.P_WRITE}><span className="t">The June sweep: 26 models on one Strix Halo box</span><span className="m">blog · 2026-06-19 · 12 min</span></a>
+                <a className="xlink" href={window.P_PROF}><span className="t">strix-mtp-max v4 — speculative decode, everything on</span><span className="m">profile · 102.1 tok/s decode</span></a>
+                <a className="xlink" href={window.P_WRITE}><span className="t">Unified memory is not VRAM</span><span className="m">knowledge base · reviewed 2026-07-28</span></a>
+              </div>
+            </div>
+
+            <div className="scard">
+              <div className="scard-h"><span className="label">categories</span></div>
+              <div className="scard-b">
+                {CATS.map(([c, col, n]) => (
+                  <a className="catrow" href="#" key={c} onClick={e => { e.preventDefault(); openCat(c); }}>
+                    <span className="cat"><i style={{ background: col }} />{c}</span><span className="n">{n}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="scard">
+              <div className="scard-h"><span className="label">box of the week</span></div>
+              <div className="scard-b">
+                <div className="well" style={{ padding: "10px 12px", fontSize: 11 }}>
+                  Ryzen AI Max+ 395 · 128 GB<br />
+                  <span style={{ color: "var(--accent)" }}>102.1</span> tok/s · rocm · draft-mtp
+                </div>
+                <a className="xlink" href="#"><span className="t">Built a 2U Strix Halo node — parts list and thermals</span><span className="m">showcase · @deadbeef7 · 46 replies</span></a>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div style={{ marginTop: 44 }}>
+          <span className="eyebrow">implementation note</span>
+          <h2 className="site-h2" style={{ margin: "10px 0 6px" }}>what is theme, what is Discourse</h2>
+          <p className="site-body" style={{ maxWidth: "64ch" }}>
+            The header and footer are the same markup as hal0.dev, injected as a Discourse theme
+            component so they stay byte-identical when the site changes. Everything inside is
+            Discourse's own topic list, restyled through its CSS variables — no forked templates,
+            nothing that breaks on upgrade.
+          </p>
+          <div className="notes">
+            <div className="note">
+              <h3>theme component</h3>
+              <p>Header, footer, sub-nav and the sodium-amber palette. Rendered into Discourse's
+              <code> above-main-container</code> and <code>below-footer</code> outlets. Active section
+              is forced to <code>forum</code>, so cross-domain nav state still reads correctly.</p>
+            </div>
+            <div className="note">
+              <h3>restyled, not rebuilt</h3>
+              <p>Topic rows, category badges, tags, unread pills and avatars are Discourse's own
+              components with hal0 tokens mapped onto <code>--primary</code>, <code>--tertiary</code>,
+              <code>--highlight</code> and the category colour set. Row height and hairlines match the
+              leaderboard.</p>
+            </div>
+            <div className="note">
+              <h3>left native</h3>
+              <p>Composer, notifications, moderation, search and user cards keep Discourse's own UI.
+              They inherit type and colour but no layout changes — this is where forks turn into
+              maintenance.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

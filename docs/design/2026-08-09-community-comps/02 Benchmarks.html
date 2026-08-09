@@ -13,10 +13,9 @@
 <link rel="stylesheet" href="hal0-site.css">
 <style>
 html,body{margin:0;background:var(--bg)}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .phead{padding-block:34px 20px}
 .phead-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
-.fresh{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border:1px solid var(--line);border-radius:var(--rad-pill);font-family:var(--jbm);font-size:11px;color:var(--fg-3);cursor:pointer}
+.fresh{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--rad-pill);font-family:var(--jbm);font-size:11px;color:var(--fg-3);cursor:pointer}
 .fresh.snap{border-color:var(--warn-line);background:var(--warn-soft);color:var(--warn)}
 .ctx{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
 .ctx .panel{padding:2px 0}
@@ -47,17 +46,9 @@ html,body{margin:0;background:var(--bg)}
 .dtable tbody tr:hover td.model{background:var(--bg-2)}
 .dtable tbody tr{cursor:pointer}
 .mid{font-family:var(--jbm);font-size:12.5px}
+.dtable td.n .decode{justify-content:flex-end}
 .mname{color:var(--fg);display:block;max-width:330px;overflow:hidden;text-overflow:ellipsis}
 .msub{color:var(--fg-4);font-size:10.5px;display:block;margin-top:2px}
-.caps{display:inline-flex;gap:6px;color:var(--fg-3)}
-.decode{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
-.decode .meter{display:inline-flex;gap:1.5px}
-.decode .meter i{width:3px;height:11px;background:var(--fg-5);border-radius:1px}
-.decode.fast .meter i.on{background:var(--ok)}.decode.mid .meter i.on{background:var(--fg-2)}.decode.slow .meter i.on{background:var(--fg-4)}
-.decode .v{font-size:13px}
-.decode.fast .v{color:var(--ok)}.decode.mid .v{color:var(--fg)}.decode.slow .v{color:var(--fg-3)}
-.decode .sd{font-size:10px;color:var(--fg-4)}
-.spark{vertical-align:middle}
 .empty{padding:56px 24px;text-align:center}
 .skel{height:12px;border-radius:3px;background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:shimmer 1.4s linear infinite}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -200,8 +191,9 @@ function Leaderboard() {
             </table>
           </div>
         )}
+        {rows.length > 0 && <BucketLegend />}
       </div>
-      <Drawer run={run} onClose={() => setRun(null)} />
+      <RunDrawer run={run} onClose={() => setRun(null)} />
     </>
   );
 }
@@ -248,6 +240,7 @@ function Evals() {
 
 function SkeletonTable() {
   return (
+    <div className="tablescroll">
     <table className="dtable">
       <thead><tr><th className="model">model</th><th>caps</th><th className="n">decode</th><th className="n">prefill</th><th className="n">ttft</th></tr></thead>
       <tbody>
@@ -262,6 +255,7 @@ function SkeletonTable() {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -269,8 +263,8 @@ function App() {
   const [tab, setTab] = React.useState("leaderboard");
   return (
     <div className="site">
-      <Header active="bench" sticky desktop user="lemond" />
-      <SubNav items={["leaderboard", "evals", "hardware", "methodology", "share your results"]} active={tab === "evals" ? "evals" : "leaderboard"} />
+      <Header active="bench" sticky user="lemond" />
+      <SubNav items={[["leaderboard", "#"], ["evals", "#"], ["hardware", "#"], ["methodology", "#"], ["profiles", window.P_PROF], ["share your results", "#"]]} active={tab === "evals" ? "evals" : "leaderboard"} />
       <div className="wrap wide phead">
         <div className="phead-row">
           <div>

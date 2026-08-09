@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hal0 — self-hosted AI inference</title>
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/colors.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/typography.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/components/components.css">
+<link rel="stylesheet" href="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/styles.css">
+<link rel="stylesheet" href="hal0-site.css">
+<style>
+html,body{margin:0;background:var(--bg)}
+.hero{position:relative;padding-block:56px 40px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-140px 0 auto 0;height:420px;background:radial-gradient(60% 100% at 50% 0%,rgba(255,176,0,.07),transparent 70%);pointer-events:none}
+.hero-in{display:grid;grid-template-columns:1fr 560px;gap:48px;align-items:start;position:relative}
+.pill{display:inline-flex;align-items:center;gap:9px;height:26px;padding:0 12px;border:1px solid var(--accent-line);background:var(--accent-soft);border-radius:var(--rad-pill);font-family:var(--jbm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.pill .dot{box-shadow:0 0 8px var(--accent);background:var(--accent)}
+.htitle{font-family:var(--jbm);font-size:clamp(38px,4.6vw,60px);line-height:1.06;letter-spacing:-0.035em;color:var(--fg);margin:22px 0 22px;font-weight:400}
+.htitle .a{color:var(--accent)}
+.hbody{font-size:16px;line-height:1.62;color:var(--fg-2);max-width:52ch;margin:0}
+.hbody b{color:var(--fg);font-weight:500}
+.term{border:1px solid var(--line);border-radius:var(--rad);background:var(--bg-1);margin-top:26px;overflow:hidden;max-width:540px}
+.term-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line-soft);font-family:var(--jbm);font-size:10.5px;color:var(--fg-4)}
+.term-bar .lights{display:flex;gap:5px}
+.term-bar .lights i{width:8px;height:8px;border-radius:50%;background:var(--bg-4)}
+.term-body{display:flex;align-items:center;gap:10px;padding:14px 14px;background:var(--bg-sunken);font-family:var(--jbm);font-size:13px;color:var(--fg)}
+.term-body .p{color:var(--accent)}
+.term-copy{margin-left:auto;font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);background:none;border:0;cursor:pointer}
+.term-copy:hover{color:var(--accent)}
+.hbtns{display:flex;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+.hbtns .meta{font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
+.ribbon{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-family:var(--jbm);font-size:11px;color:var(--fg-4)}
+.ribbon span.k{color:var(--fg-2)}
+/* slot snapshot — structure lifted from src/components/landing/LiveArtifact.astro */
+.snap{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden}
+.snap-h{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line-soft);font-family:var(--jbm);font-size:11px;color:var(--fg-3)}
+.snap-h b{color:var(--fg);font-weight:400}
+.snap-h .sep{color:var(--fg-5)}
+.snap-h .pulse{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+.slot-row{display:grid;grid-template-columns:82px 1fr 66px 74px 56px;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line-soft);font-family:var(--jbm);font-size:11.5px}
+.slot-name{display:inline-flex;align-items:center;gap:7px;color:var(--fg)}
+.slot-name .ring{width:7px;height:7px;border-radius:50%;background:var(--fg-4);flex-shrink:0}
+.slot-name.serving .ring{background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 1.2s ease-in-out infinite}
+.slot-name.ready .ring{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.slot-name.idle .ring{background:var(--fg-4)}
+.slot-model{color:var(--fg-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot-state{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-4)}
+.slot-state.serving{color:var(--accent)}
+.slot-toks{text-align:right;color:var(--fg);font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features)}
+.slot-toks small{color:var(--fg-4);font-size:10px}
+.slot-spark{display:flex;align-items:flex-end;gap:1px;height:16px}
+.slot-spark span{flex:1;background:var(--accent);opacity:.55;height:0;border-radius:1px;transition:height .5s var(--ease)}
+.art-foot{display:grid;grid-template-columns:1fr 104px;gap:14px;padding:12px 14px}
+.mem-row{display:flex;justify-content:space-between;font-family:var(--jbm);font-size:11px;color:var(--fg-3)}
+.mem-row b{color:var(--fg);font-weight:400}
+.mem-cap{color:var(--fg-4)}
+.mem-bar{height:10px;border-radius:3px;background:var(--bg-3);display:flex;overflow:hidden;margin:8px 0 10px}
+.mem-bar i{display:block;height:100%}
+.mem-bar i.a{background:var(--mem-slot-1)}.mem-bar i.b{background:var(--mem-slot-2)}.mem-bar i.c{background:var(--mem-slot-3)}.mem-bar i.d{background:var(--mem-slot-6)}
+.mem-legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--jbm);font-size:10px;color:var(--fg-4)}
+.mem-legend i.sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.mem-legend i.a{background:var(--mem-slot-1)}.mem-legend i.b{background:var(--mem-slot-2)}.mem-legend i.c{background:var(--mem-slot-3)}.mem-legend i.d{background:var(--mem-slot-6)}
+.art-foot-disp{border-left:1px solid var(--line-soft);padding-left:14px;text-align:right}
+.disp-lbl{font-family:var(--jbm);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-4)}
+.disp-val{font-family:var(--jbm);font-size:22px;color:var(--fg);font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features);margin-top:4px}
+.disp-unit{font-size:11px;color:var(--fg-4);margin-left:3px}
+/* sections */
+.sec{padding-block:52px 0}
+.sec-h{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px;flex-wrap:wrap}
+.sec-h h2{font-family:var(--jbm);font-size:22px;letter-spacing:var(--ls-title);margin:8px 0 0;font-weight:500}
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.fcard{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:20px}
+.fcard .slug{font-family:var(--jbm);font-size:10.5px;color:var(--accent);letter-spacing:.06em}
+.fcard h3{font-size:15.5px;margin:12px 0 8px;color:var(--fg);font-weight:600}
+.fcard p{font-size:13.5px;line-height:1.6;color:var(--fg-3);margin:0}
+.benchstrip{display:grid;grid-template-columns:280px 1fr;gap:0;border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden}
+.benchstrip .figs{border-right:1px solid var(--line-soft);padding:18px}
+.fig{padding:10px 0;border-top:1px solid var(--line-soft)}
+.fig:first-child{border-top:0;padding-top:0}
+.fig .n{font-family:var(--jbm);font-size:26px;letter-spacing:-0.02em;color:var(--accent);font-variant-numeric:tabular-nums;font-feature-settings:var(--num-features)}
+.fig .n.plain{color:var(--fg)}
+.topics{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);overflow:hidden}
+.topic{display:grid;grid-template-columns:1fr 130px 74px 90px;gap:14px;align-items:center;padding:12px 16px;border-top:1px solid var(--line-soft);cursor:pointer}
+.topic:first-of-type{border-top:0}
+.topic:hover{background:var(--bg-2)}
+.topic .t{font-size:14px;color:var(--fg-2)}
+.topic:hover .t{color:var(--accent)}
+.topic .cat{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4)}
+.topic .n{font-family:var(--jbm);font-size:11.5px;color:var(--fg-3);text-align:right;font-variant-numeric:tabular-nums}
+.topic .who{display:flex;justify-content:flex-end}
+.pmini{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:16px;display:flex;flex-direction:column;gap:10px}
+.pmini .slug{font-family:var(--jbm);font-size:13px;color:var(--fg)}
+.pmini .fl{font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);background:var(--bg-sunken);border:1px solid var(--line);border-radius:4px;padding:7px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.blogrow{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:16px}
+.blead{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:20px}
+.blead h3{font-size:20px;line-height:1.28;margin:12px 0 10px;color:var(--fg);font-weight:500;letter-spacing:var(--ls-tight)}
+.bsmall{border:1px solid var(--line);border-radius:var(--rad-lg);background:var(--bg-1);padding:18px;display:flex;flex-direction:column;justify-content:space-between}
+.bsmall h4{font-size:14.5px;line-height:1.35;margin:10px 0 0;color:var(--fg-2);font-weight:500}
+.bsmall:hover h4{color:var(--accent)}
+.mockctl{display:inline-flex;align-items:center;gap:8px;font-family:var(--jbm);font-size:10.5px;color:var(--fg-4);border:1px dashed var(--line-strong);border-radius:var(--rad-sm);padding:4px 9px;background:none;cursor:pointer}
+.mockctl:hover{color:var(--accent);border-color:var(--accent-line)}
+@media(max-width:1080px){.hero-in{grid-template-columns:1fr;gap:32px}.cards3{grid-template-columns:1fr}.benchstrip{grid-template-columns:1fr}.benchstrip .figs{border-right:0;border-bottom:1px solid var(--line-soft)}.blogrow{grid-template-columns:1fr}.topic{grid-template-columns:1fr 90px}.topic .cat,.topic .who{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/hal0-design-system-692ad8d8-30f9-4bfe-873e-33df68b2c065/_ds_bundle.js"></script>
+<script src="roster-data.js"></script>
+<script src="profiles-data.js"></script>
+<script type="text/babel" src="site-chrome.jsx"></script>
+<script type="text/babel" src="bench-app.jsx"></script>
+<script type="text/babel">
+const { Icon } = window.Hal0DesignSystem_692ad8;
+
+const SLOTS = [
+  { name: "agent", state: "serving", model: "Qwen3-30B-A3B-Instruct-2507-Q4_K_M", baseToks: 142, port: 8081 },
+  { name: "embed", state: "serving", model: "nomic-embed-text-v2-moe-Q4_K_M", baseToks: 116, port: 8082 },
+  { name: "rerank", state: "ready", model: "bge-reranker-v2-m3-q4_k_m", baseToks: 0, port: 8086 },
+  { name: "stt", state: "idle", model: "whisper-v3:turbo (NPU)", baseToks: 0, port: 8083 },
+  { name: "tts", state: "idle", model: "kokoro-82M-v1.0", baseToks: 0, port: 8084 },
+  { name: "img", state: "ready", model: "sdxl-turbo", baseToks: 0, port: 8085 },
+];
+const MEM = [["a", "agent 6.5G", 6.8], ["b", "embed 2.3G", 2.4], ["c", "rerank 0.4G", 0.4], ["d", "kernel + ZFS ARC 3.8G", 4]];
+
+function LiveArtifact() {
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setTick(t => t + 1), 900);
+    return () => clearInterval(id);
+  }, []);
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  return (
+    <div className="snap" aria-label="hal0 dashboard preview">
+      <div className="snap-h">
+        <span>host <b>strix-halo-01</b></span>
+        <span className="sep">·</span>
+        <span>128 GB UMA · iGPU + XDNA</span>
+        <span className="pulse"><span className="dot serving" /> SSE connected</span>
+      </div>
+      {SLOTS.map((s, i) => (
+        <div className="slot-row" key={s.name}>
+          <div className={"slot-name " + s.state}><span className="ring" />{s.name}</div>
+          <div className="slot-model">{s.model}</div>
+          <div className={"slot-state " + s.state}>{s.state}</div>
+          <div className="slot-toks">
+            {s.state === "serving" && <span>{Math.round(s.baseToks + Math.sin((tick + i * 3) * 0.7) * 8)}<small> tok/s</small></span>}
+            {s.state === "ready" && <span style={{ color: "var(--fg-2)" }}>warm</span>}
+            {s.state === "idle" && <span style={{ color: "var(--fg-3)" }}>:{s.port}</span>}
+          </div>
+          <div className="slot-spark">
+            {Array.from({ length: 18 }).map((_, b) => (
+              <span key={b} style={{ height: (s.state === "serving" ? clamp(40 + Math.sin((tick + b + i * 2) * 0.55) * 30, 8, 100) : 0) + "%" }} />
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="art-foot">
+        <div>
+          <div className="mem-row">
+            <span>Unified memory (GTT)</span>
+            <span><b>{(9.2 + Math.sin(tick * 0.4) * 0.3).toFixed(1)}</b><span className="mem-cap"> / 96 GB carveout · 128 GB DIMM</span></span>
+          </div>
+          <div className="mem-bar">{MEM.map(([c, , w]) => <i key={c} className={c} style={{ width: w + "%" }} />)}</div>
+          <div className="mem-legend">{MEM.map(([c, l]) => <span key={c}><i className={"sw " + c} />{l}</span>)}</div>
+        </div>
+        <div className="art-foot-disp">
+          <div className="disp-lbl">dispatch p50</div>
+          <div className="disp-val">{Math.round(174 + Math.sin(tick * 0.3) * 12)}<span className="disp-unit">ms</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+const TOPICS = [
+  ["Draft-mtp accept rate collapses past 8k context", "runtime", 34, "kyuz0", "2 h"],
+  ["HX 370 32 GB: what actually fits alongside embed?", "hardware", 21, "nx-void", "5 h"],
+  ["ROCm 7.2.4 LXC passthrough — working config", "install", 58, "ratchet", "1 d"],
+  ["Anyone reproduced the 4.9 tok/s gap on 27B dense?", "benchmarks", 12, "lhl", "1 d"],
+  ["Profile: 16k context on a 35B MoE without eviction", "profiles", 27, "jcbtc", "2 d"],
+];
+
+function App() {
+  const [forumUp, setForumUp] = React.useState(true);
+  const [copied, setCopied] = React.useState(false);
+  const [ontop, setOntop] = React.useState(true);
+  React.useEffect(() => {
+    const on = () => setOntop(window.scrollY < 40);
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+  const top = window.BENCH.filter(r => r.lane === "rocm" && r.variant === "default" && r.depth === 2048)
+    .sort((a, b) => b.dec - a.dec).slice(0, 5);
+  const feat = window.PROFILES.slice(0, 3);
+
+  return (
+    <div className="site">
+      <Header active={null} sticky ontop={ontop} user="lemond" />
+
+      <section className="hero">
+        <div className="wrap wide hero-in">
+          <div>
+            <span className="pill"><span className="dot" />1.0.0-RC.3 shipping now · 1.0 GA next</span>
+            <h1 className="htitle">Your Strix Halo box,<br />running real <span className="a">/v1/*</span><br />inference.</h1>
+            <p className="hbody">
+              <b>hal0</b> turns a Linux box — ideally a <b>Ryzen AI Max+ 395</b> — into a private,
+              OpenAI-compatible AI appliance: one <span className="mono amber">/v1/*</span> API across
+              every modality, with concurrent workloads the box manages for you. One command installs
+              the lot.
+            </p>
+            <div className="term">
+              <div className="term-bar"><span className="lights"><i /><i /><i /></span><span style={{ marginLeft: 8 }}>install.sh</span><span style={{ marginLeft: "auto" }}>Linux x86_64 · Python ≥3.12</span></div>
+              <div className="term-body">
+                <span className="p">$</span><span>curl -fsSL https://hal0.dev/install.sh | bash</span>
+                <button className="term-copy" onClick={() => { navigator.clipboard && navigator.clipboard.writeText("curl -fsSL https://hal0.dev/install.sh | bash"); setCopied(true); setTimeout(() => setCopied(false), 1400); }}>{copied ? "copied" : "copy"}</button>
+              </div>
+            </div>
+            <div className="hbtns">
+              <a className="btn lg" href={window.P_DOCS}>Read the docs →</a>
+              <button className="btn ghost lg" style={{ gap: 8 }}><BrandIcon name="github" size={13} />Star on GitHub</button>
+              <span className="meta">Apache-2.0 · Linux · systemd</span>
+            </div>
+            <div className="ribbon">
+              <span><span className="dot ready" style={{ marginRight: 6 }} />hal0-api <span className="k">:8080</span> ready</span>
+              <span>all slots <span className="k">up</span></span>
+              <span>GTT <span className="k">9.2 / 96 GB</span></span>
+              <span>probe <span className="k">strix-halo-01</span></span>
+            </div>
+          </div>
+
+          <LiveArtifact />
+        </div>
+      </section>
+
+      <div className="wrap wide">
+        <div className="cards3">
+          {[["/ local coding stack", "Point your editor at your own box", "Aim any OpenAI-compatible client at :8080/v1 — chat, completions, and a dedicated coder slot. Your code never leaves the LAN, and there is no per-token bill."],
+            ["/ private knowledge & rag", "Retrieval grounded on your data", "Embeddings, reranking, and a bundled agent with opt-in graph memory and MCP tools — a full RAG stack that runs on your hardware, not someone else's server."],
+            ["/ voice & image lab", "Speech and images, one control plane", "Transcription, text-to-speech, and local image generation behind the same API — STT on the XDNA NPU, TTS switchable between Kokoro and Qwen3-TTS, ComfyUI on the iGPU."]
+          ].map(([slug, h, p]) => (
+            <div className="fcard" key={slug}>
+              <div className="slug">{slug}</div>
+              <h3>{h}</h3>
+              <p>{p}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── benchmarks ── */}
+        <section className="sec">
+          <div className="sec-h">
+            <div><span className="eyebrow">measured, not claimed</span><h2>what this box actually does</h2></div>
+            <a href={window.P_BENCH} className="mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>all 26 models · sweep 2026-06-19 →</a>
+          </div>
+          <div className="benchstrip" style={{ cursor: "pointer" }} onClick={() => { location.href = window.P_BENCH; }}>
+            <div className="figs">
+              <div className="fig"><div className="n">102.1</div><div className="label">fastest decode · tok/s</div></div>
+              <div className="fig"><div className="n plain">26</div><div className="label">models measured</div></div>
+              <div className="fig"><div className="n plain">6.2k</div><div className="label">peak prefill · tok/s</div></div>
+              <div className="fig"><div className="n plain">3</div><div className="label">reps per cell, median reported</div></div>
+            </div>
+            <div>
+              <table className="dtable">
+                <thead><tr><th>model</th><th className="n sorted">decode ▼</th><th className="n">prefill</th><th className="n">ttft</th><th className="n">gb</th></tr></thead>
+                <tbody>
+                  {top.map(r => (
+                    <tr key={r.id}>
+                      <td className="lead" style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis" }}>{r.model}</td>
+                      <td className="n"><Decode v={r.dec} showSd={false} /></td>
+                      <td className="n">{r.pf.toFixed(0)}</td>
+                      <td className="n">{r.ttftP50} ms</td>
+                      <td className="n">{r.gb}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* ── forum ── */}
+        <section className="sec">
+          <div className="sec-h">
+            <div><span className="eyebrow">forum.hal0.dev</span><h2>what people are working on</h2></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button className="mockctl" onClick={() => setForumUp(v => !v)}>preview: forum api {forumUp ? "unreachable" : "reachable"}</button>
+              <a href={window.P_FORUM} className="mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>open the forum ↗</a>
+            </div>
+          </div>
+          {forumUp ? (
+            <div className="topics">
+              {TOPICS.map(([t, cat, n, who, when]) => (
+                <div className="topic" key={t} onClick={() => { location.href = window.P_FORUM; }}>
+                  <span className="t">{t}</span>
+                  <span className="cat">{cat}</span>
+                  <span className="n">{n} replies</span>
+                  <span className="who"><Attribution user={who} /></span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="site-sm" style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 14 }}>
+              When forum.hal0.dev does not answer at build time, this strip is omitted entirely — no
+              skeleton, no error card. The page below closes up and the footer still links the forum.
+            </p>
+          )}
+        </section>
+
+        {/* ── profiles ── */}
+        <section className="sec">
+          <div className="sec-h">
+            <div><span className="eyebrow">shared configs</span><h2>start from someone else's tuning</h2></div>
+            <a href={window.P_PROF} className="mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>all profiles →</a>
+          </div>
+          <div className="cards3">
+            {feat.map(p => (
+              <div className="pmini" key={p.slug} style={{ cursor: "pointer" }} onClick={() => { location.href = window.P_PROF; }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <span className="slug">{p.slug}</span><span className="chip amber">{p.intent}</span>
+                </div>
+                <p className="site-sm" style={{ margin: 0 }}>{p.summary}</p>
+                <div className="fl">{p.flags}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--line-soft)", paddingTop: 10 }}>
+                  <Decode v={p.dec} showSd={false} />
+                  <Attribution user={p.author} first={p.first} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── writing ── */}
+        <section className="sec">
+          <div className="sec-h">
+            <div><span className="eyebrow">learn</span><h2>latest from the blog</h2></div>
+            <a href={window.P_WRITE} className="mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>knowledge base →</a>
+          </div>
+          <div className="blogrow">
+            <div className="blead" style={{ cursor: "pointer" }} onClick={() => { location.href = window.P_WRITE; }}>
+              <span className="eyebrow">blog · 2026-06-19</span>
+              <h3>The June sweep: 26 models on one Strix Halo box</h3>
+              <p className="site-body" style={{ fontSize: 14 }}>Every model in the roster, measured end to end on the same hardware, same container, same flags. What moved since April, what regressed, and the two results we still cannot explain.</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
+                <Attribution first /><span className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>12 min</span>
+              </div>
+            </div>
+            <div className="bsmall" style={{ cursor: "pointer" }} onClick={() => { location.href = window.P_WRITE; }}>
+              <span className="eyebrow">blog · 2026-06-02</span>
+              <h4>v0.5.0a1 — slots get a lifecycle</h4>
+              <span className="mono" style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 14 }}>@kyuz0 · 6 min</span>
+            </div>
+            <div className="bsmall" style={{ cursor: "pointer" }} onClick={() => { location.href = window.P_WRITE; }}>
+              <span className="eyebrow">knowledge base · hardware</span>
+              <h4>Unified memory is not VRAM</h4>
+              <span className="mono" style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 14 }}>reviewed 2026-07-28</span>
+            </div>
+          </div>
+        </section>
+      </div>
+      <Footer />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>
