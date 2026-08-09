@@ -49,17 +49,34 @@ test('header manifest links present in the header of both surfaces', { skip: !bu
   const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
   assert.ok(marketingHeader, 'marketing page has a <header>');
   assert.ok(starlightNav, 'starlight page has the site docnav');
-  // Marketing renders the umbrella entries; the Starlight docnav flattens
-  // ONLY hub entries (array match, i.e. learn) — section entries with real
-  // pages render as umbrella links (StarlightSiteTitle), so assert each
-  // surface's actual shape.
+  // ONE flat nav on both renderers since the one-header unification:
+  // hub entries (array match, i.e. learn) contribute their sub links,
+  // real sections pass through — nav.ts's flatHeader. Both surfaces
+  // must carry the complete flattened set; neither may render a hub
+  // umbrella as a standalone "learn" label anymore.
   const flattened = visibleHeader.flatMap((l) => (l.sub && Array.isArray(l.match) ? l.sub : [l]));
-  for (const l of visibleHeader) {
-    assert.ok(marketingHeader.includes(`href="${l.href}"`), `marketing header missing ${l.href}`);
-  }
+  const marketingNav = marketingHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
+  assert.ok(marketingNav, 'marketing page has the site nav');
   for (const l of flattened) {
+    assert.ok(marketingNav.includes(`href="${l.href}"`), `marketing nav missing ${l.href}`);
     assert.ok(starlightNav.includes(`href="${l.href}"`), `starlight docnav missing ${l.href}`);
   }
+  for (const l of visibleHeader) {
+    if (l.sub && Array.isArray(l.match)) {
+      assert.ok(
+        !new RegExp(`>\\s*${l.label}\\s*<`).test(marketingNav),
+        `hub umbrella "${l.label}" must not render as a nav label`,
+      );
+    }
+  }
+});
+
+test('both surfaces expose a search affordance', { skip: !built && 'run npm run build first' }, async () => {
+  const marketingHtml = await readFile(pages.marketing, 'utf8');
+  const starlightHtml = await readFile(pages.starlight, 'utf8');
+  assert.ok(marketingHtml.includes('data-site-search-open'), 'marketing header has the search button');
+  assert.ok(marketingHtml.includes('/js/site-search.js'), 'marketing page loads the search palette script');
+  assert.ok(starlightHtml.includes('data-open-modal'), 'starlight header has the Pagefind search button');
 });
 
 test('SiteFooter renders outside <main> on Starlight pages', { skip: !built && 'run npm run build first' }, async () => {
