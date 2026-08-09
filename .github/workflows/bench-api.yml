@@ -1,10 +1,10 @@
 name: bench-api
 on:
   pull_request:
-    paths: ["workers/bench-api/**"]
+    paths: ["workers/bench-api/**", ".github/workflows/bench-api.yml"]
   push:
     branches: [master]
-    paths: ["workers/bench-api/**"]
+    paths: ["workers/bench-api/**", ".github/workflows/bench-api.yml"]
   workflow_dispatch:
     inputs:
       environment:
@@ -33,7 +33,9 @@ jobs:
 
   deploy-staging:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
     runs-on: ubuntu-latest
     defaults:
       run:

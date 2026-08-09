@@ -22,6 +22,14 @@ the future moderation gate (`pending`/`rejected`) and the `uploader` column
 is carried on every bundle row so non-admin submission (P4) is schema-free to
 add later.
 
+Unpublish is reversible: re-uploading the exact same bundle (same content
+hash / `bundle_id`) after a `DELETE` flips its `status` and its dependent
+rows' `status` back to `'published'` instead of re-validating and
+re-inserting — the response is `{bundle_id, republished: true, records: N}`.
+Note that `(cell_key, run_id)` collision checking is not status-scoped:
+records belonging to a `'deleted'` bundle still block *other* bundles from
+publishing the same `(cell_key, run_id)` pair.
+
 ## Local dev
 
 Run `npm run dev` to start `wrangler dev` against the local/miniflare D1 and

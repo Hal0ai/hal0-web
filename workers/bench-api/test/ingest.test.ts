@@ -190,6 +190,65 @@ describe("POST /v1/bundles", () => {
     expect(countsAfter[1]?.n).toBe(countsBefore[1]?.n);
   });
 
+  it("republishes a deleted bundle on re-upload instead of treating it as a duplicate", async () => {
+    const fixtureBytes = loadFixtureBytes();
+    const first = await post(fixtureBytes, "test-admin-token");
+    expect(first.status).toBe(200);
+    const firstBody = await first.json<{ bundle_id: string; records: number }>();
+
+    const del = await SELF.fetch(`https://api.hal0.dev/v1/bundles/${firstBody.bundle_id}`, {
+      method: "DELETE",
+      headers: { authorization: "Bearer test-admin-token" },
+    });
+    expect(del.status).toBe(200);
+
+    const deletedRow = await env.DB.prepare("SELECT status FROM bundles WHERE id = ?")
+      .bind(firstBody.bundle_id)
+      .first<{ status: string }>();
+    expect(deletedRow?.status).toBe("deleted");
+
+    const rosterAfterDelete = await SELF.fetch("https://api.hal0.dev/v1/roster");
+    const rosterAfterDeleteBody = await rosterAfterDelete.json<{
+      models: { bundle_id: string }[];
+    }>();
+    expect(rosterAfterDeleteBody.models.some((m) => m.bundle_id === firstBody.bundle_id)).toBe(
+      false,
+    );
+
+    const second = await post(loadFixtureBytes(), "test-admin-token");
+    expect(second.status).toBe(200);
+    const secondBody = await second.json<{
+      bundle_id: string;
+      republished?: boolean;
+      duplicate?: boolean;
+      records: number;
+    }>();
+    expect(secondBody.republished).toBe(true);
+    expect(secondBody.duplicate).toBeUndefined();
+    expect(secondBody.bundle_id).toBe(firstBody.bundle_id);
+    expect(secondBody.records).toBe(firstBody.records);
+
+    const republishedRow = await env.DB.prepare("SELECT status FROM bundles WHERE id = ?")
+      .bind(firstBody.bundle_id)
+      .first<{ status: string }>();
+    expect(republishedRow?.status).toBe("published");
+
+    const { results: recordStatuses } = await env.DB.prepare(
+      "SELECT status FROM records WHERE bundle_id = ?",
+    )
+      .bind(firstBody.bundle_id)
+      .all<{ status: string }>();
+    expect(recordStatuses.every((r) => r.status === "published")).toBe(true);
+
+    const rosterAfterRepublish = await SELF.fetch("https://api.hal0.dev/v1/roster");
+    const rosterAfterRepublishBody = await rosterAfterRepublish.json<{
+      models: { bundle_id: string }[];
+    }>();
+    expect(
+      rosterAfterRepublishBody.models.some((m) => m.bundle_id === firstBody.bundle_id),
+    ).toBe(true);
+  });
+
   it("rejects a tampered member with 422 and an errors array", async () => {
     const members = await loadFixtureMembers();
     const bytes = members.get("records.jsonl")!;
@@ -206,7 +265,7 @@ describe("POST /v1/bundles", () => {
   });
 
   it("exports MAX_BODY_BYTES / MAX_BODY_BYTES_NO_ARTIFACTS caps as documented", () => {
-    expect(MAX_BODY_BYTES).toBe(512 * 1024 * 1024);
+    expect(MAX_BODY_BYTES).toBe(128 * 1024 * 1024);
     expect(MAX_BODY_BYTES_NO_ARTIFACTS).toBe(64 * 1024 * 1024);
   });
 

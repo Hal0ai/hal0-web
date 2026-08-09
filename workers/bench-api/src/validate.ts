@@ -12,7 +12,6 @@ export interface Manifest {
   title?: string;
   notes?: string;
   host?: Record<string, unknown>;
-  records?: unknown[];
   profiles?: { name: string; sha256: string }[];
   artifacts?: boolean;
   files?: Record<string, string>;

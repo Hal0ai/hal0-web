@@ -3,15 +3,16 @@ import { type Env, errors, json } from "./router";
 import { UntarError, untarGz } from "./untar";
 import { type EvalRow, type ParsedRecord, ValidationError, type ValidBundle, validateBundle } from "./validate";
 
-/** Hard cap on any request body, regardless of bundle contents. */
-export const MAX_BODY_BYTES = 512 * 1024 * 1024;
+/** Hard cap on any request body, regardless of bundle contents. Kept within realistic
+ * Workers isolate memory limits (128 MB working set). */
+export const MAX_BODY_BYTES = 128 * 1024 * 1024;
 /** Cap enforced once the manifest is known and `artifacts !== true`. */
 export const MAX_BODY_BYTES_NO_ARTIFACTS = 64 * 1024 * 1024;
 
 const UNTAR_OPTS = {
   maxMembers: 4096,
   maxMemberBytes: 128 * 1024 * 1024,
-  maxTotalBytes: 768 * 1024 * 1024,
+  maxTotalBytes: 256 * 1024 * 1024,
 };
 
 const BENCHMARKS_URL = "https://hal0.dev/benchmarks";
@@ -143,10 +144,34 @@ export async function ingestHandler(req: Request, env: Env): Promise<Response> {
       return errors(["request body exceeds cap for a bundle without artifacts"], 413);
     }
 
-    const existing = await env.DB.prepare("SELECT id FROM bundles WHERE id = ?")
+    const existing = await env.DB.prepare("SELECT id, status FROM bundles WHERE id = ?")
       .bind(bundle.bundleId)
-      .first<{ id: string }>();
+      .first<{ id: string; status: string }>();
     if (existing) {
+      if (existing.status === "deleted") {
+        // Unpublish is reversible: re-uploading the same (already-validated) bundle
+        // flips it and its cascading rows back to published instead of re-inserting.
+        const id = bundle.bundleId;
+        const republishStatements = [
+          env.DB.prepare("UPDATE bundles SET status = 'published' WHERE id = ?").bind(id),
+          env.DB.prepare("UPDATE records SET status = 'published' WHERE bundle_id = ?").bind(id),
+          env.DB.prepare("UPDATE profiles SET status = 'published' WHERE bundle_id = ?").bind(id),
+          env.DB.prepare("UPDATE evals SET status = 'published' WHERE bundle_id = ?").bind(id),
+        ];
+        try {
+          await env.DB.batch(republishStatements);
+        } catch (e) {
+          console.error("ingestHandler: republish batch failed", e);
+          return errors(["republish failed"], 500);
+        }
+        const countRow = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM records WHERE bundle_id = ?",
+        )
+          .bind(id)
+          .first<{ n: number }>();
+        return json({ bundle_id: id, records: countRow?.n ?? 0, republished: true });
+      }
+
       const countRow = await env.DB.prepare(
         "SELECT COUNT(*) AS n FROM records WHERE bundle_id = ?",
       )
@@ -196,7 +221,16 @@ export async function ingestHandler(req: Request, env: Env): Promise<Response> {
     try {
       await env.DB.batch(statements);
     } catch {
-      await env.BUNDLES.delete(r2Key).catch(() => {});
+      // Another concurrent request for the same bundle may have won and already
+      // committed rows referencing this r2Key; re-check before deleting so we
+      // don't rip the object out from under it.
+      const winner = await env.DB.prepare("SELECT id FROM bundles WHERE id = ?")
+        .bind(bundle.bundleId)
+        .first<{ id: string }>()
+        .catch(() => null);
+      if (!winner) {
+        await env.BUNDLES.delete(r2Key).catch(() => {});
+      }
       return errors(["ingest failed, nothing published"], 500);
     }
 
