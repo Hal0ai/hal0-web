@@ -1,0 +1,40 @@
+{
+  "bundle_schema": 1,
+  "bundle_id": "sha256:faefa8c61bb10ffe0d9de5c8a1742b9648247b4827b847e9ca791b88658cc97b",
+  "created_at": "2026-08-09T13:34:47Z",
+  "hal0_version": "1.0.0rc3",
+  "title": "fixture bundle",
+  "notes": "",
+  "host": {
+    "gpu": "AMD Strix Halo",
+    "hal0_version": "1.0.0",
+    "mem_gb": 128,
+    "name": "redacted"
+  },
+  "records": [
+    {
+      "run_id": "2026-08-09T01:00:00Z-fix001",
+      "cell_key": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "tg",
+      "model_id": "qwen3-30b"
+    },
+    {
+      "run_id": "2026-08-09T01:05:00Z-fix002",
+      "cell_key": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "kind": "pp",
+      "model_id": "qwen3-30b"
+    }
+  ],
+  "profiles": [
+    {
+      "name": "chat.toml",
+      "sha256": "92cd9aa84568319e984da620520d6262b2e917d3248609dd4115f92872cb3edb"
+    }
+  ],
+  "artifacts": false,
+  "files": {
+    "evals.jsonl": "61a6571fa170b3463ace3d91b9170c6dec08ad61e58558e859da0ac9c093dd6d",
+    "profiles/chat.toml": "92cd9aa84568319e984da620520d6262b2e917d3248609dd4115f92872cb3edb",
+    "records.jsonl": "6c82fc6d3881a72b29ccc401a97475bbc392b70a4ff8eb19873a66c19cb12333"
+  }
+}
