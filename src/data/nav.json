@@ -2,7 +2,7 @@
   "header": [
     {
       "label": "learn",
-      "href": "/docs/getting-started/",
+      "href": "/docs/",
       "match": [
         "/docs",
         "/kb",
@@ -15,7 +15,7 @@
       "sub": [
         {
           "label": "docs",
-          "href": "/docs/getting-started/",
+          "href": "/docs/",
           "match": "/docs",
           "exclude": [
             "/docs/reference/model-roster-benchmark"
@@ -81,7 +81,7 @@
       "links": [
         {
           "label": "docs",
-          "href": "/docs/getting-started/"
+          "href": "/docs/"
         },
         {
           "label": "knowledge base",

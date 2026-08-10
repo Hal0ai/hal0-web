@@ -28,51 +28,18 @@
  */
 import { getCollection } from 'astro:content';
 import { Icon } from 'astro-icon/components';
-
-// Presentation copy — the one thing that is genuinely authored, not derived.
-const SECTIONS = [
-	{
-		section: 'getting-started',
-		title: 'getting started',
-		icon: 'lucide:rocket',
-		description: 'Install, first model, first chat. Bare metal, Proxmox, WSL.',
-	},
-	{
-		section: 'concepts',
-		title: 'concepts',
-		icon: 'lucide:layers',
-		description: 'Slots, stacks, profiles, memory, agents, and the Strix Halo itself.',
-	},
-	{
-		section: 'guides',
-		title: 'guides',
-		icon: 'lucide:compass',
-		description: 'Task by task: pull models, manage slots, wire MCP, roll back.',
-	},
-	{
-		section: 'operate',
-		title: 'operate',
-		icon: 'lucide:server',
-		description: 'Services, auth, and error reporting for a box you actually run.',
-	},
-	{
-		section: 'reference',
-		title: 'reference',
-		icon: 'lucide:terminal',
-		description: 'CLI, config schema, slot lifecycle, env vars, and the API.',
-	},
-];
+import { DOCS_SECTIONS } from '../data/docs-sections';
 
 const entries = await getCollection('docs');
 // Count the section's own index entry too where one exists (only
 // getting-started has one — it IS the docs landing page). Without this
 // the card would advertise 7 while the sidebar's "Start here" group
 // lists 8, since the landing page's id has no trailing segment.
-const cards = SECTIONS.map((s) => ({
+const cards = DOCS_SECTIONS.map((s) => ({
 	...s,
-	href: `/docs/${s.section}/`,
+	href: `/docs/${s.slug}/`,
 	count: entries.filter(
-		(e) => e.id === `docs/${s.section}` || e.id.startsWith(`docs/${s.section}/`),
+		(e) => e.id === `docs/${s.slug}` || e.id.startsWith(`docs/${s.slug}/`),
 	).length,
 }));
 ---
@@ -84,8 +51,8 @@ const cards = SECTIONS.map((s) => ({
 				<span class="seccard-icon">
 					<Icon name={s.icon} width={16} height={16} />
 				</span>
-				<h3>{s.title}</h3>
-				<p>{s.description}</p>
+				<h3>{s.label}</h3>
+				<p>{s.blurb}</p>
 				<span class="seccard-count">{s.count} pages &rarr;</span>
 			</a>
 		))
