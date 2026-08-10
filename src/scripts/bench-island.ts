@@ -365,9 +365,8 @@ function drawerThrottleHtml(): string {
 
 // drawerModel.hasHistory/row.history stay unused — no data path populates
 // BenchRow.history yet (see bench-view.mjs's typedef). The graph below is a
-// SEPARATE data path: a per-request fetch of the proposed
-// `/v1/history?model=&lane=` endpoint (see fetchRunHistory), not
-// drawerModel's `history` field.
+// SEPARATE data path: a per-request fetch of the `/v1/history` endpoint (see
+// fetchRunHistory), not drawerModel's `history` field.
 
 const SPARK_ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const svgEsc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => SPARK_ESC_MAP[c]);
