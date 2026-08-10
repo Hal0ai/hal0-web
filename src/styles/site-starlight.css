@@ -393,20 +393,52 @@ site-search button[data-open-modal]:hover {
 	color: var(--hal0-fg-dim);
 	background: var(--hal0-bg-elevated);
 }
+/* kbd hint — ONE box reading "Ctrl K", matching the marketing
+ * `.searchbtn .k` span. Starlight nests a kbd per key
+ * (`<kbd><kbd>Ctrl</kbd><kbd>K</kbd></kbd>`), which renders as two
+ * separate chips; the outer element takes the box and the inner ones
+ * are stripped back to bare text. */
 site-search button[data-open-modal] > kbd {
 	margin-left: auto;
-	padding: 0;
-	background: transparent;
-	gap: 4px;
-}
-site-search button[data-open-modal] > kbd kbd {
+	display: inline-flex;
+	gap: 0.5em; /* ≈ a mono space — marketing renders "Ctrl K" as one string */
+	font-family: var(--hal0-font-mono);
 	font-size: 10px;
+	line-height: 1.5; /* marketing `.k` box is 19px tall; Starlight's own
+	                   * line-height would make it 22 */
 	color: var(--hal0-fg-faint);
+	background: transparent;
 	border: 1px solid var(--hal0-border);
 	border-radius: 3px;
 	padding: 1px 4px;
-	background: transparent;
-	font-family: var(--hal0-font-mono);
+}
+site-search button[data-open-modal] > kbd kbd {
+	all: unset;
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+}
+
+/* social icons — the comp's `.iconbtn`: dim at rest, never accent.
+ * Starlight paints them with `--sl-color-text-accent`, which put two
+ * amber glyphs in the header where the marketing bar has quiet grey
+ * ones. 30×30 with a 4px radius to match `.iconbtn` exactly. */
+.right-group .social-icons a {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border-radius: var(--hal0-rad-sm, 4px);
+	border: 1px solid transparent;
+	color: var(--hal0-fg-dim);
+	transition:
+		color var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease),
+		background var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease),
+		border-color var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease);
+}
+.right-group .social-icons a:hover {
+	color: var(--hal0-fg);
+	background: var(--hal0-bg-2);
+	border-color: var(--hal0-border);
 }
 
 /* docnav links (StarlightSiteTitle override) → comp .hdr-nav: full-bar
