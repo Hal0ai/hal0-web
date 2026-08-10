@@ -104,6 +104,20 @@
 		border-top: 1px solid var(--line-soft);
 		padding-top: 12px;
 	}
+	/* "all N pages →" footer link on the /docs hub's cards. The /kb
+	 * landing's cards don't use it — there the card title is the whole
+	 * category, whereas the hub shows a truncated preview and needs an
+	 * explicit way through to the section listing. */
+	.kbcat-all {
+		display: inline-block;
+		margin-top: 12px;
+		font-family: var(--jbm);
+		font-size: 10.5px;
+		color: var(--fg-4);
+	}
+	.kbcat-all:hover {
+		color: var(--accent);
+	}
 	.kbcat li a {
 		font-family: var(--jbm);
 		font-size: 11.5px;

@@ -13,16 +13,16 @@ const socialHref = (id) => nav.social.find((s) => s.id === id).href;
 export default defineConfig({
 	site: 'https://hal0.dev',
 
-	// The docs root has no index page (Starlight autogenerates groups under
-	// /docs/<group>). Send /docs and /docs/ to the first tutorial so the
-	// long-standing nav link to /docs/ resolves instead of 404ing.
+	// /docs is now a real hub page (src/pages/docs/index.astro) — a map of
+	// every section plus the knowledge base — rather than a redirect that
+	// dropped readers into the middle of Starlight's sidebar. Only
+	// /releases still redirects.
 	//
 	// /changelog and /releases were merged into one page (the KB-shaped
 	// unified release history, src/pages/changelog.astro) that lives at
-	// /changelog — /releases now redirects there so old links/bookmarks
-	// keep working, same pattern as the /docs entry above.
+	// /changelog — /releases redirects there so old links/bookmarks keep
+	// working.
 	redirects: {
-		'/docs': '/docs/getting-started/',
 		'/releases': '/changelog',
 	},
 
