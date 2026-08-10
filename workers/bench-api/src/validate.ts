@@ -295,9 +295,16 @@ export async function validateBundle(members: Map<string, Uint8Array>): Promise<
   const records: ParsedRecord[] = [];
   if (recordsRaw) {
     const text = new TextDecoder().decode(recordsRaw);
-    const lines = text.split("\n").filter((l) => l.trim() !== "");
+    // Report the PHYSICAL, 1-based line number: these errors are the only
+    // actionable detail an uploader gets back (`hal0 bench upload` prints them
+    // verbatim), so "line N" has to mean the line an operator's editor shows.
+    // Blank lines are skipped but still consume a number, and the counter is
+    // 1-based — previously it was the 0-based index into the blank-filtered
+    // array, which named the wrong record in both directions.
+    const lines = text.split("\n");
     for (let i = 0; i < lines.length; i++) {
-      const rec = parseRecordLine(lines[i], i, errs);
+      if (lines[i].trim() === "") continue;
+      const rec = parseRecordLine(lines[i], i + 1, errs);
       if (rec) records.push(rec);
     }
   }

@@ -146,6 +146,22 @@ describe("validateBundle", () => {
     expect(flagged!.flagJson).toContain("implausible decode_ts_med");
   });
 
+  // The line number is the only actionable part of a rejection — `hal0 bench
+  // upload` prints these verbatim — so it must name the line an operator's
+  // editor shows, counting blanks and starting at 1.
+  it("reports the physical 1-based line number of a bad record", async () => {
+    const members = await loadFixtureMembers();
+    const records = decodeRecordsJsonl(members);
+    // Put a known-bad record third, with a blank line ahead of it so a
+    // blank-filtered index and a physical one disagree.
+    const good = JSON.stringify(records[0]);
+    const bad = JSON.stringify({ ...records[0], cell_key: "nonsense" });
+    members.set("records.jsonl", new TextEncoder().encode(`${good}\n\n${bad}\n`));
+    await rehash(members);
+
+    await expect(validateBundle(members)).rejects.toThrow(/records\.jsonl line 3: bad cell_key/);
+  });
+
   // caps are display metadata, so every malformed shape must DEGRADE (capsJson
   // null) rather than reject the record — the inverse of the cell_key/metric
   // rules tested above.
