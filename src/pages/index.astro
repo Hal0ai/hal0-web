@@ -1078,12 +1078,10 @@ const shipNowHighlights = [
    * via the section selectors.
    * ============================================================ */
 
-  /* Layout shell — wider than the Starlight 6xl default */
-  .shell-wide {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 0 32px;
-  }
+  /* `.shell-wide` now lives in site.css as the shared site container —
+   * the landing page's 1600/32 frame became the house width for every
+   * surface (operator decision 2026-08-10), so defining it here as well
+   * would fork the one number the whole site keys off. */
 
   /* Mono helper */
   .mono {

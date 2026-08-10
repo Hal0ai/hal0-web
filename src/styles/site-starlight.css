@@ -25,11 +25,12 @@
  * inset-inline-start: 0` (glued to the viewport edge) and `.main-frame`
  * pads only by the sidebar width, so at 1920 the chrome sprawls 0→1920
  * while /kb, /benchmarks, /profiles et al sit in a tidy centered
- * `.wrap.wide` box (max-width 1440, 24px gutters). That mismatch is the
+ * `.wrap.wide` box (max-width 1600, 32px gutters). That mismatch is the
  * "different apps" tell the operator flagged.
  *
- * `--hal0-page-gutter` reproduces where a `.wrap.wide` page's CONTENT
- * starts — half the overflow past 1440, plus the wrap's own 24px pad —
+ * `--hal0-page-gutter` reproduces where a `.wrap.wide`/`.shell-wide`
+ * page's CONTENT starts — half the overflow past 1600, plus the 32px
+ * pad. Keep these two numbers in step with site.css's `.wrap.wide` —
  * so every left edge on the site lands on the same x: KB landing cards,
  * benchmarks tables, the docs sidebar rail, the header wordmark.
  *
@@ -42,11 +43,11 @@
  * the sidebar is a full-width drawer and the frame is already flush. */
 
 .page {
-	--hal0-page-gutter: 24px;
+	--hal0-page-gutter: 32px;
 }
 @media (min-width: 50rem) {
 	.page {
-		--hal0-page-gutter: calc(max(0px, (100% - 1440px) / 2) + 24px);
+		--hal0-page-gutter: calc(max(0px, (100% - 1600px) / 2) + 32px);
 		/* Starlight's own seam for "how far in does the content start" —
 		 * overriding it moves .main-frame's padding AND keeps the header's
 		 * internal grid (which reads the same var) in step. */
