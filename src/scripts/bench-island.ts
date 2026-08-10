@@ -112,12 +112,13 @@ const API_URL = `${API_BASE}/v1/roster`;
 const EVALS_API_URL = `${API_BASE}/v1/evals`;
 const RUN_API_BASE = `${API_BASE}/v1/runs`;
 const BUNDLE_API_BASE = `${API_BASE}/v1/bundles`;
-// /v1/history is NOT part of the production worker contract yet — proposed
-// addition, currently served only by the dev-preview adapter
-// (bench-live-adapter.mjs) as a passthrough to CT105's own
-// /api/benchmarks/history. See fetchRunHistory: a 404/network failure here
-// degrades silently (the graph section is simply never inserted), not an
-// error state.
+// /v1/history is part of the worker contract (workers/bench-api registers it
+// alongside roster/evals/runs); the dev-preview adapter
+// (bench-live-adapter.mjs) also serves it as a passthrough to CT105's own
+// /api/benchmarks/history. It stays a soft dependency regardless — see
+// fetchRunHistory: a 404/network failure here degrades silently (the graph
+// section is simply never inserted), not an error state, so pointing
+// PUBLIC_BENCH_API at an older deploy that predates the route is fine.
 const HISTORY_API_BASE = `${API_BASE}/v1/history`;
 // The roster live-upgrade fetch is the visible, above-the-fold promise (the
 // leaderboard itself) — a tight 4s budget keeps a slow/unreachable API from

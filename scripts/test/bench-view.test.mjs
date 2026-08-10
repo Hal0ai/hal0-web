@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   normalizeRoster,
   normalizeApiRoster,
+  mapCaps,
   applyFilters,
   sortRows,
   bucket,
@@ -252,6 +253,59 @@ test('normalizeApiRoster: missing/malformed model.caps falls back to [], never i
   assert.deepEqual(rows.find((r) => r.id === 'b').caps, []);
   // Non-string entries are filtered out, real ones kept — never thrown.
   assert.deepEqual(rows.find((r) => r.id === 'c').caps, ['mtp']);
+});
+
+test('mapCaps: reduces the API\'s raw record vocabulary onto the five UI pills', () => {
+  // The vocabulary a real CT105 record carries — capability tags mixed with
+  // build/arch labels. Only the five the leaderboard has pills for survive.
+  const raw = ['agent', 'chat', 'coder', 'moe', 'mtp', 'qwen35', 'rocmfp4', 'strix', 'thinking', 'tool-calling', 'vision'];
+  assert.deepEqual(mapCaps(raw), ['mtp', 'vision', 'tools', 'coding', 'reasoning']);
+});
+
+test('mapCaps: unmapped tags are dropped, never invented into a sixth pill', () => {
+  assert.deepEqual(mapCaps(['moe', 'rocmfp4', 'strix', 'qwen35']), []);
+});
+
+test('mapCaps: tool-calling/tool-use/tool-eval all collapse onto one `tools` pill', () => {
+  assert.deepEqual(mapCaps(['tool-calling', 'tool-use', 'tool-eval']), ['tools']);
+});
+
+test('mapCaps: output order is stable regardless of source order', () => {
+  assert.deepEqual(mapCaps(['thinking', 'vision', 'mtp']), mapCaps(['mtp', 'thinking', 'vision']));
+});
+
+// The worker serves RAW caps, but the dev-preview adapter serves caps it has
+// already reduced (its own CT105_CAP_MAP). Both feed this same function, so
+// mapping must be idempotent or the dev preview would silently drop pills the
+// production path keeps.
+test('mapCaps: is idempotent — already-reduced caps survive a second pass', () => {
+  const raw = ['coder', 'thinking', 'tool-calling', 'vision', 'mtp'];
+  const once = mapCaps(raw);
+  assert.deepEqual(mapCaps(once), once);
+  assert.deepEqual(once, ['mtp', 'vision', 'tools', 'coding', 'reasoning']);
+});
+
+test('mapCaps: tolerates casing/whitespace and non-array/non-string input', () => {
+  assert.deepEqual(mapCaps([' Vision ', 'MTP']), ['mtp', 'vision']);
+  assert.deepEqual(mapCaps(null), []);
+  assert.deepEqual(mapCaps('coder'), []);
+  assert.deepEqual(mapCaps([42, null, {}, 'coder']), ['coding']);
+});
+
+test('normalizeApiRoster: maps raw worker caps so the pills survive the live upgrade', () => {
+  // Regression guard: /v1/roster serves the record's own vocabulary, so
+  // passing it through unmapped would leave every glyph and filter pill empty
+  // the moment the page upgrades off the snapshot.
+  const rows = normalizeApiRoster({
+    models: [
+      {
+        model_id: 'qwen3-coder-30b-a3b-instruct-rocmfp4',
+        caps: ['coder', 'thinking', 'rocmfp4', 'moe'],
+        cells: [{ lane: 'rocm', kind: 'tg', depth: 2048, decode_ts_med: 50 }],
+      },
+    ],
+  });
+  assert.deepEqual(rows[0].caps, ['coding', 'reasoning']);
 });
 
 test('normalizeApiRoster tolerates missing models/cells', () => {
