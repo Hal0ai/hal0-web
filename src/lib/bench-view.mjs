@@ -863,14 +863,14 @@ export function laneMarkerShape(lane) {
 }
 
 /**
- * Parse the proposed `GET /v1/history?model=<id>&lane=<lane>` response (an
- * adapter-only endpoint today — no production worker route yet; see
- * bench-live-adapter.mjs's /v1/history passthrough and this repo's PR body
- * for the proposed worker contract addition) into a validated points array
- * for the drawer's decode-history graph.
+ * Parse a `GET /v1/history?model=<id>&lane=<lane>&kind=tg&config=<variant>`
+ * response into a validated points array for the drawer's decode-history
+ * graph. A real worker route (workers/bench-api registers it alongside
+ * roster/evals/runs); bench-live-adapter.mjs stands in for it against CT105
+ * in the dev preview.
  *
- * Filtered server-side by DISPLAY DIMS (model, lane — kind='tg', outcome
- * 'ok') rather than by cell_key: a cell_key is a content-addressed
+ * Filtered server-side by DISPLAY DIMS (model, lane, kind, config) rather
+ * than by cell_key: a cell_key is a content-addressed
  * identity, so an engine/image provenance bump between two sweeps forks the
  * key and turns what should be one continuous history into several
  * one-point series — the hal0 dashboard hit exactly this and moved its own
