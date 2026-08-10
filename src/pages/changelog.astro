@@ -206,9 +206,23 @@ const description =
    * Sidebar hides below 900px, same breakpoint/behavior as the KB
    * article's `.kbside` in the comp — content keeps its own scroll, no
    * secondary nav needed on mobile. */
+  /* Same centered container as every other page (comp `.wrap.wide`).
+   * Deliberately the identical formula to the Starlight frame's
+   * --hal0-page-gutter (site-starlight.css) rather than a max-width +
+   * auto-margin box: the release rail must land on the SAME x as a
+   * docs/KB sidebar at every width, and Starlight's rail is a
+   * fixed-position element offset by this gutter, so the shell has to
+   * pad by it rather than centre a narrower box inside it. */
   .clshell {
+    --cl-gutter: calc(max(0px, (100% - 1440px) / 2) + 24px);
     display: grid;
     grid-template-columns: 300px 1fr;
+    padding-inline: var(--cl-gutter);
+  }
+  @media (max-width: 640px) {
+    .clshell {
+      --cl-gutter: 16px;
+    }
   }
   /* The pane column — mirrors Starlight's .sidebar-pane (full-height
    * hairline on the right, sidebar bg), so the rail reads as the same
@@ -228,6 +242,31 @@ const description =
     max-height: calc(100vh - 140px);
     overflow-y: auto;
     padding: 28px 1.5rem 24px;
+    /* Same amber scroll block as the Starlight rails — see the
+     * "scroll rails" section in site-starlight.css for the rationale
+     * and the two-mechanism (Firefox / WebKit) split. */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-muted, #7a5500) transparent;
+  }
+  .clside:hover {
+    scrollbar-color: var(--accent) transparent;
+  }
+  .clside::-webkit-scrollbar {
+    width: 8px;
+  }
+  .clside::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .clside::-webkit-scrollbar-thumb {
+    background-color: var(--accent-muted, #7a5500);
+    border-radius: 3px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background-color var(--dur-fast) var(--ease);
+  }
+  .clside:hover::-webkit-scrollbar-thumb {
+    background-color: var(--accent);
+    background-clip: padding-box;
   }
   .clside-label {
     padding-left: 10px;

@@ -20,6 +20,106 @@
  * Like site-docs.css, every rule targets Starlight core markup from
  * unlayered CSS, so it wins over `@layer starlight.*` on layer order. */
 
+/* ── page frame — the SAME centered container every marketing page uses ──
+ * Starlight renders full-bleed: `.sidebar-pane` is `position: fixed;
+ * inset-inline-start: 0` (glued to the viewport edge) and `.main-frame`
+ * pads only by the sidebar width, so at 1920 the chrome sprawls 0→1920
+ * while /kb, /benchmarks, /profiles et al sit in a tidy centered
+ * `.wrap.wide` box (max-width 1440, 24px gutters). That mismatch is the
+ * "different apps" tell the operator flagged.
+ *
+ * `--hal0-page-gutter` reproduces where a `.wrap.wide` page's CONTENT
+ * starts — half the overflow past 1440, plus the wrap's own 24px pad —
+ * so every left edge on the site lands on the same x: KB landing cards,
+ * benchmarks tables, the docs sidebar rail, the header wordmark.
+ *
+ * Declared on `.page`, a static full-width block, and used by
+ * fixed-position descendants too (custom properties inherit through the
+ * DOM regardless of positioning). `100%` rather than `100vw`: vw counts
+ * the scrollbar and would push a phantom horizontal overflow.
+ *
+ * Only applies at Starlight's own ≥50rem desktop breakpoint — below it
+ * the sidebar is a full-width drawer and the frame is already flush. */
+
+.page {
+	--hal0-page-gutter: 24px;
+}
+@media (min-width: 50rem) {
+	.page {
+		--hal0-page-gutter: calc(max(0px, (100% - 1440px) / 2) + 24px);
+		/* Starlight's own seam for "how far in does the content start" —
+		 * overriding it moves .main-frame's padding AND keeps the header's
+		 * internal grid (which reads the same var) in step. */
+		--sl-content-inline-start: calc(var(--sl-sidebar-width) + var(--hal0-page-gutter));
+	}
+	.sidebar-pane {
+		inset-inline-start: var(--hal0-page-gutter);
+	}
+	.main-frame {
+		padding-inline-end: var(--hal0-page-gutter);
+	}
+	/* Header BAR stays full-bleed (its frosted fill + filament hairline
+	 * span the viewport, exactly like the marketing `.hdr`); only its
+	 * contents are pulled into the container — the marketing header does
+	 * the same thing with an inner `.wrap.wide` element. */
+	header.header {
+		padding-inline: var(--hal0-page-gutter);
+	}
+}
+@media (max-width: 40rem) {
+	.page {
+		--hal0-page-gutter: 16px; /* comp: .wrap padding tightens ≤640px */
+	}
+}
+
+/* ── scroll rails — the browser's default chrome scrollbar is the one
+ * piece of un-branded UI left in the sidebar. Replace it with a thin
+ * amber block that echoes the active-row rail (`inset 2px 0 0 accent`):
+ * muted at rest so it never competes with content, full sodium amber on
+ * hover. Track stays transparent — no groove, so the rail reads as a
+ * floating marker rather than a widget.
+ *
+ * Two mechanisms because no single one is universal: `scrollbar-width` /
+ * `scrollbar-color` (Firefox, and the CSS standard) and the WebKit
+ * pseudo-elements (Chrome/Safari). The `border: 2px solid transparent` +
+ * `background-clip: padding-box` trick insets the thumb inside an 8px
+ * track so the visible block is 4px with breathing room either side —
+ * you cannot pad a scrollbar thumb directly.
+ *
+ * Applied to every scrolling rail on the page (left nav, right TOC) so a
+ * clean bar never sits next to a default one. ── */
+
+.sidebar-pane,
+.right-sidebar {
+	scrollbar-width: thin;
+	scrollbar-color: var(--hal0-accent-muted) transparent;
+}
+.sidebar-pane::-webkit-scrollbar,
+.right-sidebar::-webkit-scrollbar {
+	width: 8px;
+}
+.sidebar-pane::-webkit-scrollbar-track,
+.right-sidebar::-webkit-scrollbar-track {
+	background: transparent;
+}
+.sidebar-pane::-webkit-scrollbar-thumb,
+.right-sidebar::-webkit-scrollbar-thumb {
+	background-color: var(--hal0-accent-muted);
+	border-radius: 3px; /* a block, not a pill — comp radii stay restrained */
+	border: 2px solid transparent;
+	background-clip: padding-box;
+	transition: background-color var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease);
+}
+.sidebar-pane:hover::-webkit-scrollbar-thumb,
+.right-sidebar:hover::-webkit-scrollbar-thumb {
+	background-color: var(--hal0-accent);
+	background-clip: padding-box;
+}
+.sidebar-pane:hover,
+.right-sidebar:hover {
+	scrollbar-color: var(--hal0-accent) transparent;
+}
+
 /* ── sidebar (comp `.dside`) — mono ramp, tight rows, amber rail ── */
 
 :is([data-docs], [data-blog], [data-longform]) #starlight__sidebar {
