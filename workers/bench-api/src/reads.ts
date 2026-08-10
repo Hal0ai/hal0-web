@@ -357,3 +357,71 @@ export async function evalsHandler(req: Request, env: Env): Promise<Response> {
 
   return publicJson(req, { evals: results });
 }
+
+interface HistoryPointRow {
+  ts: string | null;
+  decode_ts_med: number | null;
+  prefill_ts_med: number | null;
+  lane: string | null;
+}
+
+/**
+ * Time series behind the run drawer's decode-history sparkline.
+ *
+ * Unlike the roster (which reads current_cells — newest published row per
+ * cell), this deliberately reads the full `records` table: the whole point is
+ * the trend across successive runs of the same cell, so superseded rows are
+ * the data, not noise.
+ *
+ * Filter contract mirrors CT105's own /api/benchmarks/history — `cell_key` or
+ * `model` is required (an unfiltered "history of everything" is a table scan
+ * with no caller), `lane` narrows further. The site calls it as
+ * ?model=&lane=; the CLI-shaped ?cell_key= form is supported for parity.
+ *
+ * Ordered oldest-first because that is plot order. The LIMIT therefore has to
+ * be applied to the NEWEST rows and reversed in JS, or a model with more than
+ * MAX_POINTS runs would silently graph only its ancient history.
+ */
+const MAX_HISTORY_POINTS = 500;
+
+export async function historyHandler(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
+  const cellKey = url.searchParams.get("cell_key");
+  const model = url.searchParams.get("model");
+  const lane = url.searchParams.get("lane");
+
+  if (!cellKey && !model) {
+    return publicErrors(req, ["cell_key or model is required"], 400);
+  }
+
+  const conditions = ["status = 'published'"];
+  const params: string[] = [];
+  if (cellKey) {
+    conditions.push("cell_key = ?");
+    params.push(cellKey);
+  }
+  if (model) {
+    conditions.push("model_id = ?");
+    params.push(model);
+  }
+  if (lane) {
+    conditions.push("lane = ?");
+    params.push(lane);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT measured_at AS ts, decode_ts_med, prefill_ts_med, lane
+     FROM records
+     WHERE ${conditions.join(" AND ")}
+     ORDER BY measured_at DESC, seq DESC
+     LIMIT ${MAX_HISTORY_POINTS}`,
+  )
+    .bind(...params)
+    .all<HistoryPointRow>();
+
+  return publicJson(req, {
+    cell_key: cellKey,
+    model,
+    points: results.reverse(),
+  });
+}

@@ -5,6 +5,7 @@ import {
   bundleHandler,
   cellsHandler,
   evalsHandler,
+  historyHandler,
   profileByIdHandler,
   profilesHandler,
   rosterHandler,
@@ -22,6 +23,7 @@ register("GET", "/v1/bundles/:id", bundleHandler);
 register("GET", "/v1/profiles", profilesHandler);
 register("GET", "/v1/profiles/:bundle_id/:name", profileByIdHandler);
 register("GET", "/v1/evals", evalsHandler);
+register("GET", "/v1/history", historyHandler);
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {

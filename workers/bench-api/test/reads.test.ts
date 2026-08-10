@@ -335,6 +335,77 @@ describe("GET /v1/profiles", () => {
   });
 });
 
+describe("GET /v1/history", () => {
+  it("requires cell_key or model", async () => {
+    const res = await SELF.fetch("https://api.hal0.dev/v1/history");
+    expect(res.status).toBe(400);
+    const body = await res.json<{ errors: string[] }>();
+    expect(body.errors[0]).toMatch(/cell_key or model is required/);
+  });
+
+  // The trend IS the superseded rows, so unlike the roster this must not
+  // collapse to newest-per-cell.
+  it("returns every published run of a cell, not just the newest", async () => {
+    const res = await SELF.fetch(`https://api.hal0.dev/v1/history?cell_key=${fx.cellKey}`);
+    expect(res.status).toBe(200);
+    const body = await res.json<{ points: { ts: string }[] }>();
+    expect(body.points.length).toBe(2);
+  });
+
+  it("excludes records from a deleted bundle", async () => {
+    const res = await SELF.fetch("https://api.hal0.dev/v1/history?model=qwen3-30b");
+    const body = await res.json<{ points: unknown[] }>();
+    const all = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM records WHERE model_id = 'qwen3-30b' AND status = 'published'",
+    ).first<{ n: number }>();
+    expect(body.points.length).toBe(all!.n);
+  });
+
+  it("filters by lane on top of model", async () => {
+    const n = ++seq;
+    await insertRecord({
+      cellKey: "sha256:" + hex(0x80000 + n),
+      runId: `run-vulkan-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId: `lane-model-${n}`,
+      lane: "vulkan_radv",
+    });
+    await insertRecord({
+      cellKey: "sha256:" + hex(0x90000 + n),
+      runId: `run-rocm-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId: `lane-model-${n}`,
+      lane: "rocm",
+    });
+
+    const res = await SELF.fetch(
+      `https://api.hal0.dev/v1/history?model=lane-model-${n}&lane=vulkan_radv`,
+    );
+    const body = await res.json<{ points: { lane: string }[] }>();
+    expect(body.points).toHaveLength(1);
+    expect(body.points[0].lane).toBe("vulkan_radv");
+  });
+
+  // normalizeHistoryPoints on the site reads decode_ts_med/prefill_ts_med/ts,
+  // so the column aliasing has to survive.
+  it("emits points in the shape the site's normalizeHistoryPoints expects", async () => {
+    const res = await SELF.fetch(`https://api.hal0.dev/v1/history?cell_key=${fx.cellKey}`);
+    const body = await res.json<{ points: Record<string, unknown>[] }>();
+    expect(Object.keys(body.points[0]).sort()).toEqual(
+      ["decode_ts_med", "lane", "prefill_ts_med", "ts"].sort(),
+    );
+  });
+
+  it("returns an empty point list rather than 404 for an unknown model", async () => {
+    const res = await SELF.fetch("https://api.hal0.dev/v1/history?model=does-not-exist");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ points: unknown[] }>();
+    expect(body.points).toEqual([]);
+  });
+});
+
 describe("GET /v1/evals", () => {
   it("filters evals by model and excludes non-published", async () => {
     const res = await SELF.fetch(`https://api.hal0.dev/v1/evals?model=qwen3-30b`);
