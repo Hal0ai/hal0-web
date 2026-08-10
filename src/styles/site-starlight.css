@@ -20,6 +20,107 @@
  * Like site-docs.css, every rule targets Starlight core markup from
  * unlayered CSS, so it wins over `@layer starlight.*` on layer order. */
 
+/* ── page frame — the SAME centered container every marketing page uses ──
+ * Starlight renders full-bleed: `.sidebar-pane` is `position: fixed;
+ * inset-inline-start: 0` (glued to the viewport edge) and `.main-frame`
+ * pads only by the sidebar width, so at 1920 the chrome sprawls 0→1920
+ * while /kb, /benchmarks, /profiles et al sit in a tidy centered
+ * `.wrap.wide` box (max-width 1600, 32px gutters). That mismatch is the
+ * "different apps" tell the operator flagged.
+ *
+ * `--hal0-page-gutter` reproduces where a `.wrap.wide`/`.shell-wide`
+ * page's CONTENT starts — half the overflow past 1600, plus the 32px
+ * pad. Keep these two numbers in step with site.css's `.wrap.wide` —
+ * so every left edge on the site lands on the same x: KB landing cards,
+ * benchmarks tables, the docs sidebar rail, the header wordmark.
+ *
+ * Declared on `.page`, a static full-width block, and used by
+ * fixed-position descendants too (custom properties inherit through the
+ * DOM regardless of positioning). `100%` rather than `100vw`: vw counts
+ * the scrollbar and would push a phantom horizontal overflow.
+ *
+ * Only applies at Starlight's own ≥50rem desktop breakpoint — below it
+ * the sidebar is a full-width drawer and the frame is already flush. */
+
+.page {
+	--hal0-page-gutter: 32px;
+}
+@media (min-width: 50rem) {
+	.page {
+		--hal0-page-gutter: calc(max(0px, (100% - 1600px) / 2) + 32px);
+		/* Starlight's own seam for "how far in does the content start" —
+		 * overriding it moves .main-frame's padding AND keeps the header's
+		 * internal grid (which reads the same var) in step. */
+		--sl-content-inline-start: calc(var(--sl-sidebar-width) + var(--hal0-page-gutter));
+	}
+	.sidebar-pane {
+		inset-inline-start: var(--hal0-page-gutter);
+	}
+	.main-frame {
+		padding-inline-end: var(--hal0-page-gutter);
+	}
+	/* Header BAR stays full-bleed (its frosted fill + filament hairline
+	 * span the viewport, exactly like the marketing `.hdr`); only its
+	 * contents are pulled into the container — the marketing header does
+	 * the same thing with an inner `.wrap.wide` element. */
+	header.header {
+		padding-inline: var(--hal0-page-gutter);
+	}
+}
+@media (max-width: 40rem) {
+	.page {
+		--hal0-page-gutter: 16px; /* comp: .wrap padding tightens ≤640px */
+	}
+}
+
+/* ── scroll rails — the browser's default chrome scrollbar is the one
+ * piece of un-branded UI left in the sidebar. Replace it with a thin
+ * amber block that echoes the active-row rail (`inset 2px 0 0 accent`):
+ * muted at rest so it never competes with content, full sodium amber on
+ * hover. Track stays transparent — no groove, so the rail reads as a
+ * floating marker rather than a widget.
+ *
+ * Two mechanisms because no single one is universal: `scrollbar-width` /
+ * `scrollbar-color` (Firefox, and the CSS standard) and the WebKit
+ * pseudo-elements (Chrome/Safari). The `border: 2px solid transparent` +
+ * `background-clip: padding-box` trick insets the thumb inside an 8px
+ * track so the visible block is 4px with breathing room either side —
+ * you cannot pad a scrollbar thumb directly.
+ *
+ * Applied to every scrolling rail on the page (left nav, right TOC) so a
+ * clean bar never sits next to a default one. ── */
+
+.sidebar-pane,
+.right-sidebar {
+	scrollbar-width: thin;
+	scrollbar-color: var(--hal0-accent-muted) transparent;
+}
+.sidebar-pane::-webkit-scrollbar,
+.right-sidebar::-webkit-scrollbar {
+	width: 8px;
+}
+.sidebar-pane::-webkit-scrollbar-track,
+.right-sidebar::-webkit-scrollbar-track {
+	background: transparent;
+}
+.sidebar-pane::-webkit-scrollbar-thumb,
+.right-sidebar::-webkit-scrollbar-thumb {
+	background-color: var(--hal0-accent-muted);
+	border-radius: 3px; /* a block, not a pill — comp radii stay restrained */
+	border: 2px solid transparent;
+	background-clip: padding-box;
+	transition: background-color var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease);
+}
+.sidebar-pane:hover::-webkit-scrollbar-thumb,
+.right-sidebar:hover::-webkit-scrollbar-thumb {
+	background-color: var(--hal0-accent);
+	background-clip: padding-box;
+}
+.sidebar-pane:hover,
+.right-sidebar:hover {
+	scrollbar-color: var(--hal0-accent) transparent;
+}
+
 /* ── sidebar (comp `.dside`) — mono ramp, tight rows, amber rail ── */
 
 :is([data-docs], [data-blog], [data-longform]) #starlight__sidebar {
@@ -292,20 +393,52 @@ site-search button[data-open-modal]:hover {
 	color: var(--hal0-fg-dim);
 	background: var(--hal0-bg-elevated);
 }
+/* kbd hint — ONE box reading "Ctrl K", matching the marketing
+ * `.searchbtn .k` span. Starlight nests a kbd per key
+ * (`<kbd><kbd>Ctrl</kbd><kbd>K</kbd></kbd>`), which renders as two
+ * separate chips; the outer element takes the box and the inner ones
+ * are stripped back to bare text. */
 site-search button[data-open-modal] > kbd {
 	margin-left: auto;
-	padding: 0;
-	background: transparent;
-	gap: 4px;
-}
-site-search button[data-open-modal] > kbd kbd {
+	display: inline-flex;
+	gap: 0.5em; /* ≈ a mono space — marketing renders "Ctrl K" as one string */
+	font-family: var(--hal0-font-mono);
 	font-size: 10px;
+	line-height: 1.5; /* marketing `.k` box is 19px tall; Starlight's own
+	                   * line-height would make it 22 */
 	color: var(--hal0-fg-faint);
+	background: transparent;
 	border: 1px solid var(--hal0-border);
 	border-radius: 3px;
 	padding: 1px 4px;
-	background: transparent;
-	font-family: var(--hal0-font-mono);
+}
+site-search button[data-open-modal] > kbd kbd {
+	all: unset;
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+}
+
+/* social icons — the comp's `.iconbtn`: dim at rest, never accent.
+ * Starlight paints them with `--sl-color-text-accent`, which put two
+ * amber glyphs in the header where the marketing bar has quiet grey
+ * ones. 30×30 with a 4px radius to match `.iconbtn` exactly. */
+.right-group .social-icons a {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border-radius: var(--hal0-rad-sm, 4px);
+	border: 1px solid transparent;
+	color: var(--hal0-fg-dim);
+	transition:
+		color var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease),
+		background var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease),
+		border-color var(--hal0-dur-fast, 0.12s) var(--hal0-ease, ease);
+}
+.right-group .social-icons a:hover {
+	color: var(--hal0-fg);
+	background: var(--hal0-bg-2);
+	border-color: var(--hal0-border);
 }
 
 /* docnav links (StarlightSiteTitle override) → comp .hdr-nav: full-bar

@@ -1,0 +1,24 @@
+---
+/**
+ * /docs/operate/ — section listing page. See
+ * src/pages/docs/concepts/index.astro for why these live in `src/pages/`
+ * rather than as `index.mdx` in the (mirror-generated) docs collection.
+ */
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import SectionPageList from '../../../components/SectionPageList.astro';
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Operate',
+		description:
+			'Day-two operations — authentication, the systemd service topology, and error reporting.',
+		tableOfContents: false,
+	}}
+>
+	<p>
+		Running hal0 as an appliance: locking it down, understanding its services,
+		and knowing when something breaks before you do.
+	</p>
+	<SectionPageList section="operate" />
+</StarlightPage>

@@ -1,0 +1,43 @@
+---
+/**
+ * /docs/concepts/ — section listing page.
+ *
+ * WHY THIS IS AN ASTRO PAGE AND NOT AN `index.mdx` IN THE DOCS COLLECTION:
+ * `src/content/docs/docs/<section>/` is GENERATED, not authored. The
+ * product repo's mirror workflow (Hal0ai/hal0
+ * .github/workflows/mirror-docs.yml) rsyncs `hal0/docs/<section>/` into
+ * it with `--delete`, so anything living there that is not in the
+ * product repo is removed on the next sync. That is exactly what
+ * happened to the original `index.mdx` version of this page (deleted by
+ * mirror commit 845f6df on 2026-08-10, along with the other three).
+ *
+ * `src/pages/` is outside the mirrored path, so the file is safe here.
+ * Astro gives a fully static file route priority over Starlight's
+ * `[...slug]` rest route, so the URL is unchanged, and `<StarlightPage>`
+ * renders it inside the normal docs shell — sidebar, header, footer and
+ * the site's themed chrome all behave as they do for a real docs entry
+ * (the PageFrame override keys off `entry.id`, which resolves to
+ * "docs/concepts" for this URL, so `[data-docs]` is applied as usual).
+ *
+ * The row list itself is derived from the content collection by
+ * SectionPageList — never hand-maintained.
+ */
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import SectionPageList from '../../../components/SectionPageList.astro';
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Concepts',
+		description:
+			'The mental model behind hal0 — slots, capabilities, stacks, memory, agents, and the hardware they run on.',
+		tableOfContents: false,
+	}}
+>
+	<p>
+		How hal0 thinks. These pages explain the moving parts — what a slot is, how
+		capabilities route requests, where memory lives — so the guides read as
+		applications of a model you already hold, not incantations.
+	</p>
+	<SectionPageList section="concepts" />
+</StarlightPage>
