@@ -375,8 +375,25 @@ interface HistoryPointRow {
  *
  * Filter contract mirrors CT105's own /api/benchmarks/history — `cell_key` or
  * `model` is required (an unfiltered "history of everything" is a table scan
- * with no caller), `lane` narrows further. The site calls it as
- * ?model=&lane=; the CLI-shaped ?cell_key= form is supported for parity.
+ * with no caller); `lane`, `kind` and `config` narrow further. The site calls
+ * it as ?model=&lane=&kind=tg&config=…; the CLI-shaped ?cell_key= form is
+ * supported for parity.
+ *
+ * `kind` and `config` matter more than they look. A model typically has both
+ * pp (prefill) and tg (decode) records under the same model_id and lane, and
+ * a pp record has no decode_ts_med at all. Without narrowing, a "decode
+ * history" series is half prefill runs — measured against real data, an
+ * 8-point response where only 4 points belonged on the graph. Different
+ * config_labels are the same apples-to-oranges problem: they are different
+ * configurations of the model, not successive measurements of one.
+ *
+ * Filtering is by these DISPLAY DIMENSIONS rather than by cell_key even
+ * though a cell is exactly "one comparable series". A cell_key is
+ * content-addressed over engine/image provenance, so an unrelated runner-image
+ * bump between two sweeps forks the key and shatters one continuous history
+ * into several one-point series. hal0's own dashboard moved off cell_key for
+ * this reason. cell_key remains available as an explicit filter for callers
+ * that genuinely want that one identity.
  *
  * Ordered oldest-first because that is plot order. The LIMIT therefore has to
  * be applied to the NEWEST rows and reversed in JS, or a model with more than
@@ -389,6 +406,8 @@ export async function historyHandler(req: Request, env: Env): Promise<Response> 
   const cellKey = url.searchParams.get("cell_key");
   const model = url.searchParams.get("model");
   const lane = url.searchParams.get("lane");
+  const kind = url.searchParams.get("kind");
+  const config = url.searchParams.get("config");
 
   if (!cellKey && !model) {
     return publicErrors(req, ["cell_key or model is required"], 400);
@@ -407,6 +426,14 @@ export async function historyHandler(req: Request, env: Env): Promise<Response> 
   if (lane) {
     conditions.push("lane = ?");
     params.push(lane);
+  }
+  if (kind) {
+    conditions.push("kind = ?");
+    params.push(kind);
+  }
+  if (config) {
+    conditions.push("config_label = ?");
+    params.push(config);
   }
 
   const { results } = await env.DB.prepare(
