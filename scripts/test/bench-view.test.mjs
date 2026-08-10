@@ -274,6 +274,17 @@ test('mapCaps: output order is stable regardless of source order', () => {
   assert.deepEqual(mapCaps(['thinking', 'vision', 'mtp']), mapCaps(['mtp', 'thinking', 'vision']));
 });
 
+// The worker serves RAW caps, but the dev-preview adapter serves caps it has
+// already reduced (its own CT105_CAP_MAP). Both feed this same function, so
+// mapping must be idempotent or the dev preview would silently drop pills the
+// production path keeps.
+test('mapCaps: is idempotent — already-reduced caps survive a second pass', () => {
+  const raw = ['coder', 'thinking', 'tool-calling', 'vision', 'mtp'];
+  const once = mapCaps(raw);
+  assert.deepEqual(mapCaps(once), once);
+  assert.deepEqual(once, ['mtp', 'vision', 'tools', 'coding', 'reasoning']);
+});
+
 test('mapCaps: tolerates casing/whitespace and non-array/non-string input', () => {
   assert.deepEqual(mapCaps([' Vision ', 'MTP']), ['mtp', 'vision']);
   assert.deepEqual(mapCaps(null), []);
