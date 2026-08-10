@@ -24,6 +24,11 @@ export default defineConfig({
 	// working.
 	redirects: {
 		'/releases': '/changelog',
+		// The KB landing was folded into the /docs hub (its six category
+		// cards live there now), so /kb has no page of its own — but the
+		// ARTICLES under /kb/<category>/<page>/ are untouched and still
+		// Starlight routes. Only the bare landing URL redirects.
+		'/kb': '/docs/',
 	},
 
 	integrations: [

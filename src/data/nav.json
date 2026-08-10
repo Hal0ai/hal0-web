@@ -23,7 +23,7 @@
         },
         {
           "label": "knowledge base",
-          "href": "/kb/",
+          "href": "/docs/#knowledge-base",
           "match": "/kb"
         },
         {
@@ -85,7 +85,7 @@
         },
         {
           "label": "knowledge base",
-          "href": "/kb/"
+          "href": "/docs/#knowledge-base"
         },
         {
           "label": "blog",

@@ -342,6 +342,13 @@ const description =
     grid-template-columns: 1fr 1fr;
     gap: 16px;
     margin-top: 24px;
+    /* Hug content instead of stretching. HARDWARE has six rows and BINARY
+     * four, so a default `stretch` leaves ~90px of empty panel under the
+     * shorter card — the taller one dictates both heights. The comp
+     * (02 Benchmarks.html `.ctx`) doesn't set this either, but its rows
+     * are 6px-padded where ours are 9px (PR #78's roomier cards), which
+     * nearly doubles the gap and makes it read as a layout bug. */
+    align-items: start;
   }
   .ctx .panel {
     padding-bottom: 8px;

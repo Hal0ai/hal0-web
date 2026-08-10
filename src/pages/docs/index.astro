@@ -125,12 +125,12 @@ const ELSEWHERE = [
       </div>
 
       {/* ── knowledge base ── */}
-      <div style="margin-top: 48px;">
+      <div id="knowledge-base" style="margin-top: 48px;">
         <span class="eyebrow">knowledge base</span>
         <h2 class="site-h2" style="margin: 10px 0 6px;">things that stay true</h2>
         <p class="site-body" style="max-width: 64ch; margin-bottom: 20px;">
           Undated on purpose — every page carries a last-reviewed stamp instead, and gets revised
-          rather than superseded. <a class="amber" href="/kb/">The full knowledge base &rarr;</a>
+          rather than superseded.
         </p>
         <div class="kbgrid hubgrid">
           {KB_CATEGORIES.map((cat) => (
@@ -147,9 +147,12 @@ const ELSEWHERE = [
                   )
                 )}
               </ul>
-              <a class="kbcat-all" href={`/kb/${cat.slug}/`}>
-                open {cat.label} &rarr;
-              </a>
+              {/* No "open <category> →" footer link here, unlike the docs
+                * section cards above: docs sections have real listing pages
+                * at /docs/<section>/, whereas /kb/<category>/ is not a route —
+                * only the articles beneath it are. The page links in the list
+                * ARE the navigation; once inside any article, Starlight's
+                * sidebar carries the rest of the category. */}
             </div>
           ))}
         </div>
