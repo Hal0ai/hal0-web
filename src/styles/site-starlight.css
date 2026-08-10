@@ -14,7 +14,7 @@
  * same themed chrome as docs/blog, so most rules use
  * `:is([data-docs], [data-blog], [data-longform])`. The sidebar pane
  * renders inside the PageFrame wrapper, so
- * `:is([data-docs], [data-longform]) #starlight__sidebar` covers docs,
+ * `:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar` covers docs,
  * blog posts, and KB alike.
  *
  * Like site-docs.css, every rule targets Starlight core markup from
@@ -22,14 +22,14 @@
 
 /* ── sidebar (comp `.dside`) — mono ramp, tight rows, amber rail ── */
 
-:is([data-docs], [data-longform]) #starlight__sidebar {
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar {
 	font-family: var(--hal0-font-mono);
 	font-size: 11.5px;
 }
 
 /* Group labels — the comp's `.label` idiom (11px mono uppercase). The
  * comp indents labels to the same 10px inset as the rows. */
-:is([data-docs], [data-longform]) #starlight__sidebar .group-label .large {
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar .group-label .large {
 	font-family: var(--hal0-font-mono);
 	font-size: 11px;
 	font-weight: 500;
@@ -39,14 +39,14 @@
 }
 
 /* Collapse carets subdued. */
-:is([data-docs], [data-longform]) #starlight__sidebar summary .caret {
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar summary .caret {
 	color: var(--hal0-fg-faint);
 }
 
 /* Rows — comp: 11.5px mono, fg-3, 2px block padding at a 10px inset,
  * line-height 1.45. Kill Starlight's pill treatment (rounded bg on
  * hover/current) so the active state is the rail, not a lozenge. */
-:is([data-docs], [data-longform]) #starlight__sidebar .top-level a {
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar .top-level a {
 	font-family: var(--hal0-font-mono);
 	font-size: 11.5px;
 	font-weight: 400;
@@ -56,18 +56,27 @@
 	border-radius: 0;
 	padding: 2px 0 2px 10px;
 }
-:is([data-docs], [data-longform]) #starlight__sidebar .top-level a:hover {
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar .top-level a:hover {
 	color: var(--hal0-fg);
 	background: transparent;
 }
 
 /* Active row — comp `.dside a.on` plus the drawer's `.on` fill
  * (site.css `.drawer a.row.on`): amber text, 2px inset rail, soft fill. */
-:is([data-docs], [data-longform]) #starlight__sidebar .top-level a[aria-current='page'],
-:is([data-docs], [data-longform]) #starlight__sidebar .top-level a[aria-current='page']:hover {
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar .top-level a[aria-current='page'],
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar .top-level a[aria-current='page']:hover {
 	color: var(--hal0-accent);
 	background: var(--hal0-accent-soft);
 	box-shadow: inset 2px 0 0 var(--hal0-accent);
+	font-weight: 400;
+}
+
+/* Standalone top-level links (starlight-blog's "All posts" entry sits
+ * outside any group and carries `.large`, which Starlight renders at
+ * heading size) read as ordinary rows — the comp's sidebar has one row
+ * scale, and the rail already marks the current page. */
+:is([data-docs], [data-blog], [data-longform]) #starlight__sidebar .top-level > li > a.large {
+	font-size: 11.5px;
 	font-weight: 400;
 }
 
