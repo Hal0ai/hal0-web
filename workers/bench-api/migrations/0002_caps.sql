@@ -1,0 +1,20 @@
+-- Model capability tags (identity.model.caps) as a JSON array of strings.
+--
+-- The record already carries these (hal0's bench/schema.py Model.caps, filled
+-- by planner.py's _model_caps from the registry) and they already reach D1
+-- inside identity_json — but the roster read path cannot afford to select and
+-- parse the whole identity block (argv, engine, config) for every current cell
+-- just to recover five tags. This denormalizes them into their own narrow
+-- column so rosterHandler stays a single cheap SELECT.
+--
+-- Deliberately raw: the value stored here is the record's OWN vocabulary
+-- (agent, chat, coder, moe, mtp, qwen35, rocmfp4, strix, thinking,
+-- tool-calling, vision, ...), not the site's five filter pills. Mapping onto a
+-- presentation vocabulary belongs to the consumer (hal0-web's
+-- normalizeApiRoster), not to a public API that should mirror the record.
+--
+-- NULL means "this record predates the column / carried no caps" and is
+-- distinct from '[]' ("carried an explicit empty caps list"). Readers treat
+-- both as no-caps; the distinction is kept only so a backfill can tell them
+-- apart.
+ALTER TABLE records ADD COLUMN caps_json TEXT DEFAULT NULL;

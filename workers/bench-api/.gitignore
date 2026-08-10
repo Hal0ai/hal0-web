@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+# wrangler's local secret file — holds a real ADMIN_TOKEN when exercising the
+# ingest path against `wrangler dev`. Never commit it.
+.dev.vars
+.dev.vars.*
