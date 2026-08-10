@@ -118,6 +118,58 @@ export function normalizeRoster(rosterRows, meta = {}) {
 }
 
 /**
+ * The bench API serves each record's OWN capability vocabulary — a mix of
+ * real capability tags and build/arch labels (agent, chat, coder, moe, mtp,
+ * qwen35, rocmfp4, strix, thinking, tool-calling, vision, …), because
+ * /v1/roster mirrors the record rather than any one consumer's UI. The
+ * leaderboard has exactly five filter pills (benchmarks.astro's CAPS), so
+ * the reduction onto that fixed vocabulary lives here, on the consumer side.
+ *
+ * Anything with no mapping (agent, chat, moe, qwen35, rocmfp4, strix, …) is
+ * DROPPED rather than invented into a sixth pill that the UI has no control
+ * for. Several source tags intentionally collapse onto one pill —
+ * tool-calling/tool-use/tool-eval are all `tools`.
+ *
+ * Keep in sync with dev-preview/bench-live-adapter.mjs's CT105_CAP_MAP,
+ * which performs the same reduction for the dev preview against CT105's
+ * /api/benchmarks shapes.
+ */
+export const CAP_VOCABULARY = Object.freeze({
+  mtp: 'mtp',
+  vision: 'vision',
+  'tool-calling': 'tools',
+  'tool-use': 'tools',
+  'tool-eval': 'tools',
+  tools: 'tools',
+  coder: 'coding',
+  coding: 'coding',
+  thinking: 'reasoning',
+  reasoning: 'reasoning',
+});
+
+/**
+ * Reduce a raw API cap list onto the five leaderboard pills. Deduped, and
+ * ordered by CAP_VOCABULARY's own value order so two models with the same
+ * capabilities always render their glyphs in the same order regardless of
+ * how the source listed them.
+ *
+ * @param {unknown} rawCaps
+ * @returns {string[]}
+ */
+export function mapCaps(rawCaps) {
+  if (!Array.isArray(rawCaps)) return [];
+  const hit = new Set();
+  for (const cap of rawCaps) {
+    if (typeof cap !== 'string') continue;
+    const mapped = CAP_VOCABULARY[cap.trim().toLowerCase()];
+    if (mapped) hit.add(mapped);
+  }
+  if (hit.size === 0) return [];
+  const order = [...new Set(Object.values(CAP_VOCABULARY))];
+  return order.filter((c) => hit.has(c));
+}
+
+/**
  * Build BenchRow[] from the /v1/roster API contract. One row per
  * (model, cell) so callers retain every lane/workload/depth/variant
  * combination for filtering; defaultView() performs the best-lane
@@ -137,9 +189,8 @@ export function normalizeRoster(rosterRows, meta = {}) {
  * different namespaces (the snapshot's curated short ids vs. the live
  * roster's full gguf-derived slugs), so upgradeRows' by-id join against the
  * snapshot only accidentally matches a handful of models — nowhere near
- * real capability coverage. When the live payload itself carries a `caps`
- * array per model (an optional contract extension a v1/roster adapter can
- * populate — see bench-live-adapter.mjs), it's read here and preferred by
+ * real capability coverage. Real coverage comes from the payload's own
+ * `caps` array, mapped through CAP_VOCABULARY here and preferred by
  * upgradeRows over the snapshot join; a missing/malformed `model.caps`
  * falls back to `[]` (upgradeRows' snapshot-join fallback still applies —
  * never invented).
@@ -151,7 +202,7 @@ export function normalizeApiRoster(apiJson) {
   const rows = [];
   for (const model of apiJson?.models ?? []) {
     if (typeof model.model_id !== 'string' || model.model_id === '') continue;
-    const caps = Array.isArray(model.caps) ? model.caps.filter((c) => typeof c === 'string') : [];
+    const caps = mapCaps(model.caps);
     const cells = model.cells ?? [];
     for (const cell of cells) {
       rows.push({
