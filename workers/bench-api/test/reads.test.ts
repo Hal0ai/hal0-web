@@ -388,6 +388,67 @@ describe("GET /v1/history", () => {
     expect(body.points[0].lane).toBe("vulkan_radv");
   });
 
+  // A pp record has no decode figure at all, so mixing kinds turns a "decode
+  // history" into a half-empty series. Measured against real CT105 data: 8
+  // points back, only 4 of which belonged on the graph.
+  it("filters by workload kind so prefill runs stay out of a decode series", async () => {
+    const n = ++seq;
+    const modelId = `kind-model-${n}`;
+    await insertRecord({
+      cellKey: "sha256:" + hex(0xa1000 + n),
+      runId: `run-tg-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId,
+      kind: "tg",
+    });
+    await insertRecord({
+      cellKey: "sha256:" + hex(0xa2000 + n),
+      runId: `run-pp-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId,
+      kind: "pp",
+    });
+
+    const all = await (await SELF.fetch(`https://api.hal0.dev/v1/history?model=${modelId}`)).json<{
+      points: unknown[];
+    }>();
+    expect(all.points).toHaveLength(2);
+
+    const tg = await (
+      await SELF.fetch(`https://api.hal0.dev/v1/history?model=${modelId}&kind=tg`)
+    ).json<{ points: unknown[] }>();
+    expect(tg.points).toHaveLength(1);
+  });
+
+  it("filters by config so two configurations aren't plotted as one series", async () => {
+    const n = ++seq;
+    const modelId = `config-model-${n}`;
+    await insertRecord({
+      cellKey: "sha256:" + hex(0xb1000 + n),
+      runId: `run-default-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId,
+      configLabel: "default",
+    });
+    await insertRecord({
+      cellKey: "sha256:" + hex(0xb2000 + n),
+      runId: `run-tuned-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId,
+      configLabel: "tuned",
+    });
+
+    const res = await SELF.fetch(
+      `https://api.hal0.dev/v1/history?model=${modelId}&config=default`,
+    );
+    const body = await res.json<{ points: unknown[] }>();
+    expect(body.points).toHaveLength(1);
+  });
+
   // normalizeHistoryPoints on the site reads decode_ts_med/prefill_ts_med/ts,
   // so the column aliasing has to survive.
   it("emits points in the shape the site's normalizeHistoryPoints expects", async () => {

@@ -913,7 +913,7 @@ function init() {
       void resolveBundleLink(model.runId, model.cellKey);
     }
     if (model.mode === 'api' && model.identity.lane) {
-      void fetchRunHistory(id, model.identity.lane);
+      void fetchRunHistory(id, model.identity.lane, model.identity.variant);
     }
 
     if (opts.pushState !== false) {
@@ -979,20 +979,29 @@ function init() {
     }
   }
 
-  // Decode-history graph: fetches the proposed /v1/history?model=&lane=
-  // endpoint (adapter-only today, see HISTORY_API_BASE's header comment)
-  // and, only on a fully successful + non-empty response, inserts the graph
-  // section right after #run-drawer-identity. Any failure — network error,
-  // non-2xx (including a 404 on a production API that doesn't have this
-  // route yet), non-JSON body, or a shape that normalizes to zero usable
-  // points — degrades silently: no section, no skeleton, no error text, per
-  // the same "the snapshot/existing content stays, nothing looks broken"
-  // principle the rest of this file follows for optional enhancements.
-  async function fetchRunHistory(modelId: string, lane: string) {
+  // Decode-history graph: fetches /v1/history and, only on a fully successful
+  // + non-empty response, inserts the graph section right after
+  // #run-drawer-identity. Any failure — network error, non-2xx (including a
+  // 404 on a deploy predating the route), non-JSON body, or a shape that
+  // normalizes to zero usable points — degrades silently: no section, no
+  // skeleton, no error text, per the same "the snapshot/existing content
+  // stays, nothing looks broken" principle the rest of this file follows for
+  // optional enhancements.
+  //
+  // The query pins the DISPLAY DIMENSIONS, not just model+lane. A model
+  // usually has pp (prefill) records alongside its tg (decode) ones under the
+  // same model_id and lane, and a pp record carries no decode figure at all —
+  // asking only by model+lane returns a "decode history" that is half prefill
+  // runs. `config` is pinned to the row's own variant for the same reason:
+  // two config_labels are different configurations, not successive
+  // measurements of one.
+  async function fetchRunHistory(modelId: string, lane: string, variant: string | null) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      const url = `${HISTORY_API_BASE}?model=${encodeURIComponent(modelId)}&lane=${encodeURIComponent(lane)}`;
+      const query = new URLSearchParams({ model: modelId, lane, kind: DEFAULT_WORKLOAD });
+      if (variant) query.set('config', variant);
+      const url = `${HISTORY_API_BASE}?${query.toString()}`;
       const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) return;
       const json = await res.json();
