@@ -1,0 +1,25 @@
+---
+/**
+ * /docs/guides/ — section listing page. See
+ * src/pages/docs/concepts/index.astro for why these live in `src/pages/`
+ * rather than as `index.mdx` in the (mirror-generated) docs collection.
+ */
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import SectionPageList from '../../../components/SectionPageList.astro';
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Guides',
+		description:
+			'Task-oriented recipes — pull models, manage slots, wire up agents, memory, MCP, voice, and images.',
+		tableOfContents: false,
+	}}
+>
+	<p>
+		One task per page, in the order the work usually happens. Each guide assumes
+		a running install (<a href="/docs/getting-started/">start here</a> if you
+		don't have one) and links back to the concept it applies.
+	</p>
+	<SectionPageList section="guides" />
+</StarlightPage>
