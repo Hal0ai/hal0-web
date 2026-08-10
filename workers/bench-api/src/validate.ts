@@ -38,6 +38,9 @@ export interface ParsedRecord {
   hostJson: string;
   flagJson: string | null;
   measuredAt: string;
+  // JSON array of the record's own capability tags, or null when the record
+  // carried none. Kept as the raw record vocabulary — see 0002_caps.sql.
+  capsJson: string | null;
 }
 
 export interface EvalRow {
@@ -97,6 +100,32 @@ function optionalMetric(
     return null;
   }
   return value;
+}
+
+// Capability tags are display metadata, not identity — a malformed or absent
+// caps list must never reject an otherwise-valid record (unlike cell_key or the
+// metrics, which do). So this sanitizes rather than erroring: non-array, or an
+// array with no usable entries, both degrade to null ("no caps").
+//
+// Bounded on both axes even though today's upload path is admin-only: the P4
+// self-serve path in the README inherits this parser, and an unbounded tag list
+// on every record is the cheapest way to bloat D1.
+const MAX_CAPS = 24;
+const MAX_CAP_LEN = 40;
+
+function parseCaps(raw: unknown): string | null {
+  if (!Array.isArray(raw)) return null;
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    const tag = entry.trim();
+    if (tag === "" || tag.length > MAX_CAP_LEN) continue;
+    seen.add(tag);
+    if (seen.size >= MAX_CAPS) break;
+  }
+  // Sorted so two records with the same tags in different order serialize
+  // identically — keeps the column diffable and comparisons cheap.
+  return seen.size ? JSON.stringify([...seen].sort()) : null;
 }
 
 function measuredAtFromRunId(runId: string): string {
@@ -198,6 +227,7 @@ function parseRecordLine(line: string, idx: number, errs: string[]): ParsedRecor
     hostJson: JSON.stringify(host),
     flagJson: flags.length ? JSON.stringify(flags) : null,
     measuredAt: measuredAtFromRunId(runId),
+    capsJson: parseCaps(model.caps),
   };
 }
 

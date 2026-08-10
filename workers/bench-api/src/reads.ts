@@ -44,13 +44,21 @@ interface CurrentCellRow {
   measured_at: string | null;
   flag_json: string | null;
   host_json: string | null;
+  caps_json: string | null;
+}
+
+/** caps_json -> string[]; tolerates NULL, malformed JSON, and non-array payloads. */
+function parseCaps(raw: string | null): string[] {
+  const parsed = safeParse(raw);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((c): c is string => typeof c === "string");
 }
 
 export async function rosterHandler(req: Request, env: Env): Promise<Response> {
   const { results } = await env.DB.prepare(
     `SELECT cell_key, run_id, bundle_id, model_id, quant, lane, kind, depth, config_label,
             decode_ts_med, prefill_ts_med, ttft_ms_p50, ttft_ms_p95, accept_med,
-            measured_at, flag_json, host_json
+            measured_at, flag_json, host_json, caps_json
      FROM current_cells
      ORDER BY model_id, quant, cell_key`,
   ).all<CurrentCellRow>();
@@ -58,6 +66,7 @@ export async function rosterHandler(req: Request, env: Env): Promise<Response> {
   interface ModelGroup {
     model_id: string | null;
     quant: string | null;
+    caps: string[];
     cells: unknown[];
     host: { gpu?: unknown; mem_gb?: unknown };
     bundle_id: string;
@@ -73,12 +82,19 @@ export async function rosterHandler(req: Request, env: Env): Promise<Response> {
       g = {
         model_id: row.model_id,
         quant: row.quant,
+        caps: [],
         cells: [],
         host: { gpu: host.gpu, mem_gb: host.mem_gb },
         bundle_id: row.bundle_id,
       };
       groups.set(key, g);
     }
+    // caps describe the MODEL, not the cell, so they sit on the group. Unlike
+    // host/bundle_id above this is not first-row-wins: a group's first cell may
+    // predate the caps column (NULL) while a later one carries them, and a
+    // model showing no capability tags because of row ordering would read as
+    // "has no capabilities" rather than "not recorded". First non-empty wins.
+    if (g.caps.length === 0) g.caps = parseCaps(row.caps_json);
     g.cells.push({
       cell_key: row.cell_key,
       lane: row.lane,

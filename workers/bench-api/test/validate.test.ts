@@ -146,6 +146,51 @@ describe("validateBundle", () => {
     expect(flagged!.flagJson).toContain("implausible decode_ts_med");
   });
 
+  // caps are display metadata, so every malformed shape must DEGRADE (capsJson
+  // null) rather than reject the record — the inverse of the cell_key/metric
+  // rules tested above.
+  async function capsFor(caps: unknown): Promise<string | null> {
+    const members = await loadFixtureMembers();
+    const records = decodeRecordsJsonl(members);
+    ((records[0].identity as Record<string, unknown>).model as Record<string, unknown>).caps = caps;
+    setRecordsJsonl(members, records.map((r) => JSON.stringify(r)));
+    await rehash(members);
+    const result = await validateBundle(members);
+    return result.records[0].capsJson;
+  }
+
+  it("carries model caps through as a sorted JSON array", async () => {
+    expect(await capsFor(["vision", "coder", "mtp"])).toBe('["coder","mtp","vision"]');
+  });
+
+  it("dedupes repeated caps and trims whitespace", async () => {
+    expect(await capsFor(["coder", " coder ", "coder"])).toBe('["coder"]');
+  });
+
+  it("degrades to null for absent, empty, non-array, and all-unusable caps", async () => {
+    expect(await capsFor(undefined)).toBeNull();
+    expect(await capsFor([])).toBeNull();
+    expect(await capsFor("coder")).toBeNull();
+    expect(await capsFor([1, null, {}, ""])).toBeNull();
+  });
+
+  it("drops over-long tags and bounds the list length", async () => {
+    expect(await capsFor(["ok", "x".repeat(41)])).toBe('["ok"]');
+    const many = Array.from({ length: 40 }, (_, i) => `cap${String(i).padStart(2, "0")}`);
+    expect(JSON.parse((await capsFor(many)) ?? "[]")).toHaveLength(24);
+  });
+
+  it("does not reject a record whose caps are malformed", async () => {
+    const members = await loadFixtureMembers();
+    const records = decodeRecordsJsonl(members);
+    ((records[0].identity as Record<string, unknown>).model as Record<string, unknown>).caps = 42;
+    setRecordsJsonl(members, records.map((r) => JSON.stringify(r)));
+    await rehash(members);
+
+    const result = await validateBundle(members);
+    expect(result.records.length).toBeGreaterThan(0);
+  });
+
   it("rejects with 'unsupported bundle_schema' when bundle_schema is 2", async () => {
     const members = await loadFixtureMembers();
     const manifest = JSON.parse(new TextDecoder().decode(members.get("manifest.json")!));

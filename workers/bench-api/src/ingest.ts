@@ -38,8 +38,9 @@ function recordStatements(env: Env, bundleId: string, records: ParsedRecord[]) {
       `INSERT INTO records (
         cell_key, run_id, bundle_id, model_id, quant, lane, kind, depth, config_label,
         decode_ts_med, prefill_ts_med, ttft_ms_p50, ttft_ms_p95, accept_med, aggregate_ts,
-        identity_json, summary_json, telemetry_json, host_json, flag_json, measured_at, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`,
+        identity_json, summary_json, telemetry_json, host_json, flag_json, measured_at,
+        caps_json, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`,
     ).bind(
       r.cellKey,
       r.runId,
@@ -62,6 +63,7 @@ function recordStatements(env: Env, bundleId: string, records: ParsedRecord[]) {
       r.hostJson,
       r.flagJson,
       r.measuredAt,
+      r.capsJson,
     ),
   );
 }

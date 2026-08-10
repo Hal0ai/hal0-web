@@ -42,12 +42,14 @@ async function insertRecord(opts: {
   configLabel?: string;
   flagJson?: string | null;
   hostJson?: string;
+  capsJson?: string | null;
 }) {
   await env.DB.prepare(
     `INSERT INTO records (
       cell_key, run_id, bundle_id, model_id, quant, lane, kind, config_label,
-      identity_json, summary_json, telemetry_json, host_json, flag_json, measured_at, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{"a":1}', '{"b":2}', '{"c":3}', ?, ?, ?, ?)`,
+      identity_json, summary_json, telemetry_json, host_json, flag_json, measured_at, status,
+      caps_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{"a":1}', '{"b":2}', '{"c":3}', ?, ?, ?, ?, ?)`,
   )
     .bind(
       opts.cellKey,
@@ -62,6 +64,7 @@ async function insertRecord(opts: {
       opts.flagJson ?? null,
       "2026-08-09T01:00:00Z",
       opts.status,
+      opts.capsJson ?? null,
     )
     .run();
 }
@@ -154,6 +157,75 @@ describe("GET /v1/roster", () => {
     expect(flagged?.flagged).toBe(true);
     const unflagged = group!.cells.find((c) => c.run_id === fx.runNew);
     expect(unflagged?.flagged).toBe(false);
+  });
+
+  it("surfaces model caps on the group, not the cell", async () => {
+    const n = ++seq;
+    await insertRecord({
+      cellKey: "sha256:" + hex(0x40000 + n),
+      runId: `run-caps-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId: `caps-model-${n}`,
+      capsJson: '["coder","vision"]',
+    });
+
+    const res = await SELF.fetch("https://api.hal0.dev/v1/roster");
+    const body = await res.json<{ models: { model_id: string; caps: string[] }[] }>();
+    const group = body.models.find((m) => m.model_id === `caps-model-${n}`);
+    expect(group?.caps).toEqual(["coder", "vision"]);
+  });
+
+  // Row order within a group is not guaranteed to put a caps-bearing row first,
+  // so a NULL on the first cell must not decide the whole model has no caps.
+  it("takes the first non-empty caps across a model's cells", async () => {
+    const n = ++seq;
+    const modelId = `mixed-caps-${n}`;
+    await insertRecord({
+      cellKey: "sha256:" + hex(0x50000 + n),
+      runId: `run-nocaps-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId,
+      capsJson: null,
+    });
+    await insertRecord({
+      cellKey: "sha256:" + hex(0x60000 + n),
+      runId: `run-hascaps-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId,
+      capsJson: '["mtp"]',
+    });
+
+    const res = await SELF.fetch("https://api.hal0.dev/v1/roster");
+    const body = await res.json<{ models: { model_id: string; caps: string[] }[] }>();
+    const group = body.models.find((m) => m.model_id === modelId);
+    expect(group?.caps).toEqual(["mtp"]);
+  });
+
+  it("returns an empty caps array for records with no caps", async () => {
+    const res = await SELF.fetch("https://api.hal0.dev/v1/roster");
+    const body = await res.json<{ models: { model_id: string; caps: string[] }[] }>();
+    const group = body.models.find((m) => m.model_id === "qwen3-30b");
+    expect(group?.caps).toEqual([]);
+  });
+
+  it("tolerates malformed caps_json without failing the response", async () => {
+    const n = ++seq;
+    await insertRecord({
+      cellKey: "sha256:" + hex(0x70000 + n),
+      runId: `run-badcaps-${n}`,
+      bundleId: fx.pubBundle,
+      status: "published",
+      modelId: `bad-caps-${n}`,
+      capsJson: "{not json",
+    });
+
+    const res = await SELF.fetch("https://api.hal0.dev/v1/roster");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ models: { model_id: string; caps: string[] }[] }>();
+    expect(body.models.find((m) => m.model_id === `bad-caps-${n}`)?.caps).toEqual([]);
   });
 
   it("sets cache-control on roster responses", async () => {
