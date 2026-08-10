@@ -344,6 +344,13 @@ starlight-theme-select select:hover {
 	color: var(--hal0-fg);
 }
 
+/* comp header cluster carries NO RSS icon (RSS lives in the footer brand
+ * block) — starlight-blog injects one into the header/mobile social row;
+ * hide those, the shared SiteFooter's stays. */
+.social-icons a[href$='/blog/rss.xml'] {
+	display: none;
+}
+
 /* ── version stamp (08 Docs.html `.vernote` + DocFoot) — rendered by
  * the PageTitle override when a page declares `appliesTo`. The dot is
  * the comp's `.dot ready` status (ok green). ── */
@@ -371,16 +378,16 @@ starlight-theme-select select:hover {
 /* ── mobile drawer site nav (01 Unified Chrome, "header — mobile":
  * `.drawer` rows + `.foot` icon row) ──
  * Rendered by the StarlightSidebar override at the top of the sidebar
- * pane; hidden ≥56rem where the docnav in the top bar takes over.
+ * pane; hidden ≥1000px (comp breakpoint) where the docnav takes over.
  * Between Starlight's own 50rem drawer breakpoint and the docnav's
- * 56rem it shows at the top of the regular sidebar, so site links are
+ * 1000px it shows at the top of the regular sidebar, so site links are
  * never unreachable at any width. KB pages never render the block
  * (see the component), so no [data-longform]-only surface changes. */
 
 .hal0-drawer-nav {
 	display: none;
 }
-@media (max-width: 55.99rem) {
+@media (max-width: 62.49rem) {
 	:is([data-docs], [data-blog], [data-longform]) .hal0-drawer-nav {
 		display: flex;
 		flex-direction: column;
