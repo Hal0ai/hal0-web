@@ -27,7 +27,17 @@
 // limit is permanently exhausted. Authenticated requests get 5000/hr
 // per token. The token only needs public-repo read scope.
 
-const CHANNEL_RE = /^\/(stable|nightly|dev)\.json$/;
+// Keep this in step with hal0's `ReleasePolicy.manifest_targets`
+// (src/hal0/release/policy.py): a final tag emits `stable.json` +
+// `preview.json`, an alpha/beta/rc tag emits `preview.json`, and a nightly
+// tag emits `nightly.json`. A channel missing here is NOT a 404 — the
+// request falls through to the `/releases/` static rewrite below and gets
+// the site's HTML 404 page served as `content-type: application/json`,
+// which surfaces to updater clients as a raw JSON parse failure. That was
+// the `preview` bug (Hal0ai/hal0#1531). `scripts/test/releases-proxy.test.mjs`
+// pins this literal; `dev` predates the policy and is kept only so any
+// already-published `dev.json` asset still resolves.
+const CHANNEL_RE = /^\/(stable|preview|nightly|dev)\.json$/;
 const RELEASES_API = "https://api.github.com/repos/Hal0ai/hal0/releases?per_page=10";
 
 function authHeaders(token: string | undefined): Record<string, string> {
