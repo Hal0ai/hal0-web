@@ -49,10 +49,28 @@ test('every hal0 release-policy channel is proxied', async () => {
   }
 });
 
+// Proxying the manifest without its detached Sigstore bundle does not make a
+// channel installable -- it only moves the failure one step later. Both
+// clients fetch the bundle from this same origin and cosign-verify the
+// manifest against it with no bypass: installer/bootstrap.sh via
+// `release_manifest_bundle_url`, and updater.py in
+// `_fetch_verified_release_manifest`. An earlier revision of this file
+// asserted the opposite -- that `/preview.json.bundle` must NOT match -- which
+// would have frozen half the defect in place as intended behaviour.
+test('every channel bundle sibling is proxied too', async () => {
+  const re = await channelRegex();
+  for (const channel of POLICY_CHANNELS) {
+    assert.ok(
+      re.test(`/${channel}.json.bundle`),
+      `/${channel}.json.bundle must be proxied -- cosign verification of the manifest is mandatory, so a channel whose bundle 404s is still uninstallable`,
+    );
+  }
+});
+
 test('the channel regex does not match arbitrary paths', async () => {
   const re = await channelRegex();
   for (const path of [
-    '/preview.json.bundle',
+    '/preview.json.bundle.sig',
     '/preview.json/',
     '/releases/preview.json',
     '/PREVIEW.json',
@@ -67,5 +85,8 @@ test('the regex captures the channel name for the proxy lookup', async () => {
   const re = await channelRegex();
   for (const channel of POLICY_CHANNELS) {
     assert.equal(`/${channel}.json`.match(re)?.[1], channel);
+    // The bundle path must resolve to the same channel capture, so the proxy
+    // annotates it with the same x-hal0-channel header.
+    assert.equal(`/${channel}.json.bundle`.match(re)?.[1], channel);
   }
 });

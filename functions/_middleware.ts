@@ -37,7 +37,16 @@
 // the `preview` bug (Hal0ai/hal0#1531). `scripts/test/releases-proxy.test.mjs`
 // pins this literal; `dev` predates the policy and is kept only so any
 // already-published `dev.json` asset still resolves.
-const CHANNEL_RE = /^\/(stable|preview|nightly|dev)\.json$/;
+//
+// The `.bundle` sibling is NOT optional. Both clients fetch the manifest and
+// then its detached Sigstore bundle from this same origin — see
+// `installer/bootstrap.sh` (`release_manifest_bundle_url`) and
+// `src/hal0/updater/updater.py::_fetch_verified_release_manifest`, where
+// cosign verification of the manifest is mandatory with no bypass. Proxying
+// `<channel>.json` alone moves the failure from "could not download release
+// manifest" to "could not download release manifest signature bundle" and
+// leaves the channel just as uninstallable (Hal0ai/hal0#1531).
+const CHANNEL_RE = /^\/(stable|preview|nightly|dev)\.json(?:\.bundle)?$/;
 const RELEASES_API = "https://api.github.com/repos/Hal0ai/hal0/releases?per_page=10";
 
 function authHeaders(token: string | undefined): Record<string, string> {
@@ -67,6 +76,7 @@ type ProxyOutcome =
 
 async function proxyChannelManifest(
 	channel: string,
+	assetName: string,
 	token: string | undefined,
 ): Promise<ProxyOutcome> {
 	let listResp: Response;
@@ -99,7 +109,7 @@ async function proxyChannelManifest(
 
 	for (const release of releases) {
 		if (release.draft) continue;
-		const asset = release.assets?.find((a) => a.name === `${channel}.json`);
+		const asset = release.assets?.find((a) => a.name === assetName);
 		if (!asset) continue;
 
 		// Use the api.github.com asset endpoint with octet-stream Accept.
@@ -143,7 +153,7 @@ async function proxyChannelManifest(
 			}),
 		};
 	}
-	const reason = `no-asset:${channel}.json:${releases.length}releases`;
+	const reason = `no-asset:${assetName}:${releases.length}releases`;
 	console.warn(`[releases-proxy] ${reason}`);
 	return { ok: false, reason };
 }
@@ -182,7 +192,15 @@ export const onRequest: PagesFunction = async (context) => {
 	if (url.hostname === "releases.hal0.dev") {
 		const channelMatch = url.pathname.match(CHANNEL_RE);
 		if (channelMatch) {
-			const outcome = await proxyChannelManifest(channelMatch[1], context.env.GITHUB_TOKEN);
+			// `channelMatch[0]` is the whole `/name.json[.bundle]` path; strip
+			// the leading slash to get the release asset name verbatim. The
+			// manifest and its bundle are published on the same release, and
+			// the newest-first scan below resolves both to that same tag.
+			const outcome = await proxyChannelManifest(
+				channelMatch[1],
+				channelMatch[0].slice(1),
+				context.env.GITHUB_TOKEN,
+			);
 			if (outcome.ok) return outcome.response;
 			// Fall through to the static placeholder, but annotate why.
 			const rewritten = new URL(context.request.url);
