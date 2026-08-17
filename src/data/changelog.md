@@ -22,7 +22,616 @@ breaking/migrations as callouts — from the cosign-verified tarball, before
 applying. Add those subsections to a version's section to surface them; see
 `scripts/gen_release_notes.py`.
 
-## [Unreleased]
+## [1.0.0-rc.6] — 2026-08-12
+
+The rc.5 validation sweep ran the whole fleet — fresh installs, in-place
+updates, CPU-only and GPU boxes — and filed seventeen findings. rc.6 closes the
+GA blocker that stopped a fresh install from chatting at all (#1827), plus
+eleven more defects that each made hal0 report something untrue: a capability
+slot that said `ready` and then 501'd, a slot command that printed a timeout
+error on an operation that had succeeded, context windows and memory figures
+that did not match reality, model ids that stayed advertised after their slot
+was deleted, and a provisioning phase that reported `ok` while every one of its
+five bundled skills had failed to link.
+
+Two of these were the *detectors* rather than the defects: the post-install
+smoke test skipped its chat probes on every install (#1831), which is why the
+GA blocker shipped in the first place, and the skill-link phase reported success
+unconditionally (#1828). Both now fail loudly.
+
+### Highlights
+
+- **A fresh install can chat again.** The installer-pulled brain model was being
+  capped to a 32,768-token context regardless of what its own slot asked for,
+  which sits below Hermes' hard 64,000-token floor — so the agent refused to
+  answer on a box that had just finished installing successfully. The brain,
+  agent and utility slots now get the 65,536-token window their shipped
+  configuration asks for (#1827).
+- **Capability slots serve their own endpoint on the first try.** A slot created
+  for embedding or reranking — from the CLI, the New-slot modal, a stack apply
+  or the capability wizard — inherits the profile its type implies when nothing
+  else supplies one, so `/v1/embeddings` and `/v1/rerank` stop returning 501
+  while the slot cheerfully reports `ready`. This also repairs the CPU-only
+  install path, where the guided installer's own embed and rerank slots were
+  affected the same way. Slots already on disk are repairable with
+  `hal0 slot edit <name> --profile <profile>`, and `hal0 doctor profiles` now
+  names them (#1830).
+- **Slot commands stop failing on success.** `hal0 slot load`, `unload`,
+  `restart` and `swap` gave up after 10 seconds against a server that budgets up
+  to 180, so any real model load printed a `ReadTimeout` and exited non-zero on
+  an operation that had actually worked. Scripts and CI that checked the exit
+  code were being told the wrong thing (#1832).
+- **The bundled agent skills actually install.** All five shipped skills failed
+  to link on every fresh install — the mirror they link into was root-owned and
+  the provisioning phase, running unprivileged, could not write to it. The phase
+  reported `ok` regardless, so the failure was invisible and the agent simply
+  came up without its skills. The mirror is now writable by the `hal0` group,
+  and a phase that could not link everything reports a warning instead of
+  success (#1828).
+- **The agent's board tools work on a fresh install.** Every board tool the
+  in-chat steward exposes returned 401, because it was still proxying to the
+  Hermes kanban while the dashboard, CLI and REST API had already moved to
+  hal0's own board store. The steward now reads and writes the same store as
+  every other board surface — so it answers about the board you are looking at,
+  rather than a different one (#1829).
+- **Reported numbers match reality.** Slot detail returns the effective context
+  window instead of the raw hardware ceiling (#1835), `GET /v1/models` stops
+  advertising model ids whose slot has been deleted (#1837), `hal0 slot
+  capacity` books a GPU-declared slot's memory as RAM on a box with no usable
+  GPU and reads real container memory instead of silently under-reporting it by
+  roughly a third (#1839), and `hal0 model add` no longer claims high confidence
+  for a capability it guessed from the filename (#1838).
+
+### Added
+
+- `hal0 slot create --profile <profile>` and `hal0 slot edit --profile
+  <profile>` — pin a slot's runtime profile explicitly instead of relying on
+  inference, and repair a profile-less slot that already exists (#1830).
+- `hal0 doctor profiles` gains a drift row that names any embedding or reranking
+  slot running without a profile and prints the exact `hal0 slot edit` command
+  that fixes it (#1830).
+
+### Fixed
+
+- A fresh install's brain, agent and utility slots resolve to the 65,536-token
+  context window their shipped configuration asks for, instead of being capped
+  at 32,768 by a blanket dense-model limit. Below Hermes' hard 64,000-token
+  floor the agent refuses to chat, so a brand-new box that installed cleanly
+  could not hold a conversation. A slot's own configured ceiling now wins over
+  the blanket cap, and a hand-edited ceiling that is not a number degrades
+  gracefully instead of aborting the launch (#1827).
+- Embedding and reranking slots created without an explicit profile no longer
+  load `ready` and then return 501 from their own endpoint. Slot creation falls
+  back to the profile the slot's type implies whenever neither the operator nor
+  the model's stamped defaults supply one — covering every creation path (CLI,
+  dashboard, API, stack apply, capability wizard). The same defect broke the
+  guided installer's embed and rerank slots on CPU-only boxes, because the
+  profile rule required a GPU; it no longer does (#1830).
+- The installer's post-install smoke test actually exercises chat. Its preflight
+  looked for the shipped default model `hal0/agent` in the `GET /v1/models`
+  list, which never advertises virtual ids, so the `chat_completions` and
+  `memory_roundtrip` probes were skipped on every install and a genuinely broken
+  chat path went unreported. The preflight now resolves the model through the
+  by-id route that serves the request, and the memory probe — which has no chat
+  dependency — always runs (#1831).
+- `hal0 slot load`, `hal0 slot unload`, `hal0 slot restart` and `hal0 slot swap`
+  wait for the server's full lifecycle budget instead of timing out after 10
+  seconds. Any model load slower than that printed a `ReadTimeout` and exited 1
+  on an operation the server had completed successfully. `slot create` and
+  `slot rename`, which never block on a health poll, keep the short client
+  timeout. The client budget is now derived from the server's own health-poll
+  and terminate timeouts rather than hardcoded, so a server-side retune carries
+  through instead of silently invalidating the client. `hal0 capability set`,
+  the MCP bridge's lifecycle tools and `update --restart-slots` all get the same
+  treatment, and connect stays bounded at 5s so a half-open daemon still fails
+  fast rather than consuming the whole multi-minute budget (#1832).
+- `GET /api/slots/{name}` returns the effective context window in `ctx_max`
+  rather than the raw ceiling from the slot's config file. The slot list and
+  `/v1/models` were corrected in rc.5; the single-slot detail route — what the
+  dashboard slot page and `hal0 slot show` read — was still reporting a
+  potentially larger number that llama-server never launched with (#1835).
+- `GET /v1/models` stops advertising a deleted slot's model id. The cached
+  listing merged each refresh into the previous one instead of replacing it, so
+  any id ever bound to an LLM slot stayed listed for the life of the API process
+  — clients discovered it, routed to it, and got a hard 404. Eviction now
+  happens on the mutation itself: deleting a slot, rewriting its config, or
+  changing its default model all refresh the catalogue, and the listing
+  re-reads and self-heals rather than waiting for an unrelated slot to become
+  ready. A failed or partial enumeration no longer overwrites a known-good
+  catalogue with an empty one (#1837).
+- `hal0 model add` and the add-from-path API tell the truth about how a model's
+  capability was determined. When a GGUF header carried no pooling type, the
+  capability was guessed from the filename but still reported as high
+  confidence — two byte-identical files could be classified differently purely
+  by name, both claiming certainty. The header is now consulted for further
+  evidence before any filename fallback, a genuine filename-only guess is
+  reported as medium confidence, and a `.gguf` file with no valid GGUF magic
+  still registers (recoverable with `hal0 model rm`) but now surfaces a warning
+  instead of a silent, confident-looking success (#1838).
+- `hal0 slot capacity` reports real memory. A slot configured for a GPU on a box
+  with no usable GPU booked its memory as VRAM that does not exist; it is now
+  booked as RAM, decided by the host's actual GPU capability rather than the
+  slot's declared device. The per-slot memory probe also falls back to the
+  slot's systemd unit when the container runtime probe is unavailable — which it
+  always was from the API process — so figures no longer under-report real usage
+  by roughly 28%. That probe is keyed off how the slot's artefacts are actually
+  named on disk rather than whether it happens to carry an id, which is what
+  made it miss on a standard install. NPU slots keep their existing
+  unified-memory accounting (#1839).
+- All five bundled agent skills link on a fresh install. The mirror at
+  `/etc/hal0/agent-skills` was root-owned while the provisioning phase runs as
+  the service user, so every link failed with `EACCES` — and the phase returned
+  `OK` unconditionally, so nothing reported it. The mirror is now group-writable
+  by `hal0` (setgid, so links planted by any group member keep the shared
+  group), and a phase that recorded link warnings reports `WARN` rather than
+  success (#1828).
+- The brain's board tools no longer return 401 for every call. They were still
+  proxying to the Hermes kanban, which the pinned wheel serves no session token
+  for, while `/api/board/*`, `hal0 board list`, the board page and the event
+  stream had all moved to hal0's own `BoardStore`. All four reads and eleven
+  mutations now resolve the same store as the REST routes — fixing the 401 and,
+  more importantly, removing the divergence where the steward would have
+  answered from a different board than the one on screen (#1829).
+- The dashboard Overview's Services widget lists the companion services that are
+  actually running instead of always claiming there are none. The `ui/` unit
+  test suite existed but no workflow ran it, so it gated nothing; CI now runs it
+  (#1836).
+- The operator-migration callout in `hal0 update` fires at all. `release.json`'s
+  `migrations` list — the panel shown before an update is confirmed — has been
+  empty for every release ever cut, because the extractor matched the heading
+  `Migrations` while every release section writes `Operator migrations`. rc.4
+  and rc.5 both documented mandatory manual steps that no operator was ever
+  shown. Wrapped bullets are also joined now, so each entry keeps its
+  remediation commands instead of being cut at the first line break (#1874).
+- `hal0 doctor` checks the context window behind Hermes' anchor model, and names
+  the slot actually serving it, its ceiling, Hermes' required floor and the
+  command that repairs it. Previously a box whose anchor resolved below the
+  floor simply refused every turn with no explanation. The window is read
+  through `GET /v1/models/{id}`, so a slot reached via the routing fallback
+  chain is measured and named correctly rather than guessed from the model's
+  spelling, and a window hal0 cannot read reports as skipped rather than as a
+  pass (#1867).
+
+### Security
+
+- `/etc/hal0/agents/hermes.env` carries `HAL0_MCP_TOKEN` and was left mode 0644,
+  world-readable, on every box provisioned unprivileged — in practice every
+  box upgraded rather than freshly installed. The mode self-heal was gated on
+  running as root, but provisioning runs as the `hal0` service user, so the one
+  case that needed repair silently did nothing on every reprovision. Fresh
+  installs were always 0600. **Existing boxes are repaired on the next
+  reprovision, not by the update itself** — check with
+  `stat -c '%a' /etc/hal0/agents/hermes.env`, expect `600` (#1876).
+
+### Docs
+
+- The installation guide's Requirements section now lists `curl` and
+  `ca-certificates`, with the `apt-get` command to install them. The documented
+  bootstrap one-liner pipes `curl` into `sudo bash`, so on a minimal image the
+  documented first step died with a bare `curl: command not found` (#1843).
+
+### Audience
+
+Preview-channel operators validating the 1.0 line ahead of GA, and fresh
+installs that want the current build. rc.6 supersedes rc.5 for everyone: rc.5
+cannot chat out of the box on a fresh install (#1827), and its capability slots
+501 their own endpoints unless a profile was supplied by hand (#1830). Boxes on
+the stable channel are not offered this tag.
+
+### Supported upgrades
+
+- `1.0.0-rc.5` → `1.0.0-rc.6` via `hal0 update` (preview channel). The GitHub
+  release asset URL (`https://github.com/Hal0ai/hal0/releases/download/v1.0.0-rc.6/preview.json`)
+  works end-to-end for install and update.
+- `1.0.0-rc.4` / `1.0.0-rc.3` / `1.0.0-rc.2` / `1.0.0-rc.1` → `1.0.0-rc.6`
+  directly, same mechanism.
+- `0.9.8` → `1.0.0-rc.6` in place — re-run the installer or `hal0 update` on the
+  preview channel; the R5 migration set applies (see the
+  [1.0.0 changelog section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100--2026-08-07)).
+- Older than 0.9.8: step through 0.9.8 first.
+
+### Known issues
+
+**An upgraded box can still refuse to chat (#1867).** The #1827 fix makes a
+slot's configured ceiling win over the blanket cap, which repairs a *fresh*
+install with no migration step. It does not reconcile a slot seed the operator
+never chose: a box upgraded from an earlier release whose agent slot carries a
+ceiling below Hermes' 64,000-token floor will keep refusing, even though its
+model advertises a large enough window. `hal0 doctor` now preflights the
+anchor window and names the serving slot, both limits, and the repair
+command — but the update itself does not raise the ceiling; the operator
+still has to run that command. If chat refuses after an in-place upgrade,
+run `hal0 doctor` first.
+
+**The brain's board tools are fixed but the underlying credential is not
+(#1829).** The steward now reads hal0's own board store, so the 401s are gone.
+The pinned `hermes-agent` wheel still ships no `web_dist`, so any surface that
+depends on harvesting a session token from it remains unavailable.
+
+`hal0 update` does not refresh the `hal0` launcher on `PATH`, so after an
+in-place upgrade a shell that resolves `/usr/local/bin/hal0` can keep running
+the previous release — check with `hal0 --version` and re-run the installer if
+it disagrees with the installed tag (#1844). The remaining rc.5 sweep polish
+items are tracked on #1840 (CLI/API) and #1841 (dashboard). Three defects found
+while reviewing this wave's own fixes are deferred: the brain's self-call HTTP
+clients carry the bare-float timeout defect fixed elsewhere here, and one of
+them truncates slot lifecycle waits at 60s (#1873); a stale or missing
+`hardware.json` still makes a real GPU box book VRAM as RAM (#1862); and the
+systemd/podman start subprocesses behind a lifecycle wait are unbounded
+server-side (#1869).
+
+**Installing by the documented one-liner still does not work for this channel
+(#1883).** The `preview.json` channel manifest now serves the real signed
+release manifest — the proxy 404 tracked as #1531 is fixed. But the
+channel-URL path still fails at mandatory manifest verification for every
+channel: `releases.hal0.dev` does not proxy the manifest's sibling cosign
+bundle (`<channel>.json.bundle`, 404), and there is no bypass for signature
+verification. Install and update from the GitHub release asset URL below,
+which remains the working path (#1530, still open, flips at GA). The 0.9.8
+CLI's spurious end-of-update `ConnectError` carries forward, as does the
+rc.1/rc.2 venv case where the passive check does not offer a newer tag and
+`hal0 update --target <version>` is the recovery path (#1715).
+
+**Memory retention on CPU-only installs remains unreliable (#1833, #1834).**
+`hal0 memory status` can report `Writes landing` on a store that has never
+landed a fact, and the hindsight extraction queue has no concurrency cap or
+`max_tokens`, so it can fail to drain on a CPU-only box. Both remain open,
+targeted at the 1.0.x line.
+
+### Operator migrations
+
+- **Profile-less capability slots (#1830):** a slot created under rc.5 or
+  earlier may have been written without a profile and will keep 501ing after
+  the update, because the fix applies at creation time. Run `hal0 doctor
+  profiles` — it names each affected slot and prints the exact
+  `hal0 slot edit <name> --profile <profile>` command to run, then follow with
+  `hal0 slot restart <name>`. Use the command doctor prints, not a guess: an
+  NPU embedding slot repairs to `--profile flm`, not `--profile embedding` —
+  `--profile embedding` (or `reranking`) is only representative of the
+  common case.
+- **Context windows widen on update (#1827):** brain, agent and utility slots
+  relaunch with a 65,536-token window instead of 32,768 and therefore reserve
+  more memory. A bare `hal0 update` does not relaunch slots, so the wider
+  window only takes effect once the operator restarts them — run
+  `hal0 update --restart-slots` or `hal0 slot restart <name>` after updating.
+  On a tightly provisioned box, check `hal0 slot capacity` once slots are
+  restarted. If chat still refuses after the update, the box is carrying an
+  agent slot ceiling below Hermes' 64,000-token floor that this fix does not
+  reconcile — run `hal0 doctor`, which now names the slot and prints the exact
+  `hal0 slot edit` command to raise it (#1867).
+- **World-readable agent token on upgraded boxes (#1876):** the agent env file
+  `/etc/hal0/agents/hermes.env` holds `HAL0_MCP_TOKEN` and was left mode 0644
+  on every box that
+  was provisioned unprivileged, which in practice means every box upgraded
+  rather than freshly installed. Run `stat -c '%a' /etc/hal0/agents/hermes.env`
+  — if it reads `644`, either reprovision the agent
+  (`hal0 agent bootstrap hermes`) or fix it directly: the file is root:root in
+  a root-owned directory, so a non-root operator needs
+  `sudo chmod 600 /etc/hal0/agents/hermes.env`. The update alone does not
+  repair it, because the repair happens during provisioning.
+- **Bundled agent skills on an already-installed box (#1828):** the permission
+  fix and the skill-link phase both live in the installer and the agent
+  provisioning path, not in `hal0 update` — an update alone does not re-run
+  either. Re-run the installer, or reprovision the agent
+  (`hal0 agent bootstrap hermes`), and confirm the skill-link phase reports
+  `ok` rather than `warn`. A box whose skills never linked shows them absent
+  under `/etc/hal0/agent-skills`.
+- **Stale DNAT rules (#1819)** from rc.5, and the **deprecated `extra_args` at
+  the seam (#1759)** / **releases-URL override (#1750)** migrations from rc.4,
+  still apply to boxes coming from an older tag; see the
+  [1.0.0-rc.5 section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100-rc5--2026-08-10).
+
+### Rollback
+
+Release tarballs are immutable and cosign-signed; roll back by re-installing the
+previous tag (`v1.0.0-rc.5`) from its GitHub release. No rc.6 change writes a
+state shape rc.5 cannot read — the new `profile` key on a slot config is one
+rc.5 already understands, and every other fix is re-derived at launch or read
+time. A slot repaired with `hal0 slot edit --profile` keeps working after a
+rollback.
+
+## [1.0.0-rc.5] — 2026-08-10
+
+The validation candidate: every defect the rc.4 fresh-install sweep turned up
+on real hardware, fixed and re-provable. Eleven findings (#1787–#1797) came out
+of that sweep; rc.5 closes all of them, adds the versioned validation kit that
+makes the next sweep compound instead of repeat, and fixes a podman/netavark
+failure mode that could black-hole a slot's published port on any box.
+
+### Highlights
+
+- **The netavark port black hole is detected and repairable.** A slot container
+  that dies without netavark's teardown leaves its DNAT rule behind; nftables is
+  first-match, so that dead rule permanently shadows every later container on
+  that port — the published port answers nothing while the container inside is
+  perfectly healthy, and it survives `podman rm -f`, `systemctl reset-failed`
+  and a fresh `hal0 slot load`. `hal0 doctor all` now carries a `Port DNAT
+  rules` row, `hal0 doctor ports` shows the per-port table, and `hal0 doctor
+  ports --fix` prunes only rules that already route nowhere. The installer also
+  stops the leak at its source by pinning root's runtime dir so container
+  netns survive logout (#1819, refs #1814).
+- **Slot telemetry tells the truth.** llama-server slots launch with
+  `--metrics`, so `/metrics` stops returning 501 and `hal0 slot metrics` shows
+  real request counters and queue depth (#1810). `ctx_max`, `/v1/models`
+  `context_length`/`max_context_window` and the SlotView dashboard now advertise
+  the *effective* context window the runner actually launched with rather than
+  the raw slot-TOML ceiling (#1788).
+- **Fresh installs serve every capability.** Embedding and rerank slots launch
+  with their profile's flags again, so `/v1/embeddings` and `/v1/rerank` stop
+  returning 501 while the slot reports `ready` (#1787) — the single largest
+  fresh-install defect in the rc.4 sweep, and the change that makes seeded
+  profile flags reach the ~93% of registered models that carry no stamped
+  tune.
+- **Profile tuning corrections.** Every seeded profile now requests `-fa auto`
+  instead of forcing `-fa on`, so Flash Attention falls back cleanly when it
+  cannot be scheduled on its layer's device (#1811/#1813). The brain seed moves
+  to `-b 2048 -ub 512` (the small batch cost ~12–14% prefill on CT105 with no
+  decode benefit) and to MiniCPM5's published sampler — `--top-p 0.95`, no
+  `--top-k` (#1815).
+- **Benchmarks can leave the box, deliberately.** `hal0 bench upload <bundle>`
+  and `hal0 bench bundle --upload` publish a result bundle to the bench API
+  behind `HAL0_BENCH_TOKEN`; uploads are content-addressed and idempotent, and
+  records that the publish API would reject are never bundled in the first
+  place (#1816).
+- **The release-candidate validation kit is versioned.** The ad-hoc workflows
+  used to validate rc.4 now live in `tests/release-validation/` as lane briefs,
+  a known-issues list, a regression register seeded with all eleven rc.4
+  findings, box profiles and a report template — so every finding filed in one
+  release becomes a mandatory probe in every release after it (#1817).
+
+### Added
+
+- `hal0 bench upload <bundle>` and `hal0 bench bundle --upload` — publish a
+  benchmark bundle to the bench API that backs
+  [hal0.dev/benchmarks](https://hal0.dev/benchmarks). Admin token from
+  `$HAL0_BENCH_TOKEN` only; deliberately no `--token` flag, since an argv
+  credential is visible in `ps`, shell history and journald (#1816).
+- `hal0 doctor ports` gains a per-port DNAT table and a `--fix` repair path,
+  plus a `Port DNAT rules` row in `hal0 doctor all`. Repair routes through new
+  `prune-dnat`/`check-dnat` verbs on the `hal0-systemctl` seam, which re-derive
+  the chain root-side and refuse any rule whose target IP belongs to a running
+  container (#1819).
+- `tests/release-validation/` — versioned release-candidate validation kit
+  (13 lane briefs, known-issues list, regression register, box profiles, report
+  template) with `.claude/workflows/rc-validate.js` orchestration and the rc.4
+  report backfilled as the comparison baseline (#1817).
+- `hal0 profile list` / `hal0 profile show` — read-only profile inspection from
+  the CLI, previously dashboard- and MCP-only (#1796).
+
+### Fixed
+
+- Slots now launch llama-server with `--metrics`, so `/metrics` stops
+  returning 501 on every slot. `--metrics` was classified as a slot-owned
+  operational flag (`seed_profiles.toml` header comment) but the slot side
+  was never implemented — no typed `SlotConfig` field and nothing emitted
+  it — so `hal0.slots.metrics_collect.llama_metrics()` scraped a 501 on
+  every poll and swallowed it by design, leaving `hal0 slot metrics`
+  showing `Reqs 0` forever (`KV%` worked because it's synthesized from
+  `/slots`, which is on by default). New `SlotConfig.metrics` (default
+  `true`) rides the same trusted `slot_hardware` argv segment as
+  `-ngl`/`--threads`; the endpoint is loopback-only and never proxied by
+  the gateway. `metrics_collect.llama_metrics()` now also logs once at
+  debug per port on a 501 instead of degrading fully silently. Live tok/s
+  is a separate, already-working code path (the dispatcher's streaming
+  instrumentation) and is unaffected either way — this fixes the request
+  counters and queue-depth gauges (#1810).
+- Every seeded profile now requests `-fa auto` instead of forcing `-fa on`
+  (#1811). Seeds are generic templates, and since #1787 they reach ~93% of
+  registered models (the unstamped ones), so a forced Flash Attention kernel
+  is now load-bearing fleet-wide. In llama.cpp b10297+ `auto` runs a startup
+  support probe and falls back to non-FA attention when the FA node cannot be
+  scheduled on its layer's device, while `on` skips the probe entirely and
+  silently leaves FA scheduled off-device. `auto` is promoted to enabled by
+  llama.cpp wherever FA is genuinely required (quantized V cache, tensor
+  split), so no profile loses Flash Attention where it previously had it. A
+  model with a measured win from forcing it can still set `-fa on` in its
+  `defaults.extra_args`.
+- Hermes provision's `smoke_tests` phase now reports `warn` (not a silent
+  `ok`) when any probe records a real failure — `hal0 agent status` and its
+  `--json` surface a dedicated failure/skipped count instead of burying it
+  in the Detail JSON blob. It still never fails the overall install: smoke
+  stays diagnostic. The `chat_completions` and `memory_roundtrip` probes now
+  preflight whether a chat-capable model is actually routable
+  (`model.default` in `config.yaml` cross-checked against the live gateway
+  model list) and report `skipped: no chat model loaded` instead of burning
+  their timeout on a doomed request — install-time smoke runs before any
+  model has ever been loaded, so those two probes were guaranteed to "fail"
+  for a reason that was never a real regression. (#1793)
+- Slot `ctx_max`, `/v1/models` `context_length`/`max_context_window`, and the
+  SlotView dashboard now advertise the EFFECTIVE context window llama-server
+  actually launched with, instead of the raw slot-TOML ceiling — a stale,
+  potentially larger number under the v1.0 model-owns-context-size split.
+  Clients that sized requests off the advertised ceiling could overrun the
+  real window and get truncated/rejected completions (#1788).
+- Embedding and rerank slots launch with their profile's flags again, so
+  `/v1/embeddings` and `/v1/rerank` stop returning 501 on a fresh install
+  while the slot reports `ready`. The v1.0 flags-ownership redesign made a
+  model's materialized `defaults` the whole launch tune, but nothing on the
+  fresh-install path stamps them — `hal0 model scan`, `hal0 model pull` and
+  the capability apply all register models with `defaults = null`, so both
+  the retired profile segment and the #1636 divergence overlay stayed
+  silent. The launch argv now carries a `slot_profile_template` segment for
+  exactly that case, layered *below* the model's own `extra_args` (a
+  template is a floor, never an override) and screened like every other
+  free-form source. A model that carries tune text — stamped or
+  hand-authored — is untouched (#1787).
+- The hal0-brain steward gates native tool calls on what the runner can
+  actually do instead of on the runner image's identity, so a slot on any
+  other image stops silently dropping `tools` and answering live-state
+  questions from invention. When tools genuinely aren't available the
+  steward now says so rather than improvising (#1789).
+- A GPU-less box no longer installs a brain model it cannot load. The AMD
+  probe was deriving `vulkan_capable` from host sysfs that an unprivileged
+  LXC can see without any passed-through render node, so a CPU-only install
+  picked a ROCmFPX quant whose custom GGML tensor types SIGSEGV stock
+  llama.cpp. `vulkan_capable` now requires a real render node, and the
+  launch path refuses a ROCmFPX build on a non-ROCmFPX runner with a 422
+  instead of letting the container crash-loop (#1790).
+- A crash-looping slot stops lying about its own lifecycle: it reports
+  `error` with the systemd result and recovery command instead of an
+  eternal `warming`, a start-limit-hit unit is cleared before `start`/
+  `restart` so `hal0 slot load` recovers first try, and `hal0 slot swap`
+  persists the requested model before teardown so a wedged slot can no
+  longer relaunch the old one (#1791, refs #1424).
+- Memory retains that arrive before any chat model is loaded no longer
+  dead-letter for good. `hal0 memory status` reports `waiting — no chat
+  model loaded` instead of `FAILING`, and once an extraction-capable slot
+  resolves, previously failed ops are retried automatically under a bounded
+  sweep (#1792).
+- Memory recall falls back to the raw retained documents when fact
+  extraction has dropped a literal value, so a stored marker or ID stays
+  recallable instead of surfacing only meta-facts. Document hits are tagged
+  with their provenance and augment — never displace — extracted facts. A
+  durable fix also needs server-side content search in the memory engine;
+  that gap is tracked on the issue (#1794).
+- Hermes integration polish: the unit only claims the dashboard is reachable
+  when its frontend actually shipped, the provisioner accepts the session
+  hook it installs, the bundled plugin declares a valid kind, and
+  `GET /v1/models/{id}` resolves `hal0/*` virtuals so every session stops
+  logging a `dispatch.no_route` before falling back (#1795).
+- CLI and API polish sweep — `hal0 doctor` summary reflects its own
+  warnings, `hal0 update --check` stops rendering a placeholder manifest as
+  a real target, `system-info` no longer reports host CPU topology inside a
+  container, `model add` derives ids from the filename and classifies
+  rerankers correctly, `hal0 profile list/show` lands, the MCP connect URL
+  carries its transport suffix and reports the hal0 version, and the bare
+  `/health`, `/openapi.json`, `/docs` and `/redoc` paths redirect to their
+  `/api` equivalents instead of returning the dashboard HTML (#1796).
+- Dashboard polish sweep — honest bench-worker liveness, a populated
+  version field in Settings, GPU and NPU telemetry gated on the box actually
+  having compute access rather than showing the host's, no more empty
+  interpolations in the Benchmarks header, correct bank-count
+  pluralization, and accessible names on the nav rail (#1797).
+- The brain seed profile no longer ships a Qwen-family sampler on a MiniCPM5
+  model: `-b 512 -ub 256` → `-b 2048 -ub 512` (the small batch cost ~12–14%
+  prefill throughput on ROCm across two independent measurement windows, with
+  no decode benefit), `--top-p 0.9` → `0.95`, and `--top-k 20` dropped —
+  matching MiniCPM5-1B's published no-think recommendation. These are
+  server-level defaults every brain request inherits unless the caller
+  overrides (#1815, refs #1811).
+- The installer's steward copy matches how the brain actually behaves. Since
+  runner `ade07ba` the brain models are native tool-callers, so the interactive
+  lead-in, both skip notices and `SKIP_NOTICE` no longer claim the steward
+  "cannot call tools on its own" or frame the agent model as a hard requirement
+  for tool calling. The post-skip hint is now the command that actually works
+  (`hal0 slot load agent --model <id>` — the bare form bails to OFFLINE on a
+  model-less slot) (#1784).
+- The FastFlowLM skip warning no longer claims an "Ubuntu .deb only" limit that
+  the script's own distro resolution contradicts — upstream ships SHA-pinned
+  per-distro artefacts for ubuntu24.04/25.10/26.04 and debian13. The "no agent
+  model fits this box" notice derives its floor from the curated ladder via a
+  new `--floor` mode on `agent_model.py` instead of hardcoding `~15 GB` in bash
+  (#1785).
+- `installer/README.md` is back in sync with `install.sh`: all 16 `ui_step`
+  banners in the right order, the previously omitted steward/agent model pull,
+  Node.js toolchain, ComfyUI model share, bundle-picker manifests and agent
+  skills, the six first-run/model-pull env knobs plus `HF_TOKEN`, and the
+  corrected claim that `hal0-api` runs as `User=hal0` with privileged
+  operations routed through the `hal0-systemctl`/`hal0-update` sudo seams
+  (#1786).
+
+### Docs
+
+- `docs/getting-started/index.mdx` and `docs/concepts/slots.mdx` carry the
+  presentation hooks hal0.dev needs (`## Sections` + `<DocsSectionCards />`,
+  and an `appliesTo: v1.0` stamp). The website mirrors `docs/<section>/` with
+  `rsync --delete`, so anything added web-side is erased on the next sync;
+  these hooks keep the site's section grid and version stamp alive without
+  pulling web dependencies into this repo (#1812).
+
+### Audience
+
+Preview-channel operators validating the 1.0 line ahead of GA, and fresh
+installs that want the current build. This is the release candidate that clears
+the rc.4 fresh-install findings on real hardware — it is the recommended pre-GA
+validation target, and it supersedes rc.4 for anyone hitting 501s on
+`/v1/embeddings`, `/v1/rerank` or `/metrics`. Boxes on the stable channel are
+not offered this tag.
+
+### Supported upgrades
+
+- `1.0.0-rc.4` → `1.0.0-rc.5` via `hal0 update` (preview channel). The GitHub
+  release asset URL (`https://github.com/Hal0ai/hal0/releases/download/v1.0.0-rc.5/preview.json`)
+  works end-to-end for install and update.
+- `1.0.0-rc.3` / `1.0.0-rc.2` / `1.0.0-rc.1` → `1.0.0-rc.5` directly, same
+  mechanism.
+- `0.9.8` → `1.0.0-rc.5` in place — re-run the installer or `hal0 update` on
+  the preview channel; the R5 migration set applies (see the
+  [1.0.0 changelog section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100--2026-08-07)).
+- Older than 0.9.8: step through 0.9.8 first.
+
+### Known issues
+
+The 0.9.8 CLI's spurious end-of-update `ConnectError` (the pre-1.0 client dies
+when the apply restarts hal0-api under its status poll, even though the update
+succeeds — verify with `hal0 --version`) and the first-boot
+`unattended-upgrades` dpkg race (#1584) carry forward. A box still on rc.1/rc.2
+whose venv predates #1663 is not *offered* a newer tag by the passive check —
+`hal0 update --target <version>` is the recovery path (#1715). Literal memory
+recall still leans on a client-side document fallback; the durable fix needs
+server-side content search in the memory engine and is tracked on #1794.
+
+### Operator migrations
+
+- **Stale DNAT rules (#1819):** a box that has been running slots across a root
+  SSH logout may already carry orphaned netavark DNAT rules. Run `hal0 doctor
+  ports` after updating; if it reports shadowed ports, `hal0 doctor ports --fix`
+  prunes them. New installs get the runtime-dir pin that prevents the leak.
+- **Deprecated `extra_args` at the seam (#1759)** and the **releases-URL
+  override (#1750)** migrations from rc.4 still apply to boxes coming from
+  rc.3 or earlier; see the
+  [1.0.0-rc.4 section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100-rc4--2026-08-09).
+- The R5 operator-run migrators (slot-flag fold, id-keying) are unchanged from
+  rc.1.
+
+### Rollback
+
+Release tarballs are immutable and cosign-signed; roll back by re-installing
+the previous tag (`v1.0.0-rc.4`) from its GitHub release. No rc.5 change writes
+a state shape rc.4 cannot read — the new `SlotConfig.metrics` field defaults to
+`true` and is ignored by an older daemon, and the profile-flag corrections are
+re-derived from the shipped seeds on every launch.
+
+## [1.0.0-rc.4] — 2026-08-09
+
+### Highlights
+
+- **Privileged-seam hardening.** The `hal0-systemctl` root wrapper now
+  allow-lists the *content* of everything it writes — systemd drop-ins
+  (#1718), quadlet bodies with the raw `write-unit` verb removed (#1748), and
+  `PodmanArgs=` pinned to the flags providers emit, closing a `--runtime`
+  host-exec path (#1759). The update staging path closes a verify→extract
+  TOCTOU (root-only stage dir + digest pinned to the extraction handle, #1745),
+  reaps orphaned staging/quarantine trees (#1755), never dereferences symlinks
+  when applying ownership (#1743), and only trusts a root-owned config for the
+  releases-URL override (#1750). Slot flag denylisting canonicalizes the
+  `--flag=value` form (#1746) and rejects malformed shell quoting at save time
+  (#1737/#1749).
+- **Fresh-install & update robustness.** The installer waits on the dpkg/apt
+  lock instead of dying (#1733), runs AppArmor remediation before the podman
+  preflight gate (#1728), preflights git for Hermes (#1727), and applies the
+  model-layout migration as its final model step (#1732). An up-to-date
+  `hal0 update` now converges an outstanding v1.0 profile-catalog reset instead
+  of going silent (#1585/#1757); staged trees get their perms normalized after
+  extraction (#1725); every `hal0.toml` write goes through one serialized
+  read-modify-write path (#1724).
+- **Capabilities & settings UI.** A unified **AI Capabilities** page (TTS, STT,
+  embeddings, reranking, image generation, NPU) with a canonical rerank slot
+  (#1747), a memory reranker model picker (#1781), and per-panel probe-failure
+  surfacing instead of a silent grey Save (#1774).
+- **Dashboard redesign.** The main and Benchmarks dashboards now share the
+  hal0.dev design-system chrome (#1764/#1768), with benchmark trigger/config/
+  outcomes/regressions surfaced (#1744) and assorted tile/row polish
+  (#1729/#1779/#1780/#1782).
+- **Benchmark system overhaul.** Adopts GuideLLM, llama-benchy and
+  tool-eval-bench (#1765), adds record telemetry + regression journaling
+  (#1766) and shareable result bundles (#1758), folds the shell harness into
+  Python behind a validate-and-exec `benchctl` shim (#1761), and makes the
+  measurements truthful and the pipeline reliable (#1736 and follow-ups).
+- **Slots.** Per-slot profile-flag divergence overlay with a cross-device
+  picker (#1639), and a live slot now restarts when apply changes config but
+  not the model (#1770).
+- **Docs.** Quick-start and migration guide rewritten for v1.0 (#1731).
 
 ### Added
 
@@ -30,6 +639,21 @@ applying. Add those subsections to a version's section to surface them; see
 
 ### Security
 
+- The `hal0-systemctl write-quadlet` allow-list now pins `PodmanArgs=` to the
+  exact flags hal0's providers emit — `--group-add <gid>`, `--security-opt
+  <token>` (GPU/llama-server), `--ipc <mode>` (comfyui), `--ulimit
+  <name=v[:v]>` (flm/NPU) — instead of accepting any non-empty value (#1759).
+  Podman's quadlet generator copies `PodmanArgs=` verbatim into the generated
+  root unit's `podman run` argv, so a persistent flag like `--runtime <path>`
+  or `--hooks-dir <dir>` made podman exec an attacker-named binary **as root
+  with no container involved** — a direct host-exec primitive reachable from
+  the unprivileged `hal0` account, exactly what #1740 set out to close. All
+  shipped providers keep loading; only out-of-list flags are refused. **Minor
+  breaking (deprecated feature):** the free-form `extra_args` escape hatch
+  (already logging `container.extra_args_deprecated`) is honoured on a
+  hal0-service install only for flags in that list — an out-of-list flag now
+  makes the slot refuse at the root seam. Move those to typed Quadlet keys in a
+  `hal0-slot@<token>.container.d/` drop-in.
 - The privileged update stage no longer downloads, verifies and extracts the
   release tarball out of the service-writable `/var/lib/hal0/cache/<version>/`
   (#1738). That directory is `hal0:hal0` `0o2775` with no sticky bit, and the
@@ -53,6 +677,12 @@ applying. Add those subsections to a version's section to surface them; see
   directories, which accumulated one whole install tree per retry and were
   never cleaned up, are now reaped: the newest three are kept for recovery and
   anything older than 30 days goes.
+- The root-only `.stage-<version>-XXXXXX` staging directory (#1738) is now also
+  reaped on the next apply. Its teardown runs in a `finally`, which a SIGKILL /
+  OOM / power-cut skips, leaking a full release tarball under the root
+  filesystem per killed stage. Orphans older than an hour — comfortably above
+  the 30-minute privileged stage timeout, so a live concurrent stage is never
+  touched — are swept. (#1754)
 - The privileged `hal0-systemctl` wrapper now allow-lists the *content* of the
   two systemd drop-ins it writes as root (`write-gateway-dropin`,
   `write-hindsight-dropin`). Both verbs take their whole payload on stdin, and
@@ -69,10 +699,83 @@ applying. Add those subsections to a version's section to surface them; see
   loud error and nothing is written. The wrapper persists the validated
   reconstruction rather than raw stdin, and a new side-effect-free
   `check-dropin <gateway|hindsight>` verb dry-runs the allow-list.
+- The same wrapper's `write-quadlet` verb now allow-lists its body too, and the
+  raw-stdin `write-unit` verb is **removed**. A `.container` file is not just a
+  container spec — podman's quadlet generator copies its `[Unit]`, `[Service]`
+  and `[Install]` sections verbatim into the generated system unit — so an
+  unvalidated body meant a process compromised as the unprivileged `hal0`
+  account could write `[Service] ExecStartPre=/bin/sh -c '…'`, then use the
+  wrapper's own `daemon-reload` + `start` verbs for an unconditional root exec.
+  The root side now accepts only the sections, directive keys and value shapes
+  the one renderer (`_render_quadlet_from_plan`) emits, in that order, each at
+  most once, and writes its own validated reconstruction. `write-unit` had no
+  producer left after the Quadlet migration and no render contract to
+  allow-list against, so it was deleted rather than guessed at. A new
+  side-effect-free `check-quadlet [<slot-id>]` verb dry-runs the allow-list.
+  **Scope, stated honestly:** this closes the direct host-side exec primitive;
+  it does not make an `hal0`-account compromise non-root-equivalent, because
+  slots run under rootful podman and a slot's `[Container]` section
+  legitimately carries config-derived `Image=`/`Volume=`/`AddDevice=`/
+  `PodmanArgs=`/`Exec=` values. Containing *that* means running slots rootless
+  or pinning mount roots.
 
 ### Fixed
 
 - Enabling the rerank capability now creates/loads the `rerank` slot the dispatcher actually routes `/v1/rerankings` to (was `embed-rerank`, which nothing routed to); `embed-rerank` resolves as an alias.
+- `hal0 update` on an already-current box now converges an outstanding one-shot v1.0 profile-catalog reset instead of printing "nothing to apply" and hiding it (#1585). The reset rides `commit()`, but a box updated 0.9.8→1.0 ran commit under the *old* daemon, which had no reset — so it landed converged-except-for-this and then went silent. `/api/updates/check` now carries a read-only `profile_reset` snapshot, and a new local `POST /api/updates/converge-profiles` runs the reset with no download or swap. The up-to-date CLI path consults the snapshot: it converges (prompting or honoring `--yes` for the consent-needing case), converges silently when there's nothing to lose, and otherwise reports the reset as outstanding and exits 2 (up to date, convergence outstanding) rather than exiting 0 in silence.
+
+### Audience
+
+Preview-channel operators validating the 1.0 line ahead of GA, and fresh
+installs that want the current build. This is the release-candidate carrying
+the privileged-seam hardening cluster (#1738/#1740/#1750/#1759); it is the
+recommended pre-GA validation target. Boxes on the stable channel are not
+offered this tag.
+
+### Supported upgrades
+
+- `1.0.0-rc.3` → `1.0.0-rc.4` via `hal0 update` (preview channel). The GitHub
+  release asset URL (`https://github.com/Hal0ai/hal0/releases/download/v1.0.0-rc.4/preview.json`)
+  works end-to-end for install and update.
+- `1.0.0-rc.2` / `1.0.0-rc.1` → `1.0.0-rc.4` directly, same mechanism.
+- `0.9.8` → `1.0.0-rc.4` in place — re-run the installer or `hal0 update` on
+  the preview channel; the R5 migration set applies (see the
+  [1.0.0 changelog section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100--2026-08-07)).
+  The profile-catalog reset that used to defer silently on this transition now
+  converges on the first post-update `hal0 update` (#1585).
+- Older than 0.9.8: step through 0.9.8 first.
+
+### Known issues
+
+The 0.9.8 CLI's spurious end-of-update `ConnectError` (the pre-1.0 client dies
+when the apply restarts hal0-api under its status poll, even though the update
+succeeds — verify with `hal0 --version`) and the first-boot
+`unattended-upgrades` dpkg race (#1584) carry forward. A box still on rc.1/rc.2
+whose venv predates #1663 is not *offered* a newer tag by the passive check —
+`hal0 update --target <version>` is the recovery path (#1715). The rc.1
+profile-catalog-defer item is resolved this release (#1585).
+
+### Operator migrations
+
+- **Releases-URL override (#1750):** a `file://` `HAL0_RELEASES_URL` is no
+  longer accepted from the service-owned `/etc/hal0/api.env` — put it in the
+  root-owned `/etc/hal0/update.conf` (`root:root 0644`) instead. `https://`
+  overrides in `api.env` are unchanged, so boxes using the GitHub asset URL
+  need no action; only `file://`-staging boxes move the line.
+- **Deprecated `extra_args` at the seam (#1759):** a slot whose deprecated
+  free-form `extra_args` carries a `podman run` flag outside
+  `--group-add`/`--security-opt`/`--ipc`/`--ulimit` is now refused at the root
+  seam on a hal0-service install. Move those flags to typed Quadlet keys in a
+  `hal0-slot@<token>.container.d/` drop-in. Shipped providers are unaffected.
+- The R5 operator-run migrators (slot-flag fold, id-keying) are unchanged from
+  rc.1.
+
+### Rollback
+
+Release tarballs are immutable and cosign-signed; roll back by re-installing
+the previous tag (`v1.0.0-rc.3`) from its GitHub release. No rc.4 change writes
+a state shape rc.3 cannot read — the profile-catalog reset stamps the same
+`schema_version = 2` rc.3's commit path already used.
 
 ## [1.0.0-rc.3] — 2026-08-09
 
