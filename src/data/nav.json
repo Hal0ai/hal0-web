@@ -94,6 +94,11 @@
         {
           "label": "changelog",
           "href": "/changelog"
+        },
+        {
+          "label": "releases",
+          "href": "https://github.com/Hal0ai/hal0/releases",
+          "external": true
         }
       ]
     },
@@ -126,6 +131,14 @@
         {
           "label": "benchmarks",
           "href": "/benchmarks/"
+        },
+        {
+          "label": "profiles",
+          "href": "/profiles"
+        },
+        {
+          "label": "submit a profile",
+          "href": "/profiles/submit"
         },
         {
           "label": "roadmap",
