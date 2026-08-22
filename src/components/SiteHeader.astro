@@ -83,6 +83,29 @@ const hostOf = (href: string) => {
           <path d="M13.5 9.8A6 6 0 0 1 6.2 2.5 6 6 0 1 0 13.5 9.8Z" />
         </svg>
       </button>
+      <!--
+        Discourse SSO auth affordance — bell + avatar (comp: "Header").
+        Anchor only; stays [hidden] (renders nothing) until the client
+        script confirms a signed-in session via /api/auth/session, per
+        the signed-out chrome staying byte-identical to today's. The
+        forum's origin is deliberately NOT baked into this markup or the
+        script below (it comes back from /api/auth/session's `forum_url`
+        field at runtime instead): the forum's nav entry is still hidden
+        in nav.json pre-launch, and a chrome-consistency test pins that no
+        static page may reveal that hostname until that flips.
+      -->
+      <div class="hdr-auth desk" id="hdr-auth" hidden>
+        <a class="iconbtn hdr-bell" id="hdr-auth-bell" href="#" aria-label="Notifications">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 1.5a4 4 0 0 0-4 4v2.3c0 .5-.16 1-.47 1.4L2.5 10.7c-.5.65-.04 1.6.78 1.6h9.44c.82 0 1.28-.95.78-1.6l-1.03-1.5a2.3 2.3 0 0 1-.47-1.4V5.5a4 4 0 0 0-4-4Z" />
+            <path d="M6.3 13.5a1.9 1.9 0 0 0 3.4 0" />
+          </svg>
+          <span class="pip" id="hdr-auth-pip" hidden></span>
+        </a>
+        <a class="hdr-avatar" id="hdr-auth-avatar" href="#" aria-label="Your account">
+          <img id="hdr-auth-avatar-img" width="22" height="22" alt="" />
+        </a>
+      </div>
       <button class="iconbtn hdr-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-drawer" id="site-drawer-toggle">
         <svg class="icon-menu" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
           <path d="M2 4.5h12M2 8h12M2 11.5h12" />
@@ -129,6 +152,53 @@ const hostOf = (href: string) => {
 <style>
   .is-hidden {
     display: none;
+  }
+
+  /* Discourse SSO bell + avatar — self-contained here rather than pulled
+     from site-data.css's inert `.avatar`/`.pip` specimens, since this is
+     the only place in the header that needs them. Reuses the same token
+     aliases (`--accent`, `--fg-3`, `--line`, `--rad-sm`) site.css exposes
+     via the `.site` class on <body>, which every page wrapping this
+     component carries. */
+  .hdr-auth {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hdr-auth[hidden] {
+    display: none;
+  }
+  .hdr-bell {
+    position: relative;
+  }
+  .hdr-bell .pip {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent, #ffb000);
+    box-shadow: 0 0 6px var(--accent, #ffb000);
+  }
+  .hdr-bell .pip[hidden] {
+    display: none;
+  }
+  .hdr-avatar {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: var(--rad-sm, 4px);
+    border: 1px solid var(--line, #262626);
+    overflow: hidden;
+    background: var(--bg-3, #1c1c1c);
+  }
+  .hdr-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 </style>
 
@@ -221,5 +291,115 @@ const hostOf = (href: string) => {
     sync();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', sync, { passive: true });
+  })();
+</script>
+
+<script>
+  // Discourse SSO auth affordance. Signed-out: does nothing, #hdr-auth
+  // stays [hidden] and the chrome is byte-identical to before this
+  // shipped. Signed-in: unhides the bell + avatar, points them at the
+  // forum, and polls /api/forum/notifications for the unread pip.
+  //
+  // Silent re-auth: if /api/auth/session 401s but this browser has
+  // signed in here before (localStorage 'hal0:seen-session'), we fire a
+  // background `fetch('/api/auth/login?prompt=none&...', {credentials:
+  // 'include', redirect:'follow'})`. The browser follows the full
+  // hal0.dev → forum → hal0.dev redirect chain and applies each hop's
+  // Set-Cookie normally (no iframe, so no X-Frame-Options concern); we
+  // just re-check /api/auth/session afterwards rather than trying to read
+  // the outcome off the fetch response. A miss clears the hint so we
+  // stop retrying on every future page load.
+  (() => {
+    const container = document.querySelector<HTMLElement>('#hdr-auth');
+    if (!container) return;
+    const bell = document.querySelector<HTMLAnchorElement>('#hdr-auth-bell');
+    const pip = document.querySelector<HTMLElement>('#hdr-auth-pip');
+    const avatarLink = document.querySelector<HTMLAnchorElement>('#hdr-auth-avatar');
+    const avatarImg = document.querySelector<HTMLImageElement>('#hdr-auth-avatar-img');
+    const SEEN_KEY = 'hal0:seen-session';
+
+    interface SessionResponse {
+      signedIn: boolean;
+      username?: string;
+      avatar_url?: string;
+      forum_url?: string;
+    }
+
+    const rememberSeen = () => {
+      try {
+        localStorage.setItem(SEEN_KEY, '1');
+      } catch {
+        /* no storage available — session still renders for this page load */
+      }
+    };
+    const forgetSeen = () => {
+      try {
+        localStorage.removeItem(SEEN_KEY);
+      } catch {
+        /* no storage available */
+      }
+    };
+    const hasSeenSession = (): boolean => {
+      try {
+        return localStorage.getItem(SEEN_KEY) === '1';
+      } catch {
+        return false;
+      }
+    };
+
+    const fetchSession = async (): Promise<SessionResponse | null> => {
+      try {
+        const resp = await fetch('/api/auth/session', { credentials: 'same-origin' });
+        if (!resp.ok) return null;
+        return (await resp.json()) as SessionResponse;
+      } catch {
+        return null;
+      }
+    };
+
+    const silentLogin = async (): Promise<void> => {
+      const returnPath = location.pathname + location.search;
+      try {
+        await fetch(`/api/auth/login?prompt=none&return=${encodeURIComponent(returnPath)}`, {
+          credentials: 'include',
+          redirect: 'follow',
+        });
+      } catch {
+        /* silent check failed to even round-trip — treated as signed-out below */
+      }
+    };
+
+    const refreshNotifications = async () => {
+      if (!pip) return;
+      try {
+        const resp = await fetch('/api/forum/notifications', { credentials: 'same-origin' });
+        if (!resp.ok) return;
+        const data = (await resp.json()) as { unread_count?: number };
+        pip.hidden = !(typeof data.unread_count === 'number' && data.unread_count > 0);
+      } catch {
+        /* transient network error — leave the pip as-is rather than flash it */
+      }
+    };
+
+    const applySession = (session: SessionResponse) => {
+      if (!session.username) return;
+      const forumUrl = (session.forum_url || '').replace(/\/$/, '');
+      if (avatarImg && session.avatar_url) avatarImg.src = session.avatar_url;
+      if (forumUrl && avatarLink) avatarLink.href = `${forumUrl}/u/${encodeURIComponent(session.username)}`;
+      if (forumUrl && bell) bell.href = `${forumUrl}/u/${encodeURIComponent(session.username)}/notifications`;
+      container.hidden = false;
+      rememberSeen();
+      void refreshNotifications();
+    };
+
+    (async () => {
+      let session = await fetchSession();
+      if (!session?.signedIn && hasSeenSession()) {
+        await silentLogin();
+        session = await fetchSession();
+        if (!session?.signedIn) forgetSeen();
+      }
+      if (session?.signedIn) applySession(session);
+    })();
   })();
 </script>

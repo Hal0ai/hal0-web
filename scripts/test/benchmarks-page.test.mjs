@@ -9,7 +9,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 
-const pageUrl = new URL('../../dist/benchmarks/index.html', import.meta.url);
+// dist/client/ — see chrome-consistency.test.mjs's note on the adapter's
+// client/server output split.
+const pageUrl = new URL('../../dist/client/benchmarks/index.html', import.meta.url);
 const built = await access(pageUrl).then(() => true, () => false);
 
 async function loadPage() {

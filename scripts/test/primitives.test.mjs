@@ -11,9 +11,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access, readdir } from 'node:fs/promises';
 
-const dist = new URL('../../dist/', import.meta.url);
-const distAstro = new URL('../../dist/_astro/', import.meta.url);
-const indexHtml = new URL('../../dist/index.html', import.meta.url);
+// dist/client/ — see chrome-consistency.test.mjs's note on the adapter's
+// client/server output split.
+const dist = new URL('../../dist/client/', import.meta.url);
+const distAstro = new URL('../../dist/client/_astro/', import.meta.url);
+const indexHtml = new URL('../../dist/client/index.html', import.meta.url);
 
 const built = await access(indexHtml).then(() => true, () => false);
 
