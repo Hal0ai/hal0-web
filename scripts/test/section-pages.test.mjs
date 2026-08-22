@@ -100,9 +100,13 @@ test('every DOCS_FORUM_PAGES entry is covered by its section listing', () => {
 });
 
 test('DOCS_FORUM_PAGES hrefs match docs-redirects.json for the same path', () => {
+	// docs-redirects.json's keys carry a trailing slash — hal0's
+	// redirect_map.py's own canonical form (see astro.config.mjs's banner
+	// comment on `docsRedirects`) — while DOCS_FORUM_PAGES' `id` field does
+	// not, so the lookup needs one added back.
 	for (const p of DOCS_FORUM_PAGES) {
-		const redirect = REDIRECTS[`/${p.id}`];
-		assert.ok(redirect, `docs-redirects.json missing an entry for /${p.id}`);
-		assert.equal(redirect, p.href, `href drift for /${p.id}`);
+		const redirect = REDIRECTS[`/${p.id}/`];
+		assert.ok(redirect, `docs-redirects.json missing an entry for /${p.id}/`);
+		assert.equal(redirect, p.href, `href drift for /${p.id}/`);
 	}
 });

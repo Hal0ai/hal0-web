@@ -7,6 +7,7 @@
     "start": "astro dev",
     "prebuild": "node scripts/sync-changelog.mjs && node scripts/sync-bench.mjs && node scripts/sync-profiles.mjs && node scripts/build-og.mjs",
     "build": "astro build",
+    "postbuild": "node scripts/patch-vercel-docs-redirects.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "sync:changelog": "node scripts/sync-changelog.mjs",

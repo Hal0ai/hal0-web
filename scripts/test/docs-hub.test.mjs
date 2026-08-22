@@ -46,15 +46,17 @@ const vercelConfig = built
 
 function isVercelRedirect(href) {
 	// The adapter compiles astro.config.mjs's `redirects` entries to an
-	// EXACT-match regex with no trailing slash (see the `/kb` redirect's
-	// comment in astro.config.mjs) — but Vercel itself normalizes a
-	// trailing-slash request down to its bare form before route matching
-	// runs (no explicit `trailingSlash` setting in .vercel/output/config.json,
-	// so that's the platform default), so a link like
-	// `/docs/getting-started/install/` still 301s in production even though
-	// only `^/docs/getting-started/install$` appears here. Match both forms
-	// so this check models what actually happens on Vercel, not just the
-	// literal regex.
+	// EXACT-match regex with no trailing-slash leniency (see the `/kb`
+	// redirect's comment in astro.config.mjs) — a bare `href.endsWith('/')`
+	// link into a redirect-only path like `/docs/getting-started/install/`
+	// would otherwise read as dead here (and 404 for real, on Vercel: it
+	// does NOT normalize away a request's trailing slash before matching
+	// custom routes). scripts/patch-vercel-docs-redirects.mjs's `postbuild`
+	// hook patches the forum.hal0.dev redirect routes to `/?$` so both
+	// forms match — this still also probes the trailing-slash-stripped
+	// form as a fallback, so this check keeps working even against an
+	// unpatched build (e.g. `npm run build -- --no-postbuild`-style local
+	// runs) instead of silently trusting the patch always ran.
 	const bare = href.endsWith('/') && href !== '/' ? href.slice(0, -1) : href;
 	return (vercelConfig.routes ?? []).some((r) => {
 		if (!r.src || !r.headers?.Location) return false;
