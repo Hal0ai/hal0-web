@@ -9,10 +9,10 @@
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
 import HermesCard from '../components/HermesCard.astro';
-import BenchHighlights from '../components/landing/BenchHighlights.astro';
 import ForumTopics from '../components/landing/ForumTopics.astro';
 import FeaturedProfiles from '../components/landing/FeaturedProfiles.astro';
 import LatestWriting from '../components/landing/LatestWriting.astro';
+import BenchHighlights from '../components/landing/BenchHighlights.astro';
 import rawChangelog from '../data/changelog.md?raw';
 import { parseChangelog } from '../lib/changelog.js';
 import '../styles/site-data.css';
@@ -446,7 +446,9 @@ const shipNowHighlights = [
           <strong>Ryzen AI Max+ 395</strong> — into a <strong>private</strong>,
           OpenAI-compatible AI appliance: <em>one</em> <code class="mono accent-mono">/v1/*</code>
           API across every modality, with concurrent workloads the box manages for you.
-          One command installs the lot.
+          One command installs the lot. Built and run by people putting local AI on
+          their own hardware — new to Strix Halo? the community below is where the
+          rest of us started.
         </p>
 
         <div class="install" id="install">
@@ -517,14 +519,21 @@ const shipNowHighlights = [
     </div>
   </section>
 
-  <!-- COMMUNITY LAYER — homepage design screen 6: bench highlights, forum
-       (omitted entirely when unreachable), featured profiles, latest
-       writing. Below the existing feature cards, in that order. -->
+  <!-- COMMUNITY LAYER — community-first pivot (2026-08-22): forum, profiles
+       and writing lead so the people running hal0 come before the numbers.
+       Bench highlights stays, demoted to the end of the layer — it still
+       degrades gracefully (ROSTER is a committed sweep, not a live fetch,
+       so there's no "unreachable" case, only an aging ROSTER_DATE the
+       section already surfaces honestly). Forum is the one section backed
+       by a live fetch (fetchLatestTopics in lib/forum.ts) and renders
+       nothing at all — no skeleton, no error card — when DISCOURSE_URL is
+       unset or the API is unreachable at build time; the page just closes
+       up around it. -->
   <div class="shell-wide">
-    <BenchHighlights />
     <ForumTopics />
     <FeaturedProfiles />
     <LatestWriting />
+    <BenchHighlights />
   </div>
 
   <!-- PERF -->
