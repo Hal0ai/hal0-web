@@ -14,40 +14,36 @@
  * sidebar and a TOC. It reuses the KB landing's `.kbcat` card idiom
  * verbatim (site-blog-kb.css) so the two hubs read as siblings.
  *
- * EVERYTHING IS DERIVED. Section cards list real pages pulled from the
- * docs collection via deriveSectionRows — the same function that renders
- * the section listing pages — so a link here can never point at a page
- * that doesn't exist, and adding a docs page needs no edit to this file.
- * Only the section blurbs (src/data/docs-sections.ts) and the KB category
- * copy (src/data/kb-categories.ts) are authored.
+ * EVERYTHING IS DERIVED. Section cards list real pages pulled from
+ * src/data/docs-forum-pages.ts via deriveForumSectionRows — the same
+ * function that renders the section listing pages — so a link here can
+ * never point at a page that doesn't exist. That data file is itself
+ * generated (see its own banner comment), so adding/removing a docs page
+ * upstream needs no edit to this file, same as before the move to
+ * forum.hal0.dev. Only the section blurbs (src/data/docs-sections.ts)
+ * and the KB category copy (src/data/kb-categories.ts) are authored.
  */
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import '../../styles/site-blog-kb.css';
 import { Icon } from 'astro-icon/components';
-import { getCollection } from 'astro:content';
 import { DOCS_SECTIONS } from '../../data/docs-sections';
 import { KB_CATEGORIES } from '../../data/kb-categories';
-import { deriveSectionRows } from '../../lib/section-pages.mjs';
+import { DOCS_FORUM_PAGES } from '../../data/docs-forum-pages';
+import { deriveForumSectionRows } from '../../lib/section-pages.mjs';
 
-const entries = await getCollection('docs');
-const collection = entries.map((e) => ({ id: e.id, filePath: e.filePath, data: e.data }));
-
-// One card per docs section: real page titles, real hrefs, real counts.
+// One card per docs section: real page titles, real forum hrefs, real
+// counts. getting-started's own landing page is just another row in its
+// section here (order 0 sorts it first) — unlike the old content
+// collection, DOCS_FORUM_PAGES never excludes a section's own index, so
+// no special-casing is needed to surface it.
 const sections = DOCS_SECTIONS.map((s) => {
-  const rows = deriveSectionRows(collection, s.slug);
-  // getting-started's own index IS the docs landing page, and
-  // deriveSectionRows excludes a section's index by design — so surface it
-  // explicitly rather than letting the section that matters most start its
-  // list at page two.
-  const landing =
-    s.slug === 'getting-started'
-      ? collection.find((e) => e.id === 'docs/getting-started')
-      : undefined;
-  const pages = [
-    ...(landing ? [{ title: landing.data.title as string, href: '/docs/getting-started/' }] : []),
-    ...rows.map((r) => ({ title: r.title, href: r.href })),
-  ];
-  return { ...s, href: `/docs/${s.slug}/`, count: pages.length, pages: pages.slice(0, 4) };
+  const rows = deriveForumSectionRows(DOCS_FORUM_PAGES, s.slug);
+  return {
+    ...s,
+    href: `/docs/${s.slug}/`,
+    count: rows.length,
+    pages: rows.slice(0, 4).map((r) => ({ title: r.title, href: r.href })),
+  };
 });
 
 // The three pages a first-time reader almost always wants, in order.

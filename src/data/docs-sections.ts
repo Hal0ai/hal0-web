@@ -1,17 +1,19 @@
 /**
  * Single source of truth for the five docs sections' presentation copy —
- * consumed by src/components/DocsSectionCards.astro (the grid on the docs
- * landing page) and src/pages/docs/index.astro (the /docs hub).
+ * consumed by src/pages/docs/index.astro (the /docs hub) and the four
+ * section listing pages (src/pages/docs/{concepts,guides,operate,
+ * reference}/index.astro).
  *
  * Deliberately copy ONLY. Page counts, page titles and hrefs are derived
- * from the content collection at build time (see deriveSectionRows in
- * src/lib/section-pages.mjs), so adding a docs page never requires an
- * edit here — the same rule the KB landing follows with KB_CATEGORIES,
- * except KB additionally lists planned-but-unwritten pages, which docs
- * does not need since every docs page in the tree is already live.
+ * at build time from src/data/docs-forum-pages.ts (see
+ * deriveForumSectionRows in src/lib/section-pages.mjs), so adding a docs
+ * page never requires an edit here — the same rule the KB landing
+ * follows with KB_CATEGORIES, except KB additionally lists
+ * planned-but-unwritten pages, which docs does not need since every doc
+ * this data covers is already a live forum.hal0.dev topic.
  *
- * `slug` must equal the section's directory under src/content/docs/docs/
- * AND the matching sidebar group's `directory` in astro.config.mjs.
+ * `slug` must equal the section slug used throughout
+ * docs-forum-pages.ts's `section` field.
  */
 export interface DocsSection {
   slug: string;

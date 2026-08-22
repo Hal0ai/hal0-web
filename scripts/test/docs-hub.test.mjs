@@ -45,10 +45,22 @@ const vercelConfig = built
 	: { routes: [] };
 
 function isVercelRedirect(href) {
+	// The adapter compiles astro.config.mjs's `redirects` entries to an
+	// EXACT-match regex with no trailing slash (see the `/kb` redirect's
+	// comment in astro.config.mjs) — but Vercel itself normalizes a
+	// trailing-slash request down to its bare form before route matching
+	// runs (no explicit `trailingSlash` setting in .vercel/output/config.json,
+	// so that's the platform default), so a link like
+	// `/docs/getting-started/install/` still 301s in production even though
+	// only `^/docs/getting-started/install$` appears here. Match both forms
+	// so this check models what actually happens on Vercel, not just the
+	// literal regex.
+	const bare = href.endsWith('/') && href !== '/' ? href.slice(0, -1) : href;
 	return (vercelConfig.routes ?? []).some((r) => {
 		if (!r.src || !r.headers?.Location) return false;
 		try {
-			return new RegExp(r.src).test(href);
+			const re = new RegExp(r.src);
+			return re.test(href) || re.test(bare);
 		} catch {
 			return false;
 		}

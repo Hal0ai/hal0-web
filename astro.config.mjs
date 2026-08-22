@@ -11,6 +11,15 @@ import vercel from '@astrojs/vercel';
 const nav = JSON.parse(readFileSync(new URL('./src/data/nav.json', import.meta.url), 'utf8'));
 const socialHref = (id) => nav.social.find((s) => s.id === id).href;
 
+// GENERATED — 88 entries (44 doc paths, both trailing-slash forms) mapping
+// old hal0.dev/docs/<section>/<slug> paths to their forum.hal0.dev topic
+// URLs. Produced by hal0's scripts/docs_discourse_sync (redirect_map.py's
+// redirect-map.json output, copied here verbatim) — do not hand-edit; a
+// re-run of that sync is the only thing that should touch this file.
+const docsRedirects = JSON.parse(
+	readFileSync(new URL('./src/data/docs-redirects.json', import.meta.url), 'utf8'),
+);
+
 export default defineConfig({
 	site: 'https://hal0.dev',
 
@@ -40,6 +49,14 @@ export default defineConfig({
 		// it 404s instead of redirecting — see src/pages/docs/index.astro's
 		// "knowledge base" link.
 		'/kb': '/docs/',
+		// hal0's 44 product docs moved off hal0.dev to forum.hal0.dev
+		// (Discourse topics, Docs category) — every /docs/<section>/<slug>
+		// path (both trailing-slash forms) 301s straight to its topic. The
+		// docs hub (/docs/) and the four section listing pages
+		// (/docs/<section>/) are NOT in this map — they stay real pages, now
+		// rebuilt to link out to the forum instead of rendering Starlight
+		// content. See docsRedirects' own banner comment above.
+		...docsRedirects,
 	},
 
 	integrations: [
@@ -129,30 +146,17 @@ export default defineConfig({
 			},
 			// Pages outside /docs use their own marketing layout, so the
 			// sidebar only applies inside /docs/*.
-			// Diátaxis 4-group IA. Each group autogenerates from its directory,
-			// so adding a page = dropping a .mdx into the dir + sidebar.order.
-			// reference/api/ nests automatically as a collapsible subgroup.
+			// The five Diátaxis docs groups that used to autogenerate here
+			// (Start here/Concepts/Guides/Operate/Reference) are gone —
+			// src/content/docs/docs/** no longer exists now that hal0's 44
+			// product docs live as forum.hal0.dev topics (see the
+			// `docsRedirects` spread above). `autogenerate: { directory }`
+			// against a directory that doesn't exist is a build error, so
+			// pruning these groups is required, not optional, once that
+			// content is removed. The four /docs/<section>/ routes are still
+			// real pages (src/pages/docs/*/index.astro, rebuilt to link out to
+			// the forum) — they just don't drive this sidebar anymore.
 			sidebar: [
-				{
-					label: 'Start here',
-					items: [{ autogenerate: { directory: 'docs/getting-started' } }],
-				},
-				{
-					label: 'Concepts',
-					items: [{ autogenerate: { directory: 'docs/concepts' } }],
-				},
-				{
-					label: 'Guides',
-					items: [{ autogenerate: { directory: 'docs/guides' } }],
-				},
-				{
-					label: 'Operate',
-					items: [{ autogenerate: { directory: 'docs/operate' } }],
-				},
-				{
-					label: 'Reference',
-					items: [{ autogenerate: { directory: 'docs/reference' } }],
-				},
 				{
 					// Knowledge base: undated, reviewed, community-editable — same
 					// Starlight sidebar/TOC shell as docs, distinguished only by the
