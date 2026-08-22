@@ -1,45 +1,47 @@
 // scripts/test/section-pages.test.mjs
 //
 // Unit tests for the pure listing derivation behind SectionPageList.astro
-// (src/lib/section-pages.mjs) plus a filesystem cross-check: every
-// section listed by a docs/<section>/index.mdx must derive one row per
-// non-hidden .mdx page in that directory — the handoff's "derived, never
-// hand-maintained" rule.
+// (src/lib/section-pages.mjs) plus a cross-check against the generated
+// data it actually runs on in production: every row DOCS_FORUM_PAGES
+// produces must resolve to a forum.hal0.dev href that also appears in
+// src/data/docs-redirects.json — the handoff's "derived, never
+// hand-maintained" rule, now anchored on the forum move instead of the
+// old content collection.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdir, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-import { deriveSectionRows } from '../../src/lib/section-pages.mjs';
+import { deriveForumSectionRows } from '../../src/lib/section-pages.mjs';
+import { DOCS_FORUM_PAGES } from '../../src/data/docs-forum-pages.ts';
 
-const entry = (id, order, extra = {}) => ({
+const page = (id, order, extra = {}) => ({
+	section: id.split('/')[1],
+	subsection: extra.subsection ?? null,
 	id,
-	data: { title: id.split('/').pop(), sidebar: order === undefined ? {} : { order }, ...extra.data },
-	...extra,
+	title: extra.title ?? id.split('/').pop(),
+	description: extra.description ?? '',
+	order: order === undefined ? null : order,
+	href: extra.href ?? `https://forum.hal0.dev/t/${id.split('/').pop()}/1`,
 });
 
-test('filters to the section, excluding the section index itself', () => {
-	const rows = deriveSectionRows(
-		[
-			entry('docs/concepts/slots', 20),
-			entry('docs/concepts', undefined), // the index page (id has no trailing segment)
-			entry('docs/guides/manage-slots', 10),
-		],
+test('filters to the requested section', () => {
+	const rows = deriveForumSectionRows(
+		[page('docs/concepts/slots', 20), page('docs/guides/manage-slots', 10)],
 		'concepts',
 	);
 	assert.deepEqual(
-		rows.map((r) => r.href),
-		['/docs/concepts/slots/'],
+		rows.map((r) => r.title),
+		['slots'],
 	);
 });
 
-test('sorts by sidebar.order, missing order last, slug tie-break', () => {
-	const rows = deriveSectionRows(
+test('sorts by order, missing order last, id tie-break', () => {
+	const rows = deriveForumSectionRows(
 		[
-			entry('docs/concepts/zeta', undefined),
-			entry('docs/concepts/slots', 20),
-			entry('docs/concepts/architecture', 10),
-			entry('docs/concepts/alpha', undefined),
+			page('docs/concepts/zeta', undefined),
+			page('docs/concepts/slots', 20),
+			page('docs/concepts/architecture', 10),
+			page('docs/concepts/alpha', undefined),
 		],
 		'concepts',
 	);
@@ -50,10 +52,10 @@ test('sorts by sidebar.order, missing order last, slug tie-break', () => {
 });
 
 test('nested sub-pages (api/) trail top-level pages regardless of order', () => {
-	const rows = deriveSectionRows(
+	const rows = deriveForumSectionRows(
 		[
-			entry('docs/reference/api/rest', 1),
-			entry('docs/reference/cli', 50),
+			page('docs/reference/api/rest', 1, { subsection: 'api' }),
+			page('docs/reference/cli', 50),
 		],
 		'reference',
 	);
@@ -63,12 +65,11 @@ test('nested sub-pages (api/) trail top-level pages regardless of order', () => 
 	);
 });
 
-test('ord is zero-based and zero-padded; hidden entries are excluded', () => {
-	const rows = deriveSectionRows(
+test('ord is zero-based and zero-padded; href passes through untouched', () => {
+	const rows = deriveForumSectionRows(
 		[
-			entry('docs/operate/auth', 10),
-			entry('docs/operate/services', 20),
-			{ id: 'docs/operate/draft', data: { title: 'draft', sidebar: { hidden: true } } },
+			page('docs/operate/auth', 10, { href: 'https://forum.hal0.dev/t/authentication-hal0-docs/43' }),
+			page('docs/operate/services', 20, { href: 'https://forum.hal0.dev/t/services-hal0-docs/45' }),
 		],
 		'operate',
 	);
@@ -76,55 +77,32 @@ test('ord is zero-based and zero-padded; hidden entries are excluded', () => {
 		rows.map((r) => r.ord),
 		['00', '01'],
 	);
+	assert.equal(rows[0].href, 'https://forum.hal0.dev/t/authentication-hal0-docs/43');
 });
 
-test('filename derives from filePath as <section>/<file>.mdx', () => {
-	const rows = deriveSectionRows(
-		[
-			entry('docs/concepts/slots', 20, {
-				filePath: 'src/content/docs/docs/concepts/slots.mdx',
-			}),
-		],
-		'concepts',
-	);
-	assert.equal(rows[0].filename, 'concepts/slots.mdx');
-});
+// ── cross-check against the generated data ─────────────────────────────
+// Every page DOCS_FORUM_PAGES lists must (a) resolve via
+// deriveForumSectionRows for its own section, and (b) carry the exact
+// href docs-redirects.json maps its site path to — the two generated
+// artifacts must agree, since a redirect and a listing row pointing at
+// different forum topics for the same doc would be a broken link with no
+// build-time signal.
+const redirectsUrl = new URL('../../src/data/docs-redirects.json', import.meta.url);
+const REDIRECTS = JSON.parse(await readFile(fileURLToPath(redirectsUrl), 'utf8'));
+const SECTIONS = ['getting-started', 'concepts', 'guides', 'operate', 'reference'];
 
-// ── filesystem cross-check ─────────────────────────────────────────────
-// For each section that ships an index.mdx listing page, the number of
-// listable pages on disk (non-index .mdx files) must equal the number of
-// rows the derivation produces from equivalent synthetic entries. This
-// catches a page added to the directory that the listing silently drops
-// (e.g. a filter regression), without needing the Astro runtime.
-const DOCS_ROOT = fileURLToPath(new URL('../../src/content/docs/docs/', import.meta.url));
-const LISTED_SECTIONS = ['concepts', 'guides', 'operate', 'reference'];
-
-async function mdxFiles(dir, rel = '') {
-	const out = [];
-	for (const e of await readdir(dir, { withFileTypes: true })) {
-		const full = path.join(dir, e.name);
-		if (e.isDirectory()) out.push(...(await mdxFiles(full, path.join(rel, e.name))));
-		else if (e.name.endsWith('.mdx')) out.push(path.join(rel, e.name));
+test('every DOCS_FORUM_PAGES entry is covered by its section listing', () => {
+	for (const section of SECTIONS) {
+		const rows = deriveForumSectionRows(DOCS_FORUM_PAGES, section);
+		const expected = DOCS_FORUM_PAGES.filter((p) => p.section === section).length;
+		assert.equal(rows.length, expected, `${section} listing dropped a page`);
 	}
-	return out;
-}
+});
 
-for (const section of LISTED_SECTIONS) {
-	test(`listing covers every page on disk: ${section}`, async () => {
-		const files = (await mdxFiles(path.join(DOCS_ROOT, section))).filter(
-			(f) => f !== 'index.mdx',
-		);
-		const hidden = [];
-		for (const f of files) {
-			const src = await readFile(path.join(DOCS_ROOT, section, f), 'utf8');
-			if (/^\s*hidden:\s*true\s*$/m.test(src)) hidden.push(f);
-		}
-		const synthetic = files.map((f) =>
-			entry(`docs/${section}/${f.replace(/\.mdx$/, '').replace(/\/index$/, '')}`, 1, {
-				data: { title: f, sidebar: { hidden: hidden.includes(f) } },
-			}),
-		);
-		const rows = deriveSectionRows(synthetic, section);
-		assert.equal(rows.length, files.length - hidden.length);
-	});
-}
+test('DOCS_FORUM_PAGES hrefs match docs-redirects.json for the same path', () => {
+	for (const p of DOCS_FORUM_PAGES) {
+		const redirect = REDIRECTS[`/${p.id}`];
+		assert.ok(redirect, `docs-redirects.json missing an entry for /${p.id}`);
+		assert.equal(redirect, p.href, `href drift for /${p.id}`);
+	}
+});

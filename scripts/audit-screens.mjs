@@ -16,8 +16,10 @@ const SURFACES = [
 	['landing', '/'],
 	['kb-landing', '/kb/'],
 	['kb-article', '/kb/getting-started/your-first-slot/'],
-	['docs-landing', '/docs/getting-started/'],
-	['docs-article', '/docs/concepts/slots/'],
+	// '/docs/getting-started/' and '/docs/concepts/slots/' now 301 straight
+	// to forum.hal0.dev (docs content moved off hal0.dev) — only the hub
+	// and the section listing pages are still in-house surfaces to audit.
+	['docs-landing', '/docs/'],
 	['docs-section', '/docs/concepts/'],
 	['blog-index', '/blog/'],
 	['blog-post', '/blog/whats-new-in-the-v0-8-line/'],
