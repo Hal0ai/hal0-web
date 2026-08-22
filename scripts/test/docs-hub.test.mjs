@@ -16,7 +16,9 @@ import { fileURLToPath } from 'node:url';
 import { DOCS_SECTIONS } from '../../src/data/docs-sections.ts';
 import { KB_CATEGORIES } from '../../src/data/kb-categories.ts';
 
-const HUB = new URL('../../dist/docs/index.html', import.meta.url);
+// dist/client/ — see chrome-consistency.test.mjs's note on the adapter's
+// client/server output split.
+const HUB = new URL('../../dist/client/docs/index.html', import.meta.url);
 const built = await access(HUB).then(
 	() => true,
 	() => false,
@@ -29,8 +31,33 @@ const hrefs = () => [...hubHtml.matchAll(/href="(\/[^"#]*)"/g)].map((m) => m[1])
 /** Astro escapes `&` in text nodes, so compare labels against escaped HTML. */
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// The @astrojs/vercel adapter implements astro.config.mjs's `redirects`
+// (e.g. /kb → /docs/) as a native 301 route in .vercel/output/config.json
+// instead of emitting a static meta-refresh dist/client/kb/index.html —
+// there's no file on disk for those anymore, so `resolves()` also has to
+// check the adapter's own redirect table, not just the filesystem.
+const vercelConfig = built
+	? JSON.parse(
+			await readFile(new URL('../../.vercel/output/config.json', import.meta.url), 'utf8').catch(
+				() => '{"routes":[]}',
+			),
+		)
+	: { routes: [] };
+
+function isVercelRedirect(href) {
+	return (vercelConfig.routes ?? []).some((r) => {
+		if (!r.src || !r.headers?.Location) return false;
+		try {
+			return new RegExp(r.src).test(href);
+		} catch {
+			return false;
+		}
+	});
+}
+
 /**
- * True only when a root-relative URL maps to a real FILE in dist.
+ * True when a root-relative URL maps to a real FILE in dist, or to a
+ * server-level redirect the adapter emits (see isVercelRedirect above).
  *
  * The `isFile` check is the whole point. An earlier version used bare
  * `existsSync`, which returns true for a DIRECTORY — so `/kb/getting-started/`
@@ -39,10 +66,10 @@ const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, 
  * links shipped past this test that way.
  */
 function resolves(href) {
-	const root = fileURLToPath(new URL('../../dist', import.meta.url));
+	const root = fileURLToPath(new URL('../../dist/client', import.meta.url));
 	const isFile = (p) => existsSync(p) && statSync(p).isFile();
 	const withIndex = root + (href.endsWith('/') ? href + 'index.html' : href + '/index.html');
-	return isFile(withIndex) || isFile(root + href);
+	return isFile(withIndex) || isFile(root + href) || isVercelRedirect(href);
 }
 
 test('/docs is a real page, not the old redirect', { skip }, () => {

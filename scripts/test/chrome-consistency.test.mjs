@@ -9,10 +9,13 @@ import { readFile, access } from 'node:fs/promises';
 
 const nav = JSON.parse(await readFile(new URL('../../src/data/nav.json', import.meta.url), 'utf8'));
 
+// Astro emits static output under dist/client/ (not dist/ directly) once an
+// adapter is configured — see astro.config.mjs's `adapter: vercel()`,
+// added for the DiscourseConnect SSO API routes under src/pages/api/**.
 const pages = {
-  marketing: new URL('../../dist/index.html', import.meta.url),
-  starlight: new URL('../../dist/blog/index.html', import.meta.url),
-  benchmarks: new URL('../../dist/benchmarks/index.html', import.meta.url),
+  marketing: new URL('../../dist/client/index.html', import.meta.url),
+  starlight: new URL('../../dist/client/blog/index.html', import.meta.url),
+  benchmarks: new URL('../../dist/client/benchmarks/index.html', import.meta.url),
 };
 
 const built = await access(pages.marketing).then(() => true, () => false);

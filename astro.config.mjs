@@ -6,6 +6,7 @@ import starlightBlog from 'starlight-blog';
 import sitemap from '@astrojs/sitemap';
 import icon from 'astro-icon';
 import tailwindcss from '@tailwindcss/vite';
+import vercel from '@astrojs/vercel';
 
 const nav = JSON.parse(readFileSync(new URL('./src/data/nav.json', import.meta.url), 'utf8'));
 const socialHref = (id) => nav.social.find((s) => s.id === id).href;
@@ -28,6 +29,16 @@ export default defineConfig({
 		// cards live there now), so /kb has no page of its own — but the
 		// ARTICLES under /kb/<category>/<page>/ are untouched and still
 		// Starlight routes. Only the bare landing URL redirects.
+		//
+		// Astro compiles this to an EXACT-match route (`^/kb$`, no trailing
+		// slash — same string either way this key is written) once the
+		// Vercel adapter is in play (added below for the DiscourseConnect
+		// SSO API routes). Before the adapter this didn't matter: Astro
+		// emitted a real dist/kb/index.html file and static hosting serves
+		// that for both `/kb` and `/kb/`. Now every internal link to this
+		// route must match the compiled form exactly (no trailing slash) or
+		// it 404s instead of redirecting — see src/pages/docs/index.astro's
+		// "knowledge base" link.
 		'/kb': '/docs/',
 	},
 
@@ -210,6 +221,14 @@ export default defineConfig({
 		}),
 		sitemap(),
 	],
+
+	// `output` stays the default ('static') — the site is still a fully
+	// prerendered marketing/docs build. The adapter only exists so a
+	// handful of routes (src/pages/api/**) can opt out of prerendering with
+	// `export const prerender = false` and run as on-demand Vercel
+	// functions (DiscourseConnect SSO + the forum notifications proxy).
+	// Everything else keeps building to static HTML same as before.
+	adapter: vercel(),
 
 	vite: {
 		plugins: [tailwindcss()],
