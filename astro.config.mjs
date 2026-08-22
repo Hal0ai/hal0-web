@@ -11,11 +11,26 @@ import vercel from '@astrojs/vercel';
 const nav = JSON.parse(readFileSync(new URL('./src/data/nav.json', import.meta.url), 'utf8'));
 const socialHref = (id) => nav.social.find((s) => s.id === id).href;
 
-// GENERATED — 88 entries (44 doc paths, both trailing-slash forms) mapping
-// old hal0.dev/docs/<section>/<slug> paths to their forum.hal0.dev topic
-// URLs. Produced by hal0's scripts/docs_discourse_sync (redirect_map.py's
-// redirect-map.json output, copied here verbatim) — do not hand-edit; a
-// re-run of that sync is the only thing that should touch this file.
+// GENERATED — 44 entries mapping old hal0.dev/docs/<section>/<slug>/
+// paths (trailing slash — Starlight's own canonical form, and the key
+// shape hal0's redirect_map.py actually emits) to their forum.hal0.dev
+// topic URLs. Produced by hal0's scripts/docs_discourse_sync
+// (redirect_map.py's redirect-map.json output, copied here verbatim) —
+// do not hand-edit; a re-run of that sync is the only thing that should
+// touch this file.
+//
+// Astro's redirect-route compiler strips a trailing slash off EVERY
+// redirect key before building its route regex (parseRoute's
+// `removeTrailingForwardSlash`), and the Vercel adapter doesn't add
+// trailing-slash leniency back in unless astro.config's own
+// `trailingSlash` is set away from its default — which this project
+// deliberately doesn't do site-wide (see
+// scripts/patch-vercel-docs-redirects.mjs's banner for why). So on its
+// own, spreading this object into `redirects` below would 301 the
+// no-slash form of each path but 404 the (canonical, bookmarked)
+// trailing-slash form. `postbuild` runs that script to patch both forms
+// back in at the compiled-Vercel-route level, scoped to just these 44
+// forum.hal0.dev redirects.
 const docsRedirects = JSON.parse(
 	readFileSync(new URL('./src/data/docs-redirects.json', import.meta.url), 'utf8'),
 );
