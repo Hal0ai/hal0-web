@@ -22,6 +22,864 @@ breaking/migrations as callouts — from the cosign-verified tarball, before
 applying. Add those subsections to a version's section to surface them; see
 `scripts/gen_release_notes.py`.
 
+## [Unreleased]
+
+## [1.0.0-rc.12] — 2026-08-28
+
+A repair release for the existing fleet. rc.11 fixed the hermes memory-MCP
+outage for fresh installs; this one reaches the boxes that were already
+installed — which, on a platform heading to 1.0, is all of them.
+
+### Highlights
+
+- **Upgrading now heals hermes' memory tools by itself.** rc.11's fix lived in
+  the config write path, which only runs when hermes is provisioned, so an
+  upgrade left the poisoned `X-hal0-Private` int in place and the agent
+  holding zero memory tools. The repair now runs as part of the migration
+  sequence `hal0 update` and `install.sh` both converge on, so an ordinary
+  update fixes it with no operator step.
+
+### Fixed
+
+- **Every box provisioned before rc.11 kept a broken hermes memory client
+  through any number of upgrades.** The unquoted YAML `1` in
+  `mcp_servers.hal0-memory.headers.X-hal0-Private` wedges hermes' MCP client
+  immediately after `initialize` — a 40 s hang ending in `CancelledError` —
+  and the agent runs on with no memory tools at all. Nothing keyed on
+  `provision.json` notices, because its `mcp_wire` counts the **server's**
+  tools, not the client's. Measured on identical rc.11 code: a fresh install
+  connected in 51 ms with 26 tools while an upgraded box and production both
+  failed at ~41 s. The new migration pass coerces every MCP header value to a
+  string, preserves the file's mode and ownership (it runs as root), and
+  bounces `hermes-gateway` only when it actually changed something (#2090).
+- **`hal0 agent reprovision` could silently run a different hal0 than the one
+  invoked.** The privilege-drop re-exec resolved its target from `PATH`, so on
+  a box carrying a stale wrapper at `/usr/local/bin/hal0` (#1844) running the
+  current binary as root re-exec'd the older one — which then resolved its
+  installer root relative to its own package and failed with a path present in
+  no release, while the command still exited 0. It now re-execs the console
+  script belonging to the running interpreter (#2092).
+
+### Audience
+
+Every operator with an existing install — this is the release that repairs
+them. Fresh rc.11 installs are already correct and gain nothing here beyond
+the reprovision fix. After updating, hermes should report its memory tools
+again; verify with `hermes mcp test hal0-memory` (expect a connect in
+milliseconds and 26 tools, not a 40 s timeout).
+
+### Known issues
+
+- The live `hal0.dev/install.sh` still lags the in-tree installer: the mirror
+  workflow is gated on a signed stable manifest, and the stable pointer still
+  serves 0.9.8, so it has not published since 2026-08-09 (#2057, #1530). Both
+  are resolved together on the GA cut.
+- `scripts/release-test.sh`'s γ rows still target the retired v0.1 slot CLI, so
+  release-check gate 5 is waived for this cut (#2050); the rc-validate kit is
+  the effective gate.
+- A box carrying rc.3-era residue (a stale `/usr/local/bin/hal0`, a
+  system-python `hal0` in dist-packages) still has that residue after this
+  release. The re-exec fix means the right code runs; the stray files remain
+  for an operator to clean up.
+- The python 3.14 CI leg remains allowed-fail (container-provider fixtures).
+
+### Supported upgrades
+
+`hal0 update` from 1.0.0-rc.9, rc.10 or rc.11 on the preview channel. The
+hermes repair runs automatically as part of the update; no `hal0 agent
+reprovision hermes` step is needed, and on boxes where that command previously
+appeared to succeed while failing, it is no longer the mechanism being relied
+on.
+
+### Operator migrations
+
+None required. The brain model default is unchanged from rc.11 and applies to
+new installs only — an existing box keeps whatever model its brain slot is
+bound to, and nothing re-pulls or re-binds on upgrade.
+
+### Rollback
+
+`hal0 update --rollback` restores the previous tree. No schema or on-disk state
+changes ship here. The one file this release rewrites — hermes' `config.yaml`,
+to quote a header — is valid for older releases too, so it is safe to leave in
+place across a rollback.
+
+## [1.0.0-rc.11] — 2026-08-28
+
+The default steward changes model, and the fresh-install path closes the last
+three defects the rc.10 validation lane surfaced — two of them introduced by
+the rc.10 fix wave itself, and reproducible only on the exact end-user shape
+(a fresh box with no system cosign; a fresh box installed from the preview
+channel).
+
+### Highlights
+
+- **LFM2.5-2.6B is the default brain model.** One plain-GGUF pick on every box
+  (Q8_0, 2.87 GB) replaces the hardware-forked `hal0-brain-sft` variants, whose
+  Q8/Q4 builds carry custom GGML tensor type ids that stock llama.cpp rejects.
+  The new default is a native tool-caller on the `hal0-combined:0826` runner and
+  an RL-trained thinker: `profile.brain` now leaves reasoning-format at the
+  runner default, so its `<think>` text is extracted into `reasoning_content`
+  instead of leaking into `message.content`. The sft variants remain available
+  through `HAL0_BRAIN_MODEL`.
+- **A fresh install completes, and can then update itself.** rc.10 could do
+  neither on a box without a system cosign: pre-flight died on an undefined
+  reporter helper, and the channel the box was installed from was never
+  persisted, so its updater fell back to `stable` and every `hal0 update
+  --check` failed.
+
+### Fixed
+
+- **Every cosign-less fresh install died at pre-flight step 1/16.** The cosign
+  persistence added in rc.10 reported success through an `ok` helper that no
+  installer source defines — `ui.sh` provides `info`/`warn`/`err`/`die`, and
+  only `bootstrap.sh` carries a private `ok()`. Under `set -euo pipefail` the
+  resulting 127 killed the install immediately after the cosign had been
+  written successfully. Hosts with a system cosign return early past that line,
+  which is why CI and every dev box missed it (#2081). The regression guard
+  added alongside the fix now resolves helper definitions per sourcing scope
+  rather than globally: as first written it counted `bootstrap.sh`'s private
+  `ok()` as a definition for every file, and stayed green over the very bug it
+  was added to pin (#2086).
+- **The bootstrap channel was never persisted.** A preview-channel install
+  installed correctly but left the updater resolving `stable`, whose pointer
+  still serves 0.9.8, so rc boxes could not self-update to the next rc and the
+  install-time update-check probe failed. The installer now writes
+  `telemetry.channel` into `hal0.toml` through a validated locked
+  read-modify-write, mirroring the cosign handoff. An explicit differing value
+  is never overwritten, and the schema default is deliberately not persisted so
+  that re-bootstrapping can still recover a preview box (#2083).
+- **Hermes ran with zero memory tools on every fresh install.** `hermes config
+  set` coerced the `X-hal0-Private` header to a YAML integer, and the integer
+  form wedges hermes' MCP client immediately after `initialize`: `hal0-admin`
+  connected normally while `hal0-memory` hung for 40 s and died with a
+  `CancelledError`, silently costing the agent all 26 memory tools. The header
+  is now rendered as a quoted string through the merge layer, with post-merge
+  coercion so an overrides file cannot re-poison it (#2085).
+
+### Audience
+
+Operators running a preview-channel box, and anyone doing a fresh install from
+`hal0.dev/install.sh`. Fresh installs gain the most: all three fixes above are
+fresh-install-shaped. Existing rc.10 boxes are unaffected by #2081 and #2083
+(both are install-time). They do **not** automatically pick up the hermes
+memory-MCP fix either: `hal0 update` never re-renders the hermes agent config,
+so the poisoned header survives the upgrade and the agent stays without memory
+tools (#2090). Run `hal0 agent reprovision hermes` once after upgrading —
+verified on an rc.10 → rc.11 upgrade.
+
+### Known issues
+
+- The live `hal0.dev/install.sh` still lags the in-tree installer: the
+  `mirror-bootstrap` workflow is gated on a signed stable manifest, and the
+  stable pointer still serves 0.9.8, so the mirror has not published since
+  2026-08-09 (#2057, #1530). Installing from the one-liner may fetch an older
+  bootstrap than this release ships. Both are resolved together on the GA cut.
+- `scripts/release-test.sh`'s γ rows still target the retired v0.1 slot CLI, so
+  release-check gate 5 cannot pass and is waived for this cut (#2050). The
+  rc-validate kit is the effective release gate.
+- The brain steward can still answer live-platform questions from its prelude
+  without a tool round on small models (#2022); the LFM2.5 default is the
+  intended mitigation and is re-evaluated in this release's validation lane.
+- The python 3.14 CI leg remains allowed-fail (container-provider fixtures).
+- #2088's `X-hal0-Private` fix reaches boxes only at hermes provision time, so
+  an upgraded box keeps the pre-fix header and its agent has no memory tools
+  until `hal0 agent reprovision hermes` is run (#2090). Note that
+  `provision.json`'s `mcp_wire` tool counts probe the server, not the hermes
+  client, so they report such a box as healthy.
+
+### Supported upgrades
+
+`hal0 update` from 1.0.0-rc.9 or 1.0.0-rc.10 on the preview channel. Boxes
+installed fresh from rc.10 or earlier and never re-pointed may have no channel
+persisted — set it once with `hal0 update --channel preview` before checking
+for this release; installs from this release onward persist it themselves.
+
+### Operator migrations
+
+None required. The brain model default changes for NEW installs only: an
+existing box keeps whatever model its brain slot is already bound to, and
+nothing re-pulls or re-binds on upgrade. To adopt LFM2.5-2.6B on an existing
+box, pull it and rebind the brain slot deliberately. Slot image pins are
+unchanged from rc.10 (`hal0-combined:0826`).
+
+### Rollback
+
+`hal0 update --rollback` restores the previously installed tree, as usual. No
+schema or on-disk state changes ship in this release, so a rollback to rc.10
+needs no data migration. The one persisted value this release introduces
+(`telemetry.channel` in `hal0.toml`) is read by newer updaters and ignored by
+older ones, so it is safe to leave in place across a rollback.
+
+## [1.0.0-rc.10] — 2026-08-26
+
+The rc.9 validation sweep's fresh-install lane (ct151, minimal Ubuntu 26.04)
+surfaced a batch of install-process defects — several of them silent for
+multiple RCs. This wave closes all nine, plus the runner-side structured-output
+repair that preceded it (#2056/#2073).
+
+### Fixed
+
+- **mDNS advertise/withdraw worked only on root-era installs** — the API
+  writes `/etc/avahi/services/hal0-addon-*.service` as the unprivileged
+  service user, but nothing ever granted it write access. The installer now
+  grants root:hal0 g+w on the directory (upgrade path fixes root-era addon
+  files), and a matching PermRow lets `hal0 doctor perms` heal drift
+  (#2059, #2071).
+- **Hermes gateway Telegram/Discord bridge silently skipped on every
+  install** — the bridge sub-install demanded sudo under an already-root
+  installer; the root path now runs the system gateway install correctly
+  (#2061, #2077).
+- **Bootstrap leaked its ~150 MB work dir on every successful install** —
+  the EXIT trap died at the exec into install.sh. install.sh now removes the
+  handed-off tree as its last step (after the cosign persist from #2058;
+  `HAL0_BOOTSTRAP_KEEP_TMP` and failed installs still keep it) (#2065, #2069).
+- **Missing-dep preflight failed one dependency at a time** — a minimal box
+  lacking curl and jq cost one full retry per dep. Bootstrap now batch-reports
+  all missing deps and auto-installs them via the detected package manager,
+  falling back to a single copy-pasteable install command (#2062, #2075).
+- **`hermes mcp list/test` as root read `~root/.hermes`** and reported "No
+  MCP servers configured" on healthy installs; root runs now resolve the
+  hal0 service home and always print which config tree they read
+  (#2063, #2070).
+- **Non-llama seeds (ComfyUI img, qwen3tts) on a kfd-less box** now refuse
+  load honestly: their runner images are ROCm-only, so the remedy hint no
+  longer suggests a `device='cpu'` that cannot exist for them (#2067, #2072).
+
+### Added
+
+- **Post-install smoke now proves output, not just transport, for the two
+  paths that shipped broken through three RCs**: a gateway structured-output
+  probe (`response_format: json_object`, kwarg-absent body — the shape that
+  caught #2056) and a `hal0 update --check` dry-run (the gap that let #2052
+  through). Both fail loudly in the install summary without aborting the
+  install (#2066, #2074).
+- **Custom hostname reaches avahi**: installing with `HAL0_HOSTNAME=<name>`
+  now pins `host-name=<name>` in avahi-daemon.conf (idempotent, warns before
+  replacing an operator's own setting), so `http://<name>.local:8080` resolves
+  on the LAN. A renamed box stops answering to the `hal0.local` alias
+  (#2060, #2078).
+- **rc-validate kit**: ct151 pristine-rollback gotchas documented — the
+  snapshot predates the dev0/dev3 passthrough entries, DNS must be set via
+  `pct set --nameserver`, and minimal Ubuntu 26.04 needs curl+jq before
+  bootstrap (#2064, #2068).
+
+## [1.0.0-rc.7] — 2026-08-17
+
+The rc.6 validation sweep ran the fleet again — fresh installs, in-place
+updates, a CPU-only box and a Vulkan-only box — and filed eighteen findings.
+rc.7 closes sixteen of them outright and retires the lane behind a seventeenth.
+The theme this time is silence: a guard that was
+supposed to stop an unservable model from launching had been disarmed on every
+model hal0 installs itself, a memory write that hal0 accepted could be dropped
+without ever telling you, a relayed stream from an upstream provider could hang
+open forever with no error, a chat request aimed at an embedding model came back
+as a bare upstream 500, and a model load could be abandoned seven seconds into a
+three-minute budget with a blank error message.
+
+The GA blocker from the rc.6 sweep — the Vulkan backend in the shipped runner
+image emits invalid tokens for every model while every health surface reads
+green (#1888) — is answered in two steps. rc.7 first retired the Vulkan LLM
+lane outright as a safety floor, requiring ROCm (`/dev/kfd`) for every
+llama.cpp GPU slot (#1923); once the defect was bisected to the old runner
+image's own upstream tree rather than to hal0's build, the hardware, or
+llama.cpp itself, rc.7 restores the lane on a corrected runner image behind an
+explicit image gate, so an unvalidated pin can never serve it again (#1948).
+That is a release-shape change with a migration either way; read Breaking,
+Operator migrations, and Known issues before upgrading a box that carries a
+`gpu-vulkan` slot.
+
+rc.7 also closes the hole that let that blocker survive a whole release. Every
+readiness surface hal0 had proved *transport* — the port answers, the weights
+mapped — and none of them proved *output*. A language-model slot now has to
+answer one short prompt correctly before hal0 calls it ready, so a backend that
+loads cleanly and then produces nonsense fails its load loudly instead of
+serving for hours behind a wall of green (#1922).
+
+### Highlights
+
+- **The Vulkan LLM lane is restored — and, on the reference box, now beats
+  ROCm.** On the runner image rc.6 shipped, the Vulkan backend emitted invalid
+  tokens for every model while the slot read `ready` and every health surface
+  read green (#1888). rc.7 first retired the lane outright as a safety floor,
+  requiring `/dev/kfd` for every llama.cpp GPU slot (#1923); bisection then
+  isolated the defect to the old runner image's own upstream tree
+  (`ciru-ai/ROCmFPX`'s port onto newer llama.cpp) rather than hal0's build,
+  gfx1151, RADV, or llama.cpp mainline itself, each of which was independently
+  exonerated (#1948). The default AMD runner image moves to
+  `ghcr.io/hal0ai/hal0-combined:0822`, which restores a correct Vulkan backend
+  and the MiniCPM5 native tool-call parser the retired image also carried, so
+  it is a strict superset rather than a tradeoff. The Vulkan LLM lane returns
+  as a first-class `gpu-vulkan` lane behind an explicit image gate — a runner
+  image has to clear the validation matrix before the lane will use it, so an
+  older or unvalidated pin is refused at preflight by name instead of serving
+  garbage again — and the rc.7 output-sanity readiness gate (#1922) stands
+  underneath it either way as the permanent net. Measured on the reference box:
+  the restored Vulkan lane now outperforms ROCm by +14% prefill and +20%
+  decode on the control model, inverting the earlier ROCm-first guidance
+  (#1948, #1959, #1973).
+- **Voice and speech runtimes that never touch ROCm keep working without
+  `/dev/kfd`.** Kokoro TTS and Moonshine STT are gated on their own device
+  needs, not llama.cpp's; ComfyUI and Qwen3-TTS ship ROCm builds and do need
+  the compute node, and each explains its own refusal instead of borrowing
+  llama.cpp's (#1923, #1941).
+- **A model that cannot produce language no longer reports itself ready.** Slot
+  readiness was proved by transport alone: `/health` answering `200` meant the
+  runner had bound its port and mapped its weights, and said nothing about
+  whether it could turn those weights into words. That is how a box served two
+  hours of garbage while the slot read `ready`, `/api/health` was green,
+  `hal0 doctor` said `OK gpu` and tokens streamed at 60-120 a second (#1888).
+  Every `type = "llm"` slot now has to finish one short prompt correctly —
+  `The capital of France is` → `Paris`, greedy, twelve tokens, once per load —
+  before it goes ready. A slot that answers with nonsense, with nothing, or not
+  at all inside twenty seconds fails its load with a red dot naming the probe,
+  the expected word and what the model actually said, and its unit is stopped
+  so it cannot quietly be re-adopted as healthy. Embedding, reranking, speech
+  and image slots are never asked to chat, and the gate can be switched off per
+  box or per slot (#1922).
+- **Streams from an upstream provider can no longer hang forever.** A relayed
+  chat stream that stopped producing tokens — a provider that wedged
+  mid-answer, a connection that went quiet without closing, or one that never
+  even wrote a response status line — used to leave the client waiting
+  indefinitely with no error and no way to tell a slow answer from a dead one.
+  Two bounds now end it: a total wall-clock ceiling
+  (`stream_total_timeout_s`, default `900`) and an idle-between-chunks
+  ceiling (`stream_idle_timeout_s`, default `300`), both configurable and
+  both settable to `0` to restore the old unbounded behaviour;
+  `direct_read_timeout_s` (default `300`) separately bounds the wait for
+  response headers on a streaming request, since the guard's own clocks only
+  start once headers arrive. Tokens already produced still arrive
+  byte-for-byte; on an SSE stream hal0 appends one final chunk explaining
+  which bound tripped, then closes the stream cleanly so the client sees a
+  finished answer rather than a broken pipe (#1893).
+- **Memory writes are no longer silently lost when the store heals itself.** If
+  the durable memory backend was unreachable at boot, hal0 fell back to a
+  volatile in-process store and healed onto the durable one as soon as it came
+  up — but everything written in between was gone for good, with no error at any
+  point. Those writes are now replayed onto the durable store the moment the
+  heal lands, exactly once, and a replay that cannot be completed is logged
+  loudly instead of disappearing (#1897).
+- **A chat request aimed at an embedding or reranking model gets a real answer.**
+  Asking for a chat completion from a model that can only embed or rerank used
+  to be forwarded anyway and came back as the upstream server's raw HTTP 500.
+  hal0 now recognises the mismatch before it calls anything and returns a typed
+  `409` naming the problem (#1894).
+- **Model loads use their full time budget again.** A container that reset the
+  connection mid-probe made hal0 give up on the load about seven seconds in,
+  instead of polling for the full ~180-second window, and stamped the slot
+  `ERROR` with an empty message. The same unhandled failure could turn a
+  routine dispatch into a `500` where a `503` was correct. Loads that just need
+  time now get it (#1898).
+- **The FPX safety guard actually protects the models hal0 installs.** The
+  rc.4 guard that refuses to launch an FPX-quantised model on a runner that
+  cannot serve it was inert for every model hal0 pulled itself — including the
+  brain model the installer seeds — because pull-registration never recorded
+  the model's quantisation. It is recorded now, and the guard falls back to
+  deriving it from the filename if a registry row is ever missing it again
+  (#1890).
+- **The dashboard's memory figures agree with each other.** On a box with a GPU
+  that hal0 drives through Vulkan rather than ROCm, the footer reported the
+  entire pool as free while models were loaded, contradicting the memory ruler
+  sitting directly above it. The footer and the ruler now read the same
+  reconciled number, and a Vulkan-only box is treated as GPU-backed rather than
+  falling through to a plain-RAM view (#1900).
+
+### Breaking
+
+- **`device = "gpu-vulkan"` is a valid llama.cpp lane again, gated on a
+  validated runner image; a fresh AMD GPU install no longer requires
+  `/dev/kfd` (#1923, #1948, #1973).** rc.7's mid-cycle retirement of the
+  Vulkan LLM lane (#1923) is superseded by its restoration behind an explicit
+  image allowlist, `VULKAN_CAPABLE_IMAGE_REFS`: a `gpu-vulkan` llama.cpp slot
+  on an AMD host now needs a render node the runner identity can open **and**
+  a runner image that has earned membership through the §3-C validation
+  matrix (`ghcr.io/hal0ai/hal0-combined:0822` or later) — an image outside
+  that set is refused at load time by name, quoting #1888, rather than
+  silently serving garbage again; `HAL0_ALLOW_VULKAN_FALLBACK=1` downgrades
+  that refusal to a warning but cannot substitute for a missing render node.
+  `gpu-rocm` keeps the unconditional `/dev/kfd` requirement rc.7 always had
+  for it — that lane's device name IS the ROCm claim. **The install-time
+  preflight changed too**: it previously stopped a fresh install on any AMD
+  render node with no ROCm compute node, telling the operator to forward
+  `/dev/kfd` even on hardware (like the ct151-class box #1888 was reproduced
+  on) that has no compute node to forward and never will; it now accepts
+  render-node-only AMD when the runner image is Vulkan-validated, and the
+  `HAL0_ALLOW_CPU_ONLY=1` messaging was corrected to stop implying a GPU
+  install was impossible there. The hardware recommendation ladder,
+  `--hardware` auto-detect, and post-install device derivation all resolve a
+  compute-less AMD GPU to the gated `gpu-vulkan` lane instead of `cpu`. A box
+  with no usable GPU at all still needs an explicit CPU-only install
+  (`HAL0_ALLOW_CPU_ONLY=1` or the interactive confirm). ComfyUI and Qwen3-TTS
+  still need `/dev/kfd` for their own ROCm builds regardless of the llama.cpp
+  lane (#1941). **No slot already relabeled by the earlier retirement
+  migration is reverted**: a slot the #1924 migration moved from
+  `gpu-vulkan` to `gpu-rocm` or `cpu` on an rc.6 → rc.7 upgrade keeps that
+  device — only the capability picker's Vulkan *offer* returns, for new slot
+  creation and for boxes that never carried the retired label; the picker
+  offers the lane without gating on image version — refusal happens at slot
+  load, not at offer time. Seed stacks still default to `gpu-rocm` where
+  `/dev/kfd` is reachable — ROCm leads on prefill; switch a slot to the
+  restored lane by hand with `hal0 slot edit <slot> --hardware vulkan`.
+
+### Added
+
+- `[dispatcher].stream_total_timeout_s` (default `900`, range `0-86400`) and
+  `[dispatcher].stream_idle_timeout_s` (default `300`, range `0-86400`) bound
+  how long a relayed stream may run in total and how long it may go without
+  producing a chunk; either set to `0` disables that bound. While the guard is
+  active, streaming requests disable the HTTP client's own read timeout so the
+  guard owns the body bound; `[dispatcher].direct_read_timeout_s` (default
+  `300`, range `30-600`, unchanged) still bounds the wait for response headers
+  on those requests, since the guard's clocks only start once headers arrive.
+  All three are settable through the settings API and documented with the
+  rest of the dispatcher configuration (#1893).
+- The output-sanity gate can be switched off where it does not suit the model:
+  `HAL0_SLOT_OUTPUT_SANITY=0` in `hal0-api`'s environment disables it for every
+  slot on the box, and `output_sanity = false` in a slot's TOML
+  (`/etc/hal0/slots/<name>.toml`) disables it for that slot alone. It is on by
+  default, applies only to `type = "llm"` slots, and costs a successful load one
+  short completion with a twenty-second ceiling (#1922).
+- `image_status` gains a fifth member, `unknown`, on `GET /api/slots`,
+  `/pull/status`, and `/pull/stream`: podman was asked whether an image
+  exists and could not answer — a broken rootful-seam grant, an unusable
+  wrapper, no container runtime at all — as distinct from `missing`, which now
+  means only "podman was asked and the image is not there." This is an
+  additive enum member on an existing field, not a removal or rename; a
+  consumer that switches on `image_status` exhaustively needs a case for it.
+  It ships pre-GA, in rc.7, on the reasoning that a schema break is cheap now
+  and expensive after the vocabulary is frozen (#1968, #1939).
+- **The Bank memory workspace is redesigned as "memory v2"**: new tokens,
+  shared primitives and stylesheet underpin ported tag/unit/curate/history
+  data plumbing, with an archive-aware units filter — an invalidated fact
+  drops out of the default listing the same way the upstream store already
+  excludes it, and the curation inspector's revert flow re-lists it
+  explicitly rather than assuming it is still there. Two backend additions
+  make the new surface honest rather than decorative: curate is exposed as
+  an audited REST `PATCH /api/memory/banks/{bank_id}/memories/{memory_id}`
+  (forwarded verbatim to the store, reversible — it invalidates, it does not
+  delete — and recorded through the same `record_action` audit path every
+  other mutating memory route uses), and a new composed
+  `GET /api/memory/banks/{bank_id}/units` endpoint adds tag and time-window
+  filtering with salience ranking computed over the same cached graph slab
+  `bank_subgraph` already pays for. That ranking is deliberately honest about
+  its own limits: a unit outside the slab's ~2000-row cap scores
+  `salience: null` and empty `link_counts_by_type` rather than a false `0.0`,
+  sorts after every row the slab could actually score, and the response
+  carries a `truncated` flag when the slab itself clipped — the same signal
+  `bank_subgraph` gives for the identical tradeoff. The ego subgraph's depth
+  ceiling rises from 2 to 10 to match the workspace's depth slider, which the
+  backend was silently clamping under before (#1987).
+
+### Fixed
+
+- Models registered by `hal0 model pull` — including the brain model the
+  installer seeds — now record their quantisation, so the guard that refuses to
+  launch an FPX model on a runner that cannot serve it fires as intended instead
+  of silently passing everything through. A model whose row still carries no
+  quantisation has it derived from the filename rather than skipping the check
+  (#1890).
+- The curated catalogue no longer offers `bge-reranker-base-q4_k_m`, which
+  pointed at a non-mainline conversion the shipped runner cannot load — it
+  appeared in the capability catalogue as a fittable choice and then failed at
+  load time. The default `bge-reranker-v2-m3-q4_k_m` already covers reranking on
+  the same runner image and is unaffected (#1891).
+- `/dev/kfd` accessibility is judged by the identity that actually opens it —
+  the rootful slot-container runner — instead of the calling process, which
+  on `hal0-api` is the unprivileged `hal0` user (#1953, #1954). A plain LXC
+  `dev1: /dev/kfd` passthrough leaves the compute node owned `root:root`
+  while the render node is group-readable, so ROCm worked perfectly inside
+  the container while the API-side preflight reported the compute node
+  unusable and refused every AMD GPU llama.cpp slot on an otherwise healthy
+  box — and told the operator to forward a device that was already forwarded.
+  The target group id is now read from the render node itself rather than
+  guessed from a group name that is not portable across boxes, and both
+  `install.sh` and `hal0 update` converge an existing box's `/dev/kfd`
+  ownership to match.
+- The agent picks the slot that is actually serving. Delegation resolved its
+  target by name against a stale idea of which slot states are dispatchable, so
+  a seed slot that had never been wired to a model could shadow a slot that was
+  genuinely serving, and a perfectly usable `idle` slot could be judged not
+  ready. Delegation now uses the same readiness rule as the rest of the system
+  and requires the slot it picks to have a model bound (#1892).
+- Writes made through the volatile memory fallback are replayed onto the durable
+  store when it heals, so a fact added while the durable backend was down is no
+  longer lost. A replay that does not land is retried and, if it still cannot
+  complete, reported as `hal0.memory.heal_replay_abandoned` rather than passing
+  in silence (#1897).
+- A chat-shaped request naming an embedding or reranking model returns a typed
+  `409 dispatch.capability_mismatch` explaining the mismatch, instead of being
+  forwarded to a server that cannot answer it and surfacing that server's raw
+  `500` (#1894).
+- The dashboard footer's service indicators show every service hal0 monitors.
+  ComfyUI was missing because the footer carried a hardcoded list; it now
+  mirrors whatever the health endpoint reports, so a service added later cannot
+  fall out of the footer the same way (#1899).
+- A container that resets the connection while hal0 is probing its health is
+  treated as "not ready yet" rather than as a hard failure. This restores the
+  full model-load wait window (a load that needed time no longer aborts after
+  roughly seven seconds), gives a failed slot a real error message instead of an
+  empty one, and keeps a mid-load dispatch returning `503` rather than `500`
+  (#1898).
+- `POST /api/memory/add` fails fast with a `503` naming the problem when the
+  slot that would perform memory extraction has a context window below the
+  usable floor, instead of accepting the request and producing nothing. A slot
+  whose window cannot be determined is not blocked (#1903).
+- The dashboard footer computes free memory from the same reconciled per-slot
+  figure the memory ruler renders, and a box whose GPU is usable through Vulkan
+  but has no ROCm stack is treated as GPU-backed. Together these stop the footer
+  from reporting the whole pool as free while models are loaded (#1900).
+- `hal0 bench history` prints `no records` when its query matches nothing —
+  an empty store, or a `--model` / `--cell` filter that matched no rows — instead
+  of printing nothing at all and exiting `0`, which read as a broken command.
+  `hal0 bench results` already did this (#1904).
+- `hal0 capabilities list` shows the Status column the API has been returning
+  all along; the synthetic `hal0` entry in the slot list explains what it
+  actually is instead of borrowing another entry's description, and
+  `GET /api/slots/hal0/logs` returns an explanation rather than a `404` that
+  looked like a missing slot (a genuinely unknown slot name still `404`s);
+  `uptime_s` on `/api/hardware` and `/api/stats/hardware` is read fresh on every
+  request instead of being frozen at the moment the hardware probe last wrote its
+  cache; and `hal0 agent peers` no longer crashes with an `AttributeError` on a
+  peer card whose metadata came back as text (#1905, #1897).
+- `hal0 config edit` prints its `sudo` hint when it cannot create a config file,
+  instead of an unhandled traceback. Running it as a user who is not in the
+  `hal0` group, against an unwritable `/etc/hal0`, now says what to do (#1885).
+- Installing and updating by the documented channel URL works again.
+  `releases.hal0.dev` now proxies the manifest's sibling cosign bundle
+  (`<channel>.json.bundle`), byte-identical to the GitHub asset, so
+  `hal0 update` against `https://releases.hal0.dev/preview.json` no longer
+  fails at mandatory manifest verification. This was an infrastructure fix on
+  the release proxy (hal0-web#107), not a change in this tree — no hal0 upgrade
+  is needed to benefit from it, and older tags that failed with the bundle 404
+  now verify too (#1883).
+- `GET /api/slots` reports the image a slot is actually running instead of
+  always `image_status: "missing"` and `actual_image: null`. Slot containers
+  run under rootful podman (Quadlet units, root's image store), but the image
+  reads shelled out to `podman` as the unprivileged `hal0-api` service user,
+  which has no subuid ranges and so could only ever see its own separate
+  rootless store — a store that by construction never holds a slot image. The
+  #663 image-drift detector could never fire as a result. Reads now go
+  through the rootful `hal0-podman-ro` seam instead, with the requested image
+  reference or slot token validated on the root side before anything runs
+  (#1889).
+- `model-pull-jobs/` and `activity.db` (with its `-wal`/`-shm` siblings) now
+  get an ownership row at install time, so `hal0-api` (running as the `hal0`
+  service user) can create and later read them. Previously the installer's
+  root-run brain-model pull was the first writer, lazily creating
+  `model-pull-jobs/` as `root:root`, which every subsequent pull-job write by
+  `hal0-api` failed against; on a freshly installed box, restarting
+  `hal0-api` lost all in-flight pull status. `hal0 doctor perms --fix` can
+  now heal both paths the same way it heals everything else it owns (#1895).
+- Updater journal lines carry the `job_id` of the job that produced them
+  instead of `job_id=None`, and every update — successful or failed — now
+  relays the `sha256_ok` / `cosign_verify_ok` / `prepare_ok` breadcrumbs the
+  routed child process logs into the journal in full. A successful update
+  previously left no trail to reconstruct it from at all, and a failed one kept
+  only the last 4,000 characters of the child's log attached to the error:
+  enough for a failure that happens early, but a failure after cosign passed —
+  during `activate`, say, with a long cleanup tail behind it — pushed exactly
+  the verification evidence an operator needs out of that window. The bounded
+  tail is still attached to the error for quick triage; it is no longer the only
+  copy. The `cosign_skipped` job field, which never had a producer and always
+  read `null`, is removed rather than given a fake one (#1901, #1940).
+- A Kokoro voice slot or a Moonshine speech-to-text slot on
+  `device = "gpu-vulkan"` loads again on an AMD box that has no `/dev/kfd`. The
+  new ROCm requirement read the slot's device string alone, but `gpu-vulkan` is
+  simply what the capability picker calls "the GPU" for every runtime that is
+  not llama.cpp — so it refused runtimes that never touch ROCm at all, and told
+  them it was because of a llama.cpp Vulkan fallback they do not use. Each
+  runtime now states for itself whether its image needs the ROCm compute node:
+  ComfyUI and Qwen3-TTS do, and are still refused without it in their own terms;
+  Kokoro, Moonshine and the CPU/NPU runtimes do not, and are no longer gated
+  (#1941).
+- The voice settings page stops attributing Kokoro's voices to a slot that is
+  not Kokoro. While the capability probe was still in flight — or had failed —
+  the page filled the voice picker with Kokoro's bundled pack and offered
+  `af_bella` as the engine default even on a box whose TTS slot runs Qwen3-TTS.
+  It now says the list is loading (or that the probe failed) and claims nothing
+  about the engine until it knows which one is configured; a slot with no TTS
+  model still gets the seed pack once the probe answers (#1944).
+- Four more paths `hal0-api` writes get an ownership row at install time, so a
+  root-run process that touches one of them first cannot leave it unwritable to
+  the service user: the image-generation PNG cache (`images/cache/`), the saved
+  dashboard layout (`dashboard-layout.json`), the durable update-job snapshots
+  (`update-jobs/`) and the custom chat-template store (`models/chat-templates/`).
+  `hal0 doctor perms --fix` now heals all four the same way it heals everything
+  else it owns (#1938).
+- **A release's own migrations now run on the update that ships them.**
+  `Updater.commit()` was running `run_post_activation_migrations` in-process
+  before the symlink swap, so it executed the *outgoing* version's migration
+  code — a release's new migration never fired on the upgrade that shipped it,
+  only on whichever later upgrade happened to run next. It now runs in a
+  subprocess of the just-activated tree, after the swap, mirroring the
+  existing unit re-render seam; a boot-time safety net re-runs the same
+  idempotent passes on every `hal0-api` start so a box that upgraded before
+  this fix, or whose post-swap subprocess itself failed, still heals. A
+  migration failure no longer aborts the commit — the swap has already
+  succeeded by the time migrations run — but it is loud: an ERROR journal
+  line, a `convergence.post_activation_migrations` block that flips
+  `converged` to `false`, and a red panel in `hal0 update`'s CLI output
+  naming what failed and that it self-heals on the next `hal0-api` restart
+  (#1961, closes #1960).
+- `GET /api/slots`, `/pull/status`, and `/pull/stream` no longer report an
+  authoritative-looking `image_status: "missing"` when the rootful podman seam
+  simply could not be asked — a broken sudoers grant, an unusable wrapper, a
+  timed-out probe, or no container runtime at all. Those cases now report
+  `unknown`; `missing` means podman was asked and answered no. The dashboard's
+  slot cards render a neutral dashed "image ?" chip for `unknown` rather than
+  nothing, with a tooltip that names `hal0 doctor` instead of claiming the
+  image is absent — covering embedding, reranking, speech and image slots as
+  well as language-model ones, and with a `reason=` journal breadcrumb on the
+  probe-timeout path too, closing two gaps the initial change left behind
+  (#1968, closes #1939; #1980).
+- `hal0 doctor perms` is durably green on a freshly installed box, and stays
+  green after a slot load, a model pull, and a Hermes `STATE.md` render — the
+  three shipped components that declare a path's mode (the ownership table,
+  the privileged `hal0-agentenv` wrapper, and each writer's own directory
+  creation) previously disagreed with each other, so a `--fix` repair was
+  undone by the very next write it was fixing. `secrets/` and
+  `secrets/agents/` are now declared and born `0700` (narrowed from a stale
+  `0755` the table carried but no writer actually produced), atomic-write
+  helpers preserve a file's existing mode across a rewrite instead of
+  resetting it to the process umask, and daemon-created state directories are
+  born `2775` rather than a umask-masked `2755` (closes #1896).
+- The footer's runtime indicator strip is relabelled **Slots** and renders a
+  pip only for a slot that is actually active, coloured from the same
+  serving/ready/warming/error palette as the slot-card indicator dots instead
+  of its own separate one; a mostly-stopped fleet no longer reads as a wall of
+  identical grey dots (#1976).
+- Memory bank cards on the dashboard collapse their working/pending/error pill
+  cluster into a single spinner and in-flight count next to the bank name; the
+  per-task breakdown moves into a new **Active tasks** list on the graph
+  extraction sidebar card, grouped by task type with active/queued totals
+  (#1975).
+- Slot cards show live tokens-per-second and context-usage figures for
+  non-streaming traffic (graph extraction, embedding callers, scripts) instead
+  of a permanent `—`. A single non-streaming completion carries its whole
+  token count in one event, which the tok/s calculation required at least two
+  events to smear across a window to read at all; the context figure had no
+  producer at all and now reads the fullest sub-slot's used tokens from the
+  runner's own `/slots` payload (#1977).
+- The dashboard's memory hero bar and the health strip's unified-memory figure
+  now size themselves against the same shared GTT pool total the Slots page
+  already reads, instead of `ram_total_mb` — on a box where the operator had
+  raised `ttm.pages_limit`, the two dashboard surfaces kept reporting the
+  smaller RAM figure while the Slots page correctly showed the raised pool
+  (#1978).
+- Deliberately stopped slots and services no longer paint red as if crashed.
+  A bounded `systemctl stop` that escalates to SIGKILL leaves a unit's
+  `is-active` reading `failed` even though the stop was clean and intentional,
+  which `unload_sync` now clears with a best-effort `systemctl reset-failed`
+  after teardown — a unit that fails on its own still never passes through
+  that path and stays red. `GET /api/services/health` gains a `state` field
+  (`up` / `stopped` / `down`) so a merely-stopped service, like ComfyUI parked
+  intentionally, reads as a grey "stopped" pip rather than the same red
+  "down" a genuine HTTP failure gets (#1979).
+- The AMD GPU runner image build is a tracked, reproducible, digest-pinned
+  recipe (`packaging/runner/rocmfpx/`) rather than a hand-build that only
+  existed as a pushed tag — the same gap that made bisecting #1888 to its
+  root cause expensive in the first place. The manifest pins the base image
+  by content digest in both build stages — verified to be the exact base
+  `:0822` was built from — and the upstream source repo by a full (not
+  abbreviated) commit sha, and records each carried patch with its own
+  rationale; `build.sh --check` reproduces the patch series against a clean
+  checkout without a container runtime and without building anything, and
+  runs as part of CI. A provenance note under
+  `tests/release-validation/provenance/runner-images.md` states plainly that
+  the published `:0822` itself predates this recipe and carries none of its
+  labels — it is reconstructed provenance, not a build record, and this
+  recipe governs the next build rather than retroactively documenting this
+  one (#1986, review record #1972, closes #1970).
+
+### Docs
+
+- The MCP connection guide points at the working `/mcp/admin/mcp` and
+  `/mcp/memory/mcp` Streamable-HTTP endpoints; the mount roots it previously
+  documented return `405`, so following the guide could not connect a client.
+  The admin and memory tool tables are regenerated from the source registrations
+  and now list every tool (180 admin, 26 memory) grouped by permission tier,
+  rather than an outdated subset. A doc test now fails the build if either drifts
+  from the code again (#1902).
+
+### Audience
+
+Preview-channel operators validating the 1.0 line ahead of GA, and fresh
+installs that want the current build. rc.7 supersedes rc.6 for everyone: rc.6
+can silently drop memory writes after a store heal (#1897), hangs
+indefinitely on a wedged upstream stream (#1893), can abandon a legitimate
+model load seconds into a three-minute budget (#1898), and will happily seed
+a Vulkan LLM slot that serves garbage while reading healthy (#1888). Boxes on
+the stable channel are not offered this tag. rc.7 is **not** a GA candidate —
+see Known issues.
+
+### Supported upgrades
+
+- `1.0.0-rc.6` → `1.0.0-rc.7` via `hal0 update` (preview channel). The GitHub
+  release asset URL (`https://github.com/Hal0ai/hal0/releases/download/v1.0.0-rc.7/preview.json`)
+  works end-to-end for install and update. The documented channel URL
+  (`https://releases.hal0.dev/preview.json`) works again as well now that the
+  cosign bundle is proxied (#1883).
+- `1.0.0-rc.5` / `1.0.0-rc.4` / `1.0.0-rc.3` / `1.0.0-rc.2` / `1.0.0-rc.1` →
+  `1.0.0-rc.7` directly, same mechanism. The rc.6 operator migrations still
+  apply to any box coming from rc.5 or earlier; see the
+  [1.0.0-rc.6 section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100-rc6--2026-08-12).
+- `0.9.8` → `1.0.0-rc.7` in place — re-run the installer or `hal0 update` on the
+  preview channel; the R5 migration set applies (see the
+  [1.0.0 changelog section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100--2026-08-07)).
+- Older than 0.9.8: step through 0.9.8 first.
+
+### Known issues
+
+**The Vulkan garbage-output blocker (#1888) is answered at the source, and the
+issue stays open only until the fix is swept on the fleet.** rc.7 restores the
+Vulkan LLM lane on a corrected runner image behind an explicit image gate
+rather than shipping the mid-cycle retirement permanently — see Highlights and
+Breaking. The deeper defect the original bug exposed — a slot reading `ready`
+on every health surface while emitting unusable tokens — is what the new
+output-sanity gate (#1922) exists to stop, independent of which lane or image
+a slot runs. Still open: the restored image and the gate have not yet been
+swept on the fleet by `rc-validate`, and the non-AMD Vulkan paths (NVIDIA
+without CDI, Intel iGPU) remain uncharacterised and ungated by the new image
+allowlist, which is AMD-specific (#1925).
+
+**The Vulkan runner-image gate is a static allowlist, not an ordering
+comparison, by design (#1948).** Build tags in this lineage carry no total
+order — a git shortref, a date stamp, and a name coexist — and correctness was
+found not to be monotonic in build recency (an older upstream tree was
+correct; a newer one was broken). A future fix to the same class of defect
+still has to earn its way into the allowlist by evidence, the same way
+`ghcr.io/hal0ai/hal0-combined:0822` did; there is no shortcut where a later
+tag is trusted automatically.
+
+**The output-sanity gate does not cover every path (#1922).** It runs on a
+`type = "llm"` slot's own load, which is where a bad backend is caught before
+anything is dispatched to it. It does not run when hal0 adopts a slot whose unit
+was already running — that reconcile happens inside the `/api/slots` poll, where
+a real completion per slot would be a hot-path cost — and the NPU/FLM lane's
+existing inference check still only asks that the runner returned something, not
+that the answer is right. Neither gap has been exercised on hardware yet.
+
+**Carried forward from rc.6.** An upgraded box can still refuse to chat if its
+agent slot carries a ceiling below Hermes' 64,000-token floor — `hal0 doctor`
+names the slot and prints the repair command, but the update does not raise the
+ceiling for you (#1867). `hal0 update` does not refresh the `hal0` launcher on
+`PATH`, so after an in-place upgrade a shell can keep running the previous
+release — check `hal0 --version` against the installed tag and re-run the
+installer if they disagree (#1844). The stable channel pointer is still 0.9.8,
+so nothing on the stable channel is offered the 1.0 line yet (#1530). Memory
+retention on CPU-only installs remains unreliable: `hal0 memory status` can
+report `Writes landing` on a store that has never landed a fact, and the
+extraction queue has no concurrency cap (#1833, #1834). The remaining rc.5
+polish items are tracked on #1840 (CLI/API) and #1841 (dashboard); three
+review-time findings remain deferred (#1873, #1862, #1869).
+
+### Operator migrations
+
+- **Nothing is required to take rc.7 unless a slot still names an unvalidated
+  Vulkan image.** No rc.7 change alters an on-disk state shape or adds a
+  mandatory configuration key; `hal0 update`'s own migrations handle the
+  runner-image transition below automatically, and the other items are
+  optional or conditional.
+- **Streams are now bounded by default (#1893).** A relayed stream that runs
+  longer than 900 seconds in total, or goes 300 seconds without producing a
+  chunk, is ended with an explanatory final chunk. If you deliberately run
+  very long or very bursty streams through hal0, raise
+  `[dispatcher].stream_total_timeout_s` and
+  `[dispatcher].stream_idle_timeout_s` in `hal0.toml`, or set either to `0`
+  to disable that bound. Restart `hal0-api` for a change to take effect.
+- **A slot TOML with `device = "gpu-vulkan"` is relabeled only when its
+  resolved runner image cannot serve the lane; it is left alone once the lane
+  is restored (#1923, #1924, #1948, #1973).** `hal0 update`'s post-activation
+  migration that moved a `gpu-vulkan` slot to `gpu-rocm` (or, with no
+  `/dev/kfd`, to `cpu` with a loud warning) still runs on every update, but it
+  is now image-aware: a `gpu-vulkan` slot whose resolved image has cleared the
+  §3-C validation matrix (`ghcr.io/hal0ai/hal0-combined:0822` or later) is
+  skipped rather than relabeled, since the lane genuinely works on that image;
+  a slot still pinned to an unvalidated image, including the retired
+  `ade07ba`, is still rescued exactly as before. **This migration never runs
+  in reverse** — a slot an earlier upgrade already moved to `gpu-rocm` or
+  `cpu` keeps that device; nothing relabels it back to `gpu-vulkan`
+  automatically. Only the `device` key is touched, the pass is idempotent, and
+  a Vulkan slot belonging to a non-llama.cpp runtime (Kokoro, whisper.cpp,
+  ComfyUI) or a non-AMD host is left alone regardless — a ComfyUI or
+  Qwen3-TTS slot still needs `/dev/kfd` because its own image is a ROCm build
+  (#1941). Separately, `hal0 update`'s migrations also retag any slot still
+  pointed at a stale runner-image reference — `ade07ba` and its predecessors
+  — to the current default, including a deliberate `ade07ba`-era pin that the
+  rc.6 `hal0 slot migrate-hw --apply` convergence fold recorded under
+  `image_pin` (previously invisible to the retag; #1959). The retag judges a
+  slot on `image_pin` before the bare `image` key when both are present,
+  matching the precedence the runtime itself resolves the launch image with,
+  so the two can never disagree about which image a slot is judged against.
+  To relabel a slot back onto `gpu-vulkan` by hand, or to review the result
+  either way, use `hal0 slot edit <name> --hardware vulkan` (or
+  `--hardware rocm`), or change `device` in the TOML directly.
+- **An AMD GPU box with a render node but no `/dev/kfd` now installs on the
+  restored `gpu-vulkan` lane instead of stopping (#1923, #1948, #1973).** The
+  install-time preflight previously refused any AMD render node with no ROCm
+  compute node outright, telling the operator to forward `/dev/kfd` — the
+  wrong remedy on hardware, like the ct151-class box #1888 was reproduced on,
+  that has no compute node to forward. It now accepts render-node-only AMD
+  when the resolved runner image is Vulkan-validated; the hardware
+  recommendation ladder and `--hardware` auto-detect then derive
+  `gpu-vulkan` for that box rather than stopping or falling back to `cpu`. A
+  box with no usable GPU device at all still needs an explicit CPU-only
+  install: `HAL0_ALLOW_CPU_ONLY=1` (or the interactive confirm).
+- **The FPX guard may now refuse a model it previously launched (#1890).** A
+  model registered by `hal0 model pull` that is FPX-quantised and sitting on a
+  runner image that cannot serve FPX was launching and producing bad output;
+  it will now be refused at launch with an explanatory error. That is the guard
+  working. Move the slot to a runner image that supports the quantisation, or
+  use a non-FPX build of the model.
+- **A language-model slot must pass an output check before it goes ready
+  (#1922).** On every `type = "llm"` load, once `/health` has converged, hal0
+  asks the slot to complete `The capital of France is` and expects `Paris`
+  (greedy, twelve tokens, twenty-second ceiling, once per load). A slot that
+  fails is stamped `error` with the probe, the expected word and the model's
+  actual output in its message, and its unit is stopped rather than left
+  running. That is the gate working — the usual cause is a backend that cannot
+  serve the model it just loaded. Answers in other languages (`Parigi`,
+  `Париж`, `巴黎`, …) already count as correct. If you run a model this prompt is
+  unfair to, add `output_sanity = false` to that slot's TOML
+  (`/etc/hal0/slots/<name>.toml`), or set `HAL0_SLOT_OUTPUT_SANITY=0` in
+  `hal0-api`'s environment to disable the gate box-wide, then restart
+  `hal0-api`.
+- **`bge-reranker-base-q4_k_m` is gone from the curated catalogue (#1891).** A
+  slot already configured with it keeps its configuration — the model is simply
+  no longer offered as a curated choice, because the shipped runner cannot load
+  it. If you have a reranking slot that never came up, point it at
+  `bge-reranker-v2-m3-q4_k_m` instead.
+- **Memory adds can now be refused with a `503` (#1903).** A request to
+  `POST /api/memory/add` is rejected up front when the extraction slot's context
+  window is below the usable floor, where it previously succeeded and produced
+  nothing. Raise that slot's context window — `hal0 doctor` names the slot and
+  the limits — to restore the write path.
+
+### Rollback
+
+Release tarballs are immutable and cosign-signed; roll back by re-installing the
+previous tag (`v1.0.0-rc.6`) from its GitHub release. No rc.7 change writes a
+state shape rc.6 cannot read — every fix is re-derived at launch or read time,
+except the quantisation now stamped on pull-registered models, which rc.6
+ignores. The two new `[dispatcher]` stream-timeout keys
+(`stream_total_timeout_s`, `stream_idle_timeout_s`) are the only configuration
+addition you must undo; if you set them, remove them from `hal0.toml` before
+rolling back to a build that does not know them. The output-sanity opt-outs need
+no undoing — rc.6 ignores an unknown `output_sanity` key in a slot TOML, and
+`HAL0_SLOT_OUTPUT_SANITY` is simply unread there. A slot TOML moved
+from `gpu-vulkan` to `gpu-rocm` for the upgrade
+loads fine on rc.6 — both device ids resolve to the same runner image there —
+so no slot edit needs undoing; a slot left on `gpu-vulkan` because its image
+had already cleared the rc.7 gate keeps whatever image reference its
+`image_pin` records and rc.6 launches it directly, unaware of the gate that
+admitted it. The `image_status: "unknown"` API value is new to rc.7; rc.6
+simply does not emit it, so no client-side undoing is needed either. Rolling
+back reinstates the rc.6 defects listed
+above, including the silently dropped memory writes (#1897), the unbounded
+stream relay (#1893), the seeding of Vulkan LLM slots that serve garbage while
+reading healthy (#1888), and readiness proved by a health check alone, so a slot
+that produces nothing usable reads `ready` again (#1922).
+
 ## [1.0.0-rc.6] — 2026-08-12
 
 The rc.5 validation sweep ran the whole fleet — fresh installs, in-place
@@ -81,6 +939,54 @@ unconditionally (#1828). Both now fail loudly.
   GPU and reads real container memory instead of silently under-reporting it by
   roughly a third (#1839), and `hal0 model add` no longer claims high confidence
   for a capability it guessed from the filename (#1838).
+- **Hermes' terminal tool is off by default on a fresh install.** A fresh
+  install — interactive (declined at the prompt), piped, headless, or run
+  with `HAL0_NONINTERACTIVE=1` — no longer hands the bundled agent a local
+  shell running as the `hal0` service user — root-equivalent on this box —
+  without the operator saying so. Opt in at the installer prompt, with
+  `sudo hal0 agent install hermes --terminal-tool`, or via
+  `HAL0_HERMES_TERMINAL=1`. This governs only a fresh provision: a bare
+  `hal0 update` never touches Hermes' config, and re-running the installer
+  against a box that already has Hermes provisioned skips the prompt and
+  any environment answer entirely, so an already-provisioned box's terminal
+  posture is untouched either way. The new default-off rule is evaluated
+  the next time Hermes is actually reprovisioned — where a `config.yaml`
+  already carrying a non-`local` backend, or `local` with a non-default
+  `cwd` (hal0-provisioned or hand-set), still reads as consent and keeps it
+  enabled, while `local` with no `cwd` or the default `cwd: "."` does not
+  and comes back off. Off also disables the `code_execution` and
+  `delegation` toolsets, since both reach a shell one hop away from
+  `terminal` (#1882).
+
+### Breaking
+
+- **Hermes' terminal tool now defaults off on a fresh install.** Every
+  prior release wrote `terminal.backend: local` unconditionally, handing
+  the bundled agent a shell running as the `hal0` service user —
+  root-equivalent on this box — without asking. A fresh install —
+  interactive (declined), piped (`curl … | bash`), headless, or run with
+  `HAL0_NONINTERACTIVE=1` — now leaves the terminal tool disabled unless
+  the operator opts in: the installer's interactive prompt (fresh installs
+  only), `sudo hal0 agent install hermes --terminal-tool`, or
+  `HAL0_HERMES_TERMINAL=1`. Turning it off also disables the
+  `code_execution` and `delegation` toolsets — `execute_code` runs
+  arbitrary code as the same user, and `delegate_task` could otherwise hand
+  a subagent the `terminal` toolset directly. Skills that stop working with
+  it off: `hal0-service-management`, `hal0-bench`, `hal0-bench-autopilot`,
+  `hal0-tune` and `hal0-quantize`. This default only governs what a fresh
+  Hermes provision writes — a bare `hal0 update` never reprovisions Hermes,
+  and re-running the installer against a box that already has Hermes
+  provisioned skips the prompt and any environment answer entirely, so
+  neither touches an existing box's terminal posture at all. At the next
+  ACTUAL reprovision or bootstrap, a `config.yaml` that already carries a
+  backend other than `local`, or `local` together with a non-default
+  `cwd` — anything hal0's own provisioning has ever written, or a path the
+  operator set by hand — is read as a prior opt-in
+  and keeps the terminal enabled. `local` with no `cwd`, or the default
+  `cwd: "."` that `hermes config migrate` can materialise on its own, is
+  NOT read as consent: that box comes back off at the next reprovision,
+  same as a fresh install, and needs
+  `sudo hal0 agent install hermes --terminal-tool` to opt back in (#1882).
 
 ### Added
 
@@ -191,6 +1097,17 @@ unconditionally (#1828). Both now fail loudly.
   chain is measured and named correctly rather than guessed from the model's
   spelling, and a window hal0 cannot read reports as skipped rather than as a
   pass (#1867).
+- A missing `hal0.toml`, `upstreams.toml` or `providers.toml` seeded by
+  `hal0 config edit` now lands at its canonical mode (`0600`, `0640`, `0600`
+  respectively) instead of the umask-mediated `0644` a bare file write
+  produced, and is chowned to the `hal0` service owner on a real install so
+  `hal0-api.service` can still read what it seeded. An operator who can
+  create the file — in the `hal0` group, on a box where `/etc/hal0` is
+  group-writable — but is neither `hal0` nor root now gets a loud failure
+  pointing at `sudo` instead of a file `hal0-api` cannot open. An operator
+  outside the `hal0` group entirely still fails earlier, at file creation,
+  with a raw permission error rather than that same clean message — tracked
+  separately (#1881).
 
 ### Security
 
@@ -202,6 +1119,34 @@ unconditionally (#1828). Both now fail loudly.
   installs were always 0600. **Existing boxes are repaired on the next
   reprovision, not by the update itself** — check with
   `stat -c '%a' /etc/hal0/agents/hermes.env`, expect `600` (#1876).
+- `hal0 doctor all` gains an **Agent UID split** row that warns — never
+  fails, since sharing a UID is the shipped 1.0 default — when a `hal0-agent@*` unit
+  resolves to the same `User=` as `hal0-api.service`. Same UID means the
+  bundled agent's `local` terminal backend can read the API process's
+  `/proc/<pid>/environ`, and therefore every credential the API holds;
+  `kernel.yama.ptrace_scope` does not stop it, since that setting gates
+  `PTRACE_MODE_ATTACH`, not same-UID reads. `SECURITY.md` gains a new
+  "Bundled agent trust boundary" section laying out the posture
+  control-by-control, with a status of accepted, documented risk for 1.0 —
+  the agent/API UID split is tracked for 1.1 under ADR-0002 (#1881).
+- `upstreams.toml`'s canonical mode drops from world-readable `0644` to
+  `0640` when `hal0 config edit upstreams` seeds a *missing* file, and on
+  every write through the API's `save_upstreams_config` writer (provider
+  create/patch/delete). Opening an EXISTING `upstreams.toml` in
+  `hal0 config edit upstreams` only launches `$EDITOR` — it never touches
+  the file's mode. The file carries no credential values — `auth_value_env`
+  only names an environment variable the registry resolves from the process
+  environment at request time — but its provider/endpoint inventory was
+  readable by every local account; every real consumer (`hal0-api`,
+  `hal0-agent@*`, the CLI) runs as `hal0` or root, group `hal0`.
+  **A bare `hal0 update` does not touch the file either**, so an existing
+  `upstreams.toml` already on disk at `0644` stays `0644` until an actual
+  provider write happens or an operator converges it directly with
+  `sudo hal0 doctor perms --fix`. CLI impact: `hal0 config show upstreams`
+  reads the file directly as the invoking user — no privilege drop — so once
+  a box is at `0640`, an ordinary login user who is neither `hal0` nor root
+  and not in the `hal0` group gets a permission error and needs `sudo` or
+  `hal0`-group membership to read it (#1881).
 
 ### Docs
 
@@ -320,6 +1265,38 @@ targeted at the 1.0.x line.
   the seam (#1759)** / **releases-URL override (#1750)** migrations from rc.4,
   still apply to boxes coming from an older tag; see the
   [1.0.0-rc.5 section](https://github.com/Hal0ai/hal0/blob/main/CHANGELOG.md#100-rc5--2026-08-10).
+- **Terminal tool off by default on new installs (#1882):** a box freshly
+  provisioned — interactive (declined), piped (`curl … | bash`), headless,
+  or run with `HAL0_NONINTERACTIVE=1` — no longer
+  enables Hermes' `local` terminal backend automatically — `code_execution`
+  and `delegation` come off with it. Nothing to run if that is what you want.
+  To enable it, answer yes at the installer's prompt on an interactive
+  install, or run `sudo hal0 agent install hermes --terminal-tool` (add
+  `HAL0_HERMES_TERMINAL=1` for an unattended install). A bare `hal0 update`
+  never touches Hermes' config — Hermes is only (re)provisioned by the
+  installer or by `hal0 agent install|bootstrap|reprovision hermes` — so an
+  existing box's terminal posture is untouched by the update itself and
+  stays exactly as it was. The default-off behaviour only applies at the
+  NEXT reprovision or bootstrap: at that point, `config.yaml` reading as a
+  real prior choice (a backend other than `local`, or `local` with a `cwd`
+  hal0's own provisioning has ever written, or one the operator set by hand)
+  keeps the terminal enabled, while `local` with no `cwd` or the default
+  `cwd: "."` is NOT read as consent and comes back off. An operator with
+  that shape who wants the terminal to stay on should re-opt-in explicitly —
+  `sudo hal0 agent install hermes --terminal-tool` or
+  `HAL0_HERMES_TERMINAL=1` before reprovisioning — rather than relying on
+  the default. Since this is a root-equivalent shell, an operator who wants
+  it off right now, without waiting for a reprovision, can run
+  `sudo hal0 agent install hermes --no-terminal-tool` at any time — note
+  this also `systemctl enable --now`s the agent unit, so it starts Hermes
+  if it was deliberately stopped. To change only the posture, without that
+  side effect, run `sudo env HAL0_HERMES_TERMINAL=0 hal0 agent reprovision
+  hermes` instead: `reprovision` only `try-restart`s an already-running
+  unit, a no-op on a stopped one. Either command only works on the CLI that
+  is actually rc.6: on an in-place upgrade, `/usr/local/bin/hal0` can still
+  resolve the previous release (#1844) — check with `hal0 --version` and
+  re-run the installer if it disagrees with the installed tag before
+  relying on either opt-out.
 
 ### Rollback
 
