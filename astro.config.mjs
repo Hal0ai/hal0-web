@@ -201,9 +201,7 @@ export default defineConfig({
 			// forum.hal0.dev as wiki topics (src/data/kb-redirects.json), and the
 			// product docs went before them. Starlight still renders /blog via
 			// starlight-blog, which brings its own navigation.
-			sidebar: []
-				},
-			],
+			sidebar: [],
 			components: {
 				// Inline the wordmark SVG so the "hal" glyphs inherit
 				// the docs nav text colour (white in dark, dark in light).
