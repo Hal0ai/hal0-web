@@ -102,11 +102,15 @@ test('every header carries the same five entries, forum included', { skip: !buil
   // and the docs hub linking out to topics).
   const marketingHeader = marketingHtml.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
   const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
+  // Compared as a parsed href SET, not by substring: an `includes()` against
+  // a URL matches it anywhere in a longer string (CodeQL's
+  // js/incomplete-url-substring-sanitization), and here it would also pass on
+  // a header that merely mentioned the forum somewhere other than its nav.
   for (const [where, markup] of [['marketing header', marketingHeader], ['starlight docnav', starlightNav]]) {
-    assert.ok(markup.includes('href="/profiles"'), `${where} missing /profiles`);
-    assert.ok(markup.includes('href="/docs/"'), `${where} missing /docs/`);
-    assert.ok(markup.includes('href="/benchmarks/"'), `${where} missing /benchmarks/`);
-    assert.ok(markup.includes('https://forum.hal0.dev'), `${where} missing the forum link`);
+    const links = hrefs(markup);
+    for (const href of ['/', '/docs/', '/benchmarks/', '/profiles', 'https://forum.hal0.dev']) {
+      assert.ok(links.has(href), `${where} missing ${href}`);
+    }
   }
 });
 
@@ -129,8 +133,9 @@ test('benchmarks carries the shared header with visible manifest links', { skip:
 test('benchmarks carries the same header as every other page', { skip: !built && 'run npm run build first' }, async () => {
   const html = await readFile(pages.benchmarks, 'utf8');
   const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
-  assert.ok(header.includes('https://forum.hal0.dev'), 'benchmarks header missing the forum link');
-  assert.ok(header.includes('href="/docs/"'), 'benchmarks header missing /docs/');
+  const links = hrefs(header);
+  assert.ok(links.has('https://forum.hal0.dev'), 'benchmarks header missing the forum link');
+  assert.ok(links.has('/docs/'), 'benchmarks header missing /docs/');
 });
 
 test('benchmarks renders a real <title> and meta description', { skip: !built && 'run npm run build first' }, async () => {
