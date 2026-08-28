@@ -90,25 +90,24 @@ test('SiteFooter renders outside <main> on Starlight pages', { skip: !built && '
   assert.ok(footerStart > mainClose, 'SiteFooter must come after </main> (contentinfo landmark)');
 });
 
-test('hidden forum header entry never renders as a nav link; profiles is now visible in both headers', { skip: !built && 'run npm run build first' }, async () => {
+test('every header carries the same five entries, forum included', { skip: !built && 'run npm run build first' }, async () => {
   const marketingHtml = await readFile(pages.marketing, 'utf8');
   const starlightHtml = await readFile(pages.starlight, 'utf8');
-  // nav.json's `forum` header entry still carries `hidden: true` — that's
-  // the operator's launch switch (this test does not, and must not, flip
-  // it). What changed is the blanket "forum.hal0.dev must not appear
-  // anywhere on a static page" pin: the homepage's ForumTopics strip
-  // (src/components/landing/ForumTopics.astro) legitimately renders
-  // forum.hal0.dev links once DISCOURSE_URL is set, and the docs hub /
-  // section pages now link straight out to forum.hal0.dev topics too
-  // (src/data/docs-redirects.json). So the assertion narrows to what it
-  // was actually guarding: the HEADER NAV specifically must still respect
-  // nav.json's hidden flag and never render a "forum" link.
+  // `forum` used to be hidden in nav.json -- a launch switch this test
+  // guarded by asserting the header never rendered a forum.hal0.dev link.
+  // The unified chrome flipped that switch on purpose: hal0.dev and the
+  // forum now carry the SAME five entries, so the assertion inverts. It
+  // stays scoped to the header nav, because forum.hal0.dev links appear
+  // legitimately elsewhere on these pages (the homepage ForumTopics strip,
+  // and the docs hub linking out to topics).
   const marketingHeader = marketingHtml.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
   const starlightNav = starlightHtml.match(/<nav[^>]*aria-label="Site"[\s\S]*?<\/nav>/)?.[0] ?? '';
-  assert.ok(!marketingHeader.includes('forum.hal0.dev'), 'hidden forum link must not render in the marketing header nav');
-  assert.ok(!starlightNav.includes('forum.hal0.dev'), 'hidden forum link must not render in the starlight docnav');
-  assert.ok(marketingHeader.includes('href="/profiles"'), 'marketing header missing /profiles');
-  assert.ok(starlightNav.includes('href="/profiles"'), 'starlight docnav missing /profiles');
+  for (const [where, markup] of [['marketing header', marketingHeader], ['starlight docnav', starlightNav]]) {
+    assert.ok(markup.includes('href="/profiles"'), `${where} missing /profiles`);
+    assert.ok(markup.includes('href="/docs/"'), `${where} missing /docs/`);
+    assert.ok(markup.includes('href="/benchmarks/"'), `${where} missing /benchmarks/`);
+    assert.ok(markup.includes('https://forum.hal0.dev'), `${where} missing the forum link`);
+  }
 });
 
 test('benchmarks carries the shared SiteFooter with the full manifest link set', { skip: !built && 'run npm run build first' }, async () => {
@@ -127,10 +126,11 @@ test('benchmarks carries the shared header with visible manifest links', { skip:
   }
 });
 
-test('benchmarks never renders the hidden forum link in its header', { skip: !built && 'run npm run build first' }, async () => {
+test('benchmarks carries the same header as every other page', { skip: !built && 'run npm run build first' }, async () => {
   const html = await readFile(pages.benchmarks, 'utf8');
   const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
-  assert.ok(!header.includes('forum.hal0.dev'), 'benchmarks header must not render the hidden forum link');
+  assert.ok(header.includes('https://forum.hal0.dev'), 'benchmarks header missing the forum link');
+  assert.ok(header.includes('href="/docs/"'), 'benchmarks header missing /docs/');
 });
 
 test('benchmarks renders a real <title> and meta description', { skip: !built && 'run npm run build first' }, async () => {
