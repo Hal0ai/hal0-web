@@ -651,19 +651,19 @@
       <div class="flow" style="grid-template-columns:repeat(4,1fr)">
         <div class="step"><div class="k">install</div><div class="cmd">hal0 --version</div><div class="d">one time</div></div>
         <div class="step"><div class="k">preflight</div><div class="cmd">hal0 doctor</div><div class="d">GPU · ports · disk</div></div>
-        <div class="step"><div class="k">seed slots</div><div class="cmd">hal0 setup</div><div class="d">hardware + slots</div></div>
+        <div class="step"><div class="k">start API</div><div class="cmd">systemctl … hal0-api</div><div class="d">control plane</div></div>
         <div class="step"><div class="k">verify</div><div class="cmd">hal0 status</div><div class="d">API on :8080</div></div>
       </div>
 
       <div class="term">
         <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash</span></div>
-<pre><span class="p">$</span> hal0 --version              <span class="c"># → hal0 0.9.2</span>
-<span class="p">$</span> hal0 doctor                 <span class="c"># re-run installer preflight checks</span>
-<span class="p">$</span> hal0 setup                  <span class="c"># detect hardware, seed slots, tune defaults</span>
-<span class="p">$</span> hal0 status                 <span class="c"># confirm the daemon is alive on :8080</span></pre>
+<pre><span class="p">$</span> hal0 --version                          <span class="c"># → hal0 0.9.2</span>
+<span class="p">$</span> hal0 doctor                             <span class="c"># re-run installer preflight checks</span>
+<span class="p">$</span> sudo systemctl enable --now <span class="s">hal0-api</span>    <span class="c"># bring up the control plane on :8080</span>
+<span class="p">$</span> hal0 status                             <span class="c"># confirm the daemon is alive on :8080</span></pre>
       </div>
 
-      <div class="note"><b>💡 No bundle picker:</b> setup gets the API and empty slots ready — it does not choose a model stack for you. Add exactly the models you want in the next stage.</div>
+      <div class="note"><b>💡 Already running?</b> The installer normally enables <code class="inline">hal0-api.service</code> for you — the command above just confirms it’s up. hal0 ships with <em>no</em> model stack, so add exactly the models you want in the next stage.</div>
     </section>
 
     <!-- STAGE 1 -->
@@ -857,7 +857,7 @@
       <h3>The whole flow at a glance</h3>
 
       <div class="flow">
-        <div class="step"><div class="k">Stage 0</div><div class="cmd">hal0 setup</div><div class="d">install &amp; first run</div></div>
+        <div class="step"><div class="k">Stage 0</div><div class="cmd">start hal0-api</div><div class="d">bring up the API</div></div>
         <div class="step"><div class="k">Stage 1</div><div class="cmd">model pull</div><div class="d">add weights</div></div>
         <div class="step"><div class="k">Stage 2</div><div class="cmd">profiles.toml</div><div class="d">how to run it</div></div>
         <div class="step"><div class="k">Stage 3</div><div class="cmd">slot create</div><div class="d">define worker</div></div>
