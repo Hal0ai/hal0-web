@@ -63,7 +63,12 @@ export default defineConfig({
 		// route must match the compiled form exactly (no trailing slash) or
 		// it 404s instead of redirecting — see src/pages/docs/index.astro's
 		// "knowledge base" link.
-		'/kb': '/docs/',
+		//
+		// Both slash forms are listed because the adapter's exact-match
+		// compilation means `/kb/` is a DIFFERENT route from `/kb`, and the
+		// bare one 404'd for anyone who typed or linked the trailing slash.
+		'/kb': '/docs/#knowledge-base',
+		'/kb/': '/docs/#knowledge-base',
 		// hal0's 44 product docs moved off hal0.dev to forum.hal0.dev
 		// (Discourse topics, Docs category) — every /docs/<section>/<slug>
 		// path (both trailing-slash forms) 301s straight to its topic. The
