@@ -1,6 +1,6 @@
 ---
 title: Speech to text and text to speech
-description: "Enable hal0's voice capability: transcription via Moonshine (CPU) or FLM (NPU), synthesis via Kokoro, then call /v1/audio/transcriptions and /v1/audio/speech."
+description: "Enable hal0's voice capability: transcription via Moonshine (CPU) or FLM (NPU), synthesis via Kokoro (CPU) or Qwen3-TTS (ROCm/GPU), then call /v1/audio/transcriptions and /v1/audio/speech."
 sidebar:
   order: 80
 ---
@@ -11,7 +11,8 @@ hal0 exposes two voice directions through OpenAI-compatible endpoints:
 
 - **Speech-to-text** (`POST /v1/audio/transcriptions`) — Moonshine container on CPU,
   or the FLM trio on the NPU.
-- **Text-to-speech** (`POST /v1/audio/speech`) — Kokoro container on CPU.
+- **Text-to-speech** (`POST /v1/audio/speech`) — two backends: Kokoro ONNX container
+  on CPU (lightweight, English) or Qwen3-TTS CustomVoice on ROCm/GPU (multilingual, richer voices).
 
 Both are children of the **`voice`** capability: `voice.stt` maps to the
 `stt` slot and `voice.tts` maps to the `tts` slot.
@@ -50,13 +51,23 @@ curl -X POST http://localhost:8080/api/capabilities/voice/tts \
 ```
 
 </TabItem>
+<TabItem label="Text-to-speech (ROCm/GPU, Qwen3-TTS)">
+
+```sh
+curl -X POST http://localhost:8080/api/capabilities/voice/tts \
+  -H 'Content-Type: application/json' \
+  -d '{"enabled": true, "backend": "rocm", "provider": "qwen3-tts"}'
+```
+
+</TabItem>
 </Tabs>
 
 The response is `{ "ok": true, "selection": { ...current selection... } }`.
 
 <Aside type="note">
 Both Moonshine and Kokoro are containerized servers running on CPU — they do not use ROCm or the NPU.
-The NPU transcription path uses the FLM container, not Moonshine.
+The NPU transcription path uses the FLM container, not Moonshine. Qwen3-TTS runs on ROCm/GPU and
+requires `amdgpu` access (`/dev/kfd`, `/dev/dri/amdgpu`).
 </Aside>
 
 ### How the NPU path differs
@@ -102,11 +113,65 @@ curl -X POST http://localhost:8080/v1/audio/speech \
 As with transcription, `model` is required — a missing or empty `model`
 returns **400** (`request.missing_model`).
 
+### Choosing a TTS backend
+
+hal0 supports two TTS engines, depending on which provider you select for the `tts` slot:
+
+<Tabs>
+<TabItem label="Kokoro-82M (CPU, ONNX)">
+
+Kokoro-82M is a lightweight ONNX model that runs entirely on CPU. It needs no
+GPU or NPU access. Use it when you want:
+
+- Minimal resource footprint (doesn't compete with LLM slots for VRAM).
+- English-only speech synthesis.
+- 54 American and British English voice presets (`af_*`, `am_*`, `bf_*`, `bm_*`).
+- Quick cold-start times (the ONNX runtime loads in under a second).
+
+Model: `kokoro`. Default voice: `af_heart`. Output format: MP3 (default) or WAV.
+
+```sh
+# Quick test
+curl -s -X POST http://localhost:8084/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"kokoro","input":"Hello world.","voice":"af_bella","response_format":"wav"}' \
+  -o kokoro_test.wav
+```
+
+</TabItem>
+<TabItem label="Qwen3-TTS CustomVoice (ROCm/GPU)">
+
+Qwen3-TTS is a 1.7B-parameter transformer model that runs on ROCm via the
+`ghcr.io/hal0ai/hal0-toolbox-qwen3tts` container. It uses the AMD iGPU and
+requires `--device /dev/kfd --device /dev/dri/amdgpu`. Use it when you want:
+
+- **Multilingual** output — 10+ languages with native pronunciation (the `language`
+  field auto-detects or accepts a specific ISO code).
+- **Richer, more expressive voices** than ONNX-based synthesis.
+- Production-quality speech with natural prosody and intonation.
+
+Model: `qwen3-tts`. Default voice: `Ryan`. Output format: WAV.
+
+Considerations:
+- Uses GPU VRAM — may contend with LLM slots under heavy concurrent load.
+- Slightly higher latency on cold calls than Kokoro (model loading).
+- Requires `amdgpu` kernel module to be loaded.
+
+```sh
+# Quick test
+curl -s -X POST http://localhost:8084/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3-tts","input":"Hello world.","voice":"Ryan","response_format":"wav"}' \
+  -o qwen3_test.wav
+```
+
+</TabItem>
+</Tabs>
+
 <Aside type="note">
-Kokoro weights are operator-staged on the configured model store. The Kokoro
-toolbox is a containerized server managed by hal0 as a podman slot — no manual
-container management needed. It implements `POST /v1/audio/speech`,
-`GET /v1/models`, and `GET /health`.
+The hal0 orchestrator ships a unified TTS bridge script (`hal0-voice-tts.py`) that
+reads the active engine from a state file and automatically falls back if one backend
+is down. Flip between Qwen3 and Kokoro at runtime without restarting slots or agents.
 </Aside>
 
 ## See also

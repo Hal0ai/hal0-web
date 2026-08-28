@@ -40,10 +40,10 @@ Thumbs.db
 # Serena MCP cache
 .serena/
 .claude/wip.json
-graphify-out/graph.html
-graphify-out/cost.json
-graphify-out/cache/
-graphify-out/.graphify_*
-graphify-out/.rebuild.lock
 
-graphify-out/
+# knowledge graph (graphify) — cache/state are local-only churn; ignore
+# everything by default and re-include only the artifacts we track.
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md
+!graphify-out/manifest.json
+!graphify-out/graph.json
