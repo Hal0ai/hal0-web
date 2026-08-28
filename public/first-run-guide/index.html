@@ -464,7 +464,7 @@
         <a class="way cli" href="#cli">
           <span class="badge">⌘ terminal</span>
           <h4>The same, on the CLI</h4>
-          <p>Five commands — <code class="inline">setup → model pull → slot create → slot load</code> — for scripted or headless hosts. The CLI is a thin client over the same API.</p>
+          <p>Three commands — <code class="inline">model pull → slot create → slot load</code> — for scripted or headless hosts. The CLI is a thin client over the same API.</p>
           <div class="go">Jump to the CLI →</div>
         </a>
       </div>
@@ -604,7 +604,7 @@
       <div class="stage-head"><div class="stage-num" style="background:var(--amber)">5</div><h3>Capabilities — wire roles to slots</h3></div>
       <p>Capabilities are the operator-friendly overlay: instead of hand-configuring each slot, you pick a <strong>capability</strong> and its child, and hal0 reconciles the real slot for you. Toggling one on loads its slot; off unloads it.</p>
 
-      <div class="note"><b>💡 Setup gets you here.</b> <code class="inline">hal0 setup</code> scaffolds these capability slots (and NPU slots) for you — the <em>structure</em> is wired (device, profile, port), with the <strong>model left unset</strong>. It never picks a model for you: run interactively, setup walks each capability and lets you choose a fitting model, scaffold it empty, or skip. So you often land here with the slots already in place — you just assign each one a model.</div>
+      <div class="note"><b>💡 The installer gets you here.</b> <code class="inline">install.sh</code> scaffolds these capability slots (and NPU slots) for you — the <em>structure</em> is wired (device, profile, port), with the <strong>model left unset</strong>. It never picks a model for you. So you often land here with the slots already in place — you just assign each one a model.</div>
 
       <figure class="shot">
         <div class="frame">
