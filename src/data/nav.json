@@ -56,7 +56,8 @@
         },
         {
           "label": "knowledge base",
-          "href": "/docs/#knowledge-base"
+          "href": "https://forum.hal0.dev/c/kb/12",
+          "external": true
         },
         {
           "label": "blog",

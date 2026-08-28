@@ -31,6 +31,13 @@ const socialHref = (id) => nav.social.find((s) => s.id === id).href;
 // trailing-slash form. `postbuild` runs that script to patch both forms
 // back in at the compiled-Vercel-route level, scoped to just these 44
 // forum.hal0.dev redirects.
+const kbRedirects = Object.fromEntries(
+	Object.entries(
+		JSON.parse(
+			readFileSync(new URL('./src/data/kb-redirects.json', import.meta.url), 'utf8'),
+		),
+	).filter(([key]) => key.startsWith('/kb/')),
+);
 const docsRedirects = JSON.parse(
 	readFileSync(new URL('./src/data/docs-redirects.json', import.meta.url), 'utf8'),
 );
@@ -75,7 +82,9 @@ export default defineConfig({
 		// The target is the hub's knowledge-base section rather than the top
 		// of the hub: that section IS the KB landing (the standalone page was
 		// retired in #103).
-		'/kb': '/docs/#knowledge-base',
+		// The KB itself is on the forum now, so the bare landing goes to the
+		// category rather than the hub's summary of it.
+		'/kb': 'https://forum.hal0.dev/c/kb/12',
 		// hal0's 44 product docs moved off hal0.dev to forum.hal0.dev
 		// (Discourse topics, Docs category) — every /docs/<section>/<slug>
 		// path (both trailing-slash forms) 301s straight to its topic. The
@@ -84,6 +93,11 @@ export default defineConfig({
 		// rebuilt to link out to the forum instead of rendering Starlight
 		// content. See docsRedirects' own banner comment above.
 		...docsRedirects,
+		// The six KB articles moved to forum.hal0.dev as wiki topics, the same
+		// way the 44 product docs did. Same 301 shape, same postbuild
+		// slash-tolerance pass (the patch keys off the forum.hal0.dev Location,
+		// so these are covered without touching it).
+		...kbRedirects,
 	},
 
 	integrations: [
@@ -183,25 +197,11 @@ export default defineConfig({
 			// content is removed. The four /docs/<section>/ routes are still
 			// real pages (src/pages/docs/*/index.astro, rebuilt to link out to
 			// the forum) — they just don't drive this sidebar anymore.
-			sidebar: [
-				{
-					// Knowledge base: undated, reviewed, community-editable — same
-					// Starlight sidebar/TOC shell as docs, distinguished only by the
-					// KbStamp badge each kb/**/*.mdx page renders inline (surface tag
-					// + "reviewed <date>", not "applies to v0.5.x"). One explicit
-					// sub-group per category (rather than one `autogenerate: { directory:
-					// 'kb' }`) so the sidebar label can use the comp's copy verbatim
-					// ("runtime & backends") instead of Starlight's dash-to-space
-					// titleisation of the directory slug ("Runtime And Backends").
-					label: 'Knowledge base',
-					items: [
-						{ label: 'Getting started', items: [{ autogenerate: { directory: 'kb/getting-started' } }] },
-						{ label: 'Hardware notes', items: [{ autogenerate: { directory: 'kb/hardware-notes' } }] },
-						{ label: 'Runtime & backends', items: [{ autogenerate: { directory: 'kb/runtime-and-backends' } }] },
-						{ label: 'Models & quants', items: [{ autogenerate: { directory: 'kb/models-and-quants' } }] },
-						{ label: 'Operating hal0', items: [{ autogenerate: { directory: 'kb/operating-hal0' } }] },
-						{ label: 'Tool reviews', items: [{ autogenerate: { directory: 'kb/tool-reviews' } }] },
-					],
+			// No sidebar entries left: the KB articles that filled this moved to
+			// forum.hal0.dev as wiki topics (src/data/kb-redirects.json), and the
+			// product docs went before them. Starlight still renders /blog via
+			// starlight-blog, which brings its own navigation.
+			sidebar: []
 				},
 			],
 			components: {

@@ -143,12 +143,13 @@ const ELSEWHERE = [
                   )
                 )}
               </ul>
-              {/* No "open <category> →" footer link here, unlike the docs
-                * section cards above: docs sections have real listing pages
-                * at /docs/<section>/, whereas /kb/<category>/ is not a route —
-                * only the articles beneath it are. The page links in the list
-                * ARE the navigation; once inside any article, Starlight's
-                * sidebar carries the rest of the category. */}
+              {/* The KB moved to forum.hal0.dev as wiki topics, so each
+                * category DOES have a listing page now — its forum category —
+                * and the card gets the same "open →" footer the docs section
+                * cards have. Before the move there was nothing to point at:
+                * /kb/<category>/ was never a route, only the articles under
+                * it were. */}
+              <a class="kbcat-all" href={cat.forumUrl}>open {cat.label} &rarr;</a>
             </div>
           ))}
         </div>
