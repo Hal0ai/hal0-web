@@ -59,15 +59,15 @@ test('the patch removed duplicate forum redirect route entries', { skip }, () =>
 });
 
 test('the /kb and /releases redirects point at the hub section and the changelog', { skip }, () => {
-	// /kb is compiled to an EXACT-match route by the Vercel adapter, so the
-	// bare key never covered the trailing-slash form and /kb/ 404'd. Both
-	// forms are declared now, and they land on the hub's knowledge-base
-	// section rather than the top of the hub.
+	// /kb is compiled to an EXACT-match route, so the bare form never covered
+	// /kb/ and the slash form 404'd. patch-vercel-docs-redirects.mjs now gives
+	// it the same `/?$` tolerance it gives the forum redirects, and the target
+	// is the hub's knowledge-base section rather than the top of the hub.
 	const kb = routes.filter((r) => r.headers?.Location === '/docs/#knowledge-base');
 	const releases = routes.filter((r) => r.headers?.Location === '/changelog');
 	assert.deepEqual(
-		kb.map((r) => r.src).sort(),
-		['^/kb$', '^/kb/$'],
+		kb.map((r) => r.src),
+		['^/kb/?$'],
 	);
 	assert.deepEqual(
 		releases.map((r) => r.src),

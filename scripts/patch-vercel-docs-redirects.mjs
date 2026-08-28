@@ -46,6 +46,13 @@ import { fileURLToPath } from 'node:url';
 
 const CONFIG_URL = new URL('../.vercel/output/config.json', import.meta.url);
 const FORUM_PREFIX = 'https://forum.hal0.dev/';
+// Site-local redirects that need the same treatment. `/kb` is compiled to an
+// exact `^/kb$` the same way the forum redirects are, so `/kb/` 404'd rather
+// than reaching the hub's knowledge-base section. Listing the slash form in
+// astro.config.mjs does not help -- Astro normalizes it off the key before
+// compiling -- so the tolerance is added here, where it already is for the
+// forum routes.
+const LOCAL_SRCS_NEEDING_SLASH_TOLERANCE = new Set(['^/kb$']);
 
 async function main() {
 	let raw;
@@ -69,14 +76,16 @@ async function main() {
 		const location = route.headers?.Location;
 		const isForumRedirect =
 			route.status === 301 && typeof location === 'string' && location.startsWith(FORUM_PREFIX) && route.src?.endsWith('$');
+		const isLocalRedirect = route.status === 301 && LOCAL_SRCS_NEEDING_SLASH_TOLERANCE.has(route.src);
+		const needsSlashTolerance = isForumRedirect || isLocalRedirect;
 
-		if (isForumRedirect && !route.src.endsWith('/?$')) {
+		if (needsSlashTolerance && !route.src.endsWith('/?$')) {
 			route.src = `${route.src.slice(0, -1)}/?$`;
 			touched++;
 		}
 
 		const key = JSON.stringify(route);
-		if (isForumRedirect) {
+		if (needsSlashTolerance) {
 			if (seen.has(key)) {
 				deduped++;
 				continue;
@@ -89,7 +98,7 @@ async function main() {
 	config.routes = patched;
 	await writeFile(fileURLToPath(CONFIG_URL), `${JSON.stringify(config, null, '\t')}\n`);
 	console.log(
-		`[patch-vercel-docs-redirects] made ${touched} forum.hal0.dev redirect routes trailing-slash tolerant, removed ${deduped} duplicate route entries`,
+		`[patch-vercel-docs-redirects] made ${touched} redirect routes trailing-slash tolerant, removed ${deduped} duplicate route entries`,
 	);
 }
 
