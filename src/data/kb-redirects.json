@@ -1,0 +1,9 @@
+{
+  "//": "AUTO-GENERATED from the forum on 2026-08-28 by the KB migration. Old hal0.dev KB article URLs -> the wiki topics that replaced them. Same shape and same 301 path as docs-redirects.json; scripts/patch-vercel-docs-redirects.mjs makes both trailing-slash tolerant.",
+  "/kb/getting-started/your-first-slot": "https://forum.hal0.dev/t/your-first-slot/85",
+  "/kb/hardware-notes/unified-memory-is-not-vram": "https://forum.hal0.dev/t/unified-memory-is-not-vram/86",
+  "/kb/models-and-quants/reading-a-quant-name": "https://forum.hal0.dev/t/reading-a-quant-name/87",
+  "/kb/operating-hal0/reading-the-memory-map": "https://forum.hal0.dev/t/reading-the-memory-map/88",
+  "/kb/runtime-and-backends/rocm-vs-vulkan-radv": "https://forum.hal0.dev/t/rocm-vs-vulkan-radv/89",
+  "/kb/tool-reviews/openwebui-as-the-chat-tab": "https://forum.hal0.dev/t/openwebui-as-the-chat-tab/90"
+}

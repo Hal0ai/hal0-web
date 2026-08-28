@@ -17,6 +17,11 @@ import { readFile } from 'node:fs/promises';
 
 const CONFIG_URL = new URL('../../.vercel/output/config.json', import.meta.url);
 const REDIRECTS_URL = new URL('../../src/data/docs-redirects.json', import.meta.url);
+const KB_REDIRECTS_URL = new URL('../../src/data/kb-redirects.json', import.meta.url);
+// The KB followed the docs to the forum; its map is the same shape, minus
+// the "//" banner key and stored without trailing slashes (the patch adds
+// the `/?$` tolerance to both maps alike).
+const KB_LANDING = 'https://forum.hal0.dev/c/kb/12';
 
 const config = await readFile(CONFIG_URL, 'utf8')
 	.then(JSON.parse)
@@ -24,6 +29,11 @@ const config = await readFile(CONFIG_URL, 'utf8')
 const skip = !config && 'run npm run build first (produces .vercel/output/config.json)';
 
 const redirects = JSON.parse(await readFile(REDIRECTS_URL, 'utf8'));
+const kbRedirects = Object.fromEntries(
+	Object.entries(JSON.parse(await readFile(KB_REDIRECTS_URL, 'utf8'))).filter(([key]) =>
+		key.startsWith('/kb/'),
+	),
+);
 const routes = config?.routes ?? [];
 
 function matchingRoutes(pathname) {
@@ -50,20 +60,39 @@ test('every docs-redirects.json entry 301s in both its trailing-slash and bare f
 	assert.deepEqual(missing, [], `paths with no matching forum redirect route: ${missing.join(', ')}`);
 });
 
+test('every kb-redirects.json entry 301s in both its trailing-slash and bare forms', { skip }, () => {
+	const missing = [];
+	for (const [barePath, forumUrl] of Object.entries(kbRedirects)) {
+		for (const pathname of [barePath, `${barePath}/`]) {
+			const hit = matchingRoutes(pathname).find(
+				(r) => r.headers.Location === forumUrl && r.status === 301,
+			);
+			if (!hit) missing.push(pathname);
+		}
+	}
+	assert.deepEqual(missing, [], `KB paths with no matching forum redirect route: ${missing.join(', ')}`);
+});
+
 test('the patch removed duplicate forum redirect route entries', { skip }, () => {
 	const forumRoutes = routes.filter((r) => r.headers?.Location?.startsWith('https://forum.hal0.dev/'));
 	const keys = forumRoutes.map((r) => JSON.stringify(r));
 	assert.equal(keys.length, new Set(keys).size, 'duplicate forum redirect route objects survived the patch');
-	// One route per docs-redirects.json entry, not one per (slash, bare) pair.
-	assert.equal(forumRoutes.length, Object.keys(redirects).length, 'expected exactly one route per docs-redirects.json entry');
+	// One route per map entry, not one per (slash, bare) pair — plus the /kb
+	// landing, which points at the forum's KB category and so is counted here
+	// too now that the KB lives there.
+	assert.equal(
+		forumRoutes.length,
+		Object.keys(redirects).length + Object.keys(kbRedirects).length + 1,
+		'expected one route per docs + kb redirect entry, plus the /kb landing',
+	);
 });
 
-test('the /kb and /releases redirects point at the hub section and the changelog', { skip }, () => {
+test('the /kb and /releases redirects point at the forum KB and the changelog', { skip }, () => {
 	// /kb is compiled to an EXACT-match route, so the bare form never covered
-	// /kb/ and the slash form 404'd. patch-vercel-docs-redirects.mjs now gives
-	// it the same `/?$` tolerance it gives the forum redirects, and the target
-	// is the hub's knowledge-base section rather than the top of the hub.
-	const kb = routes.filter((r) => r.headers?.Location === '/docs/#knowledge-base');
+	// /kb/ and the slash form 404'd; patch-vercel-docs-redirects.mjs gives it
+	// `/?$` tolerance. Its target moved with the content: the KB is forum
+	// categories now, not a section of the /docs hub.
+	const kb = routes.filter((r) => r.headers?.Location === KB_LANDING);
 	const releases = routes.filter((r) => r.headers?.Location === '/changelog');
 	assert.deepEqual(
 		kb.map((r) => r.src),
