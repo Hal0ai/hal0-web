@@ -33,7 +33,11 @@ const matches = (path: string, prefix: string) =>
   path === prefix || path.startsWith(prefix.endsWith('/') ? prefix : prefix + '/');
 
 export function isActive(path: string, link: NavLink): boolean {
-  if (!link.match) return false;
+  // A link with no `match` list still owns its own page -- `home` (href "/")
+  // is the case that forces this: "/" as a match prefix would light on every
+  // route, so home carries no match at all and relies on the exact-href test
+  // to know it is the current page.
+  if (!link.match) return isExactMatch(path, link.href);
   const prefixes = Array.isArray(link.match) ? link.match : [link.match];
   return (
     prefixes.some((p) => matches(path, p)) &&

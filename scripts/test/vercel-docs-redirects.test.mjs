@@ -58,12 +58,16 @@ test('the patch removed duplicate forum redirect route entries', { skip }, () =>
 	assert.equal(forumRoutes.length, Object.keys(redirects).length, 'expected exactly one route per docs-redirects.json entry');
 });
 
-test('the /kb and /releases redirects are untouched (single form, no forum prefix)', { skip }, () => {
-	const kb = routes.filter((r) => r.headers?.Location === '/docs/');
+test('the /kb and /releases redirects point at the hub section and the changelog', { skip }, () => {
+	// /kb is compiled to an EXACT-match route, so the bare form never covered
+	// /kb/ and the slash form 404'd. patch-vercel-docs-redirects.mjs now gives
+	// it the same `/?$` tolerance it gives the forum redirects, and the target
+	// is the hub's knowledge-base section rather than the top of the hub.
+	const kb = routes.filter((r) => r.headers?.Location === '/docs/#knowledge-base');
 	const releases = routes.filter((r) => r.headers?.Location === '/changelog');
 	assert.deepEqual(
 		kb.map((r) => r.src),
-		['^/kb$'],
+		['^/kb/?$'],
 	);
 	assert.deepEqual(
 		releases.map((r) => r.src),

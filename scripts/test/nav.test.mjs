@@ -49,11 +49,17 @@ test('labels are lowercase everywhere, including sub and footer column links', (
   }
 });
 
-test('hidden entries still carry hrefs', () => {
-  const hidden = nav.header.filter((l) => l.hidden);
-  assert.ok(hidden.length > 0, 'at least one hidden header entry exists (forum)');
-  for (const link of hidden) {
-    assert.match(link.href, /^(\/|https:\/\/|mailto:)/, `${link.label} (hidden) still has a real href`);
+test('the header is the same five entries, in order, with nothing hidden', () => {
+  // The unified chrome: hal0.dev and forum.hal0.dev carry this exact list.
+  // `forum` used to be hidden here (the site linked it only from the footer);
+  // it is a first-class header entry now, and the Discourse theme drops it
+  // from its own copy because that host IS the forum.
+  assert.deepEqual(
+    nav.header.map((l) => l.label),
+    ['home', 'docs', 'benchmarks', 'profiles', 'forum'],
+  );
+  for (const link of nav.header) {
+    assert.ok(!link.hidden, `${link.label} must not be hidden`);
   }
 });
 
@@ -82,16 +88,23 @@ test('header links that carry match use string or array form (forum has none by 
       `${link.label} match must be a string or array`,
     );
   }
+  // `home` and `forum` carry no match by design: "/" as a prefix would light
+  // on every route, and the forum link points at another host entirely. Both
+  // rely on the exact-href test in nav.ts's isActive instead.
   const withMatch = nav.header.filter((l) => l.match !== undefined).map((l) => l.label).sort();
-  assert.deepEqual(withMatch, ['benchmarks', 'learn', 'profiles']);
+  assert.deepEqual(withMatch, ['benchmarks', 'docs', 'profiles']);
 });
 
 // nav.ts is TypeScript and can't be imported under node --test, so this
 // replicates the matcher contract from src/lib/nav.ts's isActive/subFor
 // against the real nav.json data.
 const matches = (path, prefix) => path === prefix || path.startsWith(prefix.endsWith('/') ? prefix : prefix + '/');
+const isExactMatchJs = (path, href) => {
+  const norm = (v) => (v.length > 1 && v.endsWith('/') ? v.slice(0, -1) : v);
+  return norm(path) === norm(href);
+};
 const isActiveJs = (path, link) => {
-  if (!link.match) return false;
+  if (!link.match) return isExactMatchJs(path, link.href);
   const prefixes = Array.isArray(link.match) ? link.match : [link.match];
   return prefixes.some((p) => matches(path, p)) && !(link.exclude ?? []).some((e) => matches(path, e));
 };
@@ -103,28 +116,34 @@ const subForJs = (path) => {
   return null;
 };
 
-test('isActive: learn/benchmarks mutual exclusion', () => {
-  const learn = nav.header.find((l) => l.label === 'learn');
+test('isActive: docs/benchmarks mutual exclusion', () => {
+  const docs = nav.header.find((l) => l.label === 'docs');
   const bench = nav.header.find((l) => l.label === 'benchmarks');
-  assert.ok(isActiveJs('/docs/getting-started/', learn));
-  assert.ok(!isActiveJs('/benchmarks/', learn), 'benchmarks route must not light learn');
+  assert.ok(isActiveJs('/docs/guides/', docs));
+  assert.ok(!isActiveJs('/benchmarks/', docs), 'benchmarks route must not light docs');
   assert.ok(isActiveJs('/benchmarks/', bench));
-  assert.ok(!isActiveJs('/docs/getting-started/', bench), 'docs page must not light benchmarks');
+  assert.ok(!isActiveJs('/docs/guides/', bench), 'docs page must not light benchmarks');
 });
 
-test('isActive: learn covers array-match sections (blog/changelog)', () => {
-  const learn = nav.header.find((l) => l.label === 'learn');
-  assert.ok(isActiveJs('/blog/some-post/', learn), 'learn is active on /blog/x');
-  // /changelog and /releases were merged into one page at /changelog;
-  // /releases is now a build-time redirect (astro.config.mjs) with no
-  // chrome of its own, so it's no longer in nav.json's match list.
-  assert.ok(isActiveJs('/changelog', learn), 'learn is active on /changelog');
-  // The model-roster-benchmark reference page is explicitly excluded from
-  // "learn" (see nav.json's `exclude`) and, now that benchmarks moved to
-  // /benchmarks/, it's no longer covered by "benchmarks" either — it's only
-  // reachable via the methodology sub-nav link, with no top-level highlight.
-  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', learn), 'learn is NOT active on the excluded methodology docs page');
-  assert.ok(isActiveJs('/kb/', learn), 'learn is active on /kb');
+test('isActive: home lights only on the landing page', () => {
+  const home = nav.header.find((l) => l.label === 'home');
+  assert.ok(isActiveJs('/', home));
+  for (const path of ['/docs/', '/benchmarks/', '/profiles', '/blog/some-post/']) {
+    assert.ok(!isActiveJs(path, home), `home must not light on ${path}`);
+  }
+});
+
+test('isActive: docs covers the knowledge base too', () => {
+  const docs = nav.header.find((l) => l.label === 'docs');
+  // blog and changelog moved to the footer with the flat header, so nothing
+  // in the top nav lights on them any more -- but KB articles are docs
+  // content and still light the docs entry.
+  // The model-roster-benchmark reference page is explicitly excluded (see
+  // nav.json's `exclude`) and isn't covered by "benchmarks" either — it's
+  // only reachable via the methodology sub-nav link, with no top-level
+  // highlight.
+  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', docs), 'docs is NOT active on the excluded methodology page');
+  assert.ok(isActiveJs('/kb/', docs), 'docs is active on a KB article');
 });
 
 test('isActive: profiles is its own section', () => {
@@ -133,9 +152,8 @@ test('isActive: profiles is its own section', () => {
   assert.ok(!isActiveJs('/benchmarks/', profiles), 'benchmarks route must not light profiles');
 });
 
-test('subFor: /blog resolves to learn\'s sub list', () => {
-  const learn = nav.header.find((l) => l.label === 'learn');
-  assert.deepEqual(subForJs('/blog/some-post/'), learn.sub);
+test('subFor: /blog resolves to null (blog left the header)', () => {
+  assert.equal(subForJs('/blog/some-post/'), null);
 });
 
 test('subFor: /benchmarks/ resolves to benchmarks\' sub list', () => {
@@ -156,39 +174,40 @@ test('subFor: unrelated path resolves to null', () => {
 test('benchmarks sub-nav has the expected entries', () => {
   const bench = nav.header.find((l) => l.label === 'benchmarks');
   const labels = bench.sub.map((l) => l.label);
-  assert.deepEqual(labels, ['leaderboard', 'evals', 'methodology', 'profiles']);
+  // `profiles` left this sub-nav when it became a top-level header entry on
+  // both hosts -- it was the only link here that duplicated the main nav.
+  assert.deepEqual(labels, ['leaderboard', 'evals', 'methodology']);
   assert.equal(bench.sub.find((l) => l.label === 'leaderboard').href, '/benchmarks/');
   assert.equal(bench.sub.find((l) => l.label === 'evals').href, '/benchmarks/#evals');
   assert.equal(bench.sub.find((l) => l.label === 'methodology').href, '/docs/reference/model-roster-benchmark/');
-  assert.equal(bench.sub.find((l) => l.label === 'profiles').href, '/profiles');
 });
 
-test('forum stays hidden; profiles and benchmarks are visible', () => {
+test('forum is a visible, external header entry', () => {
   const forum = nav.header.find((l) => l.label === 'forum');
-  const profiles = nav.header.find((l) => l.label === 'profiles');
-  const bench = nav.header.find((l) => l.label === 'benchmarks');
-  assert.equal(forum.hidden, true, 'forum stays hidden');
-  assert.ok(!profiles.hidden, 'profiles is not hidden');
-  assert.ok(!bench.hidden, 'benchmarks is not hidden');
+  assert.ok(!forum.hidden, 'forum is no longer hidden');
+  assert.equal(forum.external, true, 'forum is marked external so the header renders its ↗');
+  assert.equal(forum.href, 'https://forum.hal0.dev');
 });
 
 test('benchmarks sub-nav entries have correct match fields', () => {
   const bench = nav.header.find((l) => l.label === 'benchmarks');
   const leaderboard = bench.sub.find((l) => l.label === 'leaderboard');
-  const profiles = bench.sub.find((l) => l.label === 'profiles');
   const evals = bench.sub.find((l) => l.label === 'evals');
+  const methodology = bench.sub.find((l) => l.label === 'methodology');
 
   assert.equal(leaderboard.match, '/benchmarks', 'leaderboard sub-entry has match field');
-  assert.equal(profiles.match, '/profiles', 'profiles sub-entry has match field');
   assert.equal(evals.match, undefined, 'evals sub-entry does not have match field');
+  assert.equal(methodology.match, undefined, 'methodology sub-entry does not have match field');
 });
 
-test('isActive on sub-nav entries: leaderboard and profiles', () => {
+test('isActive on sub-nav entries: leaderboard', () => {
   const bench = nav.header.find((l) => l.label === 'benchmarks');
   const leaderboard = bench.sub.find((l) => l.label === 'leaderboard');
-  const profiles = bench.sub.find((l) => l.label === 'profiles');
+  const topLevelProfiles = nav.header.find((l) => l.label === 'profiles');
 
   assert.ok(isActiveJs('/benchmarks/', leaderboard), 'leaderboard is active on /benchmarks/');
-  assert.ok(!isActiveJs('/benchmarks/', profiles), 'profiles sub-entry is not active on /benchmarks/');
-  assert.ok(isActiveJs('/profiles', profiles), 'profiles is active on /profiles');
+  // profiles is a header entry now, not a benchmarks sub-entry, and must not
+  // light while the reader is on the leaderboard.
+  assert.ok(!isActiveJs('/benchmarks/', topLevelProfiles), 'profiles must not light on /benchmarks/');
+  assert.ok(isActiveJs('/profiles', topLevelProfiles), 'profiles is active on /profiles');
 });
