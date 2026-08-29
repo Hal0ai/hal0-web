@@ -48,34 +48,34 @@ const softwareApplicationLd = {
 
 const features = [
   {
-    tag: '/v1/*',
-    title: 'OpenAI-compatible API',
-    body: 'chat · completions · embeddings · rerank · transcriptions · speech · images · models. Drop-in for any OpenAI SDK — point your client at :8080/v1 and go.',
+    tag: 'agents',
+    title: 'Agents that live on the box',
+    body: 'Hermes installs and bootstraps itself on first run, prewired to the local /v1 API. hal0-brain is the second: a resident operator you ask about the box in plain language, from the dashboard or a headless terminal.',
   },
   {
-    tag: 'lifecycle',
-    title: 'Typed slot state machine',
-    body: 'offline → pulling → starting → warming → ready → serving ↔ idle → unloading. Atomic transitions, persisted to state.json, streamed over SSE.',
+    tag: 'mcp',
+    title: '180 tools over MCP',
+    body: 'Two Streamable-HTTP servers mount straight onto the API: models, slots, memory, stacks, bench, telemetry and the updater, all reachable by any MCP client. The 54 destructive ones return pending_approval and wait for a human.',
   },
   {
-    tag: 'dispatcher',
-    title: 'Single-flight routing',
-    body: 'Registry-aware across local slots and external upstreams (OpenRouter, Anthropic, OpenAI, custom). Cold-cache prefetch coalesces a thundering herd into one HTTP call.',
+    tag: 'memory',
+    title: 'Memory that never leaves the box',
+    body: 'Opt-in Hindsight-backed memory with a 26-tool surface. The engine runs embedded and loopback-only, embeddings included, so recall costs nothing and reaches no one. Banks are scoped per agent, and destructive operations write an attributable audit row.',
   },
   {
-    tag: 'probe',
-    title: 'Hardware-aware everything',
-    body: 'UMA pool on Strix Halo, real CPU/RAM/GPU on WSL2 / Proxmox / bare-metal. Slot-fit warnings size against the real unified pool, not a BAR carve-out.',
+    tag: 'voice',
+    title: 'Speech in and out, device-keyed',
+    body: 'One stt slot and one tts slot, each resolving by device: Moonshine on CPU or whisper-v3:turbo on the XDNA NPU for listening, Kokoro (CPU) or Qwen3-TTS (GPU) for speaking. Switch the engine, not the plumbing.',
   },
   {
-    tag: 'update',
-    title: 'Cosign-keyless self-update',
-    body: 'hal0 update --channel stable|preview|nightly. Tarballs verify against their GitHub OIDC identity, then swap a /usr/lib/hal0/current symlink atomically. --rollback reverts in one step. Tagged releases land on stable.',
+    tag: 'images',
+    title: 'Image generation on the same API',
+    body: 'POST /v1/images/generations runs SDXL, SD 1.5 or Flux through a ComfyUI engine. Generating flips the iGPU into exclusive image mode and back, so chat and images share one accelerator without fighting over it.',
   },
   {
-    tag: 'stacks',
-    title: 'Declarative Stacks',
-    body: 'Plan a slot/model layout into a change set, apply it atomically with rollback, and converge the live slots against it — content-hash drift detection, plus export/import via a checksummed .hal0stack.json envelope.',
+    tag: 'prewired',
+    title: 'Wired up before you log in',
+    body: 'One command brings up the API, a coherent set of slots, Open WebUI on :3001, ComfyUI and the agent — lifecycle-managed as extensions, with cosign-verified updates and one-flag rollback from day one.',
   },
 ];
 
@@ -192,105 +192,6 @@ const tiers = [
     note: 'Drop a read-only PVEAuditor token into Settings and the memory bar shows physical DIMM total + a muted "Proxmox host" segment for other-tenant + ZFS ARC pressure.',
   },
 ];
-
-const loadoutTabs = [
-  { id: 'coding',  label: 'Coding',       count: 3 },
-  { id: 'chat',    label: 'General chat', count: 3 },
-  { id: 'voice',   label: 'Voice mode',   count: 1 },
-  { id: 'rag',     label: 'RAG',          count: 1 },
-  { id: 'image',   label: 'Image gen',    count: 3 },
-  { id: 'agentic', label: 'Agentic',      count: 2 },
-  { id: 'small',   label: 'Minimal',      count: 3 },
-];
-
-const loadoutData: Record<string, Array<{ size: string; title: string; vram: string; slots: Array<{ k: string; v: string; d: string }> }>> = {
-  coding: [
-    { size: '~22 GB · daily-pro', title: 'Your top coder, MTP-fast', vram: '28 GB UMA', slots: [
-      { k: 'primary', v: 'Qwopus3.6-27B-Coder-MTP', d: 'Q6_K · 22.4 GB · MTP head speculates on ROCm — fastest local coder on the box' },
-      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · repo-aware code search' },
-    ]},
-    { size: '~8 GB · lean', title: 'Snappy completion', vram: '10 GB UMA', slots: [
-      { k: 'primary', v: 'qwopus3-5-9b-coder-mtp-q6-k', d: 'Q6_K · 7.6 GB · MTP · fits beside chat + embed' },
-      { k: 'alt',     v: 'qwopus3-5-4b-coder-mtp-q6-k', d: 'Q6_K · 3.6 GB · low-VRAM / CPU fallback' },
-    ]},
-    { size: '~50 GB · max', title: 'Coder-Next ceiling', vram: '64 GB+ UMA', slots: [
-      { k: 'primary', v: 'qwen3-coder-next-q4kxl', d: 'Q4_K_XL · 49.6 GB · dedicated Qwen3-Coder-Next — the quality ceiling' },
-      { k: 'alt',     v: 'qwen3-coder-reap-25b-a3b-q5km', d: 'Q5_K_M · 17.7 GB · validated REAP prune · A3B speed, most of the quality' },
-      { k: 'alt',     v: 'qwen3-coder-next-reap-40b-a3b-q4kxl', d: 'Q4_K_XL · 28.5 GB · community 50% prune — unvalidated, some math loss' },
-    ]},
-  ],
-  chat: [
-    { size: '~15 GB · sweetspot', title: 'The Strix Halo daily-driver', vram: '20 GB UMA', slots: [
-      { k: 'primary', v: 'qwopus3-6-27b-v2-mtp-bf16-to-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · MTP head + FP4 footprint — a fast 27B that leaves room to spare' },
-      { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB · rides along free' },
-    ]},
-    { size: '~23 GB · max', title: 'Big-model reasoning at A3B speed', vram: '28 GB UMA', slots: [
-      { k: 'primary', v: 'qwen3-6-35b-a3b-halostrix-dyn-mtp-v7', d: 'Q4 · 22.6 GB · hybrid MoE 3B active · ~69 tok/s with MTP (1.4×)' },
-      { k: 'alt',     v: 'chadrock-35b-ace-saber', d: 'ROCmFP4 + MTP · 19 GB · uncensored MoE' },
-      { k: 'alt',     v: 'qwen3.6-27b-heretic-q4km', d: 'Q4_K_M · 16.9 GB · vision-capable chat' },
-    ]},
-    { size: '~8 GB · snappy', title: 'Low-latency, fits anywhere', vram: '10 GB UMA', slots: [
-      { k: 'primary', v: 'qwen3.5-9b-deepseek-v4-flash-mtp', d: 'Q6 · 7.6 GB · MTP flash · fits with embed + voice' },
-      { k: 'alt',     v: 'lfm2.5-8b-a1b-q6kxl', d: 'Q6 · A1B MoE · ultra-low-latency, NPU-friendly' },
-    ]},
-  ],
-  voice: [
-    { size: '~3 GB + NPU · realtime', title: 'Hands-free, iGPU-free', vram: '4 GB UMA (+XDNA)', slots: [
-      { k: 'llm', v: 'qwen3.5-4b-q4kxl', d: 'Q4_K_XL · 2.9 GB · low-latency reply (or gemma4-it-e2b on the NPU)' },
-      { k: 'stt', v: 'whisper-v3:turbo', d: 'runs on the XDNA NPU — frees the iGPU for chat' },
-      { k: 'tts', v: 'kokoro-v1', d: '82M · 54 voices · 8 languages' },
-      { k: 'alt', v: 'vibevoice-1.5b', d: '1.5B · expressive long-form TTS' },
-    ]},
-  ],
-  rag: [
-    { size: '~16 GB · retrieval', title: 'Grounded synthesis, long context', vram: '22 GB UMA', slots: [
-      { k: 'primary', v: 'qwopus3-6-27b-v2-mtp-bf16-to-rocmfp4-strix-lean', d: 'FP4 · 14.8 GB · fast grounded synthesis at long context' },
-      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · strong multilingual retrieval' },
-      { k: 'rerank',  v: 'bge-reranker-v2-m3', d: 'Q4_K_M · 0.4 GB · 100+ lang cross-encoder · /v1/rerankings' },
-    ]},
-  ],
-  image: [
-    { size: '~7 GB · default', title: 'Photoreal default', vram: '12 GB UMA', slots: [
-      { k: 'img', v: 'juggernaut-xl-v9-rundiffusionphoto-v2', d: 'SDXL · 7.1 GB · photoreal general-purpose checkpoint' },
-      { k: 'alt', v: 'sdxl-turbo', d: 'FP16 · 4-step · realtime previews' },
-      { k: 'alt', v: 'v1-5-pruned-emaonly-fp16', d: '2.1 GB · low-VRAM fallback' },
-    ]},
-    { size: '~17 GB · pro', title: 'Best prompt adherence', vram: '22 GB UMA', slots: [
-      { k: 'img', v: 'flux1-dev-fp8', d: 'FP8 · 17.2 GB · top prompt adherence + legible text' },
-    ]},
-    { size: '~27 GB · video', title: 'Local text/image-to-video', vram: '32 GB UMA', slots: [
-      { k: 'video',   v: 'ltx-2-19b-dev-fp8', d: 'FP8 · 27.1 GB · local video generation on the iGPU' },
-      { k: 'upscale', v: 'ltx-2-spatial-upscaler-x2', d: '2× spatial upscale pass' },
-    ]},
-  ],
-  agentic: [
-    { size: '~25 GB · agentic', title: 'Tool-use + MCP at MTP speed', vram: '30 GB UMA', slots: [
-      { k: 'primary', v: 'qwen3-6-35b-a3b-halostrix-dyn-mtp-v7', d: 'Q4 · 22.6 GB · MoE A3B · strong tool-calling, MTP-fast' },
-      { k: 'alt',     v: 'hermes-4-14b-q5km', d: 'Q5_K_M · 10.5 GB · Hermes-4, tuned for tool-call faithfulness' },
-      { k: 'embed',   v: 'qwen3-embedding-0.6b-q8', d: 'Q8 · 0.6 GB · retrieval-augmented routing' },
-      { k: 'mcp',     v: '/mcp/admin + /mcp/memory', d: 'Hindsight graph memory · two-tier scope' },
-    ]},
-    { size: '~11 GB · lean', title: 'Lean tool-caller', vram: '14 GB UMA', slots: [
-      { k: 'primary', v: 'hermes-4-14b-q5km', d: 'Q5_K_M · 10.5 GB · tool-call faithful, fits beside a coder' },
-      { k: 'alt',     v: 'gpt-oss:20b', d: 'MoE · strong tool-use + reasoning' },
-    ]},
-  ],
-  small: [
-    { size: '<1 GB · minimal', title: 'Privacy-first tiny', vram: 'CPU OK', slots: [
-      { k: 'primary', v: 'qwen3.5-0.8b', d: '0.6 GB · sub-second cold start · smoke-test / lite' },
-      { k: 'embed',   v: 'nomic-embed-text-v1.5-q8', d: 'Q8 · 0.1 GB' },
-    ]},
-    { size: '~0 iGPU · npu', title: 'NPU-only, zero iGPU', vram: 'XDNA only', slots: [
-      { k: 'llm',   v: 'gemma4-it-e2b-FLM', d: 'runs entirely on the XDNA NPU — iGPU stays free' },
-      { k: 'stt',   v: 'whisper-v3:turbo', d: 'NPU transcription' },
-      { k: 'embed', v: 'embed-gemma-300m-FLM', d: 'NPU embeddings' },
-    ]},
-    { size: '~2 GB · minimal-coder', title: 'Tiny coder', vram: '4 GB UMA', slots: [
-      { k: 'primary', v: 'qwopus3-5-4b-coder-mtp-q6-k', d: 'Q6_K · 3.6 GB · MTP autocomplete' },
-      { k: 'alt',     v: 'qwen3-zero-coder-v2-0.8b-f16', d: 'F16 · 1.6 GB · smallest coder' },
-    ]},
-  ],
-};
 
 const compareCols = ['hal0', 'ollama', 'LM Studio', 'OpenAI cloud'];
 const compareRows = [
@@ -487,6 +388,100 @@ const shipNowHighlights = [
     </div>
   </header>
 
+  <!-- STACK -->
+  <section class="section section-tight" id="stack">
+    <div class="shell-wide">
+      <div class="sec-head">
+        <div>
+          <div class="sec-tag">/ provider stack</div>
+          <h2 class="sec-title">Six engines,<br />one <span class="accent">/v1/*</span> surface.</h2>
+        </div>
+        <p class="sec-sub">
+          Chat, embeddings, rerank, speech both ways and image generation — each
+          served by the engine that suits it, on the accelerator that suits it,
+          all behind one OpenAI-compatible API. The picker only offers a backend
+          your hardware can actually honour.
+        </p>
+      </div>
+
+      <div class="matrix">
+        <div class="matrix-row head">
+          <div>Provider</div>
+          <div>Workloads</div>
+          <div>Hardware</div>
+          <div>Endpoints</div>
+        </div>
+        {providers.map((r) => (
+          <div class="matrix-row">
+            <div class="prov">
+              <span class="prov-name">{r.prov}</span>
+              <span class="prov-ver">{r.ver}</span>
+            </div>
+            <div class="uses">{r.uses}</div>
+            <div class="hw">{r.hw}</div>
+            <div class="ep">
+              {r.eps.split(' · ').map((e) => <span class="ep-chip">{e}</span>)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div class="lifecycle-wrap">
+        <div class="hr-line">SLOT LIFECYCLE — ENFORCED IN _transition()</div>
+        <div class="lifecycle">
+          <div class="lifecycle-track">
+            <span class="state-pill done">offline</span>
+            <span class="arrow">→</span>
+            <span class="state-pill done">pulling</span>
+            <span class="arrow">→</span>
+            <span class="state-pill done">starting</span>
+            <span class="arrow">→</span>
+            <span class="state-pill done">warming</span>
+            <span class="arrow">→</span>
+            <span class="state-pill done">ready</span>
+            <span class="arrow">⇄</span>
+            <span class="state-pill active">serving</span>
+            <span class="arrow">⇄</span>
+            <span class="state-pill done">idle</span>
+            <span class="arrow">→</span>
+            <span class="state-pill done">unloading</span>
+            <span class="arrow">→</span>
+            <span class="state-pill done">offline</span>
+            <span class="state-err"><span class="arrow">↳</span> <span class="state-pill err">error</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT'S IN THE BOX -->
+  <section class="section" id="what">
+    <div class="shell-wide">
+      <div class="sec-head">
+        <div>
+          <div class="sec-tag">/ what's in the box</div>
+          <h2 class="sec-title">More than models.<br />A whole <span class="accent">AI stack</span>.</h2>
+        </div>
+        <p class="sec-sub">
+          Agents, tools, memory, voice and image generation ship in the box and
+          come up wired to each other — not a model runner you then spend a
+          weekend assembling a platform around.
+        </p>
+      </div>
+
+      <div class="feat-grid">
+        {features.map((f) => (
+          <article class="feat-card">
+            <div class="feat-tag">{f.tag}</div>
+            <div class="feat-title">{f.title}</div>
+            <p class="feat-body">{f.body}</p>
+          </article>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
   <!-- USE CASES — outcome-led, right under the hero -->
   <section class="usecases" id="use-cases">
     <div class="shell-wide uc-grid">
@@ -519,20 +514,10 @@ const shipNowHighlights = [
     </div>
   </section>
 
-  <!-- COMMUNITY LAYER — community-first pivot (2026-08-22): forum, profiles
-       and writing lead so the people running hal0 come before the numbers.
-       Bench highlights stays, demoted to the end of the layer — it still
-       degrades gracefully (ROSTER is a committed sweep, not a live fetch,
-       so there's no "unreachable" case, only an aging ROSTER_DATE the
-       section already surfaces honestly). Forum is the one section backed
-       by a live fetch (fetchLatestTopics in lib/forum.ts) and renders
-       nothing at all — no skeleton, no error card — when DISCOURSE_URL is
-       unset or the API is unreachable at build time; the page just closes
-       up around it. -->
+  <!-- Bench highlights — first-party roster sweep. ROSTER is a committed
+       snapshot, not a live fetch, so there is no unreachable case; only an
+       aging ROSTER_DATE, which the section surfaces itself. -->
   <div class="shell-wide">
-    <ForumTopics />
-    <FeaturedProfiles />
-    <LatestWriting />
     <BenchHighlights />
   </div>
 
@@ -561,94 +546,6 @@ const shipNowHighlights = [
           <div class="ctx">ace-saber 35B-A3B · 19 GB · single stream</div>
           <a class="src" href="/benchmarks">from the roster benchmark →</a>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- WHAT'S IN THE BOX -->
-  <section class="section" id="what">
-    <div class="shell-wide">
-      <div class="sec-head">
-        <div>
-          <div class="sec-tag">/ what's in the box</div>
-          <h2 class="sec-title">Six workloads.<br />One systemd host.</h2>
-        </div>
-        <p class="sec-sub">
-          Every workload is a real systemd-managed slot with a typed lifecycle:
-          chat, embed, rerank, STT, TTS and image gen, each on its own port, all
-          behind one API. The dashboard operates the box; Open WebUI on :3001 is
-          where you chat with it.
-        </p>
-      </div>
-
-      <div class="feat-grid">
-        {features.map((f) => (
-          <article class="feat-card">
-            <div class="feat-tag">{f.tag}</div>
-            <div class="feat-title">{f.title}</div>
-            <p class="feat-body">{f.body}</p>
-          </article>
-        ))}
-      </div>
-
-      <div class="lifecycle-wrap">
-        <div class="hr-line">SLOT LIFECYCLE — ENFORCED IN _transition()</div>
-        <div class="lifecycle">
-          <div class="lifecycle-track">
-            <span class="state-pill done">offline</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">pulling</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">starting</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">warming</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">ready</span>
-            <span class="arrow">⇄</span>
-            <span class="state-pill active">serving</span>
-            <span class="arrow">⇄</span>
-            <span class="state-pill done">idle</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">unloading</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">offline</span>
-            <span class="state-err"><span class="arrow">↳</span> <span class="state-pill err">error</span></span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- STACK -->
-  <section class="section section-tight" id="stack">
-    <div class="shell-wide">
-      <div class="sec-head">
-        <div>
-          <div class="sec-tag">/ provider stack</div>
-          <h2 class="sec-title">Six providers,<br />one /v1/* surface.</h2>
-        </div>
-        <p class="sec-sub">
-          Each provider is stateless — <code class="mono accent-mono">build_env() / start_cmd() / health() / infer()</code>.
-          No global state, no shared connection pool. The picker only advertises
-          a backend the slot can actually honour on your hardware.
-        </p>
-      </div>
-
-      <div class="matrix">
-        <div class="matrix-row head">
-          <div>Provider</div>
-          <div>Workloads</div>
-          <div>Hardware</div>
-          <div>Endpoints</div>
-        </div>
-        {providers.map((r) => (
-          <div class="matrix-row">
-            <div class="prov">{r.prov}<small>{r.ver}</small></div>
-            <div class="uses">{r.uses}</div>
-            <div class="hw">{r.hw}</div>
-            <div class="ep">{r.eps}</div>
-          </div>
-        ))}
       </div>
     </div>
   </section>
@@ -687,79 +584,6 @@ const shipNowHighlights = [
           </article>
         ))}
       </div>
-    </div>
-  </section>
-
-  <!-- LOADOUTS -->
-  <section class="section section-tight" id="loadouts">
-    <div class="shell-wide">
-      <div class="sec-head">
-        <div>
-          <div class="sec-tag">/ recommended loadouts</div>
-          <h2 class="sec-title">Curated starting points.<br />Tweak from there.</h2>
-        </div>
-        <p class="sec-sub">
-          Sizes are published file sizes; the slot system takes a different model
-          per slot whenever you change your mind. These are tuned for Strix Halo:
-          <strong>A3B MoE</strong> models give 30–80B quality at ~3B token-gen
-          speed, and an <strong>MTP head</strong> on MTP-enabled llama.cpp delivers
-          a measured <strong>1.4–2.4× decode speedup</strong>. FP4 is what makes
-          them fit the unified pool — not what makes them fast.
-        </p>
-      </div>
-
-      <div class="loadout-tabs" role="tablist" aria-label="Recommended loadouts">
-        {loadoutTabs.map((t, i) => (
-          <button
-            class={`tab ${i === 0 ? 'active' : ''}`}
-            id={`tab-${t.id}`}
-            data-tab={t.id}
-            role="tab"
-            aria-selected={i === 0 ? 'true' : 'false'}
-            aria-controls={`panel-${t.id}`}
-            tabindex={i === 0 ? 0 : -1}
-          >
-            {t.label} <span class="count">{t.count}</span>
-          </button>
-        ))}
-      </div>
-
-      {loadoutTabs.map((t, i) => (
-        <div
-          class={`loadouts ${i === 0 ? '' : 'is-hidden'}`}
-          id={`panel-${t.id}`}
-          data-tab-panel={t.id}
-          role="tabpanel"
-          aria-labelledby={`tab-${t.id}`}
-          tabindex="0"
-          hidden={i !== 0}
-        >
-          {(loadoutData[t.id] || []).map((c) => (
-            <article class="loadout">
-              <div class="loadout-head">
-                <span class="loadout-size">{c.size}</span>
-                <span class="loadout-vram">{c.vram}</span>
-              </div>
-              <div class="loadout-title">{c.title}</div>
-              <div class="loadout-slots">
-                {c.slots.map((s) => (
-                  <div class="loadout-slot">
-                    <div class="k">{s.k}</div>
-                    <div class="v">{s.v}<small>{s.d}</small></div>
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      ))}
-
-      <p class="loadout-note">
-        Model ids are real, pull-able registry ids. Apache-clean alternatives
-        pull the same way: <strong>Qwen-Image</strong> (beats FLUX on prompt + text
-        rendering), <strong>Qwen3-Reranker-0.6B</strong> (pairs with the Qwen3
-        embedder), and <strong>Chatterbox-Turbo</strong> (zero-shot voice cloning).
-      </p>
     </div>
   </section>
 
@@ -851,17 +675,21 @@ const shipNowHighlights = [
     </div>
   </section>
 
-  <!-- MEET HERMES — the bundled agent as the dashboard's collectible foil card -->
-  <section class="section" id="hermes">
+  <!-- AGENTS, TOOLS + MEMORY — the bundled agent as the dashboard's collectible
+       foil card, then the three surfaces that make it more than a chatbot:
+       hal0-brain, the MCP catalog, and memory. Every number here is verified
+       against the product repo; see the card bodies for the honest limits. -->
+  <section class="section" id="agents">
     <div class="shell-wide hermes-sec">
       <div class="hermes-copy">
-        <div class="sec-tag">/ the bundled agent</div>
-        <h2 class="sec-title">An agent that<br /><span class="accent">lives on the box</span>.</h2>
+        <div class="sec-tag">/ agents, tools + memory</div>
+        <h2 class="sec-title">Agents that<br /><span class="accent">live on the box</span>.</h2>
         <p class="sec-sub">
           Hermes installs and bootstraps itself on first run — confined by its own
-          systemd unit, prewired to the local <code class="mono accent-mono">/v1</code> API and your
-          MCP servers, with opt-in graph memory. Reach it from Telegram or Discord; it
-          chains tool calls unattended for hours and writes each run back to the memory graph.
+          systemd unit, prewired to the local <code class="mono accent-mono">/v1</code> API
+          and hal0's MCP servers, with opt-in memory. Reach it from Telegram or
+          Discord; it chains tool calls unattended for hours and writes each run
+          back to memory.
         </p>
         <ul class="hermes-points">
           <li>Self-bootstraps: env probe → model wiring → MCP memory → persona.</li>
@@ -876,6 +704,48 @@ const shipNowHighlights = [
       <div class="hermes-card-wrap">
         <HermesCard />
       </div>
+    </div>
+
+    <div class="shell-wide agent-tiles">
+      <article class="agent-tile">
+        <div class="at-tag">hal0-brain</div>
+        <h3 class="at-title">A resident operator, not a chatbot</h3>
+        <p class="at-body">
+          hal0's own small always-on model, wired to hal0's admin catalog and
+          reachable from the dashboard's Agent Chat or{' '}
+          <code class="mono">hal0 chat --brain</code> on a headless box. Ask it what's
+          loaded, what the box is doing, what's eating the memory pool. It ships
+          read-only — it reads and explains out of the box, and one config line
+          lets it act.
+        </p>
+        <div class="at-foot"><strong>147</strong> of the 180 admin tools on its hands · <strong>85</strong> runnable under the shipped default</div>
+      </article>
+
+      <article class="agent-tile">
+        <div class="at-tag">mcp</div>
+        <h3 class="at-title">The platform is the tool catalog</h3>
+        <p class="at-body">
+          Two Streamable-HTTP servers mount onto the API —
+          <code class="mono">/mcp/admin</code> and <code class="mono">/mcp/memory</code> —
+          so any MCP client drives the box: 28 model tools, 26 memory, 22 slots,
+          17 stacks and profiles, 12 bench, plus telemetry and the updater. A
+          validator enforces zero overlap between gating tiers, so the catalog
+          cannot silently drift.
+        </p>
+        <div class="at-foot"><strong>54</strong> destructive tools queue for a human · <strong>9</strong> that no config can un-gate</div>
+      </article>
+
+      <article class="agent-tile">
+        <div class="at-tag">memory</div>
+        <h3 class="at-title">Recall that reaches no one</h3>
+        <p class="at-body">
+          Opt-in memory on a Hindsight engine that runs embedded and loopback-only,
+          local embeddings included — nothing is sent anywhere to remember it.
+          Banks are scoped per agent; recall fans out across the ones a caller can
+          see, then hal0 merges, ranks and fits the result to a token budget.
+        </p>
+        <div class="at-foot"><strong>26</strong> memory tools · destructive ops write an attributable audit row</div>
+      </article>
     </div>
   </section>
 
@@ -967,6 +837,18 @@ const shipNowHighlights = [
     </div>
   </section>
 
+  <!-- COMMUNITY LAYER — forum, shared profiles and writing. Sits low on the
+       page: it is social proof for someone already sold, not the pitch. The
+       forum section is the one backed by a live fetch (fetchLatestTopics in
+       lib/forum.ts) and renders nothing at all — no skeleton, no error card —
+       when DISCOURSE_URL is unset or unreachable at build time; the page just
+       closes up around it. -->
+  <div class="shell-wide">
+    <ForumTopics />
+    <FeaturedProfiles />
+    <LatestWriting />
+  </div>
+
   <!-- CTA -->
   <section class="cta-section">
     <div class="shell-wide cta-inner">
@@ -1018,35 +900,6 @@ const shipNowHighlights = [
         });
       });
 
-      // Loadout tabs — WAI-ARIA tabs pattern: roving tabindex + arrow/Home/End.
-      const tabs = Array.from(document.querySelectorAll('button[data-tab]'));
-      const panels = document.querySelectorAll('[data-tab-panel]');
-      const selectTab = (tab, focus) => {
-        const id = tab.getAttribute('data-tab');
-        tabs.forEach((t) => {
-          const isActive = t === tab;
-          t.classList.toggle('active', isActive);
-          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-          t.setAttribute('tabindex', isActive ? '0' : '-1');
-        });
-        panels.forEach((p) => {
-          const match = p.getAttribute('data-tab-panel') === id;
-          p.classList.toggle('is-hidden', !match);
-          p.hidden = !match;
-        });
-        if (focus) tab.focus();
-      };
-      tabs.forEach((tab, i) => {
-        tab.addEventListener('click', () => selectTab(tab, false));
-        tab.addEventListener('keydown', (e) => {
-          let next = null;
-          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = tabs[(i + 1) % tabs.length];
-          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = tabs[(i - 1 + tabs.length) % tabs.length];
-          else if (e.key === 'Home') next = tabs[0];
-          else if (e.key === 'End') next = tabs[tabs.length - 1];
-          if (next) { e.preventDefault(); selectTab(next, true); }
-        });
-      });
     })();
   </script>
 </MarketingLayout>
@@ -1642,10 +1495,11 @@ const shipNowHighlights = [
   }
   .matrix-row {
     display: grid;
-    grid-template-columns: 140px 1fr 220px 240px;
+    grid-template-columns: 200px 1fr 210px 250px;
     border-bottom: 1px solid var(--hal0-border);
     font-size: 13px;
   }
+  .matrix-row:not(.head):hover { background: var(--hal0-bg); }
   .matrix-row:last-child { border-bottom: none; }
   .matrix-row.head {
     background: var(--hal0-bg);
@@ -1655,17 +1509,46 @@ const shipNowHighlights = [
     color: var(--hal0-fg-dim);
   }
   .matrix-row > div {
-    padding: 18px 20px;
+    padding: 16px 20px;
     border-right: 1px solid var(--hal0-border);
     display: flex;
     align-items: center;
+    line-height: 1.5;
   }
+  .matrix-row.head > div { align-items: flex-end; }
   .matrix-row > div:last-child { border-right: none; }
-  .matrix-row .prov { color: var(--hal0-fg); font-weight: 500; }
-  .matrix-row .prov small { color: var(--hal0-fg-dim); font-weight: 400; margin-left: 8px; }
+  /* Name over version: the version used to sit inline and squeeze the name,
+     which is what made "Kokoro / Qwen3-TTS" wrap into four lines. */
+  .matrix-row .prov {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    color: var(--hal0-fg);
+    font-weight: 500;
+  }
+  .prov-name { white-space: nowrap; }
+  .prov-ver {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--hal0-fg-dim);
+  }
   .matrix-row .uses { color: var(--hal0-fg-muted); }
   .matrix-row .hw { color: var(--hal0-fg-muted); }
-  .matrix-row .ep { color: var(--hal0-accent); font-size: 12px; }
+  .matrix-row .ep {
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 6px;
+  }
+  .ep-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid color-mix(in srgb, var(--hal0-accent) 30%, transparent);
+    border-radius: 999px;
+    background: var(--hal0-accent-glow);
+    color: var(--hal0-accent);
+    font-size: 11px;
+    white-space: nowrap;
+  }
 
   /* Hardware tiers */
   .tiers {
@@ -1737,100 +1620,6 @@ const shipNowHighlights = [
     font-family: var(--hal0-font-mono);
   }
   .tier-note { font-size: 12px; color: var(--hal0-fg-muted); line-height: 1.5; }
-
-  /* Loadouts */
-  .loadout-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 28px;
-    flex-wrap: wrap;
-  }
-  .tab {
-    padding: 8px 14px;
-    border: 1px solid var(--hal0-border);
-    background: transparent;
-    color: var(--hal0-fg-muted);
-    font-family: var(--hal0-font-mono);
-    font-size: 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .tab:hover { color: var(--hal0-fg); border-color: var(--hal0-fg-dim); }
-  .tab.active {
-    color: var(--hal0-accent);
-    border-color: color-mix(in srgb, var(--hal0-accent) 34%, transparent);
-    background: var(--hal0-accent-glow);
-  }
-  .tab .count { color: var(--hal0-fg-dim); font-size: 10px; }
-  .tab.active .count { color: var(--hal0-accent); }
-
-  .loadouts {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-  .loadouts.is-hidden { display: none; }
-  .loadout {
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    padding: 22px;
-  }
-  .loadout-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 6px;
-  }
-  .loadout-size {
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--hal0-fg-dim);
-  }
-  .loadout-vram {
-    font-family: var(--hal0-font-mono);
-    font-size: 12px;
-    color: var(--hal0-accent);
-  }
-  .loadout-title {
-    font-family: var(--hal0-font-mono);
-    font-size: 16px;
-    letter-spacing: -0.02em;
-    color: var(--hal0-fg);
-    margin-bottom: 18px;
-  }
-  .loadout-slots {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .loadout-slot {
-    display: grid;
-    grid-template-columns: 70px 1fr;
-    gap: 12px;
-    padding: 8px 0;
-    border-top: 1px solid var(--hal0-border);
-    font-family: var(--hal0-font-mono);
-    font-size: 12px;
-    align-items: baseline;
-  }
-  .loadout-slot:first-child {
-    border-top: none;
-    padding-top: 0;
-  }
-  .loadout-slot .k { color: var(--hal0-accent); font-size: 11px; }
-  .loadout-slot .v { color: var(--hal0-fg-muted); }
-  .loadout-slot .v small {
-    color: var(--hal0-fg-dim);
-    display: block;
-    font-size: 10px;
-    margin-top: 3px;
-  }
 
   /* Comparison */
   .compare {
@@ -2189,7 +1978,7 @@ const shipNowHighlights = [
 
   /* Responsive */
   @media (max-width: 1280px) {
-    .matrix-row { grid-template-columns: 130px 1fr 180px 200px; }
+    .matrix-row { grid-template-columns: 170px 1fr 170px 200px; }
     .cmp-row { grid-template-columns: 200px repeat(4, 1fr); }
   }
 
@@ -2201,11 +1990,11 @@ const shipNowHighlights = [
     .sec-head { grid-template-columns: 1fr; gap: 24px; }
     .perf-grid { grid-template-columns: repeat(2, 1fr); }
     .feat-grid,
-    .tiers,
-    .loadouts { grid-template-columns: 1fr; }
+    .tiers { grid-template-columns: 1fr; }
     .ship-now-grid { grid-template-columns: repeat(2, 1fr); }
     .ship-card { border-bottom: 1px solid var(--hal0-border); }
     .ship-card:nth-child(2) { border-right: none; }
+    .agent-tiles { grid-template-columns: 1fr; }
     .rm-row { grid-template-columns: 1fr; }
     .rm-row-head { border-right: none; border-bottom: 1px solid var(--hal0-border); }
     .rm-cell { border-bottom: 1px solid var(--hal0-border); }
@@ -2320,14 +2109,51 @@ const shipNowHighlights = [
     line-height: 1.5;
     color: var(--hal0-fg-dim);
   }
-  .loadout-note {
-    margin: 22px 0 0;
-    max-width: 640px;
-    font-size: 0.85rem;
-    line-height: 1.55;
+  /* Agent tiles — hal0-brain / MCP / memory */
+  .agent-tiles {
+    margin-top: 48px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--hal0-border);
+    border: 1px solid var(--hal0-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .agent-tile {
+    padding: 26px 24px 22px;
+    background: var(--hal0-bg-elevated);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .at-tag {
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    color: var(--hal0-accent);
+  }
+  .at-title {
+    margin: 0;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+    color: var(--hal0-fg);
+  }
+  .at-body {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--hal0-fg-muted);
+    text-wrap: pretty;
+  }
+  .at-foot {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--hal0-border);
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
     color: var(--hal0-fg-dim);
   }
-  .loadout-note strong { color: var(--hal0-fg-muted); font-weight: 600; }
+  .at-foot strong { color: var(--hal0-accent); font-weight: 500; }
 
   /* Meet Hermes — copy + the foil card */
   .hermes-sec {
