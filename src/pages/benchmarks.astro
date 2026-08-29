@@ -72,7 +72,7 @@ const SNAPSHOT_LANE = 'rocm';
 const CAP_COUNTS = capCounts(rows, CAPS);
 
 const description =
-  'The hal0 model roster benchmark: decode/prefill throughput, TTFT, MTP accept rate and memory footprint for 26 models measured end to end on one Strix Halo box.';
+  'The hal0 model roster benchmark: decode/prefill throughput, MTP accept rate and memory footprint for 26 models measured end to end on one Strix Halo box.';
 ---
 
 <MarketingLayout title="Benchmarks — hal0" description={description}>
@@ -83,8 +83,7 @@ const description =
         <h1 class="site-h1 phead-title">benchmarks</h1>
         <p class="site-body phead-lede">
           26 models measured end to end on one Strix Halo box: decode and prefill throughput,
-          time to first token, speculative accept rate, and what each run cost in memory, watts
-          and degrees.
+          speculative accept rate, and the memory each run needed.
         </p>
       </div>
       <div class="phead-actions">
@@ -300,8 +299,8 @@ const description =
     <div class="empty panel" id="bench-empty" hidden>
       <p class="mono empty-title">No runs for this combination.</p>
       <p class="site-sm empty-body">
-        The June sweep covers <span class="mono">tg</span> only; other workloads land in the
-        next one. Drop back to the default view, or ask for it in the forum.
+        The current sweep covers <span class="mono">tg</span> only. Drop back to the default
+        view, or request a workload in the forum.
       </p>
       <button type="button" class="btn ghost sm" id="bench-empty-reset">reset filters</button>
     </div>

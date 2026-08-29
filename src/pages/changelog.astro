@@ -46,6 +46,16 @@ import { parseChangelog, releaseTagUrl } from '../lib/changelog.js';
 
 const { versions, latestStable, latestPrerelease } = parseChangelog(rawChangelog);
 
+// A prerelease is only worth showing when it leads the stable line. Once 1.0.0
+// tags, the newest prerelease is 1.0.0-rc.12 — same base version as the stable
+// release it became — and rendering it beside "1.0.0" would imply the RC is
+// newer than the GA it preceded.
+const baseVersion = (v) => v.split('-')[0];
+const showPrerelease = Boolean(
+  latestPrerelease &&
+    (!latestStable || baseVersion(latestPrerelease.version) !== baseVersion(latestStable.version)),
+);
+
 // Older tags aren't all published as GitHub releases, so per-version links
 // point at the always-valid releases index rather than deep-linking a tag
 // that may 404.
@@ -97,14 +107,14 @@ const description =
           <section class="cl-get">
             <h2 class="site-h2" style="margin: 0 0 4px;">Get hal0</h2>
             <p class="site-sm" style="margin-bottom: 16px;">
-              hal0's 1.0 line is at <strong style="color: var(--fg);">release-candidate</strong>{' '}
-              stage — RCs ship on the preview channel ahead of GA.
+              hal0 1.0 is generally available on the <strong style="color: var(--fg);">stable</strong>{' '}
+              channel. Preview and nightly carry the next line.
             </p>
 
             <div class="cl-get-grid">
-              {latestPrerelease && (
+              {showPrerelease && (
                 <article class="cl-get-card">
-                  <span class="cl-get-tag amber">1.0 release candidate</span>
+                  <span class="cl-get-tag amber">release candidate</span>
                   <div class="cl-get-version">{latestPrerelease.version}</div>
                   {latestPrerelease.date && <p class="cl-get-date">released {latestPrerelease.date}</p>}
                   <div class="cl-get-links">
@@ -115,7 +125,7 @@ const description =
               )}
               {latestStable && (
                 <article class="cl-get-card">
-                  <span class="cl-get-tag ok">last stable</span>
+                  <span class="cl-get-tag ok">latest release</span>
                   <div class="cl-get-version">{latestStable.version}</div>
                   {latestStable.date && <p class="cl-get-date">released {latestStable.date}</p>}
                   <div class="cl-get-links">
@@ -135,11 +145,11 @@ const description =
 
               <p class="site-sm" style="margin: 16px 0 8px;">
                 Self-update verifies a cosign-signed tarball and swaps the <code>current</code> symlink
-                atomically. Three channels — the 1.0 release candidates ship on <code>preview</code>:
+                atomically. Three channels — tagged releases land on <code>stable</code>:
               </p>
               <div class="cl-get-channels">
                 <CodeBlock lang="sh" title="stable channel">hal0 update --channel stable</CodeBlock>
-                <CodeBlock lang="sh" title="preview channel (1.0 RCs)">hal0 update --channel preview</CodeBlock>
+                <CodeBlock lang="sh" title="preview channel (next line)">hal0 update --channel preview</CodeBlock>
                 <CodeBlock lang="sh" title="nightly channel">hal0 update --channel nightly</CodeBlock>
               </div>
               <p class="site-sm" style="margin-top: 12px;">
