@@ -15,7 +15,7 @@
     "sync:profiles": "node scripts/sync-profiles.mjs",
     "build:og": "node scripts/build-og.mjs",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
-    "test": "node --test 'scripts/test/**/*.mjs'"
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test 'scripts/test/**/*.mjs'"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
