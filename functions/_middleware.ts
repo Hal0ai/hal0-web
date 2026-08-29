@@ -87,11 +87,22 @@ type ProxyOutcome =
 
 // GitHub paginates the releases list with an RFC 5988 `Link` header. Returns
 // the `rel="next"` URL, or null on the last page.
+//
+// The URL is followed with the `GITHUB_TOKEN` Authorization header attached, so
+// it is confined to api.github.com: a `next` link naming any other host would
+// hand that credential to whatever the header said.
 function nextPageUrl(link: string | null): string | null {
 	if (!link) return null;
 	for (const part of link.split(",")) {
 		const match = part.match(/<([^>]+)>\s*;\s*rel="next"/);
-		if (match) return match[1];
+		if (!match) continue;
+		let next: URL;
+		try {
+			next = new URL(match[1]);
+		} catch {
+			return null;
+		}
+		return next.hostname === "api.github.com" ? next.toString() : null;
 	}
 	return null;
 }

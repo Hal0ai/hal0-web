@@ -189,6 +189,32 @@ test('the release scan is bounded rather than following pagination forever', asy
   assert.match(response.headers.get('x-hal0-proxy-failed') ?? '', /^no-asset:stable\.json:/);
 });
 
+// Paging means the proxy now follows a URL it was handed rather than only the
+// one it built. Every list request carries the `GITHUB_TOKEN` Authorization
+// header, so a `next` link pointing anywhere but api.github.com would send that
+// credential to whatever host the header named.
+test('the release scan never follows a next link off api.github.com', async () => {
+  const hosts = [];
+  const fetchStub = async (url) => {
+    const parsed = new URL(String(url));
+    hosts.push(parsed.hostname);
+    if (parsed.hostname !== 'api.github.com') return new Response('[]', { status: 200 });
+    return new Response(JSON.stringify([release('v1.0.0-rc.12', 'preview.json')]), {
+      status: 200,
+      headers: new Headers({ link: '<https://evil.example/repos/Hal0ai/hal0/releases?page=2>; rel="next"' }),
+    });
+  };
+
+  const response = await getChannel('/stable.json', { fetch: fetchStub });
+
+  assert.equal(
+    hosts.includes('evil.example'),
+    false,
+    'the releases token must never be sent to a host outside api.github.com',
+  );
+  assert.equal(response.status, 404, 'the scan stops instead of chasing the off-host link');
+});
+
 test('the regex captures the channel name for the proxy lookup', async () => {
   const re = await channelRegex();
   for (const channel of POLICY_CHANNELS) {
