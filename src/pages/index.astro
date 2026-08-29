@@ -24,9 +24,9 @@ const version = parseChangelog(rawChangelog).latest?.version ?? '';
 // Full copy feeds the structured-data schema (no length limit); a tight ~155-char
 // version is the page meta + OG description (search snippets cap ~160).
 const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, declarative Stacks, systemd-managed slots, GPU voice (Qwen3-TTS) and NPU speech-to-text, local image generation (ComfyUI), a bundled Hermes agent with audited graph memory, an MCP server, and signed self-update. One command installs all of it.';
+  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, declarative Stacks, systemd-managed slots, GPU voice (Qwen3-TTS) and NPU speech-to-text, local image generation (ComfyUI), a bundled Hermes agent with audited memory, an MCP server, and signed self-update. One command installs all of it.';
 const metaDescription =
-  'Open-source homelab AI for AMD Strix Halo: declarative Stacks, OpenAI-compatible /v1/* API, GPU voice, local image gen, agents + audited graph memory, signed self-update.';
+  'Open-source homelab AI for AMD Strix Halo: declarative Stacks, OpenAI-compatible /v1/* API, GPU voice, local image gen, agents + audited memory, signed self-update.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -41,7 +41,7 @@ const softwareApplicationLd = {
   softwareVersion: version,
   codeRepository: 'https://github.com/hal0ai/hal0',
   keywords:
-    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance, declarative Stacks, local image generation, ComfyUI, SDXL, Flux, GPU voice, Qwen3-TTS, whisper-v3, AI agents, Hermes agent, graph memory, Hindsight, audit trail, MCP server, agent kanban, Operator Board, NPU occupancy, self-hosted AI',
+    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance, declarative Stacks, local image generation, ComfyUI, SDXL, Flux, GPU voice, Qwen3-TTS, whisper-v3, AI agents, Hermes agent, agent memory, Hindsight, audit trail, MCP server, agent kanban, Operator Board, NPU occupancy, self-hosted AI',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: 'hal0ai', url: 'https://github.com/hal0ai' },
 };
@@ -277,7 +277,7 @@ const themes: RoadmapTheme[] = [
     shipped: [
       { t: 'Bundled Hermes agent', d: 'Hermes installs and bootstraps on first run — confined by its own systemd unit, prewired to the local /v1 API and MCP servers, with an agent-card library in the dashboard.' },
       { t: 'Operator Board', d: 'A hal0-skinned kanban wired to Hermes (/api/board/*), with a live agent-chat drawer and working task creation.' },
-      { t: 'Hindsight graph memory', d: 'Opt-in memory engine (HAL0_MEMORY_ENABLED). Shared by default; the X-hal0-Agent header scopes a client\'s writes to its own namespace. Every destructive op — bank delete, memory/document/directive wipes — now records a durable, attributable audit row.' },
+      { t: 'Hindsight-backed memory', d: 'Opt-in memory engine (HAL0_MEMORY_ENABLED), running embedded and loopback-only. Shared by default; the X-hal0-Agent header scopes a client\'s writes to its own namespace. Every destructive op — bank delete, memory/document/directive wipes — records a durable, attributable audit row.' },
       { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions: an admin + memory MCP server, plus an allow-listed client that composes external MCP tools. Destructive calls gate through an approval bell + CLI.' },
     ],
     soon: [],
@@ -482,9 +482,22 @@ const shipNowHighlights = [
     </div>
   </section>
 
-  <!-- USE CASES — outcome-led, right under the hero -->
-  <section class="usecases" id="use-cases">
-    <div class="shell-wide uc-grid">
+  <!-- USE CASES — outcome-led. Used to sit directly under the hero, where the
+       hero supplied its spacing and context; now that it follows the feature
+       grid it carries its own header and section rhythm. -->
+  <section class="section section-tight usecases" id="use-cases">
+    <div class="shell-wide">
+      <div class="sec-head">
+        <div>
+          <div class="sec-tag">/ what people run it for</div>
+          <h2 class="sec-title">One box,<br />three <span class="accent">day jobs</span>.</h2>
+        </div>
+        <p class="sec-sub">
+          The same install serves all three at once — the slots share the
+          accelerator instead of taking turns with it.
+        </p>
+      </div>
+      <div class="uc-grid">
       <article class="uc-card">
         <div class="uc-eye">/ local coding stack</div>
         <h3 class="uc-title">Point your editor at your own box</h3>
@@ -498,7 +511,7 @@ const shipNowHighlights = [
         <div class="uc-eye">/ private knowledge &amp; RAG</div>
         <h3 class="uc-title">Retrieval grounded on your data</h3>
         <p class="uc-body">
-          Embeddings, reranking, and a bundled agent with opt-in graph memory and MCP
+          Embeddings, reranking, and a bundled agent with opt-in memory and MCP
           tools — a full RAG stack that runs on your hardware, not someone else's server.
         </p>
       </article>
@@ -511,6 +524,7 @@ const shipNowHighlights = [
           ComfyUI on the iGPU, switched cleanly so they share the box.
         </p>
       </article>
+      </div>
     </div>
   </section>
 
@@ -635,7 +649,7 @@ const shipNowHighlights = [
           <h2 class="sec-title">Chat, image gen, agents, and memory —<br /><span class="accent">one console</span>.</h2>
         </div>
         <p class="sec-sub">
-          Slots, models, local image generation, graph memory, an agent task board, MCP,
+          Slots, models, local image generation, agent memory, an agent task board, MCP,
           and logs — every surface in one React operator console. SSE-backed, dark by
           default. Real screenshots from a live hal0 instance.
         </p>
@@ -2087,8 +2101,8 @@ const shipNowHighlights = [
     .shot:hover { transform: none; }
   }
 
-  /* Use-case cards (outcome-led, under the hero) */
-  .usecases { padding: 4px 0 20px; }
+  /* Use-case cards */
+  .usecases .uc-grid { margin-top: 8px; }
   .uc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
   .uc-card {
     border: 1px solid var(--hal0-border);
