@@ -6,17 +6,17 @@
  * so this renders as a small addendum a post drops in manually rather than a
  * fork of the plugin component.
  *
- * forum.hal0.dev isn't live yet, so this points at the hal0 Discord for now.
- * Swap `href` to `https://forum.hal0.dev` once the Discourse forum launches —
- * no other change needed, every post importing this component picks it up.
+ * The href comes from nav.json's forum entry, so the link text and the target
+ * cannot drift apart — every post importing this component follows the nav.
  */
-import { getSocial } from '../lib/nav';
+import { header } from '../lib/nav';
 
-const discord = getSocial('discord');
+const forum = header.find((l) => l.label === 'forum');
+const forumHref = forum?.href ?? 'https://forum.hal0.dev';
 ---
 
 <p class="forum-discuss not-content">
-  <a href={discord.href} rel="noopener">discuss on the forum &#8599;</a>
+  <a href={forumHref} rel="noopener">discuss on the forum &#8599;</a>
 </p>
 
 <style>

@@ -523,7 +523,7 @@ async function main() {
     kind: 'fallback',
     eyebrow: 'self-hosted ai inference',
     title: 'Your Strix Halo box, running real /v1/* inference',
-    subtitle: 'One command installs it. Slots, unified memory, an OpenAI-compatible API.',
+    subtitle: 'Chat, embeddings, speech and images behind one OpenAI-compatible API. One command installs it.',
     meta: 'hal0.dev · Apache-2.0',
   });
   const fallbackDest = resolve(ROOT, 'public/og/default.png');
