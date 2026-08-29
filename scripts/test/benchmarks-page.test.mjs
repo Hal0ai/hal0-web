@@ -52,21 +52,24 @@ test("capability glyph SVG paths match ModelRoster.astro's ICONS verbatim", { sk
   );
 });
 
-test('"share your results" links to the model-roster-benchmark sharing docs anchor', { skip: !built && 'run npm run build first' }, async () => {
+test('"share your results" links to the model-roster-benchmark topic', { skip: !built && 'run npm run build first' }, async () => {
   const html = await loadPage();
+  // The docs live on the forum, so this points at the topic. The
+  // #sharing-results fragment is gone with the Starlight page: a Discourse
+  // post's heading anchors are not the ones Starlight generated.
   assert.match(
     html,
-    /href="\/docs\/reference\/model-roster-benchmark\/#sharing-results"[^>]*>\s*share your results/,
-    'share your results points at the docs sharing anchor, not an upload flow'
+    /href="https:\/\/forum\.hal0\.dev\/t\/model-roster-benchmarks-reference\/55"[^>]*>\s*share your results/,
+    'share your results points at the roster benchmark topic'
   );
 });
 
-test('methodology links to the model-roster-benchmark docs page', { skip: !built && 'run npm run build first' }, async () => {
+test('methodology links to the model-roster-benchmark topic', { skip: !built && 'run npm run build first' }, async () => {
   const html = await loadPage();
   assert.match(
     html,
-    /href="\/docs\/reference\/model-roster-benchmark\/"[^>]*>\s*methodology/,
-    'methodology button links to the docs reference page'
+    /href="https:\/\/forum\.hal0\.dev\/t\/model-roster-benchmarks-reference\/55"[^>]*>\s*methodology/,
+    'methodology button links to the roster benchmark topic'
   );
 });
 
