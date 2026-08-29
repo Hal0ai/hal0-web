@@ -92,6 +92,18 @@ export default defineConfig({
 		// (/docs/<section>/) are NOT in this map — they stay real pages, now
 		// rebuilt to link out to the forum instead of rendering Starlight
 		// content. See docsRedirects' own banner comment above.
+		// The /docs hub and its four section listing pages are retired: the
+		// forum's Docs category renders the same tree with more in it (six
+		// sections including Troubleshooting, four topics per card, the
+		// doc-categories sidebar), and keeping a second copy on hal0.dev meant
+		// keeping two generated data files in step with it. They were already
+		// out of step -- the hub knew five sections, the forum had six.
+		'/docs': 'https://forum.hal0.dev/c/docs/11',
+		'/docs/getting-started': 'https://forum.hal0.dev/c/docs/docs-getting-started/19',
+		'/docs/concepts': 'https://forum.hal0.dev/c/docs/docs-concepts/20',
+		'/docs/guides': 'https://forum.hal0.dev/c/docs/docs-guides/21',
+		'/docs/operate': 'https://forum.hal0.dev/c/docs/docs-operate/22',
+		'/docs/reference': 'https://forum.hal0.dev/c/docs/docs-reference/23',
 		...docsRedirects,
 		// The six KB articles moved to forum.hal0.dev as wiki topics, the same
 		// way the 44 product docs did. Same 301 shape, same postbuild

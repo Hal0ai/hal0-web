@@ -88,11 +88,12 @@ test('header links that carry match use string or array form (forum has none by 
       `${link.label} match must be a string or array`,
     );
   }
-  // `home` and `forum` carry no match by design: "/" as a prefix would light
-  // on every route, and the forum link points at another host entirely. Both
-  // rely on the exact-href test in nav.ts's isActive instead.
+  // `home`, `docs` and `forum` carry no match by design: "/" as a prefix
+  // would light on every route, and docs and forum both point at
+  // forum.hal0.dev now, so no hal0.dev route can light them. They rely on
+  // the exact-href test in nav.ts's isActive instead.
   const withMatch = nav.header.filter((l) => l.match !== undefined).map((l) => l.label).sort();
-  assert.deepEqual(withMatch, ['benchmarks', 'docs', 'profiles']);
+  assert.deepEqual(withMatch, ['benchmarks', 'profiles']);
 });
 
 // nav.ts is TypeScript and can't be imported under node --test, so this
@@ -116,13 +117,10 @@ const subForJs = (path) => {
   return null;
 };
 
-test('isActive: docs/benchmarks mutual exclusion', () => {
-  const docs = nav.header.find((l) => l.label === 'docs');
+test('isActive: benchmarks is its own section', () => {
   const bench = nav.header.find((l) => l.label === 'benchmarks');
-  assert.ok(isActiveJs('/docs/guides/', docs));
-  assert.ok(!isActiveJs('/benchmarks/', docs), 'benchmarks route must not light docs');
   assert.ok(isActiveJs('/benchmarks/', bench));
-  assert.ok(!isActiveJs('/docs/guides/', bench), 'docs page must not light benchmarks');
+  assert.ok(!isActiveJs('/profiles', bench), 'profiles route must not light benchmarks');
 });
 
 test('isActive: home lights only on the landing page', () => {
@@ -133,17 +131,19 @@ test('isActive: home lights only on the landing page', () => {
   }
 });
 
-test('isActive: docs covers the knowledge base too', () => {
+test('docs and the knowledge base both live on the forum', () => {
+  // Neither has a `match`: the docs hub and the KB articles are gone from
+  // hal0.dev (both are forum categories), so there is no local route left
+  // for either entry to light on.
   const docs = nav.header.find((l) => l.label === 'docs');
-  // blog and changelog moved to the footer with the flat header, so nothing
-  // in the top nav lights on them any more -- but KB articles are docs
-  // content and still light the docs entry.
-  // The model-roster-benchmark reference page is explicitly excluded (see
-  // nav.json's `exclude`) and isn't covered by "benchmarks" either — it's
-  // only reachable via the methodology sub-nav link, with no top-level
-  // highlight.
-  assert.ok(!isActiveJs('/docs/reference/model-roster-benchmark/', docs), 'docs is NOT active on the excluded methodology page');
-  assert.ok(isActiveJs('/kb/', docs), 'docs is active on a KB article');
+  assert.equal(docs.match, undefined);
+  assert.match(docs.href, /^https:\/\/forum\.hal0\.dev\/c\/docs\//);
+  assert.equal(docs.external, true);
+
+  const kb = nav.footerColumns
+    .flatMap((c) => c.links)
+    .find((l) => l.label === 'knowledge base');
+  assert.match(kb.href, /^https:\/\/forum\.hal0\.dev\/c\/kb\//);
 });
 
 test('isActive: profiles is its own section', () => {
@@ -179,7 +179,11 @@ test('benchmarks sub-nav has the expected entries', () => {
   assert.deepEqual(labels, ['leaderboard', 'evals', 'methodology']);
   assert.equal(bench.sub.find((l) => l.label === 'leaderboard').href, '/benchmarks/');
   assert.equal(bench.sub.find((l) => l.label === 'evals').href, '/benchmarks/#evals');
-  assert.equal(bench.sub.find((l) => l.label === 'methodology').href, '/docs/reference/model-roster-benchmark/');
+  // methodology is a forum topic now, like the rest of the docs
+  assert.match(
+    bench.sub.find((l) => l.label === 'methodology').href,
+    /^https:\/\/forum\.hal0\.dev\/t\//,
+  );
 });
 
 test('forum is a visible, external header entry', () => {

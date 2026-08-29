@@ -6,14 +6,8 @@
     },
     {
       "label": "docs",
-      "href": "/docs/",
-      "match": [
-        "/docs",
-        "/kb"
-      ],
-      "exclude": [
-        "/docs/reference/model-roster-benchmark"
-      ]
+      "href": "https://forum.hal0.dev/c/docs/11",
+      "external": true
     },
     {
       "label": "benchmarks",
@@ -31,7 +25,8 @@
         },
         {
           "label": "methodology",
-          "href": "/docs/reference/model-roster-benchmark/"
+          "href": "https://forum.hal0.dev/t/model-roster-benchmarks-reference/55",
+          "external": true
         }
       ]
     },
@@ -52,7 +47,8 @@
       "links": [
         {
           "label": "docs",
-          "href": "/docs/"
+          "href": "https://forum.hal0.dev/c/docs/11",
+          "external": true
         },
         {
           "label": "knowledge base",

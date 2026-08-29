@@ -77,13 +77,21 @@ test('the patch removed duplicate forum redirect route entries', { skip }, () =>
 	const forumRoutes = routes.filter((r) => r.headers?.Location?.startsWith('https://forum.hal0.dev/'));
 	const keys = forumRoutes.map((r) => JSON.stringify(r));
 	assert.equal(keys.length, new Set(keys).size, 'duplicate forum redirect route objects survived the patch');
-	// One route per map entry, not one per (slash, bare) pair — plus the /kb
-	// landing, which points at the forum's KB category and so is counted here
-	// too now that the KB lives there.
+	// One route per map entry, not one per (slash, bare) pair — plus the
+	// landing redirects declared inline in astro.config.mjs, which point at
+	// forum categories and so are counted here too:
+	//
+	//   /kb                     -> the KB category
+	//   /docs                   -> the Docs category
+	//   /docs/<section>/ x5     -> each docs section's category
+	//
+	// (Troubleshooting has no hal0.dev ancestor to redirect from — it was
+	// created on the forum, so nothing ever linked /docs/troubleshooting/.)
+	const LANDING_REDIRECTS = 7;
 	assert.equal(
 		forumRoutes.length,
-		Object.keys(redirects).length + Object.keys(kbRedirects).length + 1,
-		'expected one route per docs + kb redirect entry, plus the /kb landing',
+		Object.keys(redirects).length + Object.keys(kbRedirects).length + LANDING_REDIRECTS,
+		'expected one route per docs + kb article, plus the category landings',
 	);
 });
 

@@ -20,6 +20,8 @@ const pages = {
 
 const built = await access(pages.marketing).then(() => true, () => false);
 
+const DOCS_CATEGORY = 'https://forum.hal0.dev/c/docs/11';
+
 const hrefs = (fragment) =>
   new Set([...fragment.matchAll(/href="([^"]+)"/g)].map((m) => m[1]));
 
@@ -108,7 +110,9 @@ test('every header carries the same five entries, forum included', { skip: !buil
   // a header that merely mentioned the forum somewhere other than its nav.
   for (const [where, markup] of [['marketing header', marketingHeader], ['starlight docnav', starlightNav]]) {
     const links = hrefs(markup);
-    for (const href of ['/', '/docs/', '/benchmarks/', '/profiles', 'https://forum.hal0.dev']) {
+    // docs is a forum category now, like the KB before it, so the header
+    // carries its absolute URL rather than a local path.
+    for (const href of ['/', DOCS_CATEGORY, '/benchmarks/', '/profiles', 'https://forum.hal0.dev']) {
       assert.ok(links.has(href), `${where} missing ${href}`);
     }
   }
@@ -135,7 +139,7 @@ test('benchmarks carries the same header as every other page', { skip: !built &&
   const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
   const links = hrefs(header);
   assert.ok(links.has('https://forum.hal0.dev'), 'benchmarks header missing the forum link');
-  assert.ok(links.has('/docs/'), 'benchmarks header missing /docs/');
+  assert.ok(links.has(DOCS_CATEGORY), 'benchmarks header missing the docs category');
 });
 
 test('benchmarks renders a real <title> and meta description', { skip: !built && 'run npm run build first' }, async () => {
