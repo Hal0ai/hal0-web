@@ -3,10 +3,10 @@
  * BenchHighlights — homepage community layer, section (a): headline bench
  * figures + top-5 table.
  *
- * Source of truth: ROSTER in src/data/model-roster.ts — the same
- * first-party sweep the /docs/reference/model-roster-benchmark/ reference
- * page reads. /benchmarks isn't built yet (another team owns that page),
- * so every link here points at the roster reference doc instead.
+ * Source of truth: ROSTER in src/data/model-roster.ts — the same first-party
+ * sweep /benchmarks reads. That page now exists, so the links here point at
+ * it; they used to point at /docs/reference/model-roster-benchmark/, which
+ * since the docs move 301s off-site to the forum.
  *
  * Rows are measured only, top 5 by decode tok/s. The comp
  * (docs/design/2026-08-09-community-comps/06 Homepage.html) also shows a
@@ -16,7 +16,7 @@
  */
 import { ROSTER, ROSTER_MEASURED, ROSTER_DATE } from '../../data/model-roster';
 
-const BENCH_HREF = '/docs/reference/model-roster-benchmark/';
+const BENCH_HREF = '/benchmarks';
 const TOP_N = 5;
 
 const measured = ROSTER.filter((r) => r.measured && r.dec != null);
