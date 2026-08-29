@@ -47,7 +47,18 @@
 // manifest" to "could not download release manifest signature bundle" and
 // leaves the channel just as uninstallable (Hal0ai/hal0#1531).
 const CHANNEL_RE = /^\/(stable|preview|nightly|dev)\.json(?:\.bundle)?$/;
-const RELEASES_API = "https://api.github.com/repos/Hal0ai/hal0/releases?per_page=10";
+
+// The scan must not be depth-limited to one page. Only a FINAL tag emits
+// `stable.json`, while every rc and every nightly emits `preview.json` or
+// `nightly.json` — so the release carrying the stable manifest is pushed down
+// the list by releases that do not carry it, and a one-page scan eventually
+// stops seeing it. That is how `stable.json` came to 404 with
+// `no-asset:stable.json:10releases` on 2026-08-29: v0.9.8 had fallen past the
+// first page of 10 (Hal0ai/hal0#1530). Paginating keeps the channel resolvable
+// as history accumulates behind it; the cap keeps a missing asset from walking
+// the whole release history on every request.
+const RELEASES_API = "https://api.github.com/repos/Hal0ai/hal0/releases?per_page=100";
+const MAX_RELEASE_PAGES = 5;
 
 function authHeaders(token: string | undefined): Record<string, string> {
 	const base: Record<string, string> = {
@@ -74,86 +85,115 @@ type ProxyOutcome =
 	| { ok: true; response: Response }
 	| { ok: false; reason: string };
 
+// GitHub paginates the releases list with an RFC 5988 `Link` header. Returns
+// the `rel="next"` URL, or null on the last page.
+//
+// The URL is followed with the `GITHUB_TOKEN` Authorization header attached, so
+// it is confined to api.github.com: a `next` link naming any other host would
+// hand that credential to whatever the header said.
+function nextPageUrl(link: string | null): string | null {
+	if (!link) return null;
+	for (const part of link.split(",")) {
+		const match = part.match(/<([^>]+)>\s*;\s*rel="next"/);
+		if (!match) continue;
+		let next: URL;
+		try {
+			next = new URL(match[1]);
+		} catch {
+			return null;
+		}
+		return next.hostname === "api.github.com" ? next.toString() : null;
+	}
+	return null;
+}
+
 async function proxyChannelManifest(
 	channel: string,
 	assetName: string,
 	token: string | undefined,
 ): Promise<ProxyOutcome> {
-	let listResp: Response;
-	try {
-		listResp = await fetch(RELEASES_API, {
-			headers: {
-				...authHeaders(token),
-				Accept: "application/vnd.github+json",
-			},
-		});
-	} catch (e) {
-		const reason = `gh-list-threw:${(e as Error).message}`;
-		console.warn(`[releases-proxy] ${reason}`);
-		return { ok: false, reason };
-	}
-	if (!listResp.ok) {
-		const reason = `gh-list-${listResp.status}${token ? "-auth" : "-anon"}`;
-		console.warn(`[releases-proxy] ${reason} body=${(await listResp.text()).slice(0, 200)}`);
-		return { ok: false, reason };
-	}
+	let pageUrl: string | null = RELEASES_API;
+	let scanned = 0;
 
-	let releases: GhRelease[];
-	try {
-		releases = (await listResp.json()) as GhRelease[];
-	} catch (e) {
-		const reason = `gh-list-parse:${(e as Error).message}`;
-		console.warn(`[releases-proxy] ${reason}`);
-		return { ok: false, reason };
-	}
-
-	for (const release of releases) {
-		if (release.draft) continue;
-		const asset = release.assets?.find((a) => a.name === assetName);
-		if (!asset) continue;
-
-		// Use the api.github.com asset endpoint with octet-stream Accept.
-		// Returns a 302 to objects.githubusercontent.com with the asset
-		// bytes; `redirect: "follow"` lands us on the body in one hop.
-		// This is the documented direct-download path and gets the same
-		// rate-limit budget as the releases-list call above.
-		let assetResp: Response;
+	for (let page = 0; page < MAX_RELEASE_PAGES && pageUrl; page++) {
+		let listResp: Response;
 		try {
-			assetResp = await fetch(asset.url, {
+			listResp = await fetch(pageUrl, {
 				headers: {
 					...authHeaders(token),
-					Accept: "application/octet-stream",
+					Accept: "application/vnd.github+json",
 				},
-				redirect: "follow",
 			});
 		} catch (e) {
-			const reason = `gh-asset-threw:${(e as Error).message}:${release.tag_name}`;
+			const reason = `gh-list-threw:${(e as Error).message}`;
 			console.warn(`[releases-proxy] ${reason}`);
 			return { ok: false, reason };
 		}
-		if (!assetResp.ok) {
-			const reason = `gh-asset-${assetResp.status}:${release.tag_name}`;
-			console.warn(`[releases-proxy] ${reason}`);
+		if (!listResp.ok) {
+			const reason = `gh-list-${listResp.status}${token ? "-auth" : "-anon"}`;
+			console.warn(`[releases-proxy] ${reason} body=${(await listResp.text()).slice(0, 200)}`);
 			return { ok: false, reason };
 		}
 
-		const body = await assetResp.text();
-		return {
-			ok: true,
-			response: new Response(body, {
-				status: 200,
-				headers: {
-					"content-type": "application/json; charset=utf-8",
-					"access-control-allow-origin": "*",
-					"cache-control": "public, max-age=60, must-revalidate",
-					"x-content-type-options": "nosniff",
-					"x-hal0-source": `github-release/${release.tag_name}`,
-					"x-hal0-channel": channel,
-				},
-			}),
-		};
+		let releases: GhRelease[];
+		try {
+			releases = (await listResp.json()) as GhRelease[];
+		} catch (e) {
+			const reason = `gh-list-parse:${(e as Error).message}`;
+			console.warn(`[releases-proxy] ${reason}`);
+			return { ok: false, reason };
+		}
+		scanned += releases.length;
+		pageUrl = nextPageUrl(listResp.headers.get("link"));
+
+		for (const release of releases) {
+			if (release.draft) continue;
+			const asset = release.assets?.find((a) => a.name === assetName);
+			if (!asset) continue;
+
+			// Use the api.github.com asset endpoint with octet-stream Accept.
+			// Returns a 302 to objects.githubusercontent.com with the asset
+			// bytes; `redirect: "follow"` lands us on the body in one hop.
+			// This is the documented direct-download path and gets the same
+			// rate-limit budget as the releases-list call above.
+			let assetResp: Response;
+			try {
+				assetResp = await fetch(asset.url, {
+					headers: {
+						...authHeaders(token),
+						Accept: "application/octet-stream",
+					},
+					redirect: "follow",
+				});
+			} catch (e) {
+				const reason = `gh-asset-threw:${(e as Error).message}:${release.tag_name}`;
+				console.warn(`[releases-proxy] ${reason}`);
+				return { ok: false, reason };
+			}
+			if (!assetResp.ok) {
+				const reason = `gh-asset-${assetResp.status}:${release.tag_name}`;
+				console.warn(`[releases-proxy] ${reason}`);
+				return { ok: false, reason };
+			}
+
+			const body = await assetResp.text();
+			return {
+				ok: true,
+				response: new Response(body, {
+					status: 200,
+					headers: {
+						"content-type": "application/json; charset=utf-8",
+						"access-control-allow-origin": "*",
+						"cache-control": "public, max-age=60, must-revalidate",
+						"x-content-type-options": "nosniff",
+						"x-hal0-source": `github-release/${release.tag_name}`,
+						"x-hal0-channel": channel,
+					},
+				}),
+			};
+		}
 	}
-	const reason = `no-asset:${assetName}:${releases.length}releases`;
+	const reason = `no-asset:${assetName}:${scanned}releases`;
 	console.warn(`[releases-proxy] ${reason}`);
 	return { ok: false, reason };
 }

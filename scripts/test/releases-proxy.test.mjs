@@ -22,6 +22,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { onRequest } from '../../functions/_middleware.ts';
 
 const MIDDLEWARE = fileURLToPath(new URL('../../functions/_middleware.ts', import.meta.url));
 
@@ -79,6 +80,139 @@ test('the channel regex does not match arbitrary paths', async () => {
   ]) {
     assert.equal(re.test(path), false, `${path} must not match CHANNEL_RE`);
   }
+});
+
+// --- release scan depth -----------------------------------------------------
+//
+// Only a FINAL tag emits `stable.json` (ReleasePolicy.manifest_targets), while
+// every rc and every nightly emits `preview.json` / `nightly.json`. So the
+// release carrying `stable.json` is steadily pushed down the release list by
+// releases that do not carry it, and a scan that reads one fixed-size page
+// stops finding it after enough of them — silently, with a 404 on the channel
+// every stable user is on. That is not hypothetical: on 2026-08-29
+// `https://releases.hal0.dev/stable.json` answered 404 with
+// `x-hal0-proxy-failed: no-asset:stable.json:10releases` because v0.9.8, the
+// only release that has ever published the asset, had fallen off the first
+// page of 10. Publishing `stable.json` on the GA tag fixes that for as long as
+// it takes ten further releases to stack on top of it. See Hal0ai/hal0#1530.
+//
+// These tests drive the real `onRequest` against a stubbed GitHub API, so they
+// constrain the behaviour rather than the page-size literal.
+
+const ASSET_BODY = '{"_schema":"hal0.releases.v1","version":"1.0.0","channel":"stable"}';
+
+// One page of the GitHub releases list, newest first. `withAsset` names the
+// asset that release publishes, if any.
+function release(tag, withAsset) {
+  return {
+    tag_name: tag,
+    draft: false,
+    prerelease: !withAsset,
+    assets: withAsset
+      ? [{ id: 1, name: withAsset, url: `https://api.github.com/asset/${tag}/${withAsset}`, browser_download_url: '' }]
+      : [],
+  };
+}
+
+// A GitHub API stub that paginates like the real one: `?page=N`, newest-first,
+// `Link: rel="next"` while more pages remain. Records the pages it served so a
+// test can assert the scan is bounded.
+function githubStub(pages) {
+  const listed = [];
+  const fetch = async (url) => {
+    const parsed = new URL(String(url));
+    if (parsed.hostname === 'api.github.com' && parsed.pathname.endsWith('/releases')) {
+      const page = Number(parsed.searchParams.get('page') ?? '1');
+      listed.push(page);
+      const body = pages[page - 1] ?? [];
+      const headers = new Headers({ 'content-type': 'application/json' });
+      if (page < pages.length) {
+        const next = new URL(parsed);
+        next.searchParams.set('page', String(page + 1));
+        headers.set('link', `<${next}>; rel="next"`);
+      }
+      return new Response(JSON.stringify(body), { status: 200, headers });
+    }
+    if (parsed.pathname.startsWith('/asset/')) {
+      return new Response(ASSET_BODY, { status: 200 });
+    }
+    throw new Error(`unexpected fetch: ${url}`);
+  };
+  return { fetch, listed };
+}
+
+// Drives the middleware exactly as Cloudflare does: a request for the channel
+// path on the releases host, and a `next` standing in for the static-file
+// fallthrough (which is where a proxy miss lands).
+async function getChannel(path, stub) {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = stub.fetch;
+  try {
+    return await onRequest({
+      request: new Request(`https://releases.hal0.dev${path}`),
+      next: async () => new Response('<!doctype html>not found', { status: 404 }),
+      env: {},
+    });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
+test('a channel manifest published outside the first page of releases still resolves', async () => {
+  // 12 rc/nightly tags carrying only preview.json, then the one release that
+  // published stable.json — the shape the live repo is in today.
+  const stub = githubStub([
+    Array.from({ length: 10 }, (_, i) => release(`v1.0.0-rc.${12 - i}`, 'preview.json')),
+    [...Array.from({ length: 2 }, (_, i) => release(`v1.0.0-rc.${2 - i}`, 'preview.json')), release('v0.9.8', 'stable.json')],
+  ]);
+
+  const response = await getChannel('/stable.json', stub);
+
+  assert.equal(response.status, 200, 'stable.json must resolve from a release beyond the first page');
+  assert.equal(await response.text(), ASSET_BODY);
+  assert.equal(response.headers.get('x-hal0-source'), 'github-release/v0.9.8');
+  assert.equal(response.headers.get('x-hal0-channel'), 'stable');
+});
+
+test('the release scan is bounded rather than following pagination forever', async () => {
+  // A repo with more history than any manifest lookup should read: no page
+  // carries the asset, so the scan runs to its own limit and gives up.
+  const stub = githubStub(Array.from({ length: 40 }, () => [release('v1.0.0-nightly.x', 'nightly.json')]));
+
+  const response = await getChannel('/stable.json', stub);
+
+  assert.equal(response.status, 404, 'a genuinely absent asset still falls through');
+  assert.ok(
+    stub.listed.length <= 10,
+    `the scan must stop at a page cap, read ${stub.listed.length} pages`,
+  );
+  assert.match(response.headers.get('x-hal0-proxy-failed') ?? '', /^no-asset:stable\.json:/);
+});
+
+// Paging means the proxy now follows a URL it was handed rather than only the
+// one it built. Every list request carries the `GITHUB_TOKEN` Authorization
+// header, so a `next` link pointing anywhere but api.github.com would send that
+// credential to whatever host the header named.
+test('the release scan never follows a next link off api.github.com', async () => {
+  const hosts = [];
+  const fetchStub = async (url) => {
+    const parsed = new URL(String(url));
+    hosts.push(parsed.hostname);
+    if (parsed.hostname !== 'api.github.com') return new Response('[]', { status: 200 });
+    return new Response(JSON.stringify([release('v1.0.0-rc.12', 'preview.json')]), {
+      status: 200,
+      headers: new Headers({ link: '<https://evil.example/repos/Hal0ai/hal0/releases?page=2>; rel="next"' }),
+    });
+  };
+
+  const response = await getChannel('/stable.json', { fetch: fetchStub });
+
+  assert.equal(
+    hosts.includes('evil.example'),
+    false,
+    'the releases token must never be sent to a host outside api.github.com',
+  );
+  assert.equal(response.status, 404, 'the scan stops instead of chasing the off-host link');
 });
 
 test('the regex captures the channel name for the proxy lookup', async () => {
