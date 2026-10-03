@@ -346,13 +346,13 @@ const shipNowHighlights = [
           <span class="blip"></span> {version} shipping now · Apache-2.0
         </div>
         <h1 class="h1 hero-h1">
-          <span class="h1-line">Your box.</span>
-          <span class="h1-line">Your agents.</span>
-          <span class="h1-line">Your <span class="accent">memory.</span></span>
+          <span class="h1-line">Your box,</span>
+          <span class="h1-line">agents, memory</span>
+          <span class="h1-line"><span class="accent">&amp; more.</span></span>
         </h1>
-        <p class="hero-tagline">All local. Forever free. Forever yours.</p>
+        <p class="hero-tagline">All local. All yours.</p>
         <p class="lede">
-          Models, agents and memory across every modality, served from one
+          Chat, speech, images, embeddings — every modality, served from one
           OpenAI-compatible API on your <strong>Strix Halo</strong> box or any Linux machine.
         </p>
 
@@ -997,11 +997,11 @@ const shipNowHighlights = [
   }
 
   /* Hero headline: three fixed lines, sized off the column width so the
-   * longest line ("Your agents.", 12 mono glyphs) never wraps and
+   * longest line ("agents, memory", 14 mono glyphs) never wraps and
    * the block stays roughly as tall as the live artifact beside it. */
   .hero-copy { container-type: inline-size; }
   .hero-h1 {
-    font-size: clamp(34px, 11cqi, 64px);
+    font-size: clamp(30px, 9.4cqi, 64px);
     line-height: 1.02;
     margin-bottom: 18px;
   }
@@ -2011,7 +2011,7 @@ const shipNowHighlights = [
     .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
     .hero-grid > * { min-width: 0; }
     .h1 { font-size: clamp(2.1rem, 11vw, 3rem); }
-    .hero-h1 { font-size: clamp(30px, 11cqi, 60px); }
+    .hero-h1 { font-size: clamp(26px, 9.4cqi, 60px); }
     .hero-install { margin-top: 40px; }
     .sec-head { grid-template-columns: 1fr; gap: 24px; }
     .perf-grid { grid-template-columns: repeat(2, 1fr); }
