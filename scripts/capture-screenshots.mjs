@@ -62,6 +62,10 @@ const SCALES = [
  *           surface never renders, the shot fails loudly instead of quietly
  *           writing a blank PNG over a good one
  *   clip    selector to crop to, for the small element shots the docs embed
+ *   area    list of selectors; the shot is the union of their boxes plus `pad`
+ *           px (default 12), for a card plus its open picker and the like
+ *   viewport  {width,height} override for shots whose subject is taller than
+ *           the default frame (drawers)
  *           inline (memory bar, MTP control, requests widget …)
  *   settle  override for SETTLE_MS — how long to wait after the route loads
  *   after   extra ms to wait once `act` has run, for animations that only
@@ -120,6 +124,49 @@ export function parseLaunchArgs(raw) {
   }
   if (has || cur) args.push(cur);
   return args;
+}
+
+/**
+ * A LAN-bound box with an admin key shows a login view to any off-box
+ * browser. When HAL0_ADMIN_KEY is set, sign in with "remember me" so the
+ * session cookie carries across the per-shot remounts; the key never lands
+ * in a file or a pixel. Without the key the read-only view is used.
+ */
+async function loginIfAsked(page, route) {
+  const input = page.locator('[data-testid="login-key-input"]');
+  if (!(await input.isVisible().catch(() => false))) return;
+  const key = process.env.HAL0_ADMIN_KEY;
+  if (!key) {
+    await page.click('[data-testid="login-view-read-only"]');
+  } else {
+    await input.fill(key);
+    const remember = page.locator('[data-testid="login-remember"]');
+    if (await remember.isVisible().catch(() => false)) await remember.check().catch(() => {});
+    await page.click('[data-testid="login-submit"]');
+  }
+  await page.locator('[data-testid="login-view"]').waitFor({ state: 'detached', timeout: 15_000 });
+  // The SPA may have swallowed the hash while the gate was up; reassert it.
+  await page.goto(`/${route}`, { waitUntil: 'networkidle', timeout: 30_000 });
+}
+
+/**
+ * Union of the bounding boxes of `selectors` (first match each), grown by
+ * `pad` px and clamped to the viewport. Used for the detail shots that need
+ * two elements in frame (a slot card plus its open picker) or a little air
+ * around one element.
+ */
+async function areaOf(page, selectors, pad = 12) {
+  const vp = page.viewportSize();
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  for (const sel of selectors) {
+    const box = await page.locator(sel).first().boundingBox();
+    if (!box) throw new Error(`area: ${sel} has no box`);
+    x1 = Math.min(x1, box.x); y1 = Math.min(y1, box.y);
+    x2 = Math.max(x2, box.x + box.width); y2 = Math.max(y2, box.y + box.height);
+  }
+  x1 = Math.max(0, x1 - pad); y1 = Math.max(0, y1 - pad);
+  x2 = Math.min(vp.width, x2 + pad); y2 = Math.min(vp.height, y2 + pad);
+  return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
 }
 
 export const SHOTS = [
@@ -195,7 +242,8 @@ export const SHOTS = [
     name: 'slot-card',
     route: '#slots',
     expect: '[data-testid="infer-slot-agent"]',
-    clip: '[data-testid="infer-slot-agent"]',
+    area: ['[data-testid="infer-slot-agent"]'],
+    pad: 16,
   },
   {
     name: 'slot-profile-picker-open',
@@ -205,7 +253,9 @@ export const SHOTS = [
       await page.waitForSelector('.rsel-listbox', { state: 'visible' });
     },
     expect: '.rsel-listbox',
-    clip: '[data-testid="infer-slots"]',
+    area: ['[data-testid="infer-slot-agent"]', '.rsel-listbox'],
+    pad: 20,
+    viewport: { width: 1440, height: 1180 },
   },
   {
     name: 'slot-model-picker-open',
@@ -215,7 +265,9 @@ export const SHOTS = [
       await page.waitForSelector('.rsel-listbox', { state: 'visible' });
     },
     expect: '.rsel-listbox',
-    clip: '[data-testid="infer-slots"]',
+    area: ['[data-testid="infer-slot-agent"]', '.rsel-listbox'],
+    pad: 20,
+    viewport: { width: 1440, height: 1180 },
     after: 1200, // opening the picker fires a feasibility request
   },
 
@@ -228,7 +280,8 @@ export const SHOTS = [
     route: '#slots/agent',
     act: scrollTo('[data-testid="slot-profile"]'),
     expect: '[data-testid="slot-profile"]',
-    clip: drawer,
+    area: ['.drawer.open'],
+    pad: 0,
   },
 
   // ── Model editor (drawer) ───────────────────────────────────────────────
@@ -239,7 +292,8 @@ export const SHOTS = [
     route: '#slots',
     act: (page) => page.click('[data-testid="infer-model-edit-agent"]'),
     expect: '[data-testid="model-facts"]',
-    clip: drawer,
+    area: ['.drawer.open'],
+    pad: 0,
   },
 
   // ── Profile editor (drawer) ─────────────────────────────────────────────
@@ -248,7 +302,9 @@ export const SHOTS = [
     route: '#models/profiles',
     act: openProfileCopy,
     expect: '[data-testid="pf-drawer-preview"]',
-    clip: '.drawer.open',
+    area: ['.pf-drawer'],
+    pad: 0,
+    viewport: { width: 1440, height: 1180 },
   },
   {
     // MTP is a per-profile setting (ADR-0029), not a model one. FormRow
@@ -257,7 +313,10 @@ export const SHOTS = [
     route: '#models/profiles',
     act: openProfileCopy,
     expect: '[data-testid="pf-select-mtp"]',
-    clip: '.pf-row:has([data-testid="pf-select-mtp"])',
+    // The tune rows of the profile drawer: context, thinking, vision, MTP.
+    area: ['.pf-row:has([data-testid="pf-input-ctx"])', '.pf-row:has([data-testid="pf-select-mtp"])'],
+    pad: 14,
+    viewport: { width: 1440, height: 1180 },
   },
 
   // ── Models ──────────────────────────────────────────────────────────────
@@ -385,7 +444,9 @@ async function capture(page, shot, suffix) {
   // about:blank first: hash-only navigation does not remount the SPA, so
   // without this a drawer opened by the previous shot bleeds into this one.
   await page.goto('about:blank');
+  await page.setViewportSize(shot.viewport ?? VIEWPORT);
   await page.goto(`/${shot.route}`, { waitUntil: 'networkidle', timeout: 30_000 });
+  await loginIfAsked(page, shot.route);
   await page.waitForTimeout(shot.settle ?? SETTLE_MS);
 
   if (shot.act) await shot.act(page);
@@ -394,8 +455,13 @@ async function capture(page, shot, suffix) {
   }
   await page.waitForTimeout(shot.after ?? 500); // let the transition finish
 
-  if (shot.clip) await page.locator(shot.clip).first().screenshot({ path: out });
-  else await page.screenshot({ path: out });
+  if (shot.area) {
+    await page.screenshot({ path: out, clip: await areaOf(page, shot.area, shot.pad), animations: 'disabled' });
+  } else if (shot.clip) {
+    await page.locator(shot.clip).first().screenshot({ path: out, animations: 'disabled' });
+  } else {
+    await page.screenshot({ path: out, animations: 'disabled' });
+  }
 
   console.log(`[capture] ${shot.route} → public/screenshots/${file}`);
 }

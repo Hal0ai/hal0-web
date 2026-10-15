@@ -24,10 +24,14 @@ fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# HAL0_ADMIN_KEY (optional) signs the capture browser in on a LAN-gated box;
+# it is passed through from the caller's environment, never written down.
 exec docker run --rm --ipc=host \
   --user "$(id -u):$(id -g)" \
   -e HOME=/tmp \
   -e HAL0_DASHBOARD_URL=http://hal0.local:8080 \
+  -e HAL0_ADMIN_KEY \
+  -e HAL0_CHROMIUM_ARGS \
   --add-host "hal0.local:${HAL0_BOX_IP}" \
   -v "${ROOT}:${ROOT}" -w "${ROOT}" \
   mcr.microsoft.com/playwright:v1.64.0-noble \
