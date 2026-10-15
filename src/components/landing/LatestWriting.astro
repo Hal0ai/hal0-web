@@ -111,6 +111,16 @@ function authorNames(authors: unknown): string[] {
   }
   .blead {
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Flex columns stretch children; keep the date chip at its own width,
+   * and drop the global eyebrow's 28px section-heading margin — inside a
+   * card the title's own top margin sets the gap. */
+  .blead > .eyebrow,
+  .bsmall > .eyebrow {
+    align-self: flex-start;
+    margin-bottom: 0;
   }
   .blead-title {
     font-size: 20px;

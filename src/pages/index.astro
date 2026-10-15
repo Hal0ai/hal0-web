@@ -857,7 +857,7 @@ const shipNowHighlights = [
        lib/forum.ts) and renders nothing at all — no skeleton, no error card —
        when DISCOURSE_URL is unset or unreachable at build time; the page just
        closes up around it. -->
-  <div class="shell-wide">
+  <div class="shell-wide community">
     <ForumTopics />
     <FeaturedProfiles />
     <LatestWriting />
@@ -1369,6 +1369,10 @@ const shipNowHighlights = [
   /* Sections */
   .section { padding: 96px 0; }
   .section-tight { padding-top: 64px; padding-bottom: 96px; }
+  /* The community sections (forum/profiles/blog) only pad their tops;
+   * close the block with the same bottom rhythm as .section so the last
+   * one doesn't butt into the CTA. */
+  .community { padding-bottom: 96px; }
   .sec-head {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);

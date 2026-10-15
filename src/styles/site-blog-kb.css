@@ -185,10 +185,18 @@
 	gap: 0;
 	border-top: 1px solid var(--hal0-border);
 }
+/* Two-column row: metadata (date + author) in the left column, title /
+ * excerpt / tags stacked on the right. starlight-blog nests the title and
+ * metadata inside <header> (and the metadata in its own flex wrapper), so
+ * <header> is flattened with `display: contents` and every piece is placed
+ * explicitly — an earlier subgrid version left the metadata on its own row
+ * under the title, opening a cover-image-sized hole before the excerpt
+ * whenever a post had no cover. */
 .content-panel .sl-markdown-content .posts .preview {
 	display: grid;
 	grid-template-columns: minmax(96px, 132px) 1fr;
-	gap: 24px;
+	grid-template-rows: auto auto 1fr;
+	gap: 10px 24px;
 	padding: 22px 0;
 	border-bottom: 1px solid var(--hal0-border-soft);
 	align-items: start;
@@ -203,12 +211,20 @@
 	letter-spacing: var(--hal0-ls-title);
 }
 .content-panel .sl-markdown-content .posts .preview header {
-	grid-column: 1 / -1;
-	display: grid;
-	grid-template-columns: subgrid;
+	display: contents;
+}
+/* Starlight's prose flow rule adds margin-top between siblings; inside the
+ * grid that only stacks on top of the row gap. */
+.content-panel .sl-markdown-content .posts .preview > *,
+.content-panel .sl-markdown-content .posts .preview header > * {
+	margin: 0;
+}
+.content-panel .sl-markdown-content .posts .preview .metadata {
+	grid-column: 1;
+	grid-row: 1 / -1;
+	gap: 8px;
 }
 .content-panel .sl-markdown-content .posts .preview .metadata .dates {
-	grid-column: 1;
 	font-family: var(--hal0-font-mono);
 	font-size: 11.5px;
 	color: var(--hal0-fg-faint);
@@ -216,7 +232,8 @@
 }
 .content-panel .sl-markdown-content .posts .preview .preview-link {
 	grid-column: 2;
-	margin-bottom: 6px;
+	grid-row: 1;
+	display: block;
 }
 .content-panel .sl-markdown-content .posts .preview .preview-link h2 {
 	font-size: 19px;
@@ -225,29 +242,33 @@
 	letter-spacing: var(--hal0-ls-tight);
 	margin: 0;
 }
-.content-panel .sl-markdown-content .posts .preview .metadata .authors {
-	grid-column: 2;
-}
 .content-panel .sl-markdown-content .posts .preview > .sl-markdown-content {
 	grid-column: 2;
+	grid-row: 2;
 	font-size: 14px;
 	color: var(--hal0-fg-muted);
 	max-width: 60ch;
 }
+.content-panel .sl-markdown-content .posts .preview > .sl-markdown-content > :first-child {
+	margin-top: 0;
+}
 .content-panel .sl-markdown-content .posts .preview footer {
 	grid-column: 2;
+	grid-row: 3;
+	margin-top: 6px;
 }
 
 @media (max-width: 720px) {
 	.content-panel .sl-markdown-content .posts .preview {
 		grid-template-columns: 1fr;
+		grid-template-rows: none;
 	}
-	.content-panel .sl-markdown-content .posts .preview .metadata .dates,
+	.content-panel .sl-markdown-content .posts .preview .metadata,
 	.content-panel .sl-markdown-content .posts .preview .preview-link,
-	.content-panel .sl-markdown-content .posts .preview .metadata .authors,
 	.content-panel .sl-markdown-content .posts .preview > .sl-markdown-content,
 	.content-panel .sl-markdown-content .posts .preview footer {
 		grid-column: 1;
+		grid-row: auto;
 	}
 }
 
