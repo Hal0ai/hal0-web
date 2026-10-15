@@ -346,9 +346,8 @@ const shipNowHighlights = [
           <span class="blip"></span> {version} shipping now · Apache-2.0
         </div>
         <h1 class="h1 hero-h1">
-          <span class="h1-line">Your box,</span>
-          <span class="h1-line">agents, memory</span>
-          <span class="h1-line"><span class="accent">&amp; more.</span></span>
+          <span class="h1-line">Own Your</span>
+          <span class="h1-line"><span class="accent">Inference</span></span>
         </h1>
         <p class="hero-tagline">All local. All yours.</p>
         <p class="lede">
@@ -996,12 +995,12 @@ const shipNowHighlights = [
     font-feature-settings: 'zero' 1;
   }
 
-  /* Hero headline: three fixed lines, sized off the column width so the
-   * longest line ("agents, memory", 14 mono glyphs) never wraps and
-   * the block stays roughly as tall as the live artifact beside it. */
+  /* Hero headline: two fixed lines, sized off the column width so the
+   * longest line ("Inference", 9 mono glyphs) never wraps and fills
+   * most of the column beside the live artifact. */
   .hero-copy { container-type: inline-size; }
   .hero-h1 {
-    font-size: clamp(30px, 9.4cqi, 64px);
+    font-size: clamp(36px, 15cqi, 88px);
     line-height: 1.02;
     margin-bottom: 18px;
   }
