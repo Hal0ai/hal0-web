@@ -13,10 +13,11 @@ import GithubIcon from './GithubIcon.astro';
 import DiscordIcon from './DiscordIcon.astro';
 import { footerColumns, footerBase, getSocial } from '../lib/nav';
 import rawChangelog from '../data/changelog.md?raw';
+import releaseTags from '../data/release-tags.json';
 import { parseChangelog } from '../lib/changelog.js';
 
-const { latest } = parseChangelog(rawChangelog);
-const footerVersion = latest?.version ?? '';
+const { latestTagged } = parseChangelog(rawChangelog, { tags: releaseTags.tags });
+const footerVersion = latestTagged?.version ?? '';
 const github = getSocial('github');
 const discord = getSocial('discord');
 const rss = footerBase.find((l) => l.label === 'rss');

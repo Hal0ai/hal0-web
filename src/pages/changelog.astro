@@ -42,26 +42,32 @@ import MarketingLayout from '../layouts/MarketingLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import CTA from '../components/CTA.astro';
 import rawChangelog from '../data/changelog.md?raw';
+import releaseTags from '../data/release-tags.json';
 import { parseChangelog, releaseTagUrl } from '../lib/changelog.js';
 
-const { versions, latestStable, latestPrerelease } = parseChangelog(rawChangelog);
+const { versions, latestPrerelease, latestTagged } = parseChangelog(rawChangelog, {
+  tags: releaseTags.tags,
+});
 
 // A prerelease is only worth showing when it leads the stable line. Once 1.0.0
 // tags, the newest prerelease is 1.0.0-rc.12 — same base version as the stable
 // release it became — and rendering it beside "1.0.0" would imply the RC is
 // newer than the GA it preceded.
-const baseVersion = (v) => v.split('-')[0];
-const showPrerelease = Boolean(
+const baseVersion = (v: string) => v.split('-')[0];
+const shownPrerelease =
   latestPrerelease &&
-    (!latestStable || baseVersion(latestPrerelease.version) !== baseVersion(latestStable.version)),
-);
+    (!latestTagged || baseVersion(latestPrerelease.version) !== baseVersion(latestTagged.version))
+    ? latestPrerelease
+    : null;
 
-// Older tags aren't all published as GitHub releases, so per-version links
-// point at the always-valid releases index rather than deep-linking a tag
-// that may 404.
+// Tagged versions deep-link to their tag; untagged ones (changelog content
+// ahead of the next tag) fall back to the always-valid releases index.
 const RELEASES_URL = 'https://github.com/hal0ai/hal0/releases';
 
 // Badge palette per section kind (brand-token driven, dark-first).
+const entryUrl = (v: { untagged: boolean; version: string }) => (v.untagged ? RELEASES_URL : releaseTagUrl(v.version));
+const isHighlights = (s: { title: string }) => s.title.trim().toLowerCase() === 'highlights';
+
 const KIND_CLASS = {
   breaking: 'border-red-500/40 bg-red-500/10 text-red-300',
   added: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
@@ -107,29 +113,33 @@ const description =
           <section class="cl-get">
             <h2 class="site-h2" style="margin: 0 0 4px;">Get hal0</h2>
             <p class="site-sm" style="margin-bottom: 16px;">
-              hal0 1.0 is generally available on the <strong style="color: var(--fg);">stable</strong>{' '}
-              channel. Preview and nightly carry the next line.
+              {latestTagged ? (
+                <>The current <strong style="color: var(--fg);">stable</strong> release is {latestTagged.version}.</>
+              ) : (
+                <>Releases land on the <strong style="color: var(--fg);">stable</strong> channel.</>
+              )}{' '}
+              Preview and nightly carry the next line.
             </p>
 
             <div class="cl-get-grid">
-              {showPrerelease && (
+              {shownPrerelease && (
                 <article class="cl-get-card">
-                  <span class="cl-get-tag amber">release candidate</span>
-                  <div class="cl-get-version">{latestPrerelease.version}</div>
-                  {latestPrerelease.date && <p class="cl-get-date">released {latestPrerelease.date}</p>}
+                  <span class="cl-get-tag amber">pre-release</span>
+                  <div class="cl-get-version">{shownPrerelease.version}</div>
+                  {shownPrerelease.date && <p class="cl-get-date">released {shownPrerelease.date}</p>}
                   <div class="cl-get-links">
-                    <a href={`#${latestPrerelease.slug}`}>what's new &rarr;</a>
-                    <a href={releaseTagUrl(latestPrerelease.version)} rel="noopener">github release &#8599;</a>
+                    <a href={`#${shownPrerelease.slug}`}>what's new &rarr;</a>
+                    <a href={entryUrl(shownPrerelease)} rel="noopener">github release &#8599;</a>
                   </div>
                 </article>
               )}
-              {latestStable && (
+              {latestTagged && (
                 <article class="cl-get-card">
                   <span class="cl-get-tag ok">latest release</span>
-                  <div class="cl-get-version">{latestStable.version}</div>
-                  {latestStable.date && <p class="cl-get-date">released {latestStable.date}</p>}
+                  <div class="cl-get-version">{latestTagged.version}</div>
+                  {latestTagged.date && <p class="cl-get-date">released {latestTagged.date}</p>}
                   <div class="cl-get-links">
-                    <a href={`#${latestStable.slug}`}>what's new &rarr;</a>
+                    <a href={`#${latestTagged.slug}`}>what's new &rarr;</a>
                     <a href={RELEASES_URL} rel="noopener">all releases &#8599;</a>
                   </div>
                 </article>
@@ -166,7 +176,9 @@ const description =
                   <h2 class="cl-entry-version">
                     <a href={`#${v.slug}`}>{v.version}</a>
                   </h2>
-                  {v.prerelease ? (
+                  {v.untagged ? (
+                    <span class="rounded border border-zinc-500/40 bg-zinc-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-zinc-300">unreleased</span>
+                  ) : v.prerelease ? (
                     <span class="rounded border border-hal0-accent/40 bg-hal0-accent/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">pre-release</span>
                   ) : v.gaPreview ? (
                     <span class="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">ga &middot; shipping as rc</span>
@@ -174,12 +186,19 @@ const description =
                     <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">stable</span>
                   )}
                   {v.date && <span class="cl-entry-date">{v.date}{v.dateNote && ` · ${v.dateNote}`}</span>}
-                  <a class="cl-entry-gh" href={RELEASES_URL} rel="noopener">on github &#8599;</a>
+                  <a class="cl-entry-gh" href={entryUrl(v)} rel="noopener">on github &#8599;</a>
                 </div>
+
+                {v.sections.filter(isHighlights).map((s) => (
+                  <div class="cl-highlights">
+                    <span class="label">{s.title}</span>
+                    <div class="cl-prose" set:html={s.html} />
+                  </div>
+                ))}
 
                 {v.intro && <div class="cl-prose" set:html={v.intro} />}
 
-                {v.sections.map((s) => (
+                {v.sections.filter((s) => !isHighlights(s)).map((s) => (
                   <div class="cl-section">
                     <span class={`inline-block rounded border px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider ${KIND_CLASS[s.kind]}`}>{s.title}</span>
                     <div class="cl-prose" set:html={s.html} />
@@ -449,6 +468,15 @@ const description =
   }
   .cl-entry-gh:hover {
     color: var(--accent);
+  }
+
+  .cl-highlights {
+    margin-top: 16px;
+    padding: 12px 16px 6px;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--accent);
+    border-radius: 6px;
+    background: var(--bg-1);
   }
 
   .cl-section {

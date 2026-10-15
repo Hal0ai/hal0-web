@@ -13,7 +13,13 @@
  *   <intro paragraph(s)>
  *   ### Section                   ← Added / Changed / Removed / Breaking / …
  *   - item
- * Link-reference definitions ([v0.2.0]: https://…) sit at the very bottom.
+ * Link-reference definitions ([v1.0.0]: https://…) sit at the very bottom.
+ *
+ * A heading is not proof of a release: the CHANGELOG can document content
+ * ahead of the next git tag. The sync step also records every GitHub release
+ * tag (src/data/release-tags.json); pass that list as `{ tags }` and each
+ * entry is marked `untagged` when no matching tag exists, and `latestTagged`
+ * is the newest stable entry that really shipped.
  */
 import { marked } from 'marked';
 
@@ -42,28 +48,13 @@ function sectionKind(title) {
   return 'note';
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// CONTRIBUTION POINT — version positioning policy.
-//
-// This single predicate decides whether a release is shown as a stable
-// headline or a pre-release on /releases and /changelog. It encodes the
-// positioning decision: hal0's only stable line so far is v0.2.0; every
-// v0.3.x–v0.5.x tag carries a `-alpha`/`-beta`/`-rc` suffix and must be
-// labelled pre-release (never presented as GA).
-//
-// Decide how strict to be. Options to weigh:
-//   • Treat ANY semver pre-release suffix (-alpha/-beta/-rc/-…) as
-//     pre-release (recommended — matches semver and is future-proof).
-//   • Hard-code a known-stable allow-list of tags.
-//   • Add a "channel" concept (stable | next | nightly) if you later want
-//     three tiers on the page.
-//
-// Implement the body. `version` is the bare tag without brackets,
-// e.g. "v0.5.1-alpha.1" or "v0.2.0". Return true for pre-release.
-// ─────────────────────────────────────────────────────────────────────────
+// Version positioning policy: any semver pre-release suffix
+// (-alpha/-beta/-rc/-dev/-nightly…) or PEP 440 compact segment marks a
+// pre-release; everything else is stable. `version` is the bare version
+// without brackets, e.g. "1.4.0-rc.1" or "v1.3.0".
 export function isPrerelease(version) {
   // Hyphenated word-form tags: v0.8.1-beta.2, v0.8.0-beta.3, v0.5.1-alpha.1, …
-  if (/-(alpha|beta|rc|pre|dev)\b/i.test(version)) return true;
+  if (/-(alpha|beta|rc|pre|dev|nightly)\b/i.test(version)) return true;
   // PEP 440 compact pre-release segments with no separator before the next
   // release: v0.8.4b1, v0.8.3b1, v0.8.2b4 (a=alpha, b=beta, rc=release
   // candidate). Anchored at the end so a plain release number like "v0.2.0"
@@ -88,6 +79,7 @@ export function isPrerelease(version) {
  * @property {boolean} prerelease
  * @property {boolean} stable
  * @property {boolean} [gaPreview]
+ * @property {boolean} untagged  true when `tags` was given and has no tag for this version
  * @property {string} intro
  * @property {ChangelogSection[]} sections
  */
@@ -95,9 +87,10 @@ export function isPrerelease(version) {
 /**
  * Parse the raw changelog markdown into structured version blocks.
  * @param {string} raw
- * @returns {{versions: ChangelogVersion[], latest: ChangelogVersion|null, latestStable: ChangelogVersion|null, latestPrerelease: ChangelogVersion|null}}
+ * @param {{tags?: string[]}} [opts] GitHub release tag names (release-tags.json `tags`)
+ * @returns {{versions: ChangelogVersion[], latest: ChangelogVersion|null, latestStable: ChangelogVersion|null, latestPrerelease: ChangelogVersion|null, latestTagged: ChangelogVersion|null}}
  */
-export function parseChangelog(raw) {
+export function parseChangelog(raw, { tags } = {}) {
   const body = stripLinkRefs(raw);
   // Everything from the first version header onward; drop the file preamble.
   const firstIdx = body.indexOf('\n## [');
@@ -167,10 +160,22 @@ export function parseChangelog(raw) {
       versions.slice(0, i).some((n) => n.prerelease && baseOf(n.version) === baseOf(v.version));
   });
 
+  const tagSet = Array.isArray(tags) ? new Set(tags) : null;
+  versions.forEach((v) => {
+    const bare = v.version.replace(/^v/i, '');
+    v.untagged = tagSet ? !(tagSet.has(`v${bare}`) || tagSet.has(bare)) : false;
+  });
+
   const latestStable = versions.find((v) => v.stable && !v.gaPreview) ?? null;
   const latestPrerelease = versions.find((v) => v.prerelease) ?? null;
 
-  return { versions, latest: versions[0] ?? null, latestStable, latestPrerelease };
+  // Newest stable entry that actually shipped. Without a tag list, fall back
+  // to latestStable.
+  const latestTagged = tagSet
+    ? (versions.find((v) => !v.untagged && v.stable && !v.gaPreview) ?? null)
+    : latestStable;
+
+  return { versions, latest: versions[0] ?? null, latestStable, latestPrerelease, latestTagged };
 }
 
 /** GitHub release tag URL for a given version. */
