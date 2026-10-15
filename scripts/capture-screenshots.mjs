@@ -8,8 +8,11 @@
  * consistent set. Modelled on the product repo's Playwright e2e setup
  * (ui/tests/e2e/specs/slot-indicator-live-screenshot.spec.ts).
  *
- * Usage:
- *   npx playwright install chromium      # once, to get the browser binary
+ * Usage (Docker — host Chromium usually lacks system libs):
+ *   HAL0_BOX_IP=<ip> scripts/capture-screenshots.sh [shot-name ...]
+ * runs this script inside mcr.microsoft.com/playwright:v1.64.0-noble with
+ * `--add-host hal0.local:<ip>` and HAL0_DASHBOARD_URL=http://hal0.local:8080.
+ * Without Docker: `npx playwright install chromium`, then
  *   HAL0_DASHBOARD_URL=http://your-host:8080 npm run capture:screenshots
  *
  * Every shot is written twice: <name>.png at 1× and <name>@2x.png at
@@ -18,15 +21,18 @@
  *
  * The base URL is NEVER hard-coded to a private host — pass it via
  * HAL0_DASHBOARD_URL (default http://localhost:8080). To keep host names out
- * of the captured pixels, reach the box by an mDNS/local name (e.g.
- * http://hal0.local:8080) so any endpoint shown in the UI reads `hal0.local`.
+ * of the captured pixels, reach the box by a neutral name (hal0.local) so any
+ * endpoint shown in the UI reads `hal0.local`. Without root, map the name in
+ * Chromium itself via HAL0_CHROMIUM_ARGS (whitespace-separated launch args):
+ *   HAL0_CHROMIUM_ARGS='--host-resolver-rules="MAP hal0.local <ip>"'
  *
- * The first-run experience is a terminal TUI (`hal0 setup`) as of v0.5.1 —
- * there is no web first-run wizard to screenshot here.
+ * The capture box must show NO private hostnames, keys, or personal slot and
+ * model names: seed slots and public models only. Every PNG is reviewed before
+ * it is committed.
  */
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -70,7 +76,20 @@ const scrollTo =
     await page.waitForTimeout(400);
   };
 
-const SHOTS = [
+/**
+ * act() helper: open the edit-a-copy drawer for the seed profile `agent`
+ * (present on every install); fall back to the first seed's button.
+ */
+const openProfileCopy = async (page) => {
+  const sel = '[data-testid="pf-btn-editcopy-agent"]';
+  await page.waitForSelector('[data-testid^="pf-btn-editcopy-"]', { state: 'visible', timeout: 15_000 });
+  const target = (await page.locator(sel).count())
+    ? page.locator(sel)
+    : page.locator('[data-testid^="pf-btn-editcopy-"]').first();
+  await target.click();
+};
+
+export const SHOTS = [
   // ── Overview ────────────────────────────────────────────────────────────
   {
     name: 'dashboard-overview',
@@ -131,7 +150,7 @@ const SHOTS = [
   {
     name: 'runner-images',
     route: '#slots/runner-images',
-    expect: '[data-testid="ri-defaults"]',
+    expect: '[data-testid="ri-family-strip"]',
   },
   {
     name: 'image-gen-comfyui',
@@ -139,15 +158,44 @@ const SHOTS = [
     expect: '[data-testid="comfy-engine-pill"]',
   },
 
+  {
+    name: 'slot-card',
+    route: '#slots',
+    expect: '[data-testid="infer-slot-agent"]',
+    clip: '[data-testid="infer-slot-agent"]',
+  },
+  {
+    name: 'slot-profile-picker-open',
+    route: '#slots',
+    act: async (page) => {
+      await page.click('[data-testid="infer-profile-agent"]');
+      await page.waitForSelector('.rsel-listbox', { state: 'visible' });
+    },
+    expect: '.rsel-listbox',
+    clip: '[data-testid="infer-slots"]',
+  },
+  {
+    name: 'slot-model-picker-open',
+    route: '#slots',
+    act: async (page) => {
+      await page.click('[data-testid="infer-model-agent"]');
+      await page.waitForSelector('.rsel-listbox', { state: 'visible' });
+    },
+    expect: '.rsel-listbox',
+    clip: '[data-testid="infer-slots"]',
+    after: 1200, // opening the picker fires a feasibility request
+  },
+
   // ── Slot editor (drawer) ────────────────────────────────────────────────
   // The slot drawer is route-addressable: #slots/<name> opens it over the
   // slots view, which is also what clicking a slot row does.
+  // (`slot-detail` is dropped: the docs/blog/landing use `slot-drawer`.)
   {
-    // The slot editor. Filename kept as slot-detail because the docs already
-    // reference /screenshots/slot-detail.png.
-    name: 'slot-detail',
+    name: 'slot-drawer',
     route: '#slots/agent',
-    expect: '[data-testid="slot-model-swap"]',
+    act: scrollTo('[data-testid="slot-profile"]'),
+    expect: '[data-testid="slot-profile"]',
+    clip: drawer,
   },
 
   // ── Model editor (drawer) ───────────────────────────────────────────────
@@ -157,13 +205,26 @@ const SHOTS = [
     name: 'model-edit-drawer',
     route: '#slots',
     act: (page) => page.click('[data-testid="infer-model-edit-agent"]'),
-    expect: drawer,
+    expect: '[data-testid="model-facts"]',
+    clip: drawer,
+  },
+
+  // ── Profile editor (drawer) ─────────────────────────────────────────────
+  {
+    name: 'profile-edit-drawer',
+    route: '#models/profiles',
+    act: openProfileCopy,
+    expect: '[data-testid="pf-drawer-preview"]',
+    clip: '.drawer.open',
   },
   {
+    // MTP is a per-profile setting (ADR-0029), not a model one. FormRow
+    // renders `.pf-row`, so clip the row that wraps the MTP select.
     name: 'mtp-control',
-    route: '#slots',
-    act: (page) => page.click('[data-testid="infer-model-edit-agent"]'),
-    clip: '.drawer.open .form-row:has-text("MTP")',
+    route: '#models/profiles',
+    act: openProfileCopy,
+    expect: '[data-testid="pf-select-mtp"]',
+    clip: '.pf-row:has([data-testid="pf-select-mtp"])',
   },
 
   // ── Models ──────────────────────────────────────────────────────────────
@@ -258,6 +319,11 @@ const SHOTS = [
     expect: 'text=Version & privacy',
   },
   {
+    name: 'settings-security',
+    route: '#settings/security',
+    expect: '[data-testid="cmd-approvals"]',
+  },
+  {
     name: 'hardware-page',
     route: '#settings/hardware',
     expect: '[data-testid="hardware-page"]',
@@ -323,7 +389,9 @@ async function main() {
   }
 
   await mkdir(OUT_DIR, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    args: (process.env.HAL0_CHROMIUM_ARGS ?? '').split(/\s+/).filter(Boolean),
+  });
   const failures = [];
 
   for (const { factor, suffix } of SCALES) {
@@ -357,4 +425,6 @@ async function main() {
   console.log('[capture] done. Review the diff before committing.');
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
