@@ -425,32 +425,6 @@ const shipNowHighlights = [
           </div>
         ))}
       </div>
-
-      <div class="lifecycle-wrap">
-        <div class="hr-line">SLOT LIFECYCLE — ENFORCED IN _transition()</div>
-        <div class="lifecycle">
-          <div class="lifecycle-track">
-            <span class="state-pill done">offline</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">pulling</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">starting</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">warming</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">ready</span>
-            <span class="arrow">⇄</span>
-            <span class="state-pill active">serving</span>
-            <span class="arrow">⇄</span>
-            <span class="state-pill done">idle</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">unloading</span>
-            <span class="arrow">→</span>
-            <span class="state-pill done">offline</span>
-            <span class="state-err"><span class="arrow">↳</span> <span class="state-pill err">error</span></span>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -921,7 +895,7 @@ const shipNowHighlights = [
 <style is:global>
   /* ============================================================
    * hal0 v2 landing — design primitives that don't fit Tailwind
-   * cleanly (matrix tables, lifecycle pills, mem-bar, roadmap
+   * cleanly (matrix tables, mem-bar, roadmap
    * themed rows, perf strip, slot rows). Scoped to the landing
    * via the section selectors.
    * ============================================================ */
@@ -1439,69 +1413,6 @@ const shipNowHighlights = [
     margin: 0;
   }
 
-  /* Lifecycle */
-  .lifecycle-wrap { margin-top: 48px; }
-  .hr-line {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    color: var(--hal0-fg-dim);
-    letter-spacing: 0.1em;
-    margin-bottom: 24px;
-  }
-  .hr-line::before,
-  .hr-line::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--hal0-border);
-  }
-  .lifecycle {
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    padding: 32px;
-    font-family: var(--hal0-font-mono);
-    overflow-x: auto;
-  }
-  .lifecycle-track {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    min-width: 800px;
-    flex-wrap: nowrap;
-  }
-  .state-pill {
-    padding: 6px 10px;
-    border: 1px solid var(--hal0-border);
-    border-radius: 4px;
-    font-size: 11px;
-    color: var(--hal0-fg-muted);
-    background: var(--hal0-bg);
-    white-space: nowrap;
-  }
-  .state-pill.active {
-    color: var(--hal0-accent);
-    border-color: color-mix(in srgb, var(--hal0-accent) 34%, transparent);
-    background: var(--hal0-accent-glow);
-  }
-  .state-pill.done { color: var(--hal0-fg); }
-  .state-pill.err {
-    color: #ef6b6b;
-    border-color: rgba(239, 107, 107, 0.3);
-    background: rgba(239, 107, 107, 0.08);
-  }
-  .arrow { color: var(--hal0-fg-dim); font-size: 11px; }
-  .state-err {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    color: #ef6b6b;
-  }
 
   /* Provider matrix */
   .matrix {
