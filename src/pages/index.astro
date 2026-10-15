@@ -4,7 +4,8 @@
  *
  * hal0 v2 design — sodium amber on graphite. Strix Halo first, the rest
  * of the matrix honest. Claims and numbers trace to the hal0 codebase
- * (src/hal0) — verify there, not from a copy doc.
+ * (src/hal0) — verify there, not from a copy doc. Copy is version-neutral:
+ * the only version on the page is derived from the latest tagged release.
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import LiveArtifact from '../components/landing/LiveArtifact.astro';
@@ -14,19 +15,21 @@ import FeaturedProfiles from '../components/landing/FeaturedProfiles.astro';
 import LatestWriting from '../components/landing/LatestWriting.astro';
 import BenchHighlights from '../components/landing/BenchHighlights.astro';
 import rawChangelog from '../data/changelog.md?raw';
+import releaseTags from '../data/release-tags.json';
 import { parseChangelog } from '../lib/changelog.js';
 import '../styles/site-data.css';
 
 const canonicalUrl = 'https://hal0.dev/';
-// Derived from the changelog (synced from the product repo) — never hardcoded.
-const version = parseChangelog(rawChangelog).latest?.version ?? '';
+// Latest *tagged* stable from the synced changelog, so an untagged heading
+// never reads as shipped. Never hardcoded.
+const version = parseChangelog(rawChangelog, { tags: releaseTags.tags }).latestTagged?.version ?? '';
 
 // Full copy feeds the structured-data schema (no length limit); a tight ~155-char
 // version is the page meta + OG description (search snippets cap ~160).
 const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 — "Strix Halo" — with 128 GB of unified memory and an XDNA NPU. OpenAI-compatible /v1/* API, declarative Stacks, systemd-managed slots, GPU voice (Qwen3-TTS) and NPU speech-to-text, local image generation (ComfyUI), a bundled Hermes agent with audited memory, an MCP server, and signed self-update. One command installs all of it.';
+  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 ("Strix Halo") with 128 GB of unified memory and an XDNA NPU, and it runs on other Linux boxes with a GPU, NPU or plain CPU. One OpenAI-compatible /v1/* API serves chat, embeddings, rerank, speech, transcription and images from pinned, hardware-gated runner images: the Standard runner (llama.cpp on ROCm or Vulkan), CPU, FastFlowLM on the NPU, Kokoro, Moonshine and ComfyUI. Every tune lives in a named profile you can fork, export and import. Open WebUI, ComfyUI, the Hermes agent and Hindsight memory come up wired to each other, with an MCP server and signed self-update. One command installs all of it.';
 const metaDescription =
-  'Open-source homelab AI for AMD Strix Halo: declarative Stacks, OpenAI-compatible /v1/* API, GPU voice, local image gen, agents + audited memory, signed self-update.';
+  'Open-source homelab AI for AMD Strix Halo: one OpenAI-compatible /v1/* API, pinned runner images, named profiles, Hermes agent, Hindsight memory, Open WebUI.';
 
 const softwareApplicationLd = {
   '@context': 'https://schema.org',
@@ -41,7 +44,7 @@ const softwareApplicationLd = {
   softwareVersion: version,
   codeRepository: 'https://github.com/hal0ai/hal0',
   keywords:
-    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, FLM, AI inference appliance, declarative Stacks, local image generation, ComfyUI, SDXL, Flux, GPU voice, Qwen3-TTS, whisper-v3, AI agents, Hermes agent, agent memory, Hindsight, audit trail, MCP server, agent kanban, Operator Board, NPU occupancy, self-hosted AI',
+    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, self-hosted AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, runner images, Standard runner, ROCm, Vulkan, FastFlowLM, inference profiles, Open WebUI, ComfyUI, local image generation, Kokoro, Moonshine, Qwen3 TTS, Hermes agent, Hindsight memory, agent memory, MCP server, signed updates',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: 'hal0ai', url: 'https://github.com/hal0ai' },
 };
@@ -50,22 +53,22 @@ const features = [
   {
     tag: 'agents',
     title: 'Agents that live on the box',
-    body: 'Hermes installs and bootstraps itself on first run, prewired to the local /v1 API. hal0-brain is the second: a resident operator you ask about the box in plain language, from the dashboard or a headless terminal.',
+    body: 'Hermes installs and bootstraps itself on first run, prewired to the local /v1 API, and your own model screens its risky shell commands before you are asked. hal0-brain is the second: a resident operator you ask about the box in plain language, from the dashboard or a headless terminal.',
   },
   {
-    tag: 'mcp',
-    title: '180 tools over MCP',
-    body: 'Two Streamable-HTTP servers mount straight onto the API: models, slots, memory, stacks, bench, telemetry and the updater, all reachable by any MCP client. The 54 destructive ones return pending_approval and wait for a human.',
+    tag: 'profiles',
+    title: 'Model = facts, profile = tune, slot = placement',
+    body: 'A model records facts about its file. A profile holds every tune: flags, context, thinking, vision, MTP and the runtime. A slot holds placement. One model runs several ways through several profiles, and the launch command is shown layer by layer.',
   },
   {
     tag: 'memory',
     title: 'Memory that never leaves the box',
-    body: 'Opt-in Hindsight-backed memory with a 26-tool surface. The engine runs embedded and loopback-only, embeddings included, so recall costs nothing and reaches no one. Banks are scoped per agent, and destructive operations write an attributable audit row.',
+    body: 'The Hindsight engine runs embedded and loopback-only, embeddings included. A write lands or is refused up front with a reason, never dropped quietly, and you set the extraction limits in Settings. Destructive operations write an attributable audit row.',
   },
   {
     tag: 'voice',
     title: 'Speech in and out, device-keyed',
-    body: 'One stt slot and one tts slot, each resolving by device: Moonshine on CPU or whisper-v3:turbo on the XDNA NPU for listening, Kokoro (CPU) or Qwen3-TTS (GPU) for speaking. Switch the engine, not the plumbing.',
+    body: 'One stt slot and one tts slot, each resolving by device: Moonshine on the CPU or FastFlowLM on the XDNA NPU for listening, Kokoro on the CPU or the optional Qwen3 TTS runner on the GPU for speaking. Switch the engine, not the plumbing.',
   },
   {
     tag: 'images',
@@ -75,53 +78,21 @@ const features = [
   {
     tag: 'prewired',
     title: 'Wired up before you log in',
-    body: 'One command brings up the API, a coherent set of slots, Open WebUI on :3001, ComfyUI and the agent — lifecycle-managed as extensions, with cosign-verified updates and one-flag rollback from day one.',
+    body: 'One command brings up the API, a coherent set of slots, ComfyUI, the agent and Open WebUI on :3001, already wired for chat, voice, documents (RAG on hal0 embeddings) and images through ComfyUI. Updates are signed and roll back with one flag.',
   },
 ];
 
-const providers = [
-  {
-    prov: 'llama.cpp',
-    ver: 'hal0-combined:0826',
-    hw: 'ROCm (default) · Vulkan · CUDA',
-    uses: 'chat · embed · rerank · vision',
-    eps: '/v1/chat · /v1/embeddings · /v1/rerankings',
-  },
-  {
-    prov: 'FLM',
-    ver: 'v0.9.44',
-    hw: 'AMD XDNA NPU (opt-in)',
-    uses: 'chat · embed (ASR multiplex)',
-    eps: '/v1/chat · /v1/embeddings',
-  },
-  {
-    prov: 'FLM / Whisper',
-    ver: 'whisper-v3:turbo',
-    hw: 'AMD XDNA NPU',
-    uses: 'speech-to-text (co-loaded with chat)',
-    eps: '/v1/audio/transcriptions',
-  },
-  {
-    prov: 'Moonshine',
-    ver: 'moonshine-base-en',
-    hw: 'CPU',
-    uses: 'speech-to-text (cpu device)',
-    eps: '/v1/audio/transcriptions',
-  },
-  {
-    prov: 'Kokoro / Qwen3-TTS',
-    ver: 'kokoro-v1 82M · Qwen3-TTS 1.7B',
-    hw: 'CPU (Kokoro) · ROCm (Qwen3-TTS)',
-    uses: 'text-to-speech · one-switch CPU⇄GPU swap',
-    eps: '/v1/audio/speech',
-  },
-  {
-    prov: 'ComfyUI',
-    ver: 'digest-pinned',
-    hw: 'ROCm',
-    uses: 'image gen · SDXL / SD 1.5 / Flux',
-    eps: '/v1/images/generations',
-  },
+// Runner catalogue: titles and blurbs from src/hal0/runners/__init__.py,
+// pinned upstream builds from manifest.json `runners` (never image tags).
+const runners = [
+  { prov: 'Standard', ver: 'llama.cpp b11596', blurb: 'llama.cpp for AMD GPUs, on ROCm or Vulkan. The default on AMD; runs plain GGUF models.', hw: 'ROCm (default) · Vulkan', eps: '/v1/chat · /v1/embeddings · /v1/rerank' },
+  { prov: 'CPU', ver: 'llama.cpp b11596', blurb: 'llama.cpp on the processor, no GPU needed. A slow fallback for boxes without a supported GPU.', hw: 'CPU', eps: '/v1/chat · /v1/embeddings' },
+  { prov: 'NPU (FastFlowLM)', ver: 'FastFlowLM 0.9.44', blurb: 'Runs supported models on the AMD XDNA 2 NPU, leaving the GPU free.', hw: 'AMD XDNA NPU (opt-in)', eps: '/v1/chat · /v1/embeddings · /v1/audio/transcriptions' },
+  { prov: 'Kokoro speech', ver: 'pinned 0.4.9', blurb: 'Text-to-speech on the CPU. Works on any box, no GPU needed.', hw: 'CPU', eps: '/v1/audio/speech' },
+  { prov: 'Moonshine transcription', ver: 'pinned 20251121', blurb: 'Speech-to-text on the CPU. Works on any box, no GPU or NPU needed.', hw: 'CPU', eps: '/v1/audio/transcriptions' },
+  { prov: 'ComfyUI', ver: 'pinned 0.28.0', blurb: 'Image and video generation on the GPU (ROCm).', hw: 'ROCm', eps: '/v1/images/generations' },
+  { prov: 'Qwen3 TTS', ver: 'optional · pinned 0.1.1', blurb: 'Higher-quality multilingual text-to-speech on the GPU (ROCm). Opt-in; a large download (about 10 GB).', hw: 'ROCm', eps: '/v1/audio/speech' },
+  { prov: 'NVIDIA CUDA', ver: 'optional · llama.cpp b11580', blurb: 'llama.cpp for NVIDIA GPUs. Pick it on a box with an NVIDIA card.', hw: 'CUDA (experimental)', eps: '/v1/chat · /v1/embeddings' },
 ];
 
 const tiers = [
@@ -132,9 +103,9 @@ const tiers = [
     spec: '"Strix Halo" iGPU + XDNA NPU + 128 GB LPDDR5X-8000 unified memory',
     stats: [
       { v: '128', u: 'GB', l: 'unified · BIOS-tunable to ~96 GB GPU' },
-      { v: '258', u: 'tok/s', l: 'primary + embed concurrent' },
+      { v: '96', u: 'K', l: 'default context, Qwen3.8 27B' },
     ],
-    note: 'All published perf numbers come from this box. Q4 70B fits with massive headroom; Q4 MoE 100B+ with a 17–22B active path becomes feasible.',
+    note: 'All published perf numbers come from this box. Q4 70B fits with room to spare; Q4 MoE 100B+ with a 17–22B active path becomes feasible.',
   },
   {
     cls: 'first-class',
@@ -151,45 +122,45 @@ const tiers = [
     cls: 'supported',
     tag: 'experimental',
     name: 'NVIDIA RTX 30 / 40 / 50',
-    spec: '10–32 GB dedicated VRAM · CUDA llama.cpp',
+    spec: '10–32 GB dedicated VRAM · CUDA runner, optional tier',
     stats: [
       { v: '32', u: 'GB', l: 'RTX 5090 VRAM ceiling' },
       { v: '~30', u: 'B', l: 'Q4 comfortable' },
     ],
-    note: 'Same slot lifecycle, dedicated VRAM instead of UMA — higher tok/s on small models, lower ceiling on the big ones.',
+    note: 'The CUDA runner is opt-in and used when the NVIDIA container toolkit is present. It is not in the release gate yet, so treat it as experimental. Same slot lifecycle, dedicated VRAM instead of UMA.',
   },
   {
     cls: 'supported',
     tag: 'supported',
     name: 'AMD Radeon RX 7000',
-    spec: '16–24 GB discrete · ROCm or Vulkan container profiles',
+    spec: '16–24 GB discrete · Standard runner on ROCm or Vulkan',
     stats: [
       { v: '24', u: 'GB', l: '7900 XTX VRAM' },
       { v: 'ROCm', u: '', l: '· Vulkan' },
     ],
-    note: 'Discrete AMD path, same hal0-slot@<name> lifecycle as Strix Halo — both ROCm and Vulkan container profiles run today.',
+    note: 'Discrete AMD path on the same Standard runner and hal0-slot@<name> lifecycle as Strix Halo, on either lane.',
   },
   {
     cls: 'supported',
     tag: 'fallback',
     name: 'CPU-only x86_64',
-    spec: 'Vulkan-CPU · usable for tiny models',
+    spec: 'CPU runner · llama.cpp on the processor',
     stats: [
       { v: '0.5–4', u: 'B', l: 'practical model size' },
-      { v: 'Qwen', u: '0.5B', l: 'the CI smoke model' },
+      { v: '0', u: 'GPU', l: 'needed for Kokoro + Moonshine' },
     ],
-    note: 'CI runs Qwen 0.5B here. Usable for tiny models and smoke tests, not the headline experience.',
+    note: 'A real CPU-only llama.cpp runner ships, so a box with no supported GPU installs and serves. Fine for small models, speech and smoke tests, not the headline experience.',
   },
   {
     cls: 'supported',
     tag: 'supported',
     name: 'Proxmox LXC',
-    spec: 'privileged container · iGPU + XDNA passthrough',
+    spec: 'privileged Ubuntu LXC · iGPU + XDNA passthrough',
     stats: [
-      { v: '0600', u: '', l: 'PVE token, never echoed back' },
+      { v: '1', u: 'script', l: 'quick-start builds the LXC' },
       { v: 'segmented', u: '', l: 'host-pressure overlay' },
     ],
-    note: 'Drop a read-only PVEAuditor token into Settings and the memory bar shows physical DIMM total + a muted "Proxmox host" segment for other-tenant + ZFS ARC pressure.',
+    note: 'The quick-start script builds a privileged LXC with GPU and NPU passthrough already wired. Add a read-only PVEAuditor token in Settings and the memory bar shows other tenants and ZFS ARC pressure.',
   },
 ];
 
@@ -200,137 +171,24 @@ const compareRows = [
   { lbl: 'Slot lifecycle state machine', cells: ['typed, atomic, SSE-streamed', 'no', 'no', '—'] },
   { lbl: 'UMA-aware hardware probe', cells: ['Strix Halo · NPU · platform-aware', 'CPU / GPU only', 'CPU / GPU only', '—'] },
   { lbl: 'XDNA NPU support', cells: ['first-class via FLM', 'no', 'no', '—'] },
+  { lbl: 'Tune portability', cells: ['named profiles you fork, export, import', 'per-model flags', 'GUI presets', 'n/a'] },
   { lbl: 'Dispatcher with upstreams', cells: ['OpenRouter · Anthropic · OpenAI · custom', 'no', 'no', '—'] },
-  { lbl: 'Cosign-signed updates', cells: ['keyless OIDC + rollback', 'no', 'auto-update', '—'] },
+  { lbl: 'Signed updates + component convergence', cells: ['signed, converges every component, one-flag rollback', 'no', 'auto-update', '—'] },
   { lbl: 'Headless / Linux-first', cells: ['systemd-required, headless', 'cross-platform', 'GUI required', 'cloud'] },
   { lbl: 'Your data, your hardware', cells: ['yes', 'yes', 'yes', 'no'] },
   { lbl: 'Cost per million tokens', cells: ['$0 + electricity', '$0 + electricity', '$0 + electricity', '$0.50 – $60'] },
 ];
 
-interface RoadmapItem { t: string; d: string; }
-type RoadmapTheme = { id: string; name: string; blurb: string; shipped: RoadmapItem[]; soon: RoadmapItem[]; later: RoadmapItem[]; };
-const themes: RoadmapTheme[] = [
-  {
-    id: 'inference',
-    name: 'Inference + providers',
-    blurb: 'The /v1/* surface and the engines behind it.',
-    shipped: [
-      { t: 'OpenAI-compatible /v1/* API', d: 'Chat, completions, embeddings, rerank, transcriptions, speech, images. Every OpenAI SDK works unchanged against the local box.' },
-      { t: 'Six-provider stack', d: 'llama.cpp (Vulkan / ROCm) for chat and embed, FLM for the XDNA NPU (chat + whisper-v3:turbo STT + embed, one process), Moonshine (CPU) or whisper-v3:turbo (NPU) behind one stt slot, Kokoro (CPU) or Qwen3-TTS (GPU) behind one tts slot, ComfyUI for image generation.' },
-      { t: 'Image generation + iGPU switchover', d: 'POST /v1/images/generations served by a ComfyUI engine; generating flips the GPU into exclusive image mode and back, so chat and image share one accelerator.' },
-      { t: 'FLM NPU provider', d: 'Self-contained NPU toolbox pinned by digest. The chat + STT + embed trio is surfaced only when XDNA hardware is present.' },
-      { t: 'Bundled chat UI + voice', d: 'Open WebUI on :3001 prewired to the local API, whisper-v3:turbo STT (NPU, via FLM), and a one-switch Kokoro (CPU) ⇄ Qwen3-TTS (GPU) TTS engine served through the capability API.' },
-      { t: 'Hands-free voice', d: 'Open WebUI\'s Call mode wired to hal0\'s /v1/audio/transcriptions and /v1/audio/speech endpoints — whisper-v3:turbo for listen, Kokoro for reply. hal0 also serves its own WS /v1/realtime for clients that want to drive the loop directly.' },
-    ],
-    soon: [],
-    later: [
-      { t: 'Hot-swap LoRAs on a warm model', d: 'Attach and rotate adapters against a loaded base model without unloading its weights.' },
-      { t: 'Per-model token budgets', d: 'Rate limits and cost-style accounting for local inference, so one chatty agent can be capped without taking the box down.' },
-    ],
-  },
-  {
-    id: 'lifecycle',
-    name: 'Stability + slot lifecycle',
-    blurb: 'Atomic transitions, health gated on a real probe, state that survives a restart.',
-    shipped: [
-      { t: 'Slot lifecycle state machine', d: 'Atomic transitions (offline → pulling → starting → warming → ready → serving), persisted and SSE-streamed.' },
-      { t: 'Honest slot health + derived context', d: 'A slot is marked ready only once its real /health passes — never on a systemd snapshot. Context size is derived per slot, never silently inheriting the 4096 default.' },
-      { t: 'Capability slots + profiles', d: 'Embed / Voice / Image capability cards and an NPU rollup over flat slots; per-device profiles unify the launch flags, all from one Slots tab.' },
-    ],
-    soon: [],
-    later: [],
-  },
-  {
-    id: 'install',
-    name: 'Install + distribution',
-    blurb: 'One command. Signed. Resumable.',
-    shipped: [
-      { t: 'One-command install', d: 'install.sh probes the host, picks a hardware-anchored tier, and provisions a coherent set of slots, extensions and models in one pass — resumable, and re-runnable to repair a box in place.' },
-      { t: 'Cosign-signed self-update', d: 'Atomic version swap with one-flag rollback. Stable, preview, and nightly channels, GitHub OIDC-verified release tarballs, manifest proxied at releases.hal0.dev.' },
-      { t: 'Extensions framework', d: 'Apps and agents (Open WebUI, ComfyUI, Hermes) packaged as auto-wired extensions: lifecycle-managed, selectable at install.' },
-    ],
-    soon: [
-      { t: 'pacman and apt packages', d: 'An AUR PKGBUILD and an Ubuntu PPA as first-class install paths beside the install script.' },
-    ],
-    later: [],
-  },
-  {
-    id: 'hardware',
-    name: 'Hardware + observability',
-    blurb: 'Probe before you load. A memory bar that reads the live driver total.',
-    shipped: [
-      { t: 'UMA-aware probe', d: 'Detects iGPU, XDNA NPU, and the unified memory pool; surfaces fit warnings inline before you load a model that won\'t fit.' },
-      { t: 'Live GTT total + honest memory bar', d: 'The memory bar reports the live GTT total from the driver, not a stale cached probe — so the unified pool you see is the pool you have.' },
-      { t: 'NPU occupancy grid', d: 'A living per-slot occupancy view of the XDNA NPU that breathes with real activity instead of a static picker.' },
-    ],
-    soon: [],
-    later: [
-      { t: 'One API across several boxes', d: 'A slot mesh over the LAN: chat on the Strix Halo, embed on the workstation, all behind one /v1/* surface.' },
-    ],
-  },
-  {
-    id: 'agents',
-    name: 'Agents + memory + MCP',
-    blurb: 'Agents that run on the box, with memory and tool access.',
-    shipped: [
-      { t: 'Bundled Hermes agent', d: 'Hermes installs and bootstraps on first run — confined by its own systemd unit, prewired to the local /v1 API and MCP servers, with an agent-card library in the dashboard.' },
-      { t: 'Operator Board', d: 'A hal0-skinned kanban wired to Hermes (/api/board/*), with a live agent-chat drawer and working task creation.' },
-      { t: 'Hindsight-backed memory', d: 'Opt-in memory engine (HAL0_MEMORY_ENABLED), running embedded and loopback-only. Shared by default; the X-hal0-Agent header scopes a client\'s writes to its own namespace. Every destructive op — bank delete, memory/document/directive wipes — records a durable, attributable audit row.' },
-      { t: 'MCP host + server', d: 'hal0 speaks Model Context Protocol both directions: an admin + memory MCP server, plus an allow-listed client that composes external MCP tools. Destructive calls gate through an approval bell + CLI.' },
-    ],
-    soon: [],
-    later: [
-      { t: 'Slack and Matrix bridges', d: 'Packaged as extensions beside the Telegram and Discord bridges, so you can talk to hal0 from the rooms you already live in.' },
-    ],
-  },
-  {
-    id: 'security',
-    name: 'Security',
-    blurb: 'Signed supply chain, contained agents, audited tool calls, LAN-scoped by design.',
-    shipped: [
-      { t: 'LAN-scoped by design, proxy at the edge', d: 'hal0 ships no auth layer and no TLS of its own. The API binds 0.0.0.0:8080 for the LAN and stops there; the edge is yours — Traefik, nginx, or a Cloudflare Tunnel in front, using the identity provider you already run.' },
-      { t: 'Cosign-keyless supply chain', d: 'Every release tarball is verified against its GitHub OIDC identity before it unpacks. The version swap is atomic against a /usr/lib/hal0/current symlink, and --rollback reverts it in one flag.' },
-      { t: 'Contained agent execution', d: 'The bundled agent runs under its own systemd unit with NoNewPrivileges, ProtectSystem=strict and a pinned ReadWritePaths set, and its terminal is off by default. Gated tools clear an approval bell before they fire.' },
-      { t: 'Attributable audit trail', d: 'Every destructive memory operation — bank delete, memory/document/directive wipes — writes a durable audit row naming the caller, and an x-request-id ties a response back to rows in both the metrics and audit tables.' },
-    ],
-    soon: [],
-    later: [],
-  },
+const whatsNew = [
+  { tag: 'runners', title: 'One name per runner', body: 'The AMD llama.cpp runner is now Standard, built from upstream llama.cpp for ROCm and Vulkan. One pin table drives every runner image, each tag is immutable and hardware-gated, and the catalogue syncs itself.' },
+  { tag: 'profiles', title: 'Tune once, run many ways', body: 'Context, thinking, vision, MTP, flags and runtime moved off the model and the slot onto the profile. Existing installs convert automatically, with a backup.' },
+  { tag: 'models', title: 'A bigger default model', body: 'A box with a 32 GB or larger memory pool now seeds Qwen3.8 27B with vision at 96K context. Smaller boxes keep Qwen3.5 9B or Qwen3 4B.' },
+  { tag: 'memory', title: 'Memory that lands or refuses', body: 'Writes that used to vanish on a slow box now land, or are refused up front with a reason. Extraction limits live under Settings ▸ Memory.' },
+  { tag: 'open webui', title: 'Open WebUI, fully wired', body: 'Document uploads go through RAG on hal0 embeddings and the image button generates through ComfyUI as soon as the matching slots are bound. It keeps working with auth on.' },
+  { tag: 'updates', title: 'Updates that finish the job', body: 'hal0 update converges Open WebUI, runner images, Hermes and Hindsight, restarts slots whose runner image changed, and rolls back with one flag.' },
 ];
 
-// Everything still ahead of us, in one list — the page no longer sorts the
-// future into confidence tiers it cannot honour. The grid is one row of
-// five; a sixth entry would wrap into a lonely second row, so keep the list
-// curated to five rather than slicing it.
-const nextItems = themes.flatMap((th) =>
-  [...th.soon, ...th.later].map((it) => ({ ...it, theme: th.id })),
-);
-const countWords = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-const nextCount = countWords[nextItems.length] ?? String(nextItems.length);
-const deliveredCount = themes.reduce((n, th) => n + th.shipped.length, 0);
-
-const shipNowHighlights = [
-  {
-    tag: 'mcp',
-    title: 'The whole platform is reachable over MCP',
-    body: 'The admin MCP catalog grew from 92 to 180 tools — services, ComfyUI, updater/doctor/health, telemetry, slots, models, bench, approvals — including a 26-tool memory surface at feature parity with Hindsight 0.8.4.',
-  },
-  {
-    tag: 'slots',
-    title: 'Slots start when you say so',
-    body: 'A new autoload setting decouples binding a model from boot start, and an eviction priority (0–100) replaces the inert lru opt-in — memory-pressure eviction actually works on a stock box. On-demand capability slots and per-slot profiles round it out.',
-  },
-  {
-    tag: 'stability',
-    title: 'Nothing reports ready until it is',
-    body: 'A slot reaches ready only when its own /health passes — never on a systemd snapshot. Transitions are atomic and persisted to state.json, so slots survive an hal0-api restart, and context size is derived per slot instead of silently inheriting the 4096 default.',
-  },
-  {
-    tag: 'security',
-    title: 'Signed, sandboxed, audited',
-    body: 'Release tarballs verify against their GitHub OIDC identity before they unpack, and the version swap reverts with one flag. The bundled agent runs under NoNewPrivileges and ProtectSystem=strict with its shell off by default, gated MCP tools clear an approval bell, and every destructive memory op writes an attributable audit row.',
-  },
-];
+const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${name}@2x.png 2x`;
 
 ---
 
@@ -343,7 +201,7 @@ const shipNowHighlights = [
     <div class="shell-wide hero-grid">
       <div class="hero-copy">
         <div class="eyebrow">
-          <span class="blip"></span> {version} shipping now · Apache-2.0
+          <span class="blip"></span> {version ? `latest stable ${version} · ` : ''}Apache-2.0
         </div>
         <h1 class="h1 hero-h1">
           <span class="h1-line">Own Your</span>
@@ -385,9 +243,9 @@ const shipNowHighlights = [
         </div>
         <div class="install-body">
           <span class="prompt">$</span>
-          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | sudo bash</span>
           <span class="caret"></span>
-          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | sudo bash">copy</button>
         </div>
       </div>
     </div>
@@ -398,31 +256,31 @@ const shipNowHighlights = [
     <div class="shell-wide">
       <div class="sec-head">
         <div>
-          <div class="sec-tag">/ provider stack</div>
-          <h2 class="sec-title">Six engines,<br />one <span class="accent">/v1/*</span> surface.</h2>
+          <div class="sec-tag">/ runner images</div>
+          <h2 class="sec-title">Six runners,<br />one <span class="accent">/v1/*</span> surface.</h2>
         </div>
         <p class="sec-sub">
-          Chat, embeddings, rerank, speech both ways and image generation — each
-          served by the engine that suits it, on the accelerator that suits it,
-          all behind one OpenAI-compatible API. The picker only offers a backend
-          your hardware can actually honour.
+          Chat, embeddings, rerank, speech both ways and image generation, each
+          served by a runner image on the accelerator that suits it, behind one
+          OpenAI-compatible API. Every tag is immutable and hardware-gated. Six
+          runners ship by default; Qwen3 TTS and CUDA are opt-in.
         </p>
       </div>
 
       <div class="matrix">
         <div class="matrix-row head">
-          <div>Provider</div>
-          <div>Workloads</div>
+          <div>Runner</div>
+          <div>What it runs</div>
           <div>Hardware</div>
           <div>Endpoints</div>
         </div>
-        {providers.map((r) => (
+        {runners.map((r) => (
           <div class="matrix-row">
             <div class="prov">
               <span class="prov-name">{r.prov}</span>
               <span class="prov-ver">{r.ver}</span>
             </div>
-            <div class="uses">{r.uses}</div>
+            <div class="uses">{r.blurb}</div>
             <div class="hw">{r.hw}</div>
             <div class="ep">
               {r.eps.split(' · ').map((e) => <span class="ep-chip">{e}</span>)}
@@ -442,8 +300,8 @@ const shipNowHighlights = [
           <h2 class="sec-title">More than models.<br />A whole <span class="accent">AI stack</span>.</h2>
         </div>
         <p class="sec-sub">
-          Agents, tools, memory, voice and image generation ship in the box and
-          come up wired to each other — not a model runner you then spend a
+          Agents, profiles, memory, voice and image generation ship in the box
+          and come up wired to each other. Not a model runner you then spend a
           weekend assembling a platform around.
         </p>
       </div>
@@ -490,17 +348,18 @@ const shipNowHighlights = [
         <div class="uc-eye">/ private knowledge &amp; RAG</div>
         <h3 class="uc-title">Retrieval grounded on your data</h3>
         <p class="uc-body">
-          Embeddings, reranking, and a bundled agent with opt-in memory and MCP
-          tools — a full RAG stack that runs on your hardware, not someone else's server.
+          Embeddings, reranking, Open WebUI document uploads that go through RAG on
+          hal0 embeddings, and a bundled agent with memory and MCP tools. Retrieval
+          runs on your hardware, not someone else's server.
         </p>
       </article>
       <article class="uc-card">
         <div class="uc-eye">/ voice &amp; image lab</div>
         <h3 class="uc-title">Speech and images, one control plane</h3>
         <p class="uc-body">
-          Transcription, text-to-speech, and local image generation behind the same API —
-          STT on the XDNA NPU, TTS switchable between Kokoro (CPU) and Qwen3-TTS (GPU),
-          ComfyUI on the iGPU, switched cleanly so they share the box.
+          Transcription, text-to-speech and local image generation behind the same API:
+          STT on the XDNA NPU or the CPU, Kokoro on the CPU or the optional Qwen3 TTS
+          runner on the GPU, and ComfyUI on the iGPU, switched cleanly so they share the box.
         </p>
       </article>
       </div>
@@ -513,35 +372,6 @@ const shipNowHighlights = [
   <div class="shell-wide">
     <BenchHighlights />
   </div>
-
-  <!-- PERF -->
-  <section class="perf" id="perf">
-    <div class="shell-wide">
-      <div class="perf-grid">
-        <div class="perf-cell">
-          <div class="num">258<span class="unit">tok/s</span></div>
-          <div class="lbl">primary + embed concurrent</div>
-          <div class="ctx">Strix Halo iGPU · ~9 GB GTT</div>
-        </div>
-        <div class="perf-cell">
-          <div class="num">1<span class="unit">call</span></div>
-          <div class="lbl">thundering herd, coalesced</div>
-          <div class="ctx">single-flight dispatch + cold-cache prefetch</div>
-        </div>
-        <div class="perf-cell">
-          <div class="num">6<span class="unit">workloads</span></div>
-          <div class="lbl">chat · embed · rerank · stt · tts · img</div>
-          <div class="ctx">as many slots as memory fits</div>
-        </div>
-        <div class="perf-cell">
-          <div class="num">100<span class="unit">tok/s</span></div>
-          <div class="lbl">35B model · MTP speculative decode</div>
-          <div class="ctx">ace-saber 35B-A3B · 19 GB · single stream</div>
-          <a class="src" href="/benchmarks">from the roster benchmark →</a>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- HARDWARE -->
   <section class="section" id="hardware">
@@ -613,31 +443,32 @@ const shipNowHighlights = [
         ))}
       </div>
       <p class="cmp-note">
-        Competitor capabilities reflect each project's published docs as of June 2026
+        Competitor capabilities reflect each project's published docs as of October 2026
         and move fast — treat this as a snapshot, not a live scorecard.
       </p>
     </div>
   </section>
 
-  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900, dark, live hal0 instance) -->
+  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900 with @2x, dark, live hal0 instance) -->
   <section class="section section-tight" id="console">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
           <div class="sec-tag">/ the console</div>
-          <h2 class="sec-title">Chat, image gen, agents, and memory —<br /><span class="accent">one console</span>.</h2>
+          <h2 class="sec-title">Slots, profiles and memory,<br /><span class="accent">one console</span>.</h2>
         </div>
         <p class="sec-sub">
-          Slots, models, local image generation, agent memory, an agent task board, MCP,
-          and logs — every surface in one React operator console. SSE-backed, dark by
-          default. Real screenshots from a live hal0 instance.
+          Slots, models, profiles, image generation, agent memory, an agent task
+          board, MCP and logs: every surface in one React operator console.
+          SSE-backed, dark by default. Real screenshots from a live hal0 instance.
         </p>
       </div>
 
       <figure class="shot-hero">
         <img
           src="/screenshots/dashboard-overview.png"
-          alt="hal0 dashboard overview — slots, throughput, and live service health"
+          srcset={shotSet('dashboard-overview')}
+          alt="hal0 dashboard overview with slots, throughput and live service health"
           width="1440"
           height="900"
           loading="lazy"
@@ -647,30 +478,31 @@ const shipNowHighlights = [
 
       <div class="shot-grid">
         <figure class="shot">
-          <img src="/screenshots/slots-inference.png" alt="Slots view — per-slot state and the typed inference lifecycle" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Slots</strong> — one engine, every workload, a typed lifecycle you can watch live.</figcaption>
+          <img src="/screenshots/slots-inference.png" srcset={shotSet('slots-inference')} alt="Slots view with a card per slot, each showing its model, profile and context" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Slots</strong>: each card carries a model picker, a profile picker and a context chip, so you see what runs where and swap it in place.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="/screenshots/image-gen-comfyui.png" alt="ComfyUI image generation with the iGPU in exclusive image mode while inference slots are paused" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Image gen on the iGPU</strong> — generating flips the accelerator into exclusive image mode; inference pauses, then resumes. One GPU, shared cleanly.</figcaption>
+          {/* TODO(shots): switch to profile-edit-drawer once the recapture lands. */}
+          <img src="/screenshots/slot-detail.png" srcset={shotSet('slot-detail')} alt="Slot drawer with its model, profile and effective context" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Profiles</strong>: the profile drawer owns context, thinking, vision, MTP, flags and the runtime. Seeds stay read-only; duplicate one to edit it.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="/screenshots/memory-graph.png" alt="Agent memory rendered as a navigable semantic and temporal knowledge graph" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Graph memory</strong> (opt-in) — facts become a navigable semantic + temporal graph, namespaced per agent.</figcaption>
+          <img src="/screenshots/memory-graph.png" srcset={shotSet('memory-graph')} alt="Agent memory rendered as a navigable semantic and temporal knowledge graph" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Graph memory</strong>: facts become a navigable semantic and temporal graph, shared or private per agent.</figcaption>
         </figure>
       </div>
 
       <p class="shot-note">
-        Plus a Hermes agent that lives on the box, an Operator Board kanban wired to it,
-        an MCP server + client, and a live XDNA NPU view — see the
-        <a href="#roadmap">roadmap</a> for everything shipped.
+        Plus the Hermes agent, the Operator Board kanban wired to it, the Runner
+        Images page and the Services page. See <a href="#whats-new">what's new</a>
+        for recent changes.
       </p>
     </div>
   </section>
 
   <!-- AGENTS, TOOLS + MEMORY — the bundled agent as the dashboard's collectible
        foil card, then the three surfaces that make it more than a chatbot:
-       hal0-brain, the MCP catalog, and memory. Every number here is verified
+       hal0-brain, the MCP servers, and memory. Every claim here is verified
        against the product repo; see the card bodies for the honest limits. -->
   <section class="section" id="agents">
     <div class="shell-wide hermes-sec">
@@ -678,16 +510,16 @@ const shipNowHighlights = [
         <div class="sec-tag">/ agents, tools + memory</div>
         <h2 class="sec-title">Agents that<br /><span class="accent">live on the box</span>.</h2>
         <p class="sec-sub">
-          Hermes installs and bootstraps itself on first run — confined by its own
-          systemd unit, prewired to the local <code class="mono accent-mono">/v1</code> API
-          and hal0's MCP servers, with opt-in memory. Reach it from Telegram or
-          Discord; it chains tool calls unattended for hours and writes each run
-          back to memory.
+          Hermes installs and bootstraps itself on first run, confined by its own
+          systemd unit and prewired to the local <code class="mono accent-mono">/v1</code> API,
+          hal0's MCP servers and memory. Reach it from Telegram or Discord; it
+          chains tool calls unattended for hours and writes each run back to memory.
         </p>
         <ul class="hermes-points">
           <li>Self-bootstraps: env probe → model wiring → MCP memory → persona.</li>
-          <li><code class="mono">hal0-agent@hermes.service</code> — NoNewPrivileges, ProtectSystem=strict, a pinned ReadWritePaths set, and the terminal off by default.</li>
-          <li>Gated tools clear an approval bell; every call is audited.</li>
+          <li><code class="mono">hal0-agent@hermes.service</code>: NoNewPrivileges, ProtectSystem=strict, a pinned ReadWritePaths set, and the terminal off by default.</li>
+          <li>Smart command approvals: your local <code class="mono">hal0/agent</code> model pre-screens risky shell commands and falls back to asking you. Manual mode asks every time.</li>
+          <li>Gated MCP tools wait in an approval queue for a human.</li>
         </ul>
         <div class="hermes-cta">
           <a href="https://forum.hal0.dev/t/agents-hal0-docs/23" class="btn">Agents &amp; memory →</a>
@@ -708,129 +540,78 @@ const shipNowHighlights = [
           reachable from the dashboard's Agent Chat or{' '}
           <code class="mono">hal0 chat --brain</code> on a headless box. Ask it what's
           loaded, what the box is doing, what's eating the memory pool. It ships
-          read-only — it reads and explains out of the box, and one config line
+          read-only: it reads and explains out of the box, and one config line
           lets it act.
         </p>
-        <div class="at-foot"><strong>147</strong> of the 180 admin tools on its hands · <strong>85</strong> runnable under the shipped default</div>
+        <div class="at-foot">its own small model · <strong>no</strong> dependency on Hermes</div>
       </article>
 
       <article class="agent-tile">
         <div class="at-tag">mcp</div>
         <h3 class="at-title">The platform is the tool catalog</h3>
         <p class="at-body">
-          Two Streamable-HTTP servers mount onto the API —
-          <code class="mono">/mcp/admin</code> and <code class="mono">/mcp/memory</code> —
-          so any MCP client drives the box: 28 model tools, 26 memory, 22 slots,
-          17 stacks and profiles, 12 bench, plus telemetry and the updater. A
-          validator enforces zero overlap between gating tiers, so the catalog
-          cannot silently drift.
+          Two Streamable-HTTP servers mount onto the API,
+          <code class="mono">/mcp/admin</code> and <code class="mono">/mcp/memory</code>,
+          so any MCP client can drive the box: models, slots, profiles, stacks,
+          memory, bench, telemetry and the updater. A validator keeps the gating
+          tiers from overlapping, so the catalog cannot drift quietly.
         </p>
-        <div class="at-foot"><strong>54</strong> destructive tools queue for a human · <strong>9</strong> that no config can un-gate</div>
+        <div class="at-foot">destructive calls wait in an <strong>approval queue</strong> for a human</div>
       </article>
 
       <article class="agent-tile">
         <div class="at-tag">memory</div>
         <h3 class="at-title">Recall that reaches no one</h3>
         <p class="at-body">
-          Opt-in memory on a Hindsight engine that runs embedded and loopback-only,
-          local embeddings included — nothing is sent anywhere to remember it.
-          Banks are scoped per agent; recall fans out across the ones a caller can
-          see, then hal0 merges, ranks and fits the result to a token budget.
+          Memory runs on a Hindsight engine embedded on the box and bound to
+          loopback, local embeddings included. Writes go to a shared namespace by
+          default or to an agent's private one; recall merges, ranks and fits the
+          result to a token budget.
         </p>
         <div class="at-foot"><strong>26</strong> memory tools · destructive ops write an attributable audit row</div>
       </article>
     </div>
+
+    <div class="shell-wide">
+      <p class="shot-note">
+        Key auth is optional and off by default, the trusted-LAN posture. Once you
+        set an admin key, off-box callers need it for admin routes. hal0 has no TLS
+        of its own: put your reverse proxy in front and allow its origin with
+        <code class="mono">hal0 network public-url set</code>. Updates are signed, the
+        agent runs in a contained unit, and destructive memory operations are audited.
+      </p>
+    </div>
   </section>
 
-  <!-- ROADMAP -->
-  <section class="section section-tight" id="roadmap">
+  <!-- WHAT'S NEW — recent product changes in brief. The empty #roadmap anchor
+       keeps old /#roadmap links (footer, README, _redirects history) landing here. -->
+  <div id="roadmap" aria-hidden="true"></div>
+  <section class="section section-tight" id="whats-new">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
-          <div class="sec-tag">/ what 1.0 delivers</div>
-          <h2 class="sec-title">Everything here runs<br />on your box <span class="accent">today</span>.</h2>
+          <div class="sec-tag">/ what's new</div>
+          <h2 class="sec-title">What the latest<br />releases <span class="accent">changed</span>.</h2>
         </div>
         <p class="sec-sub">
-          The API surface, the slot lifecycle, the security model, install and
-          update, hardware probing, agents and memory — {deliveredCount} capabilities,
-          every one of them shipped in 1.0. Tagged releases reach{' '}
-          <code class="mono accent-mono">releases.hal0.dev</code> within ~60s.
+          The short version. The changelog has every line, and the docs cover each
+          change in depth.
         </p>
       </div>
 
-      <!-- Shipping Now hero -->
-      <div class="ship-now">
-        <div class="ship-now-head">
-          <div class="ship-now-banner">
-            <span class="ship-now-pulse"><span class="dot"></span> stable</span>
-            <span class="ship-now-ver">{version}</span>
-            <span class="ship-now-meta">cosign-keyless verified · atomic version swap · one-flag rollback</span>
-          </div>
-          <h3 class="ship-now-headline">
-            180 admin tools over MCP, slots that report ready only once /health passes,<br />device-keyed voice — hardened across twelve release candidates.
-          </h3>
-        </div>
-        <div class="ship-now-grid">
-          {shipNowHighlights.map((h, i) => (
-            <div class="ship-card">
-              <div class="ship-card-num">{String(i + 1).padStart(2, '0')}</div>
-              <div class="ship-card-tag">{h.tag}</div>
-              <div class="ship-card-title">{h.title}</div>
-              <div class="ship-card-body">{h.body}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <!-- Themed rows: everything 1.0 delivers -->
-      <div class="rm-grid">
-        {themes.map((theme) => (
-          <div class="rm-row">
-            <div class="rm-row-head">
-              <div class="rm-row-name">{theme.name}</div>
-              <div class="rm-row-blurb">{theme.blurb}</div>
-              <div class="rm-row-count">{theme.shipped.length} shipped</div>
-            </div>
-            <div class="rm-cell rm-cell-shipped">
-              {theme.shipped.map((it) => (
-                <div class="rm-item">
-                  <div class="rm-item-mark">✓</div>
-                  <div class="rm-item-body">
-                    <div class="rm-item-title">{it.t}</div>
-                    <div class="rm-item-desc">{it.d}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div class="feat-grid">
+        {whatsNew.map((f) => (
+          <a class="feat-card feat-link" href="/changelog">
+            <div class="feat-tag">{f.tag}</div>
+            <div class="feat-title">{f.title}</div>
+            <p class="feat-body">{f.body}</p>
+          </a>
         ))}
       </div>
 
-      <!-- What's next — one row of five. The hollow mark is the counterpart
-           of the ✓ on the shipped rows above: same column, not yet earned. -->
-      <div class="next-head">
-        <div>
-          <div class="sec-tag">/ what's next</div>
-          <h3 class="next-title">{nextCount[0].toUpperCase() + nextCount.slice(1)} things we intend to build.</h3>
-        </div>
-        <p class="next-sub">
-          No dates and no order. Scope shifts release to release as we learn what
-          people run on a local platform.
-          <a href="https://github.com/hal0ai/hal0/issues" class="rm-footnote-link">Open an issue ↗</a>
-          to argue for one.
-        </p>
-      </div>
-      <div class="next-grid">
-        {nextItems.map((it) => (
-          <div class="next-item">
-            <div class="next-item-theme">{it.theme}</div>
-            <div class="next-item-title">
-              <span class="next-item-mark" aria-hidden="true"></span>
-              <span>{it.t}</span>
-            </div>
-            <div class="next-item-desc">{it.d}</div>
-          </div>
-        ))}
+      <div class="cta-row">
+        <a href="/changelog" class="btn">Full changelog →</a>
+        <a href="https://forum.hal0.dev/t/hal0-documentation/19" class="btn ghost">Read the docs →</a>
       </div>
     </div>
   </section>
@@ -864,9 +645,9 @@ const shipNowHighlights = [
         </div>
         <div class="install-body">
           <span class="prompt">$</span>
-          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | sudo bash</span>
           <span class="caret"></span>
-          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | sudo bash">copy</button>
         </div>
       </div>
       <div class="cta-row cta-row-centered">
@@ -877,7 +658,7 @@ const shipNowHighlights = [
         <span class="pill ok">Apache-2.0</span>
         <span class="pill">Linux + systemd</span>
         <span class="pill">no telemetry by default</span>
-        <span class="pill">cosign-signed releases</span>
+        <span class="pill">signed releases</span>
       </div>
     </div>
   </section>
@@ -905,8 +686,8 @@ const shipNowHighlights = [
 <style is:global>
   /* ============================================================
    * hal0 v2 landing — design primitives that don't fit Tailwind
-   * cleanly (matrix tables, mem-bar, roadmap
-   * themed rows, perf strip, slot rows). Scoped to the landing
+   * cleanly (matrix tables, mem-bar, slot rows).
+   * Scoped to the landing
    * via the section selectors.
    * ============================================================ */
 
@@ -1122,37 +903,6 @@ const shipNowHighlights = [
   }
   .copy-btn:hover { color: var(--hal0-fg); border-color: var(--hal0-fg-dim); }
 
-  /* Holding banner — installer overhaul */
-  .holding {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-accent);
-    border-radius: 10px;
-    padding: 16px 18px;
-    margin-bottom: 24px;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--hal0-accent) 18%, transparent) inset;
-  }
-  .holding-pill {
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--hal0-accent);
-    border: 1px solid var(--hal0-accent);
-    border-radius: 999px;
-    padding: 4px 10px;
-    white-space: nowrap;
-  }
-  .holding-msg {
-    flex: 1 1 auto;
-    color: var(--hal0-fg);
-    font-size: 15px;
-    line-height: 1.5;
-  }
-  .holding-msg strong { color: var(--hal0-accent); font-weight: 600; }
   .cta-holding {
     max-width: 640px;
     margin: 0 auto 28px;
@@ -1362,44 +1112,6 @@ const shipNowHighlights = [
   }
   .disp-unit { color: var(--hal0-accent); font-size: 13px; }
 
-  /* PERF strip */
-  .perf {
-    border-top: 1px solid var(--hal0-border);
-    border-bottom: 1px solid var(--hal0-border);
-    background: var(--hal0-bg-elevated);
-  }
-  .perf-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    border-left: 1px solid var(--hal0-border);
-  }
-  .perf-cell {
-    padding: 32px;
-    border-right: 1px solid var(--hal0-border);
-  }
-  .perf-cell .num {
-    font-family: var(--hal0-font-mono);
-    font-size: 44px;
-    font-weight: 500;
-    letter-spacing: -0.03em;
-    color: var(--hal0-fg);
-    line-height: 1;
-    margin-bottom: 6px;
-    font-feature-settings: 'zero' 1;
-  }
-  .perf-cell .num .unit { color: var(--hal0-accent); font-size: 22px; margin-left: 4px; }
-  .perf-cell .lbl { color: var(--hal0-fg-muted); font-size: 12px; margin-bottom: 4px; }
-  .perf-cell .ctx { color: var(--hal0-fg-dim); font-size: 11px; font-family: var(--hal0-font-mono); }
-  .perf-cell .src {
-    display: inline-block;
-    margin-top: 8px;
-    color: var(--hal0-accent);
-    font-size: 11px;
-    font-family: var(--hal0-font-mono);
-    text-decoration: none;
-  }
-  .perf-cell .src:hover { text-decoration: underline; }
-
   /* Sections */
   .section { padding: 96px 0; }
   .section-tight { padding-top: 64px; padding-bottom: 96px; }
@@ -1472,6 +1184,10 @@ const shipNowHighlights = [
     text-wrap: pretty;
     margin: 0;
   }
+  /* What's new reuses the feature card as a link. */
+  a.feat-link { display: block; color: inherit; text-decoration: none; transition: border-color 0.15s; }
+  a.feat-link:hover { border-color: var(--hal0-accent); }
+  #whats-new .cta-row { margin-top: 24px; }
 
 
   /* Provider matrix */
@@ -1641,303 +1357,6 @@ const shipNowHighlights = [
   .cmp-row .lbl { color: var(--hal0-fg); font-weight: 500; }
   .cmp-row .us-cell { background: var(--hal0-accent-glow); }
 
-  /* Roadmap — ShippingNow hero */
-  .ship-now {
-    background: var(--hal0-bg-elevated);
-    border: 1px solid color-mix(in srgb, var(--hal0-accent) 34%, transparent);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 48px;
-    position: relative;
-  }
-  .ship-now::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(circle at 100% 0%, var(--hal0-accent-glow), transparent 55%),
-      radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--hal0-accent-glow) 70%, transparent), transparent 50%);
-    pointer-events: none;
-    opacity: 0.8;
-  }
-  .ship-now-head {
-    padding: 36px 36px 32px;
-    border-bottom: 1px solid var(--hal0-border);
-    position: relative;
-  }
-  .ship-now-banner {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-fg-muted);
-    margin-bottom: 22px;
-    flex-wrap: wrap;
-  }
-  .ship-now-pulse {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 10px 4px 8px;
-    border: 1px solid color-mix(in srgb, var(--hal0-accent) 34%, transparent);
-    background: var(--hal0-accent-glow);
-    border-radius: 999px;
-    color: var(--hal0-accent);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-size: 10px;
-  }
-  .ship-now-pulse .dot {
-    width: 5px;
-    height: 5px;
-    background: var(--hal0-accent);
-    border-radius: 50%;
-    display: inline-block;
-    animation: hal0-pulse 1.5s ease-in-out infinite;
-  }
-  .ship-now-ver {
-    font-size: 13px;
-    color: var(--hal0-fg);
-    font-weight: 500;
-    padding: 4px 10px;
-    border: 1px solid var(--hal0-border);
-    border-radius: 4px;
-    background: var(--hal0-bg);
-  }
-  .ship-now-meta { color: var(--hal0-fg-dim); font-size: 11px; }
-  .ship-now-next {
-    margin-left: auto;
-    color: var(--hal0-fg-dim);
-    font-size: 11px;
-    padding: 4px 10px;
-    border: 1px dashed var(--hal0-border-strong);
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .ship-now-headline {
-    font-family: var(--hal0-font-mono);
-    font-weight: 500;
-    font-size: clamp(20px, 2.1vw, 30px);
-    line-height: 1.15;
-    letter-spacing: -0.025em;
-    color: var(--hal0-fg);
-    margin: 0;
-    max-width: 880px;
-    text-wrap: balance;
-  }
-  .ship-now-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    position: relative;
-  }
-  .ship-card {
-    padding: 24px 22px 26px;
-    border-right: 1px solid var(--hal0-border);
-    position: relative;
-  }
-  .ship-card:last-child { border-right: none; }
-  .ship-card-num {
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-fg-dim);
-    margin-bottom: 14px;
-    letter-spacing: 0.04em;
-  }
-  .ship-card-tag {
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--hal0-accent);
-    margin-bottom: 10px;
-  }
-  .ship-card-title {
-    font-family: var(--hal0-font-mono);
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--hal0-fg);
-    letter-spacing: -0.02em;
-    line-height: 1.25;
-    margin-bottom: 10px;
-  }
-  .ship-card-body {
-    font-size: 12.5px;
-    line-height: 1.55;
-    color: var(--hal0-fg-muted);
-    text-wrap: pretty;
-  }
-
-  /* Roadmap — themed rows */
-  .rm-grid {
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--hal0-bg-elevated);
-  }
-  .rm-row {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    border-bottom: 1px solid var(--hal0-border);
-  }
-  .rm-row:last-child { border-bottom: none; }
-
-  .rm-row-head {
-    padding: 24px 22px;
-    border-right: 1px solid var(--hal0-border);
-    background: var(--hal0-bg);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .rm-row-name {
-    font-family: var(--hal0-font-mono);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--hal0-fg);
-    letter-spacing: -0.01em;
-    line-height: 1.25;
-  }
-  .rm-row-blurb {
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-fg-muted);
-    line-height: 1.5;
-    text-wrap: pretty;
-    margin-bottom: 8px;
-  }
-
-  .rm-cell {
-    padding: 20px 22px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    align-items: start;
-    gap: 18px 26px;
-  }
-  .rm-cell-shipped { background: color-mix(in srgb, var(--hal0-accent-glow) 35%, transparent); }
-  .rm-row-count {
-    margin-top: auto;
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-accent);
-  }
-
-  .rm-item {
-    display: grid;
-    grid-template-columns: 16px 1fr;
-    gap: 10px;
-    align-items: flex-start;
-  }
-  .rm-item-mark {
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    line-height: 1.5;
-    text-align: center;
-    width: 16px;
-    color: var(--hal0-fg-dim);
-  }
-  .rm-cell-shipped .rm-item-mark { color: var(--hal0-accent); }
-  .rm-item-title {
-    font-family: var(--hal0-font-mono);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--hal0-fg);
-    letter-spacing: -0.01em;
-    margin-bottom: 4px;
-    line-height: 1.3;
-  }
-  .rm-item-desc {
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--hal0-fg-muted);
-    text-wrap: pretty;
-  }
-
-  /* What's next */
-  .next-head {
-    margin-top: 56px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 28px;
-    flex-wrap: wrap;
-  }
-  .next-title {
-    margin: 0;
-    font-family: var(--hal0-font-display);
-    font-weight: 500;
-    font-size: clamp(20px, 2.2vw, 28px);
-    line-height: 1.15;
-    letter-spacing: -0.025em;
-    color: var(--hal0-fg);
-  }
-  .next-sub {
-    max-width: 42ch;
-    font-size: 13px;
-    line-height: 1.55;
-    color: var(--hal0-fg-muted);
-    text-wrap: pretty;
-  }
-  /* One fixed row of five. Dashed outline = not yet real, the same cue the
-   * ship-now banner uses for its "next" pill; the shipped grid above is
-   * solid. */
-  .next-grid {
-    margin-top: 22px;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    border: 1px dashed var(--hal0-border-strong);
-    border-radius: 10px;
-    background:
-      radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--hal0-accent-glow) 45%, transparent), transparent 40%),
-      var(--hal0-bg);
-    overflow: hidden;
-  }
-  .next-item {
-    padding: 22px 20px 24px;
-    border-right: 1px solid var(--hal0-border);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 0;
-  }
-  .next-item:last-child { border-right: none; }
-  .next-item-theme {
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--hal0-fg-dim);
-  }
-  .next-item-title {
-    display: grid;
-    grid-template-columns: 16px 1fr;
-    gap: 10px;
-    align-items: start;
-    font-family: var(--hal0-font-mono);
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    line-height: 1.3;
-    color: var(--hal0-fg);
-    text-wrap: balance;
-  }
-  .next-item-mark {
-    width: 10px;
-    height: 10px;
-    margin: 4px 3px 0;
-    border: 1.5px solid var(--hal0-accent);
-    border-radius: 2px;
-    opacity: 0.85;
-  }
-  .next-item-desc {
-    padding-left: 26px;
-    font-size: 12.5px;
-    line-height: 1.55;
-    color: var(--hal0-fg-muted);
-    text-wrap: pretty;
-  }
-  .rm-footnote-link { color: var(--hal0-accent); margin-left: 10px; white-space: nowrap; }
-
   /* CTA */
   .cta-section {
     border-top: 1px solid var(--hal0-border);
@@ -2013,20 +1432,9 @@ const shipNowHighlights = [
     .hero-h1 { font-size: clamp(26px, 9.4cqi, 60px); }
     .hero-install { margin-top: 40px; }
     .sec-head { grid-template-columns: 1fr; gap: 24px; }
-    .perf-grid { grid-template-columns: repeat(2, 1fr); }
     .feat-grid,
     .tiers { grid-template-columns: 1fr; }
-    .ship-now-grid { grid-template-columns: repeat(2, 1fr); }
-    .ship-card { border-bottom: 1px solid var(--hal0-border); }
-    .ship-card:nth-child(2) { border-right: none; }
     .agent-tiles { grid-template-columns: 1fr; }
-    .rm-row { grid-template-columns: 1fr; }
-    .rm-row-head { border-right: none; border-bottom: 1px solid var(--hal0-border); }
-    .rm-cell { border-bottom: 1px solid var(--hal0-border); }
-    .next-head { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .next-grid { grid-template-columns: 1fr; }
-    .next-item { border-right: none; border-bottom: 1px solid var(--hal0-border); }
-    .next-item:last-child { border-bottom: none; }
     .matrix-row { grid-template-columns: 1fr; }
     .matrix-row > div { border-right: none; border-bottom: 1px solid var(--hal0-border); }
     .cmp-row { grid-template-columns: 1fr; }

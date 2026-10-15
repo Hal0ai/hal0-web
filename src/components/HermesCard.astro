@@ -8,7 +8,8 @@
  * abilities/skills back. Click to flip; hover to tilt + light the foil.
  *
  * Inert by design here (it's a showcase of the real dashboard card) — the
- * Logs/Persona/Restart controls are visual. Data mirrors the live Hermes card.
+ * Logs/Persona/Restart controls are visual. Model and context are the public
+ * seed values (default agent model, `agent` profile at 64K), never one box.
  */
 const abilities = [
   { name: 'Ghost Relay', cost: 2, pow: '40', desc: 'Reach it from any Telegram or Discord thread.' },
@@ -43,11 +44,11 @@ const rarity = 3;
                 <span class="dot serving"></span>
                 <span class="fc-name">Hermes</span>
               </div>
-              <span class="fc-model">chadrock-35b-ace-saber</span>
+              <span class="fc-model">qwen3.8-27b</span>
             </div>
             <div class="hv">
               <div class="hv-ctx">
-                <div class="hv-ctxrow"><span class="hv-l">ctx</span><span class="hv-v">0<i>/164K</i></span></div>
+                <div class="hv-ctxrow"><span class="hv-l">ctx</span><span class="hv-v">0<i>/64K</i></span></div>
                 <div class="hv-bar"><i style="width:2%"></i></div>
               </div>
             </div>
