@@ -77,7 +77,9 @@ async function syncReleaseTags() {
       }
       releases.push(...batch);
       const next = /<([^>]+)>;\s*rel="next"/.exec(res.headers.get('link') ?? '');
-      url = next ? next[1] : null;
+      // Only follow a next page on the configured origin, so a bad override
+      // can never redirect the Authorization header elsewhere.
+      url = next && new URL(next[1]).origin === new URL(RELEASES_SOURCE).origin ? next[1] : null;
     }
     const tags = releases.map((r) => r.tag_name);
     const prevRaw = await readFile(TAGS_DEST, 'utf8').catch(() => '');

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SHOTS } from '../capture-screenshots.mjs';
+import { SHOTS, parseLaunchArgs } from '../capture-screenshots.mjs';
 
 test('shot names are unique kebab-case', () => {
   const names = SHOTS.map((s) => s.name);
@@ -26,4 +26,14 @@ test('no shot targets ri-defaults testid', () => {
   for (const s of SHOTS) {
     assert.ok(!`${s.expect ?? ''}${s.clip ?? ''}`.includes('data-testid="ri-defaults"'), s.name);
   }
+});
+
+test('parseLaunchArgs keeps a quoted argument whole and strips the quotes', () => {
+	assert.deepEqual(parseLaunchArgs('--host-resolver-rules="MAP hal0.local 10.0.0.5" --no-sandbox'), [
+		'--host-resolver-rules=MAP hal0.local 10.0.0.5',
+		'--no-sandbox',
+	]);
+	assert.deepEqual(parseLaunchArgs(''), []);
+	assert.deepEqual(parseLaunchArgs(undefined), []);
+	assert.deepEqual(parseLaunchArgs('["--a b", "--c"]'), ['--a b', '--c']);
 });

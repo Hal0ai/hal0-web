@@ -84,7 +84,8 @@ keeps `--accent` constant.
 
 ## Layouts
 
-- `/docs` — a hub page linking out to the forum docs.
+- `/docs` and `/docs/<section>` — redirects to the forum Docs category
+  and its section categories (see `astro.config.mjs`).
 - `/` (landing), `/changelog`, `/benchmarks`, `/profiles`,
   `/profiles/submit`, `/contributing`, `/blog` — custom
   `MarketingLayout.astro`, which reuses the global stylesheet and theme

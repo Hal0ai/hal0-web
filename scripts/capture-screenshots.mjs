@@ -23,7 +23,8 @@
  * HAL0_DASHBOARD_URL (default http://localhost:8080). To keep host names out
  * of the captured pixels, reach the box by a neutral name (hal0.local) so any
  * endpoint shown in the UI reads `hal0.local`. Without root, map the name in
- * Chromium itself via HAL0_CHROMIUM_ARGS (whitespace-separated launch args):
+ * Chromium itself via HAL0_CHROMIUM_ARGS (launch args, split on whitespace
+ * outside quotes; a JSON array is accepted too):
  *   HAL0_CHROMIUM_ARGS='--host-resolver-rules="MAP hal0.local <ip>"'
  *
  * The capture box must show NO private hostnames, keys, or personal slot and
@@ -88,6 +89,38 @@ const openProfileCopy = async (page) => {
     : page.locator('[data-testid^="pf-btn-editcopy-"]').first();
   await target.click();
 };
+
+/**
+ * Split HAL0_CHROMIUM_ARGS into launch args. Quotes group an argument that
+ * contains spaces (`--host-resolver-rules="MAP hal0.local 10.0.0.5"`) and are
+ * stripped; a JSON array is passed through as-is.
+ */
+export function parseLaunchArgs(raw) {
+  const text = (raw ?? '').trim();
+  if (!text) return [];
+  if (text.startsWith('[')) return JSON.parse(text).map(String);
+  const args = [];
+  let cur = '';
+  let quote = null;
+  let has = false;
+  for (const ch of text) {
+    if (quote) {
+      if (ch === quote) quote = null;
+      else cur += ch;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      has = true;
+    } else if (/\s/.test(ch)) {
+      if (has || cur) args.push(cur);
+      cur = '';
+      has = false;
+    } else {
+      cur += ch;
+    }
+  }
+  if (has || cur) args.push(cur);
+  return args;
+}
 
 export const SHOTS = [
   // ── Overview ────────────────────────────────────────────────────────────
@@ -389,9 +422,7 @@ async function main() {
   }
 
   await mkdir(OUT_DIR, { recursive: true });
-  const browser = await chromium.launch({
-    args: (process.env.HAL0_CHROMIUM_ARGS ?? '').split(/\s+/).filter(Boolean),
-  });
+  const browser = await chromium.launch({ args: parseLaunchArgs(process.env.HAL0_CHROMIUM_ARGS) });
   const failures = [];
 
   for (const { factor, suffix } of SCALES) {

@@ -56,6 +56,7 @@ const { versions, latestPrerelease, latestTagged } = parseChangelog(rawChangelog
 const baseVersion = (v: string) => v.split('-')[0];
 const shownPrerelease =
   latestPrerelease &&
+    !latestPrerelease.untagged &&
     (!latestTagged || baseVersion(latestPrerelease.version) !== baseVersion(latestTagged.version))
     ? latestPrerelease
     : null;
