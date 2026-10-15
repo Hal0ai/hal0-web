@@ -482,9 +482,8 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
           <figcaption class="shot-cap"><strong>Slots</strong>: each card carries a model picker, a profile picker and a context chip, so you see what runs where and swap it in place.</figcaption>
         </figure>
         <figure class="shot">
-          {/* TODO(shots): switch to profile-edit-drawer once the recapture lands. */}
-          <img src="/screenshots/slot-detail.png" srcset={shotSet('slot-detail')} alt="Slot drawer showing the slot's model, its profile and the effective context" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Slot drawer</strong>: pick the model and the profile, see the effective context, and jump to the profile editor that owns context, thinking, vision, MTP, flags and the runtime.</figcaption>
+          <img src="/screenshots/profiles-tab.png" srcset={shotSet('profiles-tab')} alt="Profiles tab listing the seed templates with their context, thinking, vision, MTP, runner and flags" width="1440" height="900" loading="lazy" decoding="async" />
+          <figcaption class="shot-cap"><strong>Profiles</strong>: the whole tune (context, thinking, vision, MTP, flags, runtime) is a named object a slot picks. Seed templates ship with hal0; duplicate one to make it yours.</figcaption>
         </figure>
         <figure class="shot">
           <img src="/screenshots/memory-graph.png" srcset={shotSet('memory-graph')} alt="Agent memory rendered as a navigable semantic and temporal knowledge graph" width="1440" height="900" loading="lazy" decoding="async" />

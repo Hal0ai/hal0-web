@@ -174,11 +174,15 @@ export const SHOTS = [
   {
     name: 'dashboard-overview',
     route: '#dashboard',
-    expect: '.rd-mem-card',
+    // A slot segment in the memory bar means the slots query has landed;
+    // before that the stat strip reads "—" and the slot list says loading.
+    expect: '.rd-mem-seg:not(.rd-mem-seg-system)',
+    after: 1500,
   },
   {
     name: 'unified-memory-hero',
     route: '#dashboard',
+    expect: '.rd-mem-seg:not(.rd-mem-seg-system)',
     clip: '.rd-mem-card',
   },
   {
@@ -187,6 +191,7 @@ export const SHOTS = [
     // which is a worse image than the one already committed.
     name: 'requests-latency-widget',
     route: '#dashboard',
+    expect: '.rd-mem-seg:not(.rd-mem-seg-system)',
     clip: '.rd-card:has(.rd-card-title:text-is("Requests"))',
   },
 
@@ -241,6 +246,7 @@ export const SHOTS = [
   {
     name: 'slot-card',
     route: '#slots',
+    act: scrollTo('[data-testid="infer-slot-agent"]', 'center'),
     expect: '[data-testid="infer-slot-agent"]',
     area: ['[data-testid="infer-slot-agent"]'],
     pad: 16,
@@ -331,6 +337,10 @@ export const SHOTS = [
     expect: '[data-testid="pf-btn-new"]',
   },
   {
+    // The roster is the box's own benchmark history, so it names whatever
+    // private checkpoints the operator has run through it. Not publishable
+    // from a working box; the committed image stays until a clean sweep.
+    skip: true,
     name: 'benchmarks-roster',
     route: '#benchmarks',
     expect: '[data-testid="benchmarks-view"]',
@@ -437,6 +447,20 @@ async function reachable(url) {
   }
 }
 
+/**
+ * Close any dismissable banner (update-available, first-run) before the
+ * shot: they are box state, not product surface, and a nightly "update now"
+ * strip across every page dates the image the day it is taken.
+ */
+async function dismissBanners(page) {
+  for (let i = 0; i < 4; i++) {
+    const btn = page.locator('.banner-dismiss').first();
+    if (!(await btn.isVisible().catch(() => false))) return;
+    await btn.click().catch(() => {});
+    await page.waitForTimeout(250);
+  }
+}
+
 async function capture(page, shot, suffix) {
   const file = `${shot.name}${suffix}.png`;
   const out = resolve(OUT_DIR, file);
@@ -448,6 +472,7 @@ async function capture(page, shot, suffix) {
   await page.goto(`/${shot.route}`, { waitUntil: 'networkidle', timeout: 30_000 });
   await loginIfAsked(page, shot.route);
   await page.waitForTimeout(shot.settle ?? SETTLE_MS);
+  await dismissBanners(page);
 
   if (shot.act) await shot.act(page);
   if (shot.expect) {
