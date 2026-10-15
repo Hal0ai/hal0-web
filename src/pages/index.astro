@@ -224,8 +224,8 @@ const themes: RoadmapTheme[] = [
     ],
     soon: [],
     later: [
-      { t: 'Fine-tune & LoRA hot-swap', d: 'Attach and rotate LoRAs against a warm base model without unloading the underlying weights.' },
-      { t: 'Per-model rate limits & budgets', d: 'Cost-style accounting for local inference so a chatty agent can be capped without taking the whole box down.' },
+      { t: 'Hot-swap LoRAs on a warm model', d: 'Attach and rotate adapters against a loaded base model without unloading its weights.' },
+      { t: 'Per-model token budgets', d: 'Rate limits and cost-style accounting for local inference, so one chatty agent can be capped without taking the box down.' },
     ],
   },
   {
@@ -237,9 +237,7 @@ const themes: RoadmapTheme[] = [
       { t: 'Honest slot health + derived context', d: 'A slot is marked ready only once its real /health passes — never on a systemd snapshot. Context size is derived per slot, never silently inheriting the 4096 default.' },
       { t: 'Capability slots + profiles', d: 'Embed / Voice / Image capability cards and an NPU rollup over flat slots; per-device profiles unify the launch flags, all from one Slots tab.' },
     ],
-    soon: [
-      { t: 'Benchmarks & presets UI', d: 'In-dashboard tok/s + latency runs, plus curated loadout presets you can flash onto a fresh install.' },
-    ],
+    soon: [],
     later: [],
   },
   {
@@ -252,7 +250,7 @@ const themes: RoadmapTheme[] = [
       { t: 'Extensions framework', d: 'Apps and agents (Open WebUI, ComfyUI, Hermes) packaged as auto-wired extensions: lifecycle-managed, selectable at install.' },
     ],
     soon: [
-      { t: 'AUR PKGBUILD & Ubuntu PPA', d: 'Native distro packages on top of the install script: pacman and apt as first-class install paths.' },
+      { t: 'pacman and apt packages', d: 'An AUR PKGBUILD and an Ubuntu PPA as first-class install paths beside the install script.' },
     ],
     later: [],
   },
@@ -267,7 +265,7 @@ const themes: RoadmapTheme[] = [
     ],
     soon: [],
     later: [
-      { t: 'Multi-host federation', d: 'A slot mesh across LAN boxes: chat on the Strix Halo, embed on the workstation, all behind one /v1/* surface.' },
+      { t: 'One API across several boxes', d: 'A slot mesh over the LAN: chat on the Strix Halo, embed on the workstation, all behind one /v1/* surface.' },
     ],
   },
   {
@@ -282,7 +280,7 @@ const themes: RoadmapTheme[] = [
     ],
     soon: [],
     later: [
-      { t: 'ChatOps adapters', d: 'Slack and Matrix bridges as extensions, so you can talk to hal0 from the rooms you already live in.' },
+      { t: 'Slack and Matrix bridges', d: 'Packaged as extensions beside the Telegram and Discord bridges, so you can talk to hal0 from the rooms you already live in.' },
     ],
   },
   {
@@ -301,8 +299,14 @@ const themes: RoadmapTheme[] = [
 ];
 
 // Everything still ahead of us, in one list — the page no longer sorts the
-// future into confidence tiers it cannot honour.
-const nextItems: RoadmapItem[] = themes.flatMap((th) => [...th.soon, ...th.later]);
+// future into confidence tiers it cannot honour. The grid is one row of
+// five; a sixth entry would wrap into a lonely second row, so keep the list
+// curated to five rather than slicing it.
+const nextItems = themes.flatMap((th) =>
+  [...th.soon, ...th.later].map((it) => ({ ...it, theme: th.id })),
+);
+const countWords = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const nextCount = countWords[nextItems.length] ?? String(nextItems.length);
 const deliveredCount = themes.reduce((n, th) => n + th.shipped.length, 0);
 
 const shipNowHighlights = [
@@ -748,7 +752,7 @@ const shipNowHighlights = [
         <p class="sec-sub">
           The API surface, the slot lifecycle, the security model, install and
           update, hardware probing, agents and memory — {deliveredCount} capabilities,
-          every one of them shipped in 1.0. Tagged releases reach
+          every one of them shipped in 1.0. Tagged releases reach{' '}
           <code class="mono accent-mono">releases.hal0.dev</code> within ~60s.
         </p>
       </div>
@@ -801,11 +805,12 @@ const shipNowHighlights = [
         ))}
       </div>
 
-      <!-- What's next -->
+      <!-- What's next — one row of five. The hollow mark is the counterpart
+           of the ✓ on the shipped rows above: same column, not yet earned. -->
       <div class="next-head">
         <div>
           <div class="sec-tag">/ what's next</div>
-          <h3 class="next-title">{nextItems.length} things we intend to build.</h3>
+          <h3 class="next-title">{nextCount[0].toUpperCase() + nextCount.slice(1)} things we intend to build.</h3>
         </div>
         <p class="next-sub">
           No dates and no order. Scope shifts release to release as we learn what
@@ -817,7 +822,11 @@ const shipNowHighlights = [
       <div class="next-grid">
         {nextItems.map((it) => (
           <div class="next-item">
-            <div class="next-item-title">{it.t}</div>
+            <div class="next-item-theme">{it.theme}</div>
+            <div class="next-item-title">
+              <span class="next-item-mark" aria-hidden="true"></span>
+              <span>{it.t}</span>
+            </div>
             <div class="next-item-desc">{it.d}</div>
           </div>
         ))}
@@ -1711,8 +1720,7 @@ const shipNowHighlights = [
   /* Roadmap — themed rows */
   .rm-grid {
     border: 1px solid var(--hal0-border);
-    border-top: none;
-    border-radius: 0 0 10px 10px;
+    border-radius: 10px;
     overflow: hidden;
     background: var(--hal0-bg-elevated);
   }
@@ -1804,9 +1812,12 @@ const shipNowHighlights = [
     flex-wrap: wrap;
   }
   .next-title {
-    margin: 8px 0 0;
-    font-size: clamp(20px, 2.4vw, 28px);
-    letter-spacing: -0.02em;
+    margin: 0;
+    font-family: var(--hal0-font-display);
+    font-weight: 500;
+    font-size: clamp(20px, 2.2vw, 28px);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
     color: var(--hal0-fg);
   }
   .next-sub {
@@ -1816,28 +1827,60 @@ const shipNowHighlights = [
     color: var(--hal0-fg-muted);
     text-wrap: pretty;
   }
+  /* One fixed row of five. Dashed outline = not yet real, the same cue the
+   * ship-now banner uses for its "next" pill; the shipped grid above is
+   * solid. */
   .next-grid {
     margin-top: 22px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1px;
-    background: var(--hal0-border);
-    border: 1px solid var(--hal0-border);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border: 1px dashed var(--hal0-border-strong);
     border-radius: 10px;
+    background:
+      radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--hal0-accent-glow) 45%, transparent), transparent 40%),
+      var(--hal0-bg);
     overflow: hidden;
   }
   .next-item {
-    padding: 18px 20px;
-    background: var(--hal0-bg-elevated);
+    padding: 22px 20px 24px;
+    border-right: 1px solid var(--hal0-border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .next-item:last-child { border-right: none; }
+  .next-item-theme {
+    font-family: var(--hal0-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
   }
   .next-item-title {
+    display: grid;
+    grid-template-columns: 16px 1fr;
+    gap: 10px;
+    align-items: start;
     font-family: var(--hal0-font-mono);
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
     color: var(--hal0-fg);
-    margin-bottom: 6px;
+    text-wrap: balance;
+  }
+  .next-item-mark {
+    width: 10px;
+    height: 10px;
+    margin: 4px 3px 0;
+    border: 1.5px solid var(--hal0-accent);
+    border-radius: 2px;
+    opacity: 0.85;
   }
   .next-item-desc {
-    font-size: 13px;
+    padding-left: 26px;
+    font-size: 12.5px;
     line-height: 1.55;
     color: var(--hal0-fg-muted);
     text-wrap: pretty;
@@ -1927,8 +1970,10 @@ const shipNowHighlights = [
     .rm-row { grid-template-columns: 1fr; }
     .rm-row-head { border-right: none; border-bottom: 1px solid var(--hal0-border); }
     .rm-cell { border-bottom: 1px solid var(--hal0-border); }
-    .next-head { flex-direction: column; gap: 10px; }
+    .next-head { flex-direction: column; align-items: flex-start; gap: 10px; }
     .next-grid { grid-template-columns: 1fr; }
+    .next-item { border-right: none; border-bottom: 1px solid var(--hal0-border); }
+    .next-item:last-child { border-bottom: none; }
     .matrix-row { grid-template-columns: 1fr; }
     .matrix-row > div { border-right: none; border-bottom: 1px solid var(--hal0-border); }
     .cmp-row { grid-template-columns: 1fr; }
