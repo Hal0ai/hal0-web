@@ -91,10 +91,11 @@ const featured = profilesSnapshot.profiles
   }
   .cards3 {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
   }
   .pmini {
+    min-width: 0;
     border: 1px solid var(--line);
     border-radius: var(--rad-lg);
     background: var(--bg-1);
