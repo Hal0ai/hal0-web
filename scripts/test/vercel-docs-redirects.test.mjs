@@ -84,10 +84,11 @@ test('the patch removed duplicate forum redirect route entries', { skip }, () =>
 	//   /kb                     -> the KB category
 	//   /docs                   -> the Docs category
 	//   /docs/<section>/ x5     -> each docs section's category
+	//   /first-run-guide        -> the Getting started category
 	//
 	// (Troubleshooting has no hal0.dev ancestor to redirect from — it was
 	// created on the forum, so nothing ever linked /docs/troubleshooting/.)
-	const LANDING_REDIRECTS = 7;
+	const LANDING_REDIRECTS = 8;
 	assert.equal(
 		forumRoutes.length,
 		Object.keys(redirects).length + Object.keys(kbRedirects).length + LANDING_REDIRECTS,

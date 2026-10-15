@@ -1,7 +1,7 @@
 ---
 /**
  * MarketingLayout — shared chrome for non-docs pages (/, /changelog,
- * /releases, /contributing). Reuses the global stylesheet (which carries
+ * /benchmarks, /profiles, /contributing). Reuses the global stylesheet (which carries
  * both Starlight tokens and the hal0 design system) and provides a
  * thin top nav + footer.
  *
@@ -22,7 +22,7 @@ import SiteFooter from '../components/SiteFooter.astro';
 
 // Preload the two latin web fonts that drive above-the-fold rendering —
 // without these, the FOUT swap from system fallback → real font pushes
-// CLS to ~0.21 on long pages like /hardware.
+// CLS to ~0.21 on long pages like /changelog.
 import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import jbm700 from '@fontsource/jetbrains-mono/files/jetbrains-mono-latin-700-normal.woff2?url';
 import jbm400 from '@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2?url';

@@ -82,7 +82,7 @@ const laneOptions = [...laneCounts.keys()].sort();
 const total = cards.length;
 
 const description =
-  "A profile is the flag string that produced a number, versioned and downloadable. Find the one for your model, install it with the CLI, or read the config and steal the parts you want.";
+  "A profile is the flag string that produced a number, versioned and downloadable. Find the one for your model, copy its flags into a profile of your own, or read the config and steal the parts you want.";
 ---
 
 <MarketingLayout title="profiles — hal0" description={description} ogImage="/og/profiles-index.png">
@@ -93,7 +93,7 @@ const description =
         <h1 class="site-h1" style="margin: 10px 0 10px">profiles</h1>
         <p class="site-body" style="max-width: 60ch">
           A profile is the flag string that produced a number, versioned and downloadable.
-          Find the one for your model, install it with the CLI, or read the config and steal the
+          Find the one for your model, copy its flags into a profile of your own, or read the config and steal the
           parts you want.
         </p>
       </div>
@@ -260,14 +260,18 @@ const description =
 
         <div class="dr-actions">
           <button type="button" class="btn ghost" data-profile-copy-flags data-flags={record.args.raw}>copy flags</button>
-          <a class="btn ghost" href={`${PROFILES_REPO_RAW}/${profile.slug}.toml`} rel="noopener">install with hal0</a>
+          <a class="btn ghost" href={`${PROFILES_REPO_RAW}/${profile.slug}.toml`} rel="noopener">download .toml</a>
         </div>
 
         <section>
-          <h4 class="label">install</h4>
+          <h4 class="label">use it</h4>
           <div class="well" style="padding:12px 14px; margin-top:8px">
-            <span class="amber">hal0</span> profile install {profile.slug}
+            <span class="amber">hal0</span> profile create my-{profile.slug} --from &lt;a-profile-you-have&gt; --flags "&lt;copied flags&gt;"
           </div>
+          <p class="mono dim" style="font-size:11px; margin-top:8px">
+            Copy the flags below, then create a custom profile from one you already have (or
+            use the dashboard's Profiles page). hal0 does not install community .toml files directly.
+          </p>
         </section>
 
         <section>
