@@ -1,0 +1,183 @@
+---
+title: "Runners, profiles and a bigger default brain: what changed in hal0 since 1.0"
+date: 2026-10-15T12:00:00
+authors: hal0
+excerpt: >-
+  One name per runner, config where the model holds facts and the profile holds
+  the tune, a 27B vision model as the default agent brain, memory that no longer
+  drops writes, and updates that converge the whole system. A look at what hal0
+  does now compared with the 1.0 GA.
+tags:
+  - release
+  - platform
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import ForumDiscussLink from '../../../components/ForumDiscussLink.astro';
+
+hal0 turns an AMD Strix Halo box, or any Linux machine with a GPU, an NPU or
+just a CPU, into a private AI appliance you can reason about. Every model runs
+in its own slot. Every tune lives in a named profile you can read, fork and
+share. Every runner image is a pinned, hardware-gated build of upstream
+llama.cpp or one of its peers. One OpenAI-compatible `/v1` endpoint serves
+chat, embeddings, rerank, speech, transcription and images.
+
+Open WebUI, ComfyUI, a sandboxed Hermes agent and Hindsight memory come up
+already wired to each other. Signed updates converge the whole system and roll
+back with one flag. You own the hardware, the data and the config, and the
+config now says exactly what runs. The 1.0 GA was the starting line. This is
+what has landed since, with everything below traced to the
+[changelog](/changelog).
+
+## One name per runner
+
+A runner is the container build a slot launches. Each one now has a single name
+that is used everywhere: the registry key, the pin, the catalogue row and the
+package, `ghcr.io/hal0ai/hal0-runner-<key>`. The AMD llama.cpp runner is
+**Standard**. It is built from pristine upstream llama.cpp and covers both ROCm
+and Vulkan. CPU, FLM (the NPU), Kokoro, Moonshine and ComfyUI sit beside it as
+default runners, with Qwen3 TTS and an NVIDIA CUDA image as optional extras.
+
+Every image is pinned in one table in the release manifest, and each pin says
+which hardware lanes it was gated on. The runner-image catalogue syncs itself
+at startup and during `hal0 update`, so the page shows what is really on the
+box rather than a stale list. The old image names are gone, along with the
+FPX quant formats no shipped runner can load. Existing installs are converted
+automatically.
+
+{/* TODO(shots): confirm file exists */}
+<img
+  src="/screenshots/runner-images.png"
+  srcSet="/screenshots/runner-images.png 1x, /screenshots/runner-images@2x.png 2x"
+  alt="The runner images page listing each runner with its pinned build, hardware lanes and pull state"
+  loading="lazy"
+/>
+
+## Model is facts, profile is tune, slot is placement
+
+This is the biggest change to how you configure hal0. A model row records only
+facts about its file: path, architecture, native context, chat template,
+projector, whether it has MTP heads. A profile holds every tune: flags, context
+size, thinking, vision and MTP. A slot holds placement: device, layers,
+threads, port, runner, and which model and profile it runs.
+
+The practical result is that one model can run several ways. Put the same GGUF
+in two slots with two profiles, say a long-context one and a fast one, and
+nothing about the model changes. The launch command is composed in a fixed
+order (base, model, profile, slot) and the dashboard shows it layer by layer,
+so you can see which layer set which flag.
+
+Existing configs are converted automatically, and the files are backed up under
+`/var/lib/hal0/backups/` before anything is rewritten. A slot the conversion
+cannot place safely is marked blocked, with the reason and the fix on its card.
+
+{/* TODO(shots): confirm file exists */}
+<img
+  src="/screenshots/slot-card.png"
+  srcSet="/screenshots/slot-card.png 1x, /screenshots/slot-card@2x.png 2x"
+  alt="A slot card with a model picker, a profile picker and a context size chip"
+  loading="lazy"
+/>
+
+{/* TODO(shots): confirm file exists */}
+<img
+  src="/screenshots/profile-edit-drawer.png"
+  srcSet="/screenshots/profile-edit-drawer.png 1x, /screenshots/profile-edit-drawer@2x.png 2x"
+  alt="The profile edit drawer with context size, thinking, vision and flag fields"
+  loading="lazy"
+/>
+
+## A bigger default brain
+
+A fresh install on a box with a 32 GB or larger memory pool now seeds Qwen3.8
+27B (UD-Q4_K_XL, with vision) as the primary chat and agent model, at a 96K
+default context. Smaller boxes keep a 9B or 4B seed. hal0's own always-on
+steward model, the brain, is LFM2.5 2.6B, small enough to leave running next to
+whatever else you load.
+
+The bundled Hermes agent moves to 0.19 with smart command approvals. When it
+wants to run a flagged shell command, your own local agent model looks at it
+first. If that model does not clearly approve, Hermes falls back to asking you.
+You can switch between smart and manual in Settings, or with
+`hal0 agent command-approvals`.
+
+## Memory you can trust
+
+The bundled Hindsight engine is on 1.0. More important is what changed around
+it. Extraction used to run with defaults meant for a hosted API, 32 concurrent
+calls and 64000 tokens each, against a slot that serves one request at a time.
+On a slow box a write could return success and store nothing.
+
+Now extraction has limits you set under Settings, Memory, and a write whose
+extraction slot is too small for the prompt is refused up front instead of
+vanishing. Writes land, or you are told why they did not.
+
+Deleting a model follows the same rule. Removing one now removes its files by
+default, with guards and a keep-files opt-out, so a model you deleted no longer
+reappears after the next restart.
+
+## Wired before you log in
+
+Open WebUI comes up with document uploads going through RAG on hal0's own
+embeddings, and its image button generating through ComfyUI, as soon as the
+slots are bound. Nothing to paste into a settings page. It keeps working when
+you turn key auth on, because the installer mints a client key for it.
+
+## Updates that finish the job
+
+`hal0 update` is a signed tarball swap, and `hal0 update --rollback` puts the
+previous tree back. It now also converges the components that ride along with a
+release: Open WebUI, the runner images, Hermes and Hindsight. If a slot is
+still running an old runner image after the update, hal0 restarts it, and the
+command exits 2 while convergence is outstanding, so a script can tell "applied"
+from "applied and finished". You no longer end up with a new version running an
+old build.
+
+## See it before you apply it
+
+A lot of the work has been about showing consequences before you click.
+Settings saves preview their exact diff. Applying a profile lists the runtime,
+flags and restart it will cause. Applying a stack tells you which slots it will
+unload. Model pickers carry a fit chip (fits, tight, won't fit) based on the
+GPU memory the host reports right now, and when a container dies during load
+the decisive crash line shows up on the slot card instead of in a journal.
+
+{/* TODO(shots): confirm file exists */}
+<img
+  src="/screenshots/dashboard-overview.png"
+  srcSet="/screenshots/dashboard-overview.png 1x, /screenshots/dashboard-overview@2x.png 2x"
+  alt="The hal0 dashboard overview with slot status, memory and recent activity"
+  loading="lazy"
+/>
+
+## Safer by default on a LAN
+
+hal0 still assumes a trusted network, so key auth is optional and off by
+default. Once you have an admin key, off-box callers need it for admin routes.
+Behind a reverse proxy, tell hal0 the public name with
+`hal0 network public-url set`, or the origin check will refuse it. Login has a
+30-day Remember me, and a lost admin key is recoverable with
+`sudo hal0 auth reset-key`. Secrets are redacted more thoroughly in logs and
+reports, and the `/v1` proxy no longer forwards your session credentials to
+whatever upstream it picks.
+
+One thing has not changed: hal0 does not do TLS itself. Bring your own proxy.
+
+## Upgrading
+
+Run `hal0 update`. It verifies the signed tarball, shows the release notes
+including any breaking changes and migrations before applying, swaps the tree,
+runs the automatic conversions for runners and profiles, then converges
+components and restarts slots whose runner image changed. Backups of anything
+it rewrites go to `/var/lib/hal0/backups/`, and `hal0 update --rollback` returns
+to the previous tree.
+
+<Aside type="caution" title="Upgrade floor: 1.3.0">
+Boxes older than 1.3.0 cannot jump straight to this release. Step through 1.3.0
+first, or reinstall.
+</Aside>
+
+Questions, odd results or a conversion that blocked on your setup? Bring them
+to the forum.
+
+<ForumDiscussLink />
