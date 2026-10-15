@@ -245,7 +245,7 @@ const description =
   .clshell {
     --cl-gutter: calc(max(0px, (100% - 1600px) / 2) + 32px);
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 300px minmax(0, 1fr);
     padding-inline: var(--cl-gutter);
   }
   @media (max-width: 640px) {
@@ -336,7 +336,13 @@ const description =
   }
 
   .cl-content {
-    max-width: 68ch;
+    max-width: min(68ch, 100%);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .cl-content :global(pre) {
+    max-width: 100%;
+    overflow-x: auto;
     padding-inline: 1.5rem;
     padding-block: 28px 64px;
   }

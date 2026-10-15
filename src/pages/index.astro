@@ -52,8 +52,8 @@ const softwareApplicationLd = {
 const features = [
   {
     tag: 'agents',
-    title: 'Agents that live on the box',
-    body: 'Hermes installs and bootstraps itself on first run, prewired to the local /v1 API, and your own model screens its risky shell commands before you are asked. hal0-brain is the second: a resident operator you ask about the box in plain language, from the dashboard or a headless terminal.',
+    title: 'An agent and an operator on board',
+    body: 'Hermes installs itself on first run, prewired to the local /v1 API, with your own model screening its risky shell commands. hal0-brain is a resident operator you ask about the box in plain language. Both run as contained units on the box.',
   },
   {
     tag: 'profiles',
@@ -63,7 +63,7 @@ const features = [
   {
     tag: 'memory',
     title: 'Memory that never leaves the box',
-    body: 'The Hindsight engine runs embedded and loopback-only, embeddings included. A write lands or is refused up front with a reason, never dropped quietly, and you set the extraction limits in Settings. Destructive operations write an attributable audit row.',
+    body: 'A local Hindsight engine bound to loopback holds it, embeddings included. A write lands or is refused up front with a reason, never dropped quietly, and you set the extraction limits in Settings. Destructive operations write an attributable audit row.',
   },
   {
     tag: 'voice',
@@ -257,7 +257,7 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
       <div class="sec-head">
         <div>
           <div class="sec-tag">/ runner images</div>
-          <h2 class="sec-title">Six runners,<br />one <span class="accent">/v1/*</span> surface.</h2>
+          <h2 class="sec-title">Six default runners,<br />one <span class="accent">/v1/*</span> surface.</h2>
         </div>
         <p class="sec-sub">
           Chat, embeddings, rerank, speech both ways and image generation, each
@@ -563,8 +563,8 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
         <div class="at-tag">memory</div>
         <h3 class="at-title">Recall that reaches no one</h3>
         <p class="at-body">
-          Memory runs on a Hindsight engine embedded on the box and bound to
-          loopback, local embeddings included. Writes go to a shared namespace by
+          Memory runs on a local Hindsight engine bound to loopback, local
+          embeddings included. Writes go to a shared namespace by
           default or to an agent's private one; recall merges, ranks and fits the
           result to a token budget.
         </p>
@@ -576,7 +576,7 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
       <p class="shot-note">
         Key auth is optional and off by default, the trusted-LAN posture. Once you
         set an admin key, off-box callers need it for admin routes. hal0 has no TLS
-        of its own: put your reverse proxy in front and allow its origin with
+        of its own: put your reverse proxy in front and allow its origin with{' '}
         <code class="mono">hal0 network public-url set</code>. Updates are signed, the
         agent runs in a contained unit, and destructive memory operations are audited.
       </p>
@@ -1435,7 +1435,7 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
     .sec-head { grid-template-columns: 1fr; gap: 24px; }
     .feat-grid,
     .tiers { grid-template-columns: 1fr; }
-    .agent-tiles { grid-template-columns: 1fr; }
+    .agent-tiles { grid-template-columns: minmax(0, 1fr); }
     .matrix-row { grid-template-columns: 1fr; }
     .matrix-row > div { border-right: none; border-bottom: 1px solid var(--hal0-border); }
     .cmp-row { grid-template-columns: 1fr; }

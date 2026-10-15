@@ -62,14 +62,22 @@ async function syncReleaseTags() {
   try {
     const headers = { Accept: 'application/vnd.github+json' };
     if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-    const res = await fetch(RELEASES_SOURCE, { headers, signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const releases = await res.json();
-    if (
-      !Array.isArray(releases) ||
-      !releases.every((r) => r && typeof r.tag_name === 'string' && r.tag_name)
-    ) {
-      throw new Error('releases response is not an array of tagged releases');
+    // Follow the Link header: nightlies push the real releases past one page.
+    const releases = [];
+    let url = RELEASES_SOURCE;
+    for (let page = 0; url && page < 20; page++) {
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const batch = await res.json();
+      if (
+        !Array.isArray(batch) ||
+        !batch.every((r) => r && typeof r.tag_name === 'string' && r.tag_name)
+      ) {
+        throw new Error('releases response is not an array of tagged releases');
+      }
+      releases.push(...batch);
+      const next = /<([^>]+)>;\s*rel="next"/.exec(res.headers.get('link') ?? '');
+      url = next ? next[1] : null;
     }
     const tags = releases.map((r) => r.tag_name);
     const prevRaw = await readFile(TAGS_DEST, 'utf8').catch(() => '');
