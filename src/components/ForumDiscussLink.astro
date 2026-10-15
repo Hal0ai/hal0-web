@@ -21,7 +21,9 @@ const forumHref = forum?.href ?? 'https://forum.hal0.dev';
 
 <style>
   .forum-discuss {
-    margin: -0.75rem 0 1.5rem;
+    /* Sits directly under starlight-blog's byline; match its 0.75rem row gap
+     * (a negative top margin here pulled the link up over the author name). */
+    margin: 0.75rem 0 1.5rem;
     font-family: var(--hal0-font-mono);
     font-size: 12px;
   }
