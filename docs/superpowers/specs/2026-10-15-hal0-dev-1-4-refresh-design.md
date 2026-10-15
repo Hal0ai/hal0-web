@@ -1,6 +1,9 @@
 # hal0.dev 1.4 refresh — design
 
-Date: 2026-10-15. Status: proposed, awaiting operator approval.
+Date: 2026-10-15. Status: approved 2026-10-15 with one override: copy is
+version-neutral. Name a version only where a date or tag is the subject
+(changelog entries, the release blog post). Marketing copy says "current",
+"latest stable", or nothing, so the site stays accurate across releases.
 
 The site was last reframed for the 1.0 GA on 2026-08-29 (#120, #121). Four
 product releases later (1.1, 1.2, 1.3, and the upcoming 1.4), most product
@@ -48,9 +51,9 @@ plan for the refresh. Research inputs (scratchpad, this session):
 
 ## 2. Goals
 
-1. Every product claim on hal0.dev is true for 1.4 and sourced to the
+1. Every product claim on hal0.dev is true for the current product and sourced to the
    product repo.
-2. The landing page tells the 1.4 story (runners, profiles, bigger default
+2. The landing page tells the current product story (runners, profiles, bigger default
    model, memory, wired OWUI, converging updates) without becoming a
    release-notes dump; the 1.0 "what 1.0 delivers / what's next" block goes.
 3. Screenshots show the current slot cards (RichSelect model and profile
@@ -108,7 +111,7 @@ hardware, compare, console, agents, community, CTA). Changes:
 - **`#roadmap` → `#whats-new`.** Delete the `themes` data (23 items, six
   rows, 300 lines of CSS), `shipNowHighlights`, `nextItems`, and the
   "twelve release candidates" headline. Replace with one compact section:
-  eyebrow "/ what's new in 1.4", four to six cards (runner system,
+  eyebrow "/ what's new", four to six cards (runner system,
   profile-centric config, Qwen3.8 27B default, memory, OWUI wired, updates
   that converge + upgrade floor), a link to `/changelog` and to the release
   blog post. Section id `whats-new`; keep an empty `id="roadmap"` anchor so
@@ -270,7 +273,7 @@ Wave 3:
 - I. Vercel preview deploy, visual pass light and dark at phone and desktop
   widths (`scripts/audit-screens.mjs`), Lighthouse spot-check.
 - J. PR; CI green; merge when v1.4.0 is tagged (the version guard makes an
-  earlier merge safe, but the blog post date and "1.4" copy should wait).
+  earlier merge safe, the blog post carries the tag date).
 
 ## 7. Operator decisions needed
 
@@ -281,3 +284,12 @@ Wave 3:
 4. Merge timing: hold the PR until v1.4.0 is tagged (recommended), or merge
    early behind the version guard with the 1.4 copy phrased as "coming"?
 5. Blog archive: keep the two beta-line posts (recommended) or delete?
+
+## 8. Decisions taken 2026-10-15
+
+Operator approved the plan and asked that copy avoid naming a single version.
+Defaults taken where no answer was given: first-run guide deleted with a
+redirect; Lemonade lines left as mirrored (public upstream); beta-era blog
+posts kept; PR opened as soon as CI is green, merge timing left to the
+operator; screenshot capture on CT150 waits for an explicit go because it
+touches the release-validation fleet and production slots.
