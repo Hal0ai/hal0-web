@@ -341,34 +341,19 @@ const shipNowHighlights = [
   <!-- HERO -->
   <header class="hero">
     <div class="shell-wide hero-grid">
-      <div>
+      <div class="hero-copy">
         <div class="eyebrow">
           <span class="blip"></span> {version} shipping now · Apache-2.0
         </div>
-        <h1 class="h1">
-          Your Strix Halo box,<br />
-          running real <span class="accent">/v1/*</span><br />
-          inference.
+        <h1 class="h1 hero-h1">
+          <span class="h1-line">Own Your</span>
+          <span class="h1-line"><span class="accent">Inference</span></span>
         </h1>
+        <p class="hero-tagline">All local. All yours.</p>
         <p class="lede">
-          Every modality — <strong>agents, chat, speech, images, memory</strong> — served
-          from a single OpenAI-compatible API on your <strong>Strix Halo</strong> box
-          or any Linux machine.
+          Chat, speech, images, embeddings — every modality, served from one
+          OpenAI-compatible API on your <strong>Strix Halo</strong> box or any Linux machine.
         </p>
-
-        <div class="install" id="install">
-          <div class="install-head">
-            <div class="install-dots"><i></i><i></i><i></i></div>
-            <div class="install-title">install.sh</div>
-            <div class="install-meta">Linux x86_64 · Python ≥3.12</div>
-          </div>
-          <div class="install-body">
-            <span class="prompt">$</span>
-            <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
-            <span class="caret"></span>
-            <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
-          </div>
-        </div>
 
         <div class="cta-row">
           <a href="https://forum.hal0.dev/t/hal0-documentation/19" class="btn">Read the docs →</a>
@@ -389,6 +374,22 @@ const shipNowHighlights = [
       </div>
 
       <LiveArtifact />
+    </div>
+
+    <div class="shell-wide hero-install">
+      <div class="install install-hero" id="install">
+        <div class="install-head">
+          <div class="install-dots"><i></i><i></i><i></i></div>
+          <div class="install-title">install.sh</div>
+          <div class="install-meta">Linux x86_64 · Python ≥3.12</div>
+        </div>
+        <div class="install-body">
+          <span class="prompt">$</span>
+          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | bash</span>
+          <span class="caret"></span>
+          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | bash">copy</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -992,6 +993,56 @@ const shipNowHighlights = [
     letter-spacing: -0.04em;
     margin: 0 0 20px;
     font-feature-settings: 'zero' 1;
+  }
+
+  /* Hero headline: two fixed lines, sized off the column width so the
+   * longest line ("Inference", 9 mono glyphs) never wraps and fills
+   * most of the column beside the live artifact. */
+  .hero-copy { container-type: inline-size; }
+  .hero-h1 {
+    font-size: clamp(36px, 15cqi, 88px);
+    line-height: 1.02;
+    margin-bottom: 18px;
+  }
+  .h1-line { display: block; white-space: nowrap; }
+  .hero-tagline {
+    font-family: var(--hal0-font-mono);
+    font-size: clamp(13px, 1.15vw, 16px);
+    letter-spacing: 0.02em;
+    color: var(--hal0-accent);
+    margin: 0 0 20px;
+  }
+  .hero-copy .lede { max-width: 620px; margin-bottom: 26px; }
+
+  /* Featured installer: its own full-width row under the hero grid. */
+  .hero-install {
+    margin-top: 56px;
+    display: flex;
+    justify-content: center;
+  }
+  .install-hero {
+    width: 100%;
+    max-width: 920px;
+    margin-bottom: 0;
+    border-color: color-mix(in srgb, var(--hal0-accent) 38%, var(--hal0-border));
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--hal0-accent) 12%, transparent),
+      0 18px 60px -24px color-mix(in srgb, var(--hal0-accent) 45%, transparent);
+  }
+  .install-hero .install-head { padding: 10px 18px; font-size: 12px; }
+  .install-hero .install-body {
+    padding: 26px 24px 26px 30px;
+    font-size: clamp(15px, 1.6vw, 21px);
+    gap: 16px;
+  }
+  .install-hero .install-body .caret { height: 22px; width: 10px; }
+  .install-hero .copy-btn { font-size: 12px; padding: 7px 14px; }
+  @media (max-width: 640px) {
+    /* Wrap rather than ellipsize: a truncated one-liner can't be read back. */
+    .install-hero .install-body { padding: 18px 16px; font-size: 14px; align-items: flex-start; }
+    .install-hero .install-body .cmd { white-space: normal; overflow-wrap: anywhere; }
+    .install-hero .install-body .caret { display: none; }
+    .install-hero .install-meta { display: none; }
   }
 
   .lede {
@@ -1959,6 +2010,8 @@ const shipNowHighlights = [
     .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
     .hero-grid > * { min-width: 0; }
     .h1 { font-size: clamp(2.1rem, 11vw, 3rem); }
+    .hero-h1 { font-size: clamp(26px, 9.4cqi, 60px); }
+    .hero-install { margin-top: 40px; }
     .sec-head { grid-template-columns: 1fr; gap: 24px; }
     .perf-grid { grid-template-columns: repeat(2, 1fr); }
     .feat-grid,
