@@ -68,7 +68,7 @@ const features = [
   {
     tag: 'voice',
     title: 'Speech in and out, device-keyed',
-    body: 'One stt slot and one tts slot, each resolving by device: Moonshine on the CPU or FastFlowLM on the XDNA NPU for listening, Kokoro on the CPU or the optional Qwen3 TTS runner on the GPU for speaking. Switch the engine, not the plumbing.',
+    body: 'One stt slot and one tts slot, each resolving by device. Moonshine on the CPU or FastFlowLM on the XDNA NPU listens; Kokoro on the CPU or the optional Qwen3 TTS runner on the GPU speaks. Switch the engine, not the plumbing.',
   },
   {
     tag: 'images',
@@ -78,7 +78,7 @@ const features = [
   {
     tag: 'prewired',
     title: 'Wired up before you log in',
-    body: 'One command brings up the API, a coherent set of slots, ComfyUI, the agent and Open WebUI on :3001, already wired for chat, voice, documents (RAG on hal0 embeddings) and images through ComfyUI. Updates are signed and roll back with one flag.',
+    body: 'One command brings up the API, a coherent set of slots, ComfyUI, the agent and Open WebUI on :3001. Open WebUI arrives wired for chat, voice, documents (RAG on hal0 embeddings) and images through ComfyUI.',
   },
 ];
 
@@ -357,9 +357,9 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
         <div class="uc-eye">/ voice &amp; image lab</div>
         <h3 class="uc-title">Speech and images, one control plane</h3>
         <p class="uc-body">
-          Transcription, text-to-speech and local image generation behind the same API:
-          STT on the XDNA NPU or the CPU, Kokoro on the CPU or the optional Qwen3 TTS
-          runner on the GPU, and ComfyUI on the iGPU, switched cleanly so they share the box.
+          Transcription, text-to-speech and local image generation behind the same API.
+          STT runs on the XDNA NPU or the CPU, TTS on the CPU or the GPU, and ComfyUI on
+          the iGPU, switched cleanly so they share the box.
         </p>
       </article>
       </div>
@@ -611,6 +611,7 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
 
       <div class="cta-row">
         <a href="/changelog" class="btn">Full changelog →</a>
+        <a href="/blog/whats-new-since-1-0/" class="btn ghost">Read the write-up →</a>
         <a href="https://forum.hal0.dev/t/hal0-documentation/19" class="btn ghost">Read the docs →</a>
       </div>
     </div>

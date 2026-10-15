@@ -103,7 +103,7 @@ npm run dev              # sync scripts, then dev server at http://localhost:432
 npm run build            # prebuild (sync + OG) then static/Vercel build -> ./dist and .vercel/output
 npm run preview          # serve the build for smoke-testing
 npm test                 # node:test suites in scripts/test/
-npx astro check          # type check (must be 0 errors)
+npx astro check          # type check (known errors in profiles.astro and workers/bench-api; add no new ones)
 ```
 
 Several tests inspect built output (`dist/`) and skip with a hint if you
