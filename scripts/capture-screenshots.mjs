@@ -8,8 +8,11 @@
  * consistent set. Modelled on the product repo's Playwright e2e setup
  * (ui/tests/e2e/specs/slot-indicator-live-screenshot.spec.ts).
  *
- * Usage:
- *   npx playwright install chromium      # once, to get the browser binary
+ * Usage (Docker — host Chromium usually lacks system libs):
+ *   HAL0_BOX_IP=<ip> scripts/capture-screenshots.sh [shot-name ...]
+ * runs this script inside mcr.microsoft.com/playwright:v1.64.0-noble with
+ * `--add-host hal0.local:<ip>` and HAL0_DASHBOARD_URL=http://hal0.local:8080.
+ * Without Docker: `npx playwright install chromium`, then
  *   HAL0_DASHBOARD_URL=http://your-host:8080 npm run capture:screenshots
  *
  * Every shot is written twice: <name>.png at 1× and <name>@2x.png at
@@ -18,15 +21,19 @@
  *
  * The base URL is NEVER hard-coded to a private host — pass it via
  * HAL0_DASHBOARD_URL (default http://localhost:8080). To keep host names out
- * of the captured pixels, reach the box by an mDNS/local name (e.g.
- * http://hal0.local:8080) so any endpoint shown in the UI reads `hal0.local`.
+ * of the captured pixels, reach the box by a neutral name (hal0.local) so any
+ * endpoint shown in the UI reads `hal0.local`. Without root, map the name in
+ * Chromium itself via HAL0_CHROMIUM_ARGS (launch args, split on whitespace
+ * outside quotes; a JSON array is accepted too):
+ *   HAL0_CHROMIUM_ARGS='--host-resolver-rules="MAP hal0.local <ip>"'
  *
- * The first-run experience is a terminal TUI (`hal0 setup`) as of v0.5.1 —
- * there is no web first-run wizard to screenshot here.
+ * The capture box must show NO private hostnames, keys, or personal slot and
+ * model names: seed slots and public models only. Every PNG is reviewed before
+ * it is committed.
  */
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -55,6 +62,10 @@ const SCALES = [
  *           surface never renders, the shot fails loudly instead of quietly
  *           writing a blank PNG over a good one
  *   clip    selector to crop to, for the small element shots the docs embed
+ *   area    list of selectors; the shot is the union of their boxes plus `pad`
+ *           px (default 12), for a card plus its open picker and the like
+ *   viewport  {width,height} override for shots whose subject is taller than
+ *           the default frame (drawers)
  *           inline (memory bar, MTP control, requests widget …)
  *   settle  override for SETTLE_MS — how long to wait after the route loads
  *   after   extra ms to wait once `act` has run, for animations that only
@@ -70,16 +81,108 @@ const scrollTo =
     await page.waitForTimeout(400);
   };
 
-const SHOTS = [
+/**
+ * act() helper: open the edit-a-copy drawer for the seed profile `agent`
+ * (present on every install); fall back to the first seed's button.
+ */
+const openProfileCopy = async (page) => {
+  const sel = '[data-testid="pf-btn-editcopy-agent"]';
+  await page.waitForSelector('[data-testid^="pf-btn-editcopy-"]', { state: 'visible', timeout: 15_000 });
+  const target = (await page.locator(sel).count())
+    ? page.locator(sel)
+    : page.locator('[data-testid^="pf-btn-editcopy-"]').first();
+  await target.click();
+};
+
+/**
+ * Split HAL0_CHROMIUM_ARGS into launch args. Quotes group an argument that
+ * contains spaces (`--host-resolver-rules="MAP hal0.local 10.0.0.5"`) and are
+ * stripped; a JSON array is passed through as-is.
+ */
+export function parseLaunchArgs(raw) {
+  const text = (raw ?? '').trim();
+  if (!text) return [];
+  if (text.startsWith('[')) return JSON.parse(text).map(String);
+  const args = [];
+  let cur = '';
+  let quote = null;
+  let has = false;
+  for (const ch of text) {
+    if (quote) {
+      if (ch === quote) quote = null;
+      else cur += ch;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      has = true;
+    } else if (/\s/.test(ch)) {
+      if (has || cur) args.push(cur);
+      cur = '';
+      has = false;
+    } else {
+      cur += ch;
+    }
+  }
+  if (has || cur) args.push(cur);
+  return args;
+}
+
+/**
+ * A LAN-bound box with an admin key shows a login view to any off-box
+ * browser. When HAL0_ADMIN_KEY is set, sign in with "remember me" so the
+ * session cookie carries across the per-shot remounts; the key never lands
+ * in a file or a pixel. Without the key the read-only view is used.
+ */
+async function loginIfAsked(page, route) {
+  const input = page.locator('[data-testid="login-key-input"]');
+  if (!(await input.isVisible().catch(() => false))) return;
+  const key = process.env.HAL0_ADMIN_KEY;
+  if (!key) {
+    await page.click('[data-testid="login-view-read-only"]');
+  } else {
+    await input.fill(key);
+    const remember = page.locator('[data-testid="login-remember"]');
+    if (await remember.isVisible().catch(() => false)) await remember.check().catch(() => {});
+    await page.click('[data-testid="login-submit"]');
+  }
+  await page.locator('[data-testid="login-view"]').waitFor({ state: 'detached', timeout: 15_000 });
+  // The SPA may have swallowed the hash while the gate was up; reassert it.
+  await page.goto(`/${route}`, { waitUntil: 'networkidle', timeout: 30_000 });
+}
+
+/**
+ * Union of the bounding boxes of `selectors` (first match each), grown by
+ * `pad` px and clamped to the viewport. Used for the detail shots that need
+ * two elements in frame (a slot card plus its open picker) or a little air
+ * around one element.
+ */
+async function areaOf(page, selectors, pad = 12) {
+  const vp = page.viewportSize();
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  for (const sel of selectors) {
+    const box = await page.locator(sel).first().boundingBox();
+    if (!box) throw new Error(`area: ${sel} has no box`);
+    x1 = Math.min(x1, box.x); y1 = Math.min(y1, box.y);
+    x2 = Math.max(x2, box.x + box.width); y2 = Math.max(y2, box.y + box.height);
+  }
+  x1 = Math.max(0, x1 - pad); y1 = Math.max(0, y1 - pad);
+  x2 = Math.min(vp.width, x2 + pad); y2 = Math.min(vp.height, y2 + pad);
+  return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
+}
+
+export const SHOTS = [
   // ── Overview ────────────────────────────────────────────────────────────
   {
     name: 'dashboard-overview',
     route: '#dashboard',
-    expect: '.rd-mem-card',
+    // A slot segment in the memory bar means the slots query has landed;
+    // before that the stat strip reads "—" and the slot list says loading.
+    expect: '.rd-mem-seg:not(.rd-mem-seg-system)',
+    after: 1500,
   },
   {
     name: 'unified-memory-hero',
     route: '#dashboard',
+    expect: '.rd-mem-seg:not(.rd-mem-seg-system)',
     clip: '.rd-mem-card',
   },
   {
@@ -88,6 +191,7 @@ const SHOTS = [
     // which is a worse image than the one already committed.
     name: 'requests-latency-widget',
     route: '#dashboard',
+    expect: '.rd-mem-seg:not(.rd-mem-seg-system)',
     clip: '.rd-card:has(.rd-card-title:text-is("Requests"))',
   },
 
@@ -131,7 +235,7 @@ const SHOTS = [
   {
     name: 'runner-images',
     route: '#slots/runner-images',
-    expect: '[data-testid="ri-defaults"]',
+    expect: '[data-testid="ri-family-strip"]',
   },
   {
     name: 'image-gen-comfyui',
@@ -139,15 +243,51 @@ const SHOTS = [
     expect: '[data-testid="comfy-engine-pill"]',
   },
 
+  {
+    name: 'slot-card',
+    route: '#slots',
+    act: scrollTo('[data-testid="infer-slot-agent"]', 'center'),
+    expect: '[data-testid="infer-slot-agent"]',
+    area: ['[data-testid="infer-slot-agent"]'],
+    pad: 16,
+  },
+  {
+    name: 'slot-profile-picker-open',
+    route: '#slots',
+    act: async (page) => {
+      await page.click('[data-testid="infer-profile-agent"]');
+      await page.waitForSelector('.rsel-listbox', { state: 'visible' });
+    },
+    expect: '.rsel-listbox',
+    area: ['[data-testid="infer-slot-agent"]', '.rsel-listbox'],
+    pad: 20,
+    viewport: { width: 1440, height: 1180 },
+  },
+  {
+    name: 'slot-model-picker-open',
+    route: '#slots',
+    act: async (page) => {
+      await page.click('[data-testid="infer-model-agent"]');
+      await page.waitForSelector('.rsel-listbox', { state: 'visible' });
+    },
+    expect: '.rsel-listbox',
+    area: ['[data-testid="infer-slot-agent"]', '.rsel-listbox'],
+    pad: 20,
+    viewport: { width: 1440, height: 1180 },
+    after: 1200, // opening the picker fires a feasibility request
+  },
+
   // ── Slot editor (drawer) ────────────────────────────────────────────────
   // The slot drawer is route-addressable: #slots/<name> opens it over the
   // slots view, which is also what clicking a slot row does.
+  // (`slot-detail` is dropped: the docs/blog/landing use `slot-drawer`.)
   {
-    // The slot editor. Filename kept as slot-detail because the docs already
-    // reference /screenshots/slot-detail.png.
-    name: 'slot-detail',
+    name: 'slot-drawer',
     route: '#slots/agent',
-    expect: '[data-testid="slot-model-swap"]',
+    act: scrollTo('[data-testid="slot-profile"]'),
+    expect: '[data-testid="slot-profile"]',
+    area: ['.drawer.open'],
+    pad: 0,
   },
 
   // ── Model editor (drawer) ───────────────────────────────────────────────
@@ -157,13 +297,32 @@ const SHOTS = [
     name: 'model-edit-drawer',
     route: '#slots',
     act: (page) => page.click('[data-testid="infer-model-edit-agent"]'),
-    expect: drawer,
+    expect: '[data-testid="model-facts"]',
+    area: ['.drawer.open'],
+    pad: 0,
+  },
+
+  // ── Profile editor (drawer) ─────────────────────────────────────────────
+  {
+    name: 'profile-edit-drawer',
+    route: '#models/profiles',
+    act: openProfileCopy,
+    expect: '[data-testid="pf-drawer-preview"]',
+    area: ['.pf-drawer'],
+    pad: 0,
+    viewport: { width: 1440, height: 1180 },
   },
   {
+    // MTP is a per-profile setting (ADR-0029), not a model one. FormRow
+    // renders `.pf-row`, so clip the row that wraps the MTP select.
     name: 'mtp-control',
-    route: '#slots',
-    act: (page) => page.click('[data-testid="infer-model-edit-agent"]'),
-    clip: '.drawer.open .form-row:has-text("MTP")',
+    route: '#models/profiles',
+    act: openProfileCopy,
+    expect: '[data-testid="pf-select-mtp"]',
+    // The tune rows of the profile drawer: context, thinking, vision, MTP.
+    area: ['.pf-row:has([data-testid="pf-input-ctx"])', '.pf-row:has([data-testid="pf-select-mtp"])'],
+    pad: 14,
+    viewport: { width: 1440, height: 1180 },
   },
 
   // ── Models ──────────────────────────────────────────────────────────────
@@ -178,6 +337,10 @@ const SHOTS = [
     expect: '[data-testid="pf-btn-new"]',
   },
   {
+    // The roster is the box's own benchmark history, so it names whatever
+    // private checkpoints the operator has run through it. Not publishable
+    // from a working box; the committed image stays until a clean sweep.
+    skip: true,
     name: 'benchmarks-roster',
     route: '#benchmarks',
     expect: '[data-testid="benchmarks-view"]',
@@ -258,6 +421,11 @@ const SHOTS = [
     expect: 'text=Version & privacy',
   },
   {
+    name: 'settings-security',
+    route: '#settings/security',
+    expect: '[data-testid="cmd-approvals"]',
+  },
+  {
     name: 'hardware-page',
     route: '#settings/hardware',
     expect: '[data-testid="hardware-page"]',
@@ -279,6 +447,20 @@ async function reachable(url) {
   }
 }
 
+/**
+ * Close any dismissable banner (update-available, first-run) before the
+ * shot: they are box state, not product surface, and a nightly "update now"
+ * strip across every page dates the image the day it is taken.
+ */
+async function dismissBanners(page) {
+  for (let i = 0; i < 4; i++) {
+    const btn = page.locator('.banner-dismiss').first();
+    if (!(await btn.isVisible().catch(() => false))) return;
+    await btn.click().catch(() => {});
+    await page.waitForTimeout(250);
+  }
+}
+
 async function capture(page, shot, suffix) {
   const file = `${shot.name}${suffix}.png`;
   const out = resolve(OUT_DIR, file);
@@ -286,8 +468,11 @@ async function capture(page, shot, suffix) {
   // about:blank first: hash-only navigation does not remount the SPA, so
   // without this a drawer opened by the previous shot bleeds into this one.
   await page.goto('about:blank');
+  await page.setViewportSize(shot.viewport ?? VIEWPORT);
   await page.goto(`/${shot.route}`, { waitUntil: 'networkidle', timeout: 30_000 });
+  await loginIfAsked(page, shot.route);
   await page.waitForTimeout(shot.settle ?? SETTLE_MS);
+  await dismissBanners(page);
 
   if (shot.act) await shot.act(page);
   if (shot.expect) {
@@ -295,8 +480,13 @@ async function capture(page, shot, suffix) {
   }
   await page.waitForTimeout(shot.after ?? 500); // let the transition finish
 
-  if (shot.clip) await page.locator(shot.clip).first().screenshot({ path: out });
-  else await page.screenshot({ path: out });
+  if (shot.area) {
+    await page.screenshot({ path: out, clip: await areaOf(page, shot.area, shot.pad), animations: 'disabled' });
+  } else if (shot.clip) {
+    await page.locator(shot.clip).first().screenshot({ path: out, animations: 'disabled' });
+  } else {
+    await page.screenshot({ path: out, animations: 'disabled' });
+  }
 
   console.log(`[capture] ${shot.route} → public/screenshots/${file}`);
 }
@@ -323,7 +513,7 @@ async function main() {
   }
 
   await mkdir(OUT_DIR, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: parseLaunchArgs(process.env.HAL0_CHROMIUM_ARGS) });
   const failures = [];
 
   for (const { factor, suffix } of SCALES) {
@@ -357,4 +547,6 @@ async function main() {
   console.log('[capture] done. Review the diff before committing.');
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

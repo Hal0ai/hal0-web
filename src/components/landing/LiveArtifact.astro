@@ -9,7 +9,7 @@
  * artifact and the operator UI feel like the same product.
  */
 const slots = [
-  { name: 'agent',   state: 'serving', model: 'Qwen3-30B-A3B-Instruct-2507-Q4_K_M', baseToks: 142, port: 8081 },
+  { name: 'agent',   state: 'serving', model: 'qwen3.8-27b-ud-q4-k-xl',            baseToks: 24,  port: 8081 },
   { name: 'embed',   state: 'serving', model: 'nomic-embed-text-v2-moe-Q4_K_M',     baseToks: 116, port: 8082 },
   { name: 'rerank',  state: 'ready',   model: 'bge-reranker-v2-m3-q4_k_m',          baseToks: 0,   port: 8086 },
   { name: 'stt',     state: 'idle',    model: 'whisper-v3:turbo (NPU)',             baseToks: 0,   port: 8083 },

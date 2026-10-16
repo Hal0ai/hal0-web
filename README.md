@@ -13,203 +13,131 @@
 
 ---
 
-Source for [hal0.dev](https://hal0.dev) — the marketing site + Starlight
-docs for the [hal0](https://github.com/Hal0ai/hal0) homelab AI inference
-platform.
+Source for [hal0.dev](https://hal0.dev), the marketing site for the
+[hal0](https://github.com/Hal0ai/hal0) homelab AI inference platform.
+Product documentation and the knowledge base live on
+[forum.hal0.dev](https://forum.hal0.dev); this repo links out to them.
 
-Built with **Astro 6 + Starlight 0.39 + Tailwind v4**, **Geist Variable**
+Built with **Astro 7 + Starlight 0.41 + Tailwind v4**, **Geist Variable**
 for body, **JetBrains Mono** for code/display, all fonts self-hosted.
 Deployed on Vercel at `hal0.dev`.
 
 Licensed **Apache-2.0** (matches the upstream hal0 product repo).
 
-## Where the docs live
+## Pages
 
-`src/content/docs/docs/**` is **generated** — mirrored from
-[`Hal0ai/hal0:docs/`](https://github.com/Hal0ai/hal0/tree/main/docs) by that repo's
-`mirror-docs` workflow on every merge to `main`. Do not edit those files here; edits
-will be overwritten by the next sync. Blog posts, marketing pages, and `alpha-docs/`
-are native to this repo.
+| Path                 | Source                                                                 |
+| -------------------- | ---------------------------------------------------------------------- |
+| `/`                  | `src/pages/index.astro` (landing page)                                 |
+| `/changelog`         | `src/pages/changelog.astro`, rendered from the synced product `CHANGELOG.md` |
+| `/benchmarks`        | `src/pages/benchmarks.astro`, model roster leaderboard                 |
+| `/profiles`          | `src/pages/profiles.astro`, community profile gallery                  |
+| `/profiles/submit`   | `src/pages/profiles/submit.astro`, in-browser validated submission     |
+| `/profiles/submitted`| `src/pages/profiles/submitted.astro`                                   |
+| `/contributing`      | `src/pages/contributing.astro`                                         |
+| `/blog`              | starlight-blog, posts under `src/content/docs/blog/`                   |
 
-## Layout
+`src/pages/api/auth/*` and `src/pages/api/forum/*` are the DiscourseConnect
+SSO and forum-notification endpoints. `workers/bench-api` is the separate
+benchmark API worker (its own README).
 
-```
-src/
-├── assets/wordmark.svg     ← header logo (JetBrains Mono "hal0")
-├── components/             ← shared marketing components
-│   ├── Wordmark.astro
-│   ├── StarlightSiteTitle.astro
-│   ├── CodeBlock.astro
-│   ├── HermesCard.astro
-│   ├── ModelRoster.astro
-│   ├── CTA.astro
-│   └── landing/            ← LiveArtifact.astro, LoadoutCard.astro
-├── content/docs/
-│   ├── docs/               ← Starlight docs (served at /docs/*, five sidebar groups)
-│   │   ├── getting-started/
-│   │   ├── concepts/       ← Strix Halo crown jewel page lives here
-│   │   ├── guides/
-│   │   ├── operate/
-│   │   └── reference/      ← reference/api/ nests as a collapsible subgroup
-│   └── blog/               ← starlight-blog posts (served at /blog/*)
-├── layouts/MarketingLayout.astro
-├── pages/
-│   ├── index.astro         ← landing page — hero + why + features + hardware +
-│   │                          roadmap + … as anchor sections on one page
-│   ├── changelog.astro
-│   ├── releases.astro
-│   └── contributing.astro
-└── styles/
-    ├── fonts.css           ← @fontsource self-hosted bundles
-    └── global.css          ← design tokens + Starlight overrides
-public/
-├── favicon.svg
-├── og-default.png          ← 1200×630 social card (sodium amber)
-└── robots.txt              ← allow-all + sitemap pointer
-NOTES.md                    ← design rationale (accent color, type stack)
-```
+Marketing pages render through `src/layouts/MarketingLayout.astro`.
 
-## URL structure
+## Redirects
 
-| Path                              | Owner          |
-| --------------------------------- | -------------- |
-| `/`                                | MarketingLayout — `src/pages/index.astro`. `/install`, `/hardware`, and `/roadmap` are anchor sections on this page, not standalone routes; `/roadmap` 302s here via `public/_redirects` for old links |
-| `/changelog`                      | MarketingLayout — `src/pages/changelog.astro`, rendered from the synced product-repo `CHANGELOG.md` |
-| `/releases`                       | MarketingLayout — `src/pages/releases.astro` |
-| `/contributing`                   | MarketingLayout — `src/pages/contributing.astro` |
-| `/docs/`                          | Starlight — redirects to `/docs/getting-started/` (the docs root has no index page) |
-| `/docs/getting-started/*`         | Starlight — "Start here" sidebar group |
-| `/docs/concepts/*`                | Starlight — "Concepts" sidebar group (incl. `/docs/concepts/strix-halo`) |
-| `/docs/guides/*`                  | Starlight — "Guides" sidebar group |
-| `/docs/operate/*`                 | Starlight — "Operate" sidebar group |
-| `/docs/reference/*`               | Starlight — "Reference" sidebar group |
-| `/blog/*`                         | starlight-blog — posts under `src/content/docs/blog/` |
+`astro.config.mjs` sends these to `forum.hal0.dev` (or elsewhere on-site):
 
-Marketing pages render through `MarketingLayout.astro`. Anything under
-`/docs/*` (including `/blog/*`) goes through Starlight's default sidebar + TOC chrome.
+- `/docs` and `/docs/<section>/<page>` to the forum Docs category, from
+  `src/data/docs-redirects.json`.
+- `/kb` and `/kb/<category>/<page>` to the forum knowledge base, from
+  `src/data/kb-redirects.json`.
+- `/first-run-guide` to the forum's Getting started category.
+- `/releases` to `/changelog`.
+
+`scripts/patch-vercel-docs-redirects.mjs` runs as `postbuild` and makes the
+forum redirects match with and without a trailing slash.
+
+## Data sync scripts
+
+Each runs as part of `prebuild` (and `npm run dev`) and falls back to a
+committed snapshot if the network fetch fails, so a build never breaks on an
+unreachable source.
+
+| Script                      | Writes                                              | Fallback                  |
+| --------------------------- | --------------------------------------------------- | ------------------------- |
+| `scripts/sync-changelog.mjs`| `src/data/changelog.md`, `src/data/release-tags.json` | committed copies          |
+| `scripts/sync-bench.mjs`    | `src/data/bench-snapshot.json` (bench API)          | committed snapshot        |
+| `scripts/sync-profiles.mjs` | `src/data/profiles.json` (`Hal0ai/hal0-profiles`)   | committed snapshot        |
+
+Run them individually with `npm run sync:changelog`, `sync:bench`,
+`sync:profiles`.
+
+## OG images
+
+`scripts/build-og.mjs` (satori + resvg, no browser) renders the 1200x630
+social cards into `public/og/` at `prebuild`. `npm run build:og` runs it alone.
+
+## Screenshots
+
+`public/screenshots/` is captured from a live hal0 dashboard with
+`npm run capture:screenshots`, which runs inside the Playwright container.
+The header comment of `scripts/capture-screenshots.mjs` has the usage and
+environment variables. `scripts/audit-screens.mjs` is a related audit helper.
 
 ## Design system
 
 See [`NOTES.md`](./NOTES.md) for the full rationale.
 
-- **Accent**: sodium amber `#FFB000` — hardware semantics, AA-contrast
-  against the `#0a0a0a` surface.
-- **Body**: Geist Variable (self-hosted via `@fontsource-variable/geist`).
-- **Mono / display**: JetBrains Mono with slashed-zero on (`font-feature-settings: 'zero' 1`).
-- **Tokens**: defined in `src/styles/global.css` as CSS custom properties,
-  bridged into Tailwind via `@theme` (`bg-hal0-bg`, `text-hal0-accent`, …).
-- **Dark-first**, with a light theme override for users who flip the
-  Starlight toggle.
+- **Accent**: sodium amber `#FFB000`.
+- **Body**: Geist Variable (`@fontsource-variable/geist`).
+- **Mono / display**: JetBrains Mono with slashed-zero on.
+- **Tokens**: CSS custom properties in `src/styles/`, bridged into Tailwind
+  via `@theme`.
+- **Dark-first**, with a light theme override.
 
 ## Commands
 
 ```sh
-npm install            # install deps
-npm run dev            # dev server at http://localhost:4321
-npm run astro check    # type check (must be 0 errors / 0 warnings)
-npm run build          # static site → ./dist/
-npm run preview        # serve ./dist/ for smoke-testing
+npm install              # install deps
+npm run dev              # sync scripts, then dev server at http://localhost:4321
+npm run build            # prebuild (sync + OG) then static/Vercel build -> ./dist and .vercel/output
+npm run preview          # serve the build for smoke-testing
+npm test                 # node:test suites in scripts/test/
+npx astro check          # type check (known errors in profiles.astro and workers/bench-api; add no new ones)
+```
+
+Several tests inspect built output (`dist/`) and skip with a hint if you
+have not run `npm run build` first.
+
+## Release manifest proxy (`releases.hal0.dev`)
+
+The hal0 self-updater fetches per-channel manifests from
+`https://releases.hal0.dev/{stable|preview|nightly}.json` (schema
+`hal0.releases.v1`; field reference in the product repo's release-manifest docs).
+
+`releases.hal0.dev` is a Cloudflare Pages host. Its middleware,
+`functions/_middleware.ts`, proxies each manifest live from the most recent
+GitHub Release on `Hal0ai/hal0` that carries an asset of that name, so a new
+tag appears there with no hal0-web deploy. Other paths on that host are
+rewritten to `/releases/*`. `public/releases/{stable,preview,nightly}.json` are
+placeholder backstops served if the GitHub API is unreachable; they are
+sentinel files, not real manifests. `scripts/test/releases-proxy.test.mjs`
+pins the channel list.
+
+```sh
+curl -s https://releases.hal0.dev/stable.json | jq .
 ```
 
 ## Deploy
 
-The marketing site + docs ship to **Vercel** on every push to `master`.
-Apex `hal0.dev` is wired through Vercel; previews come up on
+The site ships to **Vercel** on every push to `master`. Previews come up on
 `hal0-web-*.vercel.app`.
-
-```sh
-vercel --prod          # ad-hoc prod ship (CI handles the normal path)
-```
-
-## Release manifest hosting (`releases.hal0.dev`)
-
-The hal0 self-updater (`src/hal0/updater/updater.py`) fetches per-channel
-release manifests from:
-
-```
-https://releases.hal0.dev/{stable|nightly}.json
-```
-
-Schema: `hal0.releases.v1` — see
-[`hal0/docs/release-manifest.md`](https://github.com/hal0ai/hal0/blob/main/docs/release-manifest.md)
-for the full field reference. The schema's `cert_url` field is
-**required** — cosign 3.x keyless `verify-blob` needs `--certificate`,
-so the manifest carries the URL to the `.crt` artifact alongside
-`url` (tarball) and `sig_url` (signature).
-
-### How it works (as of v0.1.0-alpha.1, 2026-05-21)
-
-`releases.hal0.dev` is **fully operational** and serves the live
-manifest. The subdomain lives on a small Cloudflare Pages project
-whose middleware proxies the canonical asset off the latest GitHub
-Release on `hal0ai/hal0`:
-
-1. Tag `vX.Y.Z` on `hal0ai/hal0` triggers `.github/workflows/release.yml`.
-2. The workflow builds `hal0-X.Y.Z.tar.gz`, computes its sha256, signs
-   it with cosign keyless against the GH Actions OIDC identity, and
-   uploads tarball + `.sig` + `.crt` to the GH Release alongside the
-   generated `stable.json` (manifest schema `hal0.releases.v1`).
-3. The CF Pages middleware on `releases.hal0.dev` fetches
-   `stable.json` from the latest GH Release and serves it with a short
-   cache (~60s). A `v*` tag propagates end-to-end within about a
-   minute — **no hal0-web deploy required**.
-4. Updater clients verify the tarball with `cosign verify-blob
-   --certificate <cert_url> --signature <sig_url> …` against the
-   `signer_identity` regex in the manifest.
-
-Updater clients should point at `https://releases.hal0.dev/stable.json`
-(or `…/nightly.json`). The old GitHub-direct URL form is not used; the
-canonical asset name is `stable.json`, not `latest.json`.
-
-### Static fallback in this repo
-
-```
-public/releases/
-├── stable.json      ← static backstop (not the primary source)
-└── nightly.json     ← static backstop (not the primary source)
-```
-
-`public/` is copied verbatim into `dist/` by Astro, so the files also
-land at `https://hal0.dev/releases/{stable,nightly}.json`. They're
-kept as a backstop and as a schema example; the live manifest is
-whatever the CF Pages middleware on `releases.hal0.dev` returns.
-
-### Verify
-
-```sh
-curl -s https://releases.hal0.dev/stable.json | jq .
-curl -sI https://releases.hal0.dev/stable.json | grep -i cache-control
-```
-
-## Build state
-
-`npm run build` produces **54 static pages** (4 marketing + 40 docs +
-9 blog + the 404), a sitemap (`/sitemap-index.xml`), a pagefind search index for
-docs, `robots.txt`, and a default OG image. Lighthouse scores ≥95
-across performance / accessibility / best-practices / SEO on the five
-key pages (verified 2026-05).
-
-The harmless `Entry docs → 404 was not found.` log line is Starlight
-0.39 probing for a user-supplied custom 404 entry; the build succeeds
-and falls back to Starlight's built-in 404 page.
 
 ## Conventions
 
-- **Self-hosted fonts only.** No `fonts.googleapis.com` requests at
-  runtime — `@fontsource*` bundles the `.woff2` files into the build.
+- **Self-hosted fonts only.** No `fonts.googleapis.com` requests at runtime.
 - **No telemetry.** Astro telemetry is disabled at the project level.
-- **Semantic commits.** Match the existing history: `chore:`, `style:`,
-  `feat:`, `feat(ui):`, `docs:`.
-- **Do not touch `/home/halo/dev/hal0/`** — that's the upstream
-  product repo, read-only reference.
-
-## Cross-references
-
-- **Source of truth = the hal0 codebase** (`hal0` repo, `src/hal0`). Docs are
-  maintained against it directly; verify claims and numbers there, not from a
-  copy doc. (`CONTENT_BRIEF.md` was retired — it had drifted from the
-  product.) `src/content/docs/docs/**` mirrors one-way into `Hal0ai/hal0:docs/**`
-  on every `master` push via `.github/workflows/mirror-docs.yml` — edit docs
-  here, never in the product repo.
-- [NOTES.md](./NOTES.md) — design rationale (accent, type stack).
-- Upstream hal0 repo: `/home/halo/dev/hal0/` (do not edit).
+- **Conventional Commits** (`feat:`, `fix:`, `chore:`, `docs:`, ...).
+- **Source of truth is the hal0 product repo.** Verify product claims and
+  numbers there, not from copies. Keep the product checkout read-only from here.
+- Public copy stays version-neutral: no hard-coded release numbers.

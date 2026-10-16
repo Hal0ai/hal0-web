@@ -56,6 +56,10 @@ export default defineConfig({
 	// working.
 	redirects: {
 		'/releases': '/changelog',
+		// The first-run guide moved to the forum's Getting started category.
+		'/first-run-guide': 'https://forum.hal0.dev/c/docs/docs-getting-started/19',
+		// Old deep link; the section is now what's-new.
+		'/roadmap': '/#whats-new',
 		// The KB landing was folded into the /docs hub (its six category
 		// cards live there now), so /kb has no page of its own — but the
 		// ARTICLES under /kb/<category>/<page>/ are untouched and still
