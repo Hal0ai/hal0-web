@@ -133,6 +133,41 @@ curl -s https://releases.hal0.dev/stable.json | jq .
 The site ships to **Vercel** on every push to `master`. Previews come up on
 `hal0-web-*.vercel.app`.
 
+Response headers (security headers, `/install.sh` content type and cache
+TTL, long-lived caching for `/screenshots`, `/brand`, `/og`, `/agents`) live
+in `vercel.json`. `scripts/patch-vercel-headers.mjs` (postbuild) copies that
+block into `.vercel/output/config.json` as continue-routes so the headers
+apply regardless of how Vercel merges `vercel.json` with adapter output;
+`scripts/test/vercel-headers.test.mjs` pins it. `public/_headers` is the
+Cloudflare Pages equivalent and only applies to the `releases.hal0.dev`
+Pages host; Vercel ignores it.
+
+## Analytics
+
+Google Analytics 4 is wired through `src/components/Analytics.astro`, which
+`MarketingLayout.astro` and the Starlight `Head` override
+(`src/components/StarlightHead.astro`) both render, so every page on
+hal0.dev reports to the same property. It emits **nothing** unless the
+build sees `PUBLIC_GA_MEASUREMENT_ID` set to a GA4 ID (`G-XXXXXXXXXX`), so
+local builds and preview deploys stay tag-free.
+
+To turn it on:
+
+1. In GA4, create one property with one web data stream for `hal0.dev`.
+   Under *Admin › Data streams › Configure tag settings › Configure your
+   domains*, list both `hal0.dev` and `forum.hal0.dev` so a landing-page
+   visit that continues on the forum counts as one session.
+2. Vercel › Project › Settings › Environment Variables: add
+   `PUBLIC_GA_MEASUREMENT_ID` = the measurement ID, scoped to Production
+   only. Redeploy.
+3. Discourse admin › Settings on forum.hal0.dev, same measurement ID:
+   `ga universal tracking code` = `G-…`, `ga version` = `v4_gtag`,
+   `ga universal auto link domains` = `hal0.dev`.
+
+`src/lib/analytics.ts` holds the ID validation and the gtag bootstrap; the
+cross-domain linker there lists both hosts. `scripts/test/analytics.test.mjs`
+checks the tag is all-or-nothing across marketing and Starlight pages.
+
 ## Conventions
 
 - **Self-hosted fonts only.** No `fonts.googleapis.com` requests at runtime.

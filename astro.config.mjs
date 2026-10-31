@@ -234,16 +234,27 @@ export default defineConfig({
 				// Comp's 2-state ThemeToggle instead of the 3-state select —
 				// identical button to the marketing SiteHeader's.
 				ThemeSelect: './src/components/StarlightThemeSelect.astro',
+				// Default head + the shared GA4 tag (src/components/Analytics.astro)
+				// so /blog reports to the same property as the marketing pages.
+				Head: './src/components/StarlightHead.astro',
 			},
-			// Sensible OG / social defaults.
+			// Sensible OG / social defaults. The image URL must be ABSOLUTE:
+			// Facebook/LinkedIn/Slack/Discord card scrapers ignore a
+			// root-relative og:image, so blog posts shared anywhere rendered
+			// with no card until this was made absolute (MarketingLayout
+			// already resolves its own against `site`).
 			head: [
 				{
 					tag: 'meta',
-					attrs: { property: 'og:image', content: '/og-default.png' },
+					attrs: { property: 'og:image', content: 'https://hal0.dev/og-default.png' },
 				},
 				{
 					tag: 'meta',
 					attrs: { name: 'twitter:card', content: 'summary_large_image' },
+				},
+				{
+					tag: 'meta',
+					attrs: { name: 'twitter:image', content: 'https://hal0.dev/og-default.png' },
 				},
 				{
 					tag: 'meta',
@@ -264,7 +275,12 @@ export default defineConfig({
 				},
 			],
 		}),
-		sitemap(),
+		sitemap({
+			// Pages that are noindex (MarketingLayout's `noindex` prop) must not
+			// be advertised to crawlers either — a sitemap entry that resolves
+			// to a noindex page is flagged as a conflict in Search Console.
+			filter: (page) => !page.startsWith('https://hal0.dev/profiles/submitted'),
+		}),
 	],
 
 	// `output` stays the default ('static') — the site is still a fully

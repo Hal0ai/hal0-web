@@ -1,0 +1,27 @@
+---
+/**
+ * Google Analytics 4 tag. Rendered in <head> by MarketingLayout.astro and by
+ * the Starlight Head override (StarlightHead.astro) so every page on hal0.dev
+ * — marketing, blog, 404 — reports to the same property.
+ *
+ * Renders NOTHING unless PUBLIC_GA_MEASUREMENT_ID is set at build time to a
+ * valid G-XXXXXXXXXX value; see src/lib/analytics.ts for the rules and the
+ * cross-domain (forum.hal0.dev) linker setup.
+ *
+ * The loader is `async` so it never blocks parsing or first paint; the
+ * bootstrap is inline and tiny. Both are `is:inline` so Astro ships them
+ * verbatim instead of bundling.
+ */
+import { gtagInlineScript, gtagScriptSrc, resolveMeasurementId } from '../lib/analytics';
+
+const measurementId = resolveMeasurementId(import.meta.env.PUBLIC_GA_MEASUREMENT_ID);
+---
+
+{
+	measurementId && (
+		<>
+			<script is:inline async src={gtagScriptSrc(measurementId)} data-ga-measurement-id={measurementId} />
+			<script is:inline set:html={gtagInlineScript(measurementId)} />
+		</>
+	)
+}

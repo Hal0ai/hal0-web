@@ -14,11 +14,16 @@
  *                   only it has a full-bleed hero. Transparent navs
  *                   automatically promote to solid past the fold
  *                   (see the inline scroll watcher in <body>).
+ *   noindex?      – emit <meta name="robots" content="noindex"> for pages
+ *                   that must never rank (thank-you / confirmation pages).
+ *                   Such pages are also filtered out of the sitemap in
+ *                   astro.config.mjs; keep the two lists in step.
  */
 import '../styles/global.css';
 import SiteHeader from '../components/SiteHeader.astro';
 import SubNav from '../components/SubNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import Analytics from '../components/Analytics.astro';
 
 // Preload the two latin web fonts that drive above-the-fold rendering —
 // without these, the FOUT swap from system fallback → real font pushes
@@ -32,6 +37,7 @@ interface Props {
   description?: string;
   ogImage?: string;
   navTone?: 'transparent' | 'solid';
+  noindex?: boolean;
 }
 
 const {
@@ -39,6 +45,7 @@ const {
   description = 'Local AI for your home. Strix Halo native.',
   ogImage = '/og-default.png',
   navTone = 'solid',
+  noindex = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
@@ -79,6 +86,7 @@ const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString()
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/brand/logo-halo-dark-favico.png" />
     <link rel="mask-icon" href="/favicon.svg" color="#feaf00" />
@@ -100,6 +108,10 @@ const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString()
     <meta property="og:image:alt" content="hal0 — local AI inference for AMD Strix Halo" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={ogImageUrl} />
+
+    <!-- Google Analytics 4 — renders nothing unless PUBLIC_GA_MEASUREMENT_ID
+         is set at build time (src/lib/analytics.ts). -->
+    <Analytics />
   </head>
 
   <body class="site min-h-screen bg-hal0-bg text-hal0-fg antialiased">
