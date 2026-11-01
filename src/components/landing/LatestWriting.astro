@@ -49,7 +49,7 @@ function authorNames(authors: unknown): string[] {
     <div class="blogrow" data-count={posts.length}>
       {posts.map((post, i) => (
         i === 0 ? (
-          <a class="blead" href={`/${post.id}/`}>
+          <a class:list={['blead', 'card-hover']} href={`/${post.id}/`}>
             <span class="eyebrow">blog · {formatDate(post.data.date)}</span>
             <h3 class="blead-title">{post.data.title}</h3>
             {post.data.excerpt && <p class="site-body blead-body">{post.data.excerpt}</p>}
@@ -58,7 +58,7 @@ function authorNames(authors: unknown): string[] {
             )}
           </a>
         ) : (
-          <a class="bsmall" href={`/${post.id}/`}>
+          <a class:list={['bsmall', 'card-hover']} href={`/${post.id}/`}>
             <span class="eyebrow">blog · {formatDate(post.data.date)}</span>
             <h4 class="bsmall-title">{post.data.title}</h4>
           </a>
@@ -103,11 +103,6 @@ function authorNames(authors: unknown): string[] {
     background: var(--bg-1);
     text-decoration: none;
     color: inherit;
-    transition: border-color var(--dur-fast) var(--ease);
-  }
-  .blead:hover,
-  .bsmall:hover {
-    border-color: var(--line-strong);
   }
   .blead {
     padding: 20px;

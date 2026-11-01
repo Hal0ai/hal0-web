@@ -36,7 +36,7 @@ const featured = profilesSnapshot.profiles
     </div>
     <div class="cards3">
       {featured.map(({ record, bench }) => (
-        <a class="pmini" href={`/profiles?p=${record.profile.slug}`}>
+        <a class:list={['pmini', 'card-hover']} href={`/profiles?p=${record.profile.slug}`}>
           <div class="pmini-top">
             <span class="slug mono">{record.profile.slug}</span>
             <span class="chip amber">{record.profile.intent}</span>
@@ -105,10 +105,6 @@ const featured = profilesSnapshot.profiles
     gap: 10px;
     text-decoration: none;
     color: inherit;
-    transition: border-color var(--dur-fast) var(--ease);
-  }
-  .pmini:hover {
-    border-color: var(--line-strong);
   }
   .pmini-top {
     display: flex;

@@ -111,3 +111,79 @@ test('site.css .site alias block maps the new tokens', () => {
     assert.equal(decl(aliasBlock, name), squash(value), `${name} -> ${value}`);
   }
 });
+
+// ── B2: shared interactive-card recipe ────────────────────────────────
+
+const siteDataCss = await read('styles/site-data.css');
+
+// Landing components that own a card-like link surface. ForumTopics is
+// deliberately absent from CARD_COMPONENTS: its `.topic` rows live inside one
+// overflow-hidden list panel, where a lift + shadow would clip and misalign.
+const CARD_COMPONENTS = ['FeaturedProfiles', 'BenchHighlights', 'LatestWriting'];
+const LANDING_COMPONENTS = [...CARD_COMPONENTS, 'ForumTopics'];
+const landing = Object.fromEntries(
+  await Promise.all(
+    LANDING_COMPONENTS.map(async (name) => [name, await read(`components/landing/${name}.astro`)]),
+  ),
+);
+
+/** Body of the first `.card-hover { ... }` / `.card-hover:hover { ... }` rule. */
+function ruleBody(css, selector) {
+  const escaped = selector.replace(/[.:()]/g, '\\$&');
+  return css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+}
+
+test('site-data.css defines the .card-hover recipe', () => {
+  assert.ok(siteDataCss.includes('.card-hover'), '.card-hover present');
+  assert.ok(siteDataCss.includes('translateY(-1px)'), 'hover lifts by 1px');
+});
+
+test('.card-hover transitions border, transform and shadow at .15s', () => {
+  const base = squash(ruleBody(siteDataCss, '.card-hover'));
+  assert.match(
+    base,
+    /transition: border-color \.15s ease,transform \.15s ease,box-shadow \.15s ease;/,
+    'base rule carries the three-property transition',
+  );
+});
+
+test('.card-hover:hover uses line-strong, the 1px lift and --shadow-hover', () => {
+  const hover = squash(ruleBody(siteDataCss, '.card-hover:hover'));
+  assert.ok(hover.includes('border-color: var(--line-strong)'), 'border-color');
+  assert.ok(hover.includes('transform: translateY(-1px)'), 'transform');
+  assert.ok(hover.includes('box-shadow: var(--shadow-hover)'), 'box-shadow');
+});
+
+test('.card-hover removes the lift under prefers-reduced-motion', () => {
+  const reduced = siteDataCss.match(
+    /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.card-hover:hover\s*\{([^}]*)\}/,
+  );
+  assert.ok(reduced, 'reduced-motion block targets .card-hover:hover');
+  assert.ok(squash(reduced[1]).includes('transform: none'), 'transform: none');
+});
+
+for (const name of LANDING_COMPONENTS) {
+  test(`${name} has no translateY(-2px) and no literal #6fcf97`, () => {
+    assert.ok(!landing[name].includes('translateY(-2px)'), 'no 2px lift');
+    assert.ok(!landing[name].includes('#6fcf97'), 'no literal ok green; use var(--ok)');
+  });
+
+  test(`${name} amber chips do not fill with accent-glow`, () => {
+    assert.ok(!landing[name].includes('accent-glow'), 'accent-soft + accent-line only');
+  });
+}
+
+for (const name of CARD_COMPONENTS) {
+  test(`${name} cards opt into card-hover`, () => {
+    assert.match(landing[name], /class:list=\{\[[^\]]*'card-hover'/, "class:list includes 'card-hover'");
+  });
+
+  test(`${name} no longer keeps its own border-color hover rule`, () => {
+    // The shared recipe owns the hover border; a component-level
+    // `:hover { border-color: ... }` would fork it.
+    assert.ok(
+      !/:hover\s*\{[^}]*border-color/.test(landing[name]),
+      'no component-local :hover border-color',
+    );
+  });
+}
