@@ -302,17 +302,24 @@ export function plainText(html) {
 // listed keep their changelog order after these.
 const SECTION_ORDER = ['highlights', 'breaking', 'added', 'changed', 'removed', 'fixed', 'security'];
 
+// Sections an operator must read in full before upgrading: the maintainers'
+// own summary, what breaks, what to migrate, and security fixes. An excerpt
+// never cuts these; a truncated Breaking list is worse than a long page.
+const NEVER_CUT = new Set(['highlights', 'breaking', 'migrations', 'security']);
+
 /**
  * Bulleted sections of an entry, ready to render as a bounded excerpt.
- * Highlights are the maintainers' own summary and are never cut; every other
- * section keeps its first `max` bullets and reports how many it dropped, so
- * a release with a hundred fixes stays a few lines long and points at the
- * full notes. Sections with no bullets (prose, tables) are left out.
+ * Highlights, Breaking, Migrations and Security are never cut. Every other
+ * section (Added, Changed, Removed, Fixed and the rest) keeps its first `max`
+ * bullets and reports how many it dropped, so a release with a hundred fixes
+ * stays short and points at the full notes. Sections with no bullets (prose,
+ * tables) are left out, so a Highlights section that is only prose does not
+ * count as Highlights.
  * @param {ChangelogVersion} version
  * @param {{max?: number, skipHighlights?: boolean}} [opts]
  * @returns {{title: string, kind: ChangelogSection['kind'], items: string[], more: number}[]}
  */
-export function releaseSections(version, { max = 4, skipHighlights = false } = {}) {
+export function releaseSections(version, { max = 6, skipHighlights = false } = {}) {
   const rank = (title) => {
     const i = SECTION_ORDER.indexOf(title.trim().toLowerCase());
     return i === -1 ? SECTION_ORDER.length : i;
@@ -322,7 +329,7 @@ export function releaseSections(version, { max = 4, skipHighlights = false } = {
     .filter(({ s, all }) => all.length && !(skipHighlights && rank(s.title) === 0))
     .sort((a, b) => rank(a.s.title) - rank(b.s.title) || a.index - b.index)
     .map(({ s, all }) => {
-      const shown = rank(s.title) === 0 ? all : all.slice(0, max);
+      const shown = NEVER_CUT.has(s.title.trim().toLowerCase()) ? all : all.slice(0, max);
       return { title: s.title, kind: s.kind, items: shown, more: all.length - shown.length };
     });
 }

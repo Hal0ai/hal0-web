@@ -252,6 +252,8 @@ Intro paragraph.
 - add 4
 - add 5
 - add 6
+- add 7
+- add 8
 
 ### Audience
 
@@ -270,16 +272,60 @@ test('releaseSections orders Highlights, Breaking, then added/changed/removed/fi
   );
 });
 
-test('releaseSections caps non-Highlights sections and reports how many were cut', () => {
+test('releaseSections caps Added at six bullets and reports how many were cut', () => {
   const v = parseChangelog(SECTIONS_RAW).versions[0];
-  const byTitle = Object.fromEntries(releaseSections(v, { max: 4 }).map((s) => [s.title, s]));
+  const byTitle = Object.fromEntries(releaseSections(v).map((s) => [s.title, s]));
   assert.equal(byTitle.Highlights.items.length, 5, 'Highlights are never cut');
   assert.equal(byTitle.Highlights.more, 0);
-  assert.equal(byTitle.Added.items.length, 4);
+  assert.equal(byTitle.Added.items.length, 6);
   assert.equal(byTitle.Added.more, 2);
   assert.equal(byTitle.Fixed.items.length, 2);
   assert.equal(byTitle.Fixed.more, 0);
   assert.equal(byTitle.Breaking.kind, 'breaking');
+  assert.equal(releaseSections(v, { max: 3 }).find((s) => s.title === 'Added').items.length, 3, 'max still overrides the cap');
+});
+
+function longSections(titles, count) {
+  const body = titles
+    .map((t) => `### ${t}\n\n${Array.from({ length: count }, (_, i) => `- ${t.toLowerCase()} item ${i + 1}`).join('\n')}\n`)
+    .join('\n');
+  return parseChangelog(`# Changelog\n\n## [9.4.0] — 2026-11-01\n\n${body}`).versions[0];
+}
+
+test('Breaking, Migrations, Security and Highlights are never cut, even at ten bullets', () => {
+  const v = longSections(['Highlights', 'Breaking', 'Migrations', 'Security'], 10);
+  const sections = releaseSections(v);
+  assert.deepEqual(sections.map((s) => s.title), ['Highlights', 'Breaking', 'Security', 'Migrations']);
+  for (const s of sections) {
+    assert.equal(s.items.length, 10, `${s.title} keeps all ten bullets`);
+    assert.equal(s.more, 0, `${s.title} reports nothing cut`);
+  }
+});
+
+test('Added, Changed, Removed and Fixed are cut at six bullets', () => {
+  const v = longSections(['Added', 'Changed', 'Removed', 'Fixed'], 10);
+  for (const s of releaseSections(v)) {
+    assert.equal(s.items.length, 6, `${s.title} shows six`);
+    assert.equal(s.more, 4, `${s.title} reports four more`);
+  }
+});
+
+test('a Highlights section with no bullets is not a Highlights section', () => {
+  const raw = `# Changelog
+
+## [9.3.0] — 2026-11-01
+
+### Highlights
+
+Only prose here, no list.
+
+### Added
+
+- an add
+`;
+  const v = parseChangelog(raw).versions[0];
+  assert.ok(!releaseSections(v).some((s) => s.title === 'Highlights'));
+  assert.deepEqual(releaseHighlights(v), ['an add']);
 });
 
 test('releaseSections skips sections without list items and can skip Highlights', () => {
