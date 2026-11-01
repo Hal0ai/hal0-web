@@ -774,6 +774,8 @@ const faqPage = {
   /* 7. Console. A lone last shot takes the whole row: the dock is a wide strip. */
   .console-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
   .console-grid > :last-child:nth-child(3n + 1) { grid-column: 1 / -1; }
+  /* A strip-shaped shot (ConsoleShot's `natural`) always gets the whole row. */
+  .console-grid > .natural { grid-column: 1 / -1; }
 
   /* 8. Hardware */
   .tier-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
