@@ -1,0 +1,654 @@
+---
+/**
+ * SlotBoard: the hero's interactive demo, "swap the model, keep the name".
+ *
+ * Built on the dashboard's slot card (2px state stripe, sunken head and foot
+ * bars, metric row). The pickers on `agent` and `coder` work: choosing a model
+ * shows the warming state, then the previous state, while the client strip and
+ * the /v1/models readout stay exactly as they were. That is the product's
+ * promise, so nothing in this demo may imply more: a real swap unloads and
+ * reloads the slot, and clients get a 503 with Retry-After meanwhile.
+ *
+ * Data lives in src/data/slot-board.ts. No framework; the script is inline.
+ */
+import { BOARD_SLOTS, BOARD_CLIENTS, BOARD_MODEL_IDS } from '../../data/slot-board';
+
+const fits = (gb: number) => `fits · ~${Math.round(gb)} gb`;
+const footer = (slot: (typeof BOARD_SLOTS)[number]) => {
+  if (slot.models.length === 1) return slot.models[0].note;
+  return slot.state === 'serving' ? 'serving · 1 request in flight' : 'ready · warm, idle';
+};
+---
+
+<div class="board" role="group" aria-label="Slot board demo" data-slot-board>
+  <div class="board-h">
+    <span>host <b>halo</b></span>
+    <span class="sep">·</span>
+    <span>116 GB unified · iGPU + XDNA</span>
+    <span class="chip amber demo">interactive demo</span>
+  </div>
+
+  <div class="board-b">
+    {BOARD_SLOTS.map((slot) => (
+      <div
+        class:list={['scard', 'card-hover', slot.device, slot.state]}
+        data-slot={slot.name}
+        data-state={slot.state}
+      >
+        <div class="scard-h">
+          <span class:list={['sdot', slot.state]} data-dot></span>
+          <span class="snm">{slot.name}</span>
+          <span class="sport">:{slot.port}</span>
+        </div>
+
+        <div class="scard-b">
+          {slot.models.length > 1 ? (
+            <div class="picker">
+              <button type="button" class="rsel" aria-haspopup="listbox" aria-expanded="false" data-picker={slot.name}>
+                <span class="nm" data-model>{slot.models[0].name}</span>
+                <span class="chip ok" data-fit>{fits(slot.models[0].gb)}</span>
+                <span class="caret" aria-hidden="true">▾</span>
+              </button>
+              <ul class="listbox" role="listbox" aria-label={`Models for the ${slot.name} slot`} hidden data-list={slot.name}>
+                {slot.models.map((model, i) => (
+                  <li
+                    class="opt"
+                    role="option"
+                    tabindex="-1"
+                    aria-selected={i === 0 ? 'true' : 'false'}
+                    data-m={model.name}
+                    data-gb={model.gb}
+                    data-fit={fits(model.gb)}
+                  >
+                    <div class="opt-row">
+                      <span class="nm">{model.name}</span>
+                      <span class="chip ok">{fits(model.gb)}</span>
+                    </div>
+                    <div class="opt-desc">{model.gb} GB · {model.note}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div class="rsel static">
+              <span class="nm">{slot.models[0].name}</span>
+              <span class="chip ok">{fits(slot.models[0].gb)}</span>
+            </div>
+          )}
+
+          <div class="scard-row">
+            <span class="prov">
+              <span class="dchip"><span class="sw"></span>{slot.device}</span>
+              <span class="ppill">{slot.profile}</span>
+            </span>
+          </div>
+
+          <div class="scard-meta">
+            <div><div class="l">mem</div><div class="v" data-mem>{slot.models[0].gb} GB</div></div>
+            <div><div class="l">ctx</div><div class:list={['v', { muted: !slot.ctx }]}>{slot.ctx ?? '—'}</div></div>
+            <div><div class="l">state</div><div class="v" data-state-label>{slot.state}</div></div>
+          </div>
+        </div>
+
+        <div class="scard-foot"><span data-foot>{footer(slot)}</span></div>
+      </div>
+    ))}
+  </div>
+
+  <div class="board-clients">
+    <div class="clients-h">
+      <span>connected clients</span>
+      <span class="flash" data-flash>✓ no client reconfigured</span>
+    </div>
+    <div class="clients">
+      {BOARD_CLIENTS.map((client) => (
+        <div class="client">
+          <div class="nm"><span class="sdot ready"></span>{client.name}</div>
+          <div class="to">{client.target}</div>
+        </div>
+      ))}
+    </div>
+    <div class="models-out">
+      <span>GET /v1/models →</span>
+      {BOARD_MODEL_IDS.map((id) => <code>{id}</code>)}
+      <span class="swapnote" aria-live="polite" data-swapnote>pick a model above to swap it</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .board {
+    position: relative;
+    background: var(--hal0-bg-elevated);
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+  }
+  .board::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 85% 0%, var(--hal0-accent-glow), transparent 48%);
+    pointer-events: none;
+  }
+  .board-h {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hal0-border-soft);
+    border-radius: var(--hal0-rad-lg) var(--hal0-rad-lg) 0 0;
+    background: var(--hal0-bg);
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    color: var(--hal0-fg-dim);
+  }
+  .board-h b {
+    color: var(--hal0-fg);
+    font-weight: 500;
+  }
+  .board-h .sep {
+    color: var(--hal0-border-strong);
+  }
+  .board-h .demo {
+    margin-left: auto;
+  }
+  .board-b {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+  }
+
+  /* The dashboard's slot card. The stripe carries state; the swatch carries device. */
+  .scard {
+    --bk: var(--hal0-dev-vulkan);
+    --dev: var(--hal0-dev-vulkan);
+    position: relative;
+    min-width: 0;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+    background: var(--hal0-bg-elevated);
+    font-size: 12px;
+  }
+  .scard.rocm {
+    --dev: var(--hal0-dev-rocm);
+  }
+  .scard.warming {
+    --bk: var(--hal0-warn);
+  }
+  /* A lifted card is its own stacking context; keep its open list above the next card. */
+  .scard:hover,
+  .scard:focus-within {
+    z-index: 5;
+  }
+  .scard::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 2px;
+    background: var(--bk);
+    opacity: 0.85;
+    border-radius: var(--hal0-rad-lg) 0 0 var(--hal0-rad-lg);
+    transition: background var(--hal0-dur) var(--hal0-ease);
+  }
+  .scard:hover::before {
+    opacity: 1;
+    box-shadow: 0 0 12px var(--bk);
+  }
+  .scard-h {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--hal0-border-soft);
+    border-radius: var(--hal0-rad-lg) var(--hal0-rad-lg) 0 0;
+    background: var(--hal0-bg);
+  }
+  .snm {
+    font: 500 13px var(--hal0-font-mono);
+    color: var(--hal0-fg);
+  }
+  .sport {
+    margin-left: auto;
+    font: 11px var(--hal0-font-mono);
+    color: var(--hal0-fg-faint);
+  }
+  .scard-b {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 10px 12px;
+  }
+  .scard-foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 11px;
+    border-top: 1px solid var(--hal0-border-soft);
+    border-radius: 0 0 var(--hal0-rad-lg) var(--hal0-rad-lg);
+    background: var(--hal0-bg);
+    font: 11px var(--hal0-font-mono);
+    color: var(--hal0-fg-faint);
+  }
+
+  /* Status dots: dashboard semantics. */
+  .sdot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--hal0-fg-ghost);
+  }
+  .sdot.serving {
+    background: var(--hal0-ok);
+    box-shadow: 0 0 8px var(--hal0-ok-glow);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .sdot.ready {
+    background: var(--hal0-accent);
+  }
+  .sdot.warming {
+    background: var(--hal0-warn);
+    box-shadow: 0 0 8px var(--hal0-warn-glow);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .sdot.offline {
+    background: var(--hal0-fg-ghost);
+  }
+
+  /* Picker */
+  .picker {
+    position: relative;
+  }
+  .rsel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--hal0-border-strong);
+    border-radius: var(--hal0-rad-sm);
+    background: var(--hal0-bg-elevated);
+    font: 11.5px var(--hal0-font-mono);
+    color: var(--hal0-fg);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color var(--hal0-dur-fast) var(--hal0-ease),
+      box-shadow var(--hal0-dur-fast) var(--hal0-ease);
+  }
+  .rsel.static {
+    border-color: var(--hal0-border);
+    cursor: default;
+  }
+  button.rsel:hover {
+    border-color: var(--hal0-accent-line);
+  }
+  button.rsel[aria-expanded='true'],
+  button.rsel:focus-visible {
+    border-color: var(--hal0-accent-line);
+    box-shadow: 0 0 0 3px var(--hal0-accent-soft);
+    outline: none;
+  }
+  .nm {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .caret {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--hal0-fg-faint);
+    transition: transform var(--hal0-dur-fast) var(--hal0-ease);
+  }
+  .rsel[aria-expanded='true'] .caret {
+    transform: rotate(180deg);
+    color: var(--hal0-accent);
+  }
+  .listbox {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 30;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    background: var(--hal0-bg-2);
+    border: 1px solid var(--hal0-border-strong);
+    border-radius: var(--hal0-rad);
+    box-shadow: var(--hal0-shadow-menu);
+  }
+  .listbox[hidden] {
+    display: none;
+  }
+  .opt {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hal0-border-soft);
+    cursor: pointer;
+  }
+  .opt:last-child {
+    border-bottom: 0;
+  }
+  .opt:hover,
+  .opt:focus {
+    background: var(--hal0-bg-3);
+    outline: none;
+  }
+  .opt[aria-selected='true'] {
+    background: var(--hal0-accent-bg);
+  }
+  .opt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font: 12px var(--hal0-font-mono);
+    color: var(--hal0-fg);
+  }
+  .opt[aria-selected='true'] .opt-row {
+    color: var(--hal0-accent);
+  }
+  .opt-desc {
+    font: 10.5px var(--hal0-font-mono);
+    line-height: 1.35;
+    color: var(--hal0-fg-dim);
+    overflow-wrap: anywhere;
+  }
+
+  /* Device and profile */
+  .scard-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .prov {
+    display: inline-flex;
+    align-items: stretch;
+  }
+  .dchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 7px;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-xs) 0 0 var(--hal0-rad-xs);
+    background: var(--hal0-bg-elevated);
+    font: 10px var(--hal0-font-mono);
+    color: var(--hal0-fg-muted);
+  }
+  .sw {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--hal0-rad-xs);
+    background: var(--dev);
+  }
+  .ppill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border: 1px solid var(--hal0-border);
+    border-left: 0;
+    border-radius: 0 var(--hal0-rad-xs) var(--hal0-rad-xs) 0;
+    background: var(--hal0-bg-2);
+    font: 9.5px var(--hal0-font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
+  }
+
+  /* Metric row */
+  .scard-meta {
+    display: flex;
+    gap: 8px;
+    padding-top: 9px;
+    border-top: 1px solid var(--hal0-border-soft);
+  }
+  .scard-meta > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .l {
+    margin-bottom: 2px;
+    font: 9px var(--hal0-font-mono);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--hal0-fg-faint);
+  }
+  .v {
+    font: 13px var(--hal0-font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--hal0-fg);
+  }
+  .v.muted {
+    color: var(--hal0-fg-ghost);
+  }
+
+  /* Clients and readout */
+  .board-clients {
+    position: relative;
+    padding: 12px 16px;
+    border-top: 1px solid var(--hal0-border-soft);
+    border-radius: 0 0 var(--hal0-rad-lg) var(--hal0-rad-lg);
+    background: var(--hal0-bg);
+  }
+  .clients-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-family: var(--hal0-font-mono);
+    font-size: 10.5px;
+    letter-spacing: var(--hal0-ls-label);
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
+  }
+  .flash {
+    font-size: 11px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--hal0-ok);
+    opacity: 0;
+    transition: opacity var(--hal0-dur-slow) var(--hal0-ease);
+  }
+  .flash.show {
+    opacity: 1;
+  }
+  .clients {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .client {
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad);
+    background: var(--hal0-bg-elevated);
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+  }
+  .client .nm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: var(--hal0-fg);
+  }
+  .client .sdot {
+    width: 6px;
+    height: 6px;
+  }
+  .to {
+    margin-top: 3px;
+    font-size: 10px;
+    color: var(--hal0-accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .models-out {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    font-family: var(--hal0-font-mono);
+    font-size: 10.5px;
+    color: var(--hal0-fg-dim);
+  }
+  .models-out code {
+    padding: 1px 6px;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-xs);
+    background: var(--hal0-bg-2);
+    color: var(--hal0-fg-muted);
+  }
+  .swapnote.on {
+    color: var(--hal0-warn);
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    const board = document.querySelector('[data-slot-board]');
+    if (!board) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const flash = board.querySelector('[data-flash]');
+    const swapnote = board.querySelector('[data-swapnote]');
+    const buttonFor = (id) => board.querySelector(`[data-picker="${id}"]`);
+    const listFor = (id) => board.querySelector(`[data-list="${id}"]`);
+
+    let openId = null;
+    const close = (refocus) => {
+      if (!openId) return;
+      const button = buttonFor(openId);
+      button.setAttribute('aria-expanded', 'false');
+      listFor(openId).hidden = true;
+      openId = null;
+      if (refocus) button.focus();
+    };
+    const open = (id) => {
+      close(false);
+      const list = listFor(id);
+      list.hidden = false;
+      buttonFor(id).setAttribute('aria-expanded', 'true');
+      openId = id;
+      list.querySelector('[aria-selected="true"]').focus();
+    };
+
+    const setState = (card, state) => {
+      card.classList.remove('serving', 'ready', 'warming');
+      card.classList.add(state);
+      card.querySelector('[data-dot]').className = `sdot ${state}`;
+      card.querySelector('[data-state-label]').textContent = state;
+    };
+
+    const swapTimers = new Map();
+    let flashTimer;
+
+    const choose = (opt) => {
+      const list = opt.closest('[data-list]');
+      const id = list.dataset.list;
+      const unchanged = opt.getAttribute('aria-selected') === 'true';
+      close(true);
+      if (unchanged) return;
+
+      list.querySelectorAll('.opt').forEach((o) => {
+        o.setAttribute('aria-selected', o === opt ? 'true' : 'false');
+      });
+
+      const card = board.querySelector(`[data-slot="${id}"]`);
+      const button = buttonFor(id);
+      const { m: name, gb, fit } = opt.dataset;
+      const previous = card.dataset.state;
+      const foot = card.querySelector('[data-foot]');
+      const mem = card.querySelector('[data-mem]');
+
+      button.querySelector('[data-model]').textContent = name;
+      button.querySelector('[data-fit]').textContent = fit;
+      setState(card, 'warming');
+      foot.textContent = `warming · unloading, then loading ${gb} GB`;
+      mem.textContent = '—';
+      swapnote.textContent = 'swap in progress · clients get a 503 with Retry-After';
+      swapnote.classList.add('on');
+      flash.classList.remove('show');
+
+      clearTimeout(swapTimers.get(id));
+      swapTimers.set(id, setTimeout(() => {
+        swapTimers.delete(id);
+        setState(card, previous);
+        foot.textContent = `${previous} · ${name} · clients unchanged`;
+        mem.textContent = `${gb} GB`;
+        if (swapTimers.size > 0) return;
+
+        swapnote.textContent = 'same ids as before the swap';
+        swapnote.classList.remove('on');
+        flash.classList.add('show');
+        clearTimeout(flashTimer);
+        flashTimer = setTimeout(() => flash.classList.remove('show'), 3200);
+      }, reduced ? 50 : 1500));
+    };
+
+    board.addEventListener('click', (event) => {
+      const opt = event.target.closest('.opt');
+      if (opt) {
+        choose(opt);
+        return;
+      }
+      const button = event.target.closest('[data-picker]');
+      if (!button) return;
+      const id = button.dataset.picker;
+      if (openId === id) close(true);
+      else open(id);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.picker')) close(false);
+    });
+
+    board.addEventListener('keydown', (event) => {
+      if (!openId) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(true);
+        return;
+      }
+      if (event.key === 'Tab') {
+        close(false);
+        return;
+      }
+      const opts = [...listFor(openId).querySelectorAll('.opt')];
+      const at = opts.indexOf(document.activeElement);
+      const moves = {
+        ArrowDown: (at + 1) % opts.length,
+        ArrowUp: (at - 1 + opts.length) % opts.length,
+        Home: 0,
+        End: opts.length - 1,
+      };
+      if (event.key in moves) {
+        event.preventDefault();
+        opts[moves[event.key]].focus();
+      } else if ((event.key === 'Enter' || event.key === ' ') && at >= 0) {
+        event.preventDefault();
+        choose(opts[at]);
+      }
+    });
+  })();
+</script>
