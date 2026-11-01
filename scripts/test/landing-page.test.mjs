@@ -52,6 +52,7 @@ test('the swap script honours reduced motion and keeps the honest lines', async 
   assert.match(board, /✓ no client reconfigured/, 'flash line');
   assert.match(board, /503 with Retry-After/, 'names what clients get during the reload');
   assert.ok(!/Math\.random/.test(board), 'no invented live numbers');
+  assert.ok(!/\.className\s*=/.test(board), 'className would drop the scoped-style class');
 });
 
 test('BOARD_SLOTS carries the four slots with real picks', async () => {
@@ -212,7 +213,7 @@ test('ConsoleShot renders a TODO(shots) comment and only real 2x candidates', as
   assert.match(shot, /existsSync/, 'srcset checks the @2x file exists');
 });
 
-test('the ld+json FAQPage mirrors the visible questions', { ...skipUnbuilt, todo: built && 'wired in C3' }, () => {
+test('the ld+json FAQPage mirrors the visible questions', skipUnbuilt, () => {
   const scripts = [...html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/g)];
   assert.equal(scripts.length, 1, 'exactly one ld+json script');
   const graph = JSON.parse(scripts[0][1])['@graph'];
@@ -221,4 +222,151 @@ test('the ld+json FAQPage mirrors the visible questions', { ...skipUnbuilt, todo
   const summaries = [...html.matchAll(/<summary[^>]*>([^<]*)<\/summary>/g)].map((m) => m[1].trim());
   assert.deepEqual(pages[0].mainEntity.map((q) => q.name), summaries);
   assert.equal(summaries.length, 7);
+});
+
+// ── C3: the page ────────────────────────────────────────────────────────────
+
+const PAGE = 'src/pages/index.astro';
+const main = html.match(/<main[\s\S]*<\/main>/)?.[0] ?? '';
+
+function visibleWords(fragment) {
+  return fragment
+    // The picker lists start `hidden`; a reader does not see them until they open one.
+    .replace(/<ul[^>]*\shidden[^>]*>[\s\S]*?<\/ul>/g, ' ')
+    .replace(/<script[\s\S]*?<\/script>/g, ' ')
+    .replace(/<style[\s\S]*?<\/style>/g, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .split(/\s+/)
+    .filter((token) => /[\p{L}\p{N}]/u.test(token));
+}
+
+test('the page has one h1, the operator-chosen one', skipUnbuilt, () => {
+  const h1s = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/g)];
+  assert.equal(h1s.length, 1);
+  assert.equal(h1s[0][1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), 'Own Your Inference');
+});
+
+test('prose keeps its spaces around inline tags', skipUnbuilt, () => {
+  // Astro's HTML compression drops a line break between text and an inline tag.
+  assert.match(html, /each in a <strong[^>]*>named slot<\/strong>/);
+  assert.ok(!/[a-z]<strong/.test(main), 'no word runs straight into a <strong>');
+});
+
+test('title and description come from the SEO audit', skipUnbuilt, () => {
+  assert.ok(html.includes('<title>hal0: Self-Hosted Local AI Server for AMD Strix Halo</title>'));
+  assert.ok(
+    html.includes(
+      'content="Run LLMs, speech and images on your own hardware. Open-source, OpenAI-compatible local AI server for AMD Strix Halo (Ryzen AI Max+ 395) and Linux."',
+    ),
+  );
+});
+
+test('sections run in the spec order', skipUnbuilt, () => {
+  const order = ['idea', 'swap', 'privacy', 'wired', 'memory', 'console', 'hardware', 'compare', 'benchmarks', 'releases', 'faq', 'get'];
+  const at = order.map((id) => {
+    const i = html.search(new RegExp(`<section[^>]*\\sid="${id}"`));
+    assert.ok(i >= 0, `section #${id} is present`);
+    return i;
+  });
+  assert.deepEqual(at, [...at].sort((a, b) => a - b), 'section ids are in order');
+});
+
+test('the key headings are on the page', skipUnbuilt, () => {
+  for (const heading of [
+    'One giant model is the wrong shape for a home box.',
+    'Swap the model, keep the name.',
+    'Your prompts stay on your box.',
+    'One memory your agents share.',
+  ]) {
+    assert.ok(html.includes(heading), heading);
+  }
+});
+
+test('every screenshot exists on disk or carries its TODO comment', skipUnbuilt, async () => {
+  const referenced = new Set([...html.matchAll(/\/screenshots\/([\w-]+)(?:@2x)?\.png/g)].map((m) => m[1]));
+  assert.ok(referenced.size >= 9, 'the page references the console shots');
+  for (const name of referenced) {
+    assert.ok(await exists(`public/screenshots/${name}.png`), `${name}.png is on disk`);
+  }
+  for (const name of ['openwebui-picker', 'image-gen-models', 'dock-gpu', 'approvals-inbox', 'overview-now']) {
+    assert.ok(html.includes(`<!-- TODO(shots): ${name} -->`), `TODO comment for ${name}`);
+    assert.ok(!referenced.has(name), `${name} has no <img> yet`);
+  }
+});
+
+test('the page links /releases, not the old route', skipUnbuilt, () => {
+  assert.ok(!/href="\/changelog/.test(main), 'no /changelog link in the page body');
+  assert.match(main, /href="\/releases"/);
+});
+
+test('every internal href in the page body resolves', skipUnbuilt, async () => {
+  const config = await source('astro.config.mjs');
+  const paths = new Set(
+    [...main.matchAll(/href="(\/[^"#?]*)/g)].map((m) => m[1]).filter((p) => p !== '/'),
+  );
+  assert.ok(paths.size > 0);
+  for (const path of paths) {
+    const bare = path.replace(/\/$/, '');
+    const resolves =
+      (await exists(`dist/client${bare}/index.html`)) ||
+      (await exists(`dist/client${bare}`)) ||
+      config.includes(`'${bare}'`);
+    assert.ok(resolves, `${path} resolves`);
+  }
+});
+
+test('visible copy stays between 1600 and 2400 words', skipUnbuilt, () => {
+  const count = visibleWords(main).length;
+  assert.ok(count >= 1600 && count <= 2400, `visible word count is ${count}`);
+});
+
+test('no inline style forces a width wider than a phone', skipUnbuilt, () => {
+  for (const [, style] of html.matchAll(/\sstyle="([^"]*)"/g)) {
+    const m = style.match(/min-width:\s*(\d+)px/);
+    if (m) assert.ok(Number(m[1]) <= 360, `inline min-width ${m[1]}px`);
+  }
+});
+
+test('the structured data is complete and comes through the layout', skipUnbuilt, () => {
+  const scripts = [...html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/g)];
+  assert.equal(scripts.length, 1, 'exactly one ld+json script');
+  const graph = JSON.parse(scripts[0][1])['@graph'];
+  const app = graph.find((node) => node['@type'] === 'SoftwareApplication');
+  assert.ok(app, 'SoftwareApplication node');
+  assert.match(app.softwareVersion, /^\d+\.\d+\.\d+/, 'version from latestTagged');
+  assert.equal(app.softwareRequirements, 'Linux x86_64, Python 3.12+, systemd, podman');
+  assert.equal(app.releaseNotes, 'https://hal0.dev/releases/');
+  assert.equal(app.installUrl, 'https://hal0.dev/install.sh');
+  assert.deepEqual(app.publisher, { '@id': 'https://hal0.dev/#org' });
+  assert.ok(Array.isArray(app.featureList) && app.featureList.length > 0, 'featureList');
+  assert.match(app.image, /^https:\/\/hal0\.dev\/screenshots\/.+\.png$/);
+  assert.ok(Array.isArray(app.screenshot) && app.screenshot.length >= 9, 'screenshot list');
+  for (const url of app.screenshot) {
+    assert.match(url, /^https:\/\/hal0\.dev\/screenshots\/.+\.png$/);
+  }
+});
+
+test('the old sections are gone', async () => {
+  const page = await source(PAGE);
+  assert.ok(!page.includes('LiveArtifact'), 'no live artifact');
+  assert.ok(!/type="application\/ld\+json"/.test(page), 'the page renders no ld+json of its own');
+  for (const removed of ['const runners', 'const tiers', 'const features', 'const whatsNew', 'id="stack"', 'id="use-cases"', 'feat-grid', 'matrix-row']) {
+    assert.ok(!page.includes(removed), `${removed} is removed`);
+  }
+});
+
+test('copy no longer overclaims what Hermes does alone', async () => {
+  const card = await source('src/components/HermesCard.astro');
+  assert.ok(!card.includes('unattended for hours'), 'the unattended line is gone');
+  assert.ok(!card.includes('never relearns'), 'the "never relearns" line is gone');
+});
+
+test('page copy avoids the forbidden words and version numbers', async () => {
+  const page = copyOf(await source(PAGE));
+  for (const word of FORBIDDEN) {
+    assert.ok(!page.toLowerCase().includes(word), `index.astro contains "${word}"`);
+  }
+  assert.ok(!page.includes('—'), 'no em dash in page copy');
+  assert.ok(!/\b1\.\d+(\.\d+)?\b|\brc\b|\bGA\b|new in\b/.test(page), 'no hal0 version in page copy');
 });

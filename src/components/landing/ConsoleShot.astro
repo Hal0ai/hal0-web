@@ -26,8 +26,7 @@ const srcset = has2x ? `${src} 1x, /screenshots/${shot.file}@2x.png 2x` : undefi
   {shot.todo ? (
     <Fragment>
       <Fragment set:html={`<!-- TODO(shots): ${shot.file} -->`} />
-      <div class="placeholder" role="img" aria-label={shot.alt}>
-        <span>{shot.alt}</span>
+      <div class="placeholder" role="img" aria-label={shot.alt} style={`aspect-ratio: ${width} / ${height}`}>
         <span class="pending">screenshot pending</span>
       </div>
     </Fragment>
@@ -78,18 +77,15 @@ const srcset = has2x ? `${src} 1x, /screenshots/${shot.file}@2x.png 2x` : undefi
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
     padding: 16px;
-    font-family: var(--hal0-font-mono);
-    font-size: 12px;
     text-align: center;
-    color: var(--hal0-fg-dim);
   }
   .pending {
+    font-family: var(--hal0-font-mono);
     font-size: 10px;
     letter-spacing: var(--hal0-ls-label);
     text-transform: uppercase;
-    color: var(--hal0-fg-faint);
+    color: var(--hal0-fg-dim);
   }
   figcaption {
     padding: 10px 14px;

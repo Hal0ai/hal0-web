@@ -18,19 +18,19 @@ export const IDEA_COLUMNS: { key: string; title: string; body: string; examples:
   {
     key: 'slot = placement',
     title: 'A name, a device, a port',
-    body: 'A slot is one model running in its own container on a loopback port. It has a type (chat, embedding, rerank, speech, image), a device (ROCm, Vulkan, NPU, CPU), a priority, and a name your apps use. Custom slots are one command.',
+    body: 'One model in its own container on a loopback port, with a type (chat, embedding, rerank, speech, image), a device (ROCm, Vulkan, NPU, CPU), a priority and a name your apps use. Custom slots are one command.',
     examples: 'agent · coder · brain · embed · rerank · stt · tts · img · custom: research',
   },
   {
     key: 'profile = tune',
     title: 'The whole tune, reusable',
-    body: 'Context length, thinking, vision, speculation, runner and flags live in a named profile. Seed profiles ship for each workload; clone one, change it, point any slot at it. The slot drawer shows the resolved command with every flag labelled by owner.',
+    body: 'Context length, thinking, vision, speculation, runner and flags live in a named profile. Clone a seed, change it, point any slot at it. The slot drawer shows the resolved command with every flag labelled by owner.',
     examples: 'chat · agent · coding · embedding · brain · flm · comfyui',
   },
   {
     key: 'model = facts',
     title: 'The file and nothing else',
-    body: 'A model record holds what is true about the file: size, quantisation, context ceiling, what it can do. Pull from Hugging Face with a fit check, keep several quants, and let update checks tell you when the repo changed.',
+    body: 'What is true about the file: size, quantisation, context ceiling, what it can do. Pull from Hugging Face with a fit check, keep several quants, and let update checks tell you when the repo changed.',
     examples: 'GGUF · drafters for speculation · HF update checks',
   },
 ];
@@ -47,7 +47,7 @@ export const ROUTING_NOTE =
   'One API, one slot per medium. hal0 routes by endpoint and model name, and it never reads a prompt to choose a slot.';
 
 export const PARALLEL_NOTE =
-  'Every slot runs in parallel as far as the memory pool allows; hal0 checks fit before it loads and evicts by priority under pressure. Image generation borrows the GPU while it renders, so GPU chat slots pause until it hands the GPU back.';
+  'Slots run in parallel as far as the memory pool allows; hal0 checks fit before loading and evicts by priority under pressure. Image generation borrows the GPU while it renders, so GPU chat slots pause until it finishes.';
 
 export const CLIENT_DEFAULTS: { client: string; detail: string }[] = [
   {
@@ -99,38 +99,37 @@ export const PRIVACY_FACTS: { title: string; body: string }[] = [
 ];
 
 export const LAN_NOTE =
-  'The API and Open WebUI serve your network without a login by default, and there is no TLS. Keep the box on your LAN, or turn on key auth and put a reverse proxy in front before you share it.';
+  'The API and Open WebUI serve your network with no login and no TLS by default. Keep the box on your LAN, or turn on key auth and put a reverse proxy in front before you share it.';
 
 export const WIRED_TILES: { tag: string; title: string; body: string }[] = [
   {
     tag: 'chat',
     title: 'Open WebUI',
-    body: 'Installed and started on `:3001`, pointed at `/v1` so every chat slot is in its model picker. Voice in and out, document search on hal0 embeddings, and the image button through ComfyUI.',
+    body: 'Installed and started on `:3001`, with every chat slot in its model picker. Voice in and out, document search on hal0 embeddings, and an image button through ComfyUI.',
   },
   {
     tag: 'agent',
     title: 'Hermes',
-    body: 'A third-party agent, pinned to a reviewed release and installed by default. Defaults to the agent slot, sees every slot, and gets hal0\'s admin and memory tools. Risky tool calls wait for your approval.',
+    body: 'A third-party agent, pinned to a reviewed release and installed by default. Defaults to the agent slot and gets hal0\'s admin and memory tools. Risky tool calls wait for your approval.',
   },
   {
     tag: 'coding',
     title: 'pi',
-    body: 'A third-party terminal coding agent, one command to add. Points at the agent slot and carries the same admin and memory tools, so it can read the box and remember what it learned. Restart it to see new slots.',
+    body: 'A third-party terminal coding agent, one command to add. Points at the agent slot with the same admin and memory tools.',
   },
   {
     tag: 'images',
     title: 'ComfyUI',
-    body: 'Runs in the img slot. `POST /v1/images/generations` renders SDXL, SD 1.5 or Flux. The editor stays available on the LAN for the workflows the API does not cover.',
+    body: 'Runs in the img slot. `POST /v1/images/generations` renders SDXL, SD 1.5 or Flux. The editor stays on the LAN for workflows the API does not cover.',
   },
 ];
 
 export const WIRED_NOTE =
-  'Bring your own MCP client as well: `/mcp/admin` and `/mcp/memory` are plain Streamable HTTP endpoints. Claude Code, Codex and Cursor connect by pasting one line. Destructive admin calls wait in the approvals inbox until a person says yes.';
+  'Bring your own MCP client: `/mcp/admin` and `/mcp/memory` are plain Streamable HTTP. Claude Code, Codex and Cursor connect by pasting one line. Destructive admin calls wait until a person says yes.';
 
 export const MEMORY_POINTS: { term: string; text: string }[] = [
   { term: 'Directives', text: 'are standing instructions an agent sees every turn.' },
   { term: 'Mental models', text: 'are standing questions whose answers stay fresh as facts change.' },
-  { term: 'Recall', text: 'merges, ranks and fits the result to a token budget.' },
   {
     term: 'The bank workspace',
     text: 'shows every fact, a graph of how they connect, and lets you curate or delete with an audit row.',
@@ -143,7 +142,7 @@ export type ConsoleShot = {
   /** The first sentence renders as the bold label. */
   caption: string;
   todo?: true;
-  /** Pixel size of the 1x file, when it is not the usual 1440 by 900. */
+  /** Pixel size of the 1x file, or the frame a pending capture should hold, when not 1440 by 900. */
   size?: [number, number];
 };
 
@@ -159,11 +158,12 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     alt: 'Open WebUI model picker listing agent, coder and brain',
     caption: 'Open WebUI, same box. The picker shows slot names with the model behind each one.',
     todo: true,
+    size: [1440, 520],
   },
   {
     file: 'memory-bank',
     alt: 'hal0 memory bank workspace with a facts list and graph',
-    caption: 'Memory bank. Facts, tags, the graph, directives and mental models in one workspace.',
+    caption: 'Memory bank. Facts, the graph, directives and mental models in one workspace.',
   },
   {
     file: 'slots-inference',
@@ -173,13 +173,13 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
   {
     file: 'slot-drawer',
     alt: 'Slot drawer showing the resolved command',
-    caption: 'Slot drawer. The resolved command, every flag labelled base, model, profile or slot.',
+    caption: 'Slot drawer. The resolved command, every flag labelled by owner.',
     size: [560, 900],
   },
   {
     file: 'stacks-tab',
     alt: 'Stacks tab listing saved lineups',
-    caption: 'Stacks. Save a whole lineup, apply it with a plan that says what unloads, export it.',
+    caption: 'Stacks. Save a lineup, apply it with a plan that says what unloads.',
   },
   {
     file: 'image-gen-comfyui',
@@ -189,7 +189,7 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
   {
     file: 'image-gen-models',
     alt: 'Image model catalogue with a fit meter',
-    caption: 'Image models. A catalogue with a fit meter, so you see what fits before you install.',
+    caption: 'Image models. A fit meter shows what fits before you install.',
     todo: true,
   },
   {
@@ -216,14 +216,15 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
   {
     file: 'overview-now',
     alt: 'Overview page showing what each slot is serving',
-    caption: 'Overview (preview). What each slot is serving right now, on the nightly channel.',
+    caption: 'Overview (preview). What each slot is serving, on the nightly channel.',
     todo: true,
   },
   {
     file: 'dock-gpu',
     alt: 'The dock with its GPU tab open',
-    caption: 'Dock. The GPU\'s state and controls, slot and service health, downloads and a merged event feed.',
+    caption: 'Dock. GPU state, slot and service health, downloads and a merged event feed.',
     todo: true,
+    size: [1440, 200],
   },
 ];
 
@@ -354,12 +355,12 @@ export const COMPARE_ROWS: {
 ];
 
 export const COMPARE_NOTE =
-  'From each project\'s published documentation as of 2026-11-01. "None found" means we looked and did not find it, not that it cannot exist. Lemonade is also AMD-first; the difference is the slot and profile layer, not AMD support.';
+  'From each project\'s published documentation as of 2026-11-01. "None found" means we looked and did not find it. Lemonade is also AMD-first; the difference is the slot and profile layer.';
 
 export const FAQ: { q: string; a: string }[] = [
   {
     q: 'What is hal0?',
-    a: 'An open-source, self-hosted AI inference platform for Linux. It runs chat, embedding, rerank, speech and image models in named slots behind one OpenAI-compatible API, with a web console, a bundled chat UI and agents, MCP servers and a memory engine. Apache-2.0.',
+    a: 'An open-source, self-hosted AI inference platform for Linux. It runs chat, embedding, rerank, speech and image models in named slots behind one OpenAI-compatible API, with a web console, a chat UI, agents, MCP servers and a memory engine. Apache-2.0.',
   },
   {
     q: 'Do I need a Strix Halo machine?',
@@ -367,15 +368,15 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Is hal0 an Ollama alternative?',
-    a: 'Partly. Both serve local models over an OpenAI-style API. hal0 adds slots that clients address by name, reusable profiles, a console, a bundled chat UI, agents, MCP servers and memory. If you want one binary, or you run macOS or Windows, Ollama is the simpler choice.',
+    a: 'Partly. Both serve local models over an OpenAI-style API. hal0 adds slots that clients address by name, reusable profiles, a console, agents, MCP servers and memory. If you want one binary, or you run macOS or Windows, Ollama is the simpler choice.',
   },
   {
     q: 'Can I run several models at once?',
-    a: 'Yes. Each slot is its own container. How many stay resident depends on your memory pool; hal0 checks fit before loading and evicts by priority under pressure. Image generation borrows the GPU while it renders, so GPU chat slots pause until it finishes.',
+    a: 'Yes. Each slot is its own container, and how many stay resident depends on your memory pool. hal0 checks fit before loading and evicts by priority under pressure. Image generation borrows the GPU while it renders, pausing GPU chat slots.',
   },
   {
     q: 'Does my data leave the machine?',
-    a: 'Inference, chat history, uploaded documents and memory stay on the box unless you connect an upstream. hal0 has no telemetry and no account. It pulls models and runner images when you ask and checks for updates while the console is open.',
+    a: 'Inference, chat history, uploaded documents and memory stay on the box unless you connect an upstream. No telemetry, no account. hal0 pulls models and runner images when you ask and checks for updates while the console is open.',
   },
   {
     q: 'Is the API OpenAI-compatible?',

@@ -41,8 +41,6 @@ const featured = profilesSnapshot.profiles
             <span class="slug mono">{record.profile.slug}</span>
             <span class="chip amber">{record.profile.intent}</span>
           </div>
-          <p class="site-sm pmini-desc">{record.profile.summary}</p>
-          <div class="fl mono">{record.args.raw}</div>
           <div class="pmini-foot">
             <span class="mono pmini-dec">{bench.headline?.dec.toFixed(1)}<u>tok/s</u></span>
             {record.profile.first_party ? (
@@ -114,21 +112,6 @@ const featured = profilesSnapshot.profiles
   .slug {
     font-size: 13px;
     color: var(--fg);
-  }
-  .pmini-desc {
-    margin: 0;
-  }
-  .fl {
-    overflow-wrap: anywhere;
-    font-size: 10.5px;
-    color: var(--fg-4);
-    background: var(--bg-sunken);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 7px 9px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .pmini-foot {
     display: flex;

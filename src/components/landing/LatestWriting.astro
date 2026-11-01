@@ -52,7 +52,6 @@ function authorNames(authors: unknown): string[] {
           <a class:list={['blead', 'card-hover']} href={`/${post.id}/`}>
             <span class="eyebrow">blog · {formatDate(post.data.date)}</span>
             <h3 class="blead-title">{post.data.title}</h3>
-            {post.data.excerpt && <p class="site-body blead-body">{post.data.excerpt}</p>}
             {authorNames(post.data.authors)[0] && (
               <div class="blead-byline mono">{authorNames(post.data.authors)[0]}</div>
             )}
@@ -124,9 +123,6 @@ function authorNames(authors: unknown): string[] {
     color: var(--fg);
     font-weight: 500;
     letter-spacing: var(--ls-tight);
-  }
-  .blead-body {
-    font-size: 14px;
   }
   .blead-byline {
     margin-top: 14px;

@@ -59,9 +59,20 @@ function releaseHighlightsFallback(version: Entry, max = 3): string[] {
   return picked;
 }
 
+const EXCERPT_WORDS = 28;
+
+/** One line per bullet: a bold lead stays bold, the rest is cut to length. The full text is on /releases. */
+function excerpt(html: string): string {
+  const lead = html.match(/^<strong>([\s\S]*?)<\/strong>\s*/);
+  const plain = (s: string) => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const words = plain(lead ? html.slice(lead[0].length) : html).split(' ');
+  const text = words.length > EXCERPT_WORDS ? `${words.slice(0, EXCERPT_WORDS).join(' ')}…` : words.join(' ');
+  return lead ? `<strong>${lead[1]}</strong> ${text}` : text;
+}
+
 const { latestTagged } = parseChangelog(rawChangelog, { tags: releaseTags.tags });
 // The helper returns every Highlights bullet; the teaser shows three.
-const bullets = latestTagged ? releaseHighlightsFallback(latestTagged, 3).slice(0, 3) : [];
+const bullets = latestTagged ? releaseHighlightsFallback(latestTagged, 3).slice(0, 3).map(excerpt) : [];
 ---
 
 <div class="mini-head">

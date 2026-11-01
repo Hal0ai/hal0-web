@@ -554,9 +554,11 @@ const footer = (slot: (typeof BOARD_SLOTS)[number]) => {
     };
 
     const setState = (card, state) => {
-      card.classList.remove('serving', 'ready', 'warming');
-      card.classList.add(state);
-      card.querySelector('[data-dot]').className = `sdot ${state}`;
+      // classList, not className: Astro's scoped styles hang off a class on each element.
+      for (const el of [card, card.querySelector('[data-dot]')]) {
+        el.classList.remove('serving', 'ready', 'warming');
+        el.classList.add(state);
+      }
       card.querySelector('[data-state-label]').textContent = state;
     };
 

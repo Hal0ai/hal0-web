@@ -1,14 +1,19 @@
 ---
 /**
- * Landing page — / (hal0.dev).
+ * Landing page, / (hal0.dev), built around named slots.
  *
- * hal0 v2 design — sodium amber on graphite. Strix Halo first, the rest
- * of the matrix honest. Claims and numbers trace to the hal0 codebase
- * (src/hal0) — verify there, not from a copy doc. Copy is version-neutral:
- * the only version on the page is derived from the latest tagged release.
+ * Section copy lives in src/data/landing.ts and the board's state in
+ * src/data/slot-board.ts. Every claim follows section 4 of the redesign spec.
+ * Copy is version-neutral: the release version comes from the latest tagged
+ * entry in the synced changelog, and the benchmark note states the sweep's own
+ * date and version because those numbers are not current-release numbers.
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import SlotBoard from '../components/landing/SlotBoard.astro';
+import ConsoleShotFrame from '../components/landing/ConsoleShot.astro';
+import CompareTable from '../components/landing/CompareTable.astro';
+import Faq from '../components/landing/Faq.astro';
+import ReleaseTeaser from '../components/landing/ReleaseTeaser.astro';
 import HermesCard from '../components/HermesCard.astro';
 import ForumTopics from '../components/landing/ForumTopics.astro';
 import FeaturedProfiles from '../components/landing/FeaturedProfiles.astro';
@@ -16,218 +21,129 @@ import LatestWriting from '../components/landing/LatestWriting.astro';
 import BenchHighlights from '../components/landing/BenchHighlights.astro';
 import rawChangelog from '../data/changelog.md?raw';
 import releaseTags from '../data/release-tags.json';
+import { ROSTER_DATE } from '../data/model-roster';
+import { BOARD_SLOTS } from '../data/slot-board';
+import {
+  CLIENT_DEFAULTS,
+  CONSOLE_SHOTS,
+  ENDPOINT_MAP,
+  FAQ,
+  HARDWARE_TIERS,
+  IDEA_COLUMNS,
+  LAN_NOTE,
+  MEMORY_POINTS,
+  PARALLEL_NOTE,
+  PRIVACY_FACTS,
+  PRIVACY_LEDE,
+  ROUTING_NOTE,
+  SWAP_STEPS,
+  WIRED_NOTE,
+  WIRED_TILES,
+  codeSpans,
+} from '../data/landing';
 import { parseChangelog } from '../lib/changelog.js';
 import '../styles/site-data.css';
 
-const canonicalUrl = 'https://hal0.dev/';
-// Latest *tagged* stable from the synced changelog, so an untagged heading
-// never reads as shipped. Never hardcoded.
+const SITE = 'https://hal0.dev';
+const TITLE = 'hal0: Self-Hosted Local AI Server for AMD Strix Halo';
+const DESCRIPTION =
+  'Run LLMs, speech and images on your own hardware. Open-source, OpenAI-compatible local AI server for AMD Strix Halo (Ryzen AI Max+ 395) and Linux.';
+const INSTALL_COMMAND = 'curl -fsSL https://hal0.dev/install.sh | sudo bash';
+const DOCS_URL = 'https://forum.hal0.dev/t/hal0-documentation/19';
+const GITHUB_URL = 'https://github.com/hal0ai/hal0';
+
+// Latest *tagged* stable, so an untagged heading never reads as shipped.
 const version = parseChangelog(rawChangelog, { tags: releaseTags.tags }).latestTagged?.version ?? '';
 
-// Full copy feeds the structured-data schema (no length limit); a tight ~155-char
-// version is the page meta + OG description (search snippets cap ~160).
-const description =
-  'hal0 is an open-source homelab AI inference platform built for the AMD Ryzen AI Max+ 395 ("Strix Halo") with 128 GB of unified memory and an XDNA NPU, and it runs on other Linux boxes with a GPU, NPU or plain CPU. One OpenAI-compatible /v1/* API serves chat, embeddings, rerank, speech, transcription and images from pinned, hardware-gated runner images: the Standard runner (llama.cpp on ROCm or Vulkan), CPU, FastFlowLM on the NPU, Kokoro, Moonshine and ComfyUI. Every tune lives in a named profile you can fork, export and import. Open WebUI, ComfyUI, the Hermes agent and Hindsight memory come up wired to each other, with an MCP server and signed self-update. One command installs all of it.';
-const metaDescription =
-  'Open-source homelab AI for AMD Strix Halo: one OpenAI-compatible /v1/* API, pinned runner images, named profiles, Hermes agent, Hindsight memory, Open WebUI.';
+// The ticker agrees with the board below it. Ten is the product's seeded slot count.
+const slotsUp = `${BOARD_SLOTS.length} / 10`;
+const memoryUsed = BOARD_SLOTS.reduce((sum, slot) => sum + slot.models[0].gb, 0).toFixed(1);
 
-const softwareApplicationLd = {
-  '@context': 'https://schema.org',
+const shotByFile = (file: string) => {
+  const shot = CONSOLE_SHOTS.find((s) => s.file === file);
+  if (!shot) throw new Error(`no console shot named ${file}`);
+  return shot;
+};
+const swapShots = ['slot-model-picker-open', 'openwebui-picker'].map(shotByFile);
+const memoryShot = shotByFile('memory-bank');
+const heroShot = shotByFile('slots-inference');
+const offGrid = new Set([...swapShots, memoryShot, heroShot]);
+const gridShots = CONSOLE_SHOTS.filter((s) => !offGrid.has(s));
+
+const shotUrl = (file: string) => `${SITE}/screenshots/${file}.png`;
+
+const softwareApplication = {
   '@type': 'SoftwareApplication',
   name: 'hal0',
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Linux',
-  description,
-  url: canonicalUrl,
-  downloadUrl: 'https://hal0.dev/install.sh',
+  description: FAQ[0].a,
+  url: `${SITE}/`,
+  image: shotUrl(heroShot.file),
+  screenshot: CONSOLE_SHOTS.filter((s) => !s.todo).map((s) => shotUrl(s.file)),
+  featureList: [
+    'Named slots for chat, embeddings, rerank, speech and images',
+    'One OpenAI-compatible /v1 API, one slot per medium',
+    'Swap the model behind a slot without reconfiguring clients',
+    'Reusable inference profiles',
+    'Open WebUI, Hermes and ComfyUI configured on install',
+    'One Hindsight memory shared by your agents',
+    'MCP servers for admin and memory, with human approval for gated calls',
+    'Cosign-verified updates with one-flag rollback',
+  ],
+  softwareRequirements: 'Linux x86_64, Python 3.12+, systemd, podman',
+  releaseNotes: `${SITE}/releases/`,
+  installUrl: `${SITE}/install.sh`,
+  downloadUrl: `${SITE}/install.sh`,
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
   softwareVersion: version,
-  codeRepository: 'https://github.com/hal0ai/hal0',
-  keywords:
-    'Strix Halo, Ryzen AI Max+ 395, AMD XDNA NPU, 128 GB unified memory, homelab AI, self-hosted AI, OpenAI-compatible API, local LLM, Proxmox LXC, llama.cpp, runner images, Standard runner, ROCm, Vulkan, FastFlowLM, inference profiles, Open WebUI, ComfyUI, local image generation, Kokoro, Moonshine, Qwen3 TTS, Hermes agent, Hindsight memory, agent memory, MCP server, signed updates',
+  codeRepository: GITHUB_URL,
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: 'hal0ai', url: 'https://github.com/hal0ai' },
+  publisher: { '@id': `${SITE}/#org` },
 };
 
-const features = [
-  {
-    tag: 'agents',
-    title: 'An agent and an operator on board',
-    body: 'Hermes installs itself on first run, prewired to the local /v1 API, with your own model screening its risky shell commands. hal0-brain is a resident operator you ask about the box in plain language. Both run as contained units on the box.',
-  },
-  {
-    tag: 'profiles',
-    title: 'Model = facts, profile = tune, slot = placement',
-    body: 'A model records facts about its file. A profile holds every tune: flags, context, thinking, vision, MTP and the runtime. A slot holds placement. One model runs several ways through several profiles, and the launch command is shown layer by layer.',
-  },
-  {
-    tag: 'memory',
-    title: 'Memory that never leaves the box',
-    body: 'A local Hindsight engine bound to loopback holds it, embeddings included. A write lands or is refused up front with a reason, never dropped quietly, and you set the extraction limits in Settings. Destructive operations write an attributable audit row.',
-  },
-  {
-    tag: 'voice',
-    title: 'Speech in and out, device-keyed',
-    body: 'One stt slot and one tts slot, each resolving by device. Moonshine on the CPU or FastFlowLM on the XDNA NPU listens; Kokoro on the CPU or the optional Qwen3 TTS runner on the GPU speaks. Switch the engine, not the plumbing.',
-  },
-  {
-    tag: 'images',
-    title: 'Image generation on the same API',
-    body: 'POST /v1/images/generations runs SDXL, SD 1.5 or Flux through a ComfyUI engine. Generating flips the iGPU into exclusive image mode and back, so chat and images share one accelerator without fighting over it.',
-  },
-  {
-    tag: 'prewired',
-    title: 'Wired up before you log in',
-    body: 'One command brings up the API, a coherent set of slots, ComfyUI, the agent and Open WebUI on :3001. Open WebUI arrives wired for chat, voice, documents (RAG on hal0 embeddings) and images through ComfyUI.',
-  },
-];
-
-// Runner catalogue: titles and blurbs from src/hal0/runners/__init__.py,
-// pinned upstream builds from manifest.json `runners` (never image tags).
-const runners = [
-  { prov: 'Standard', ver: 'llama.cpp b11596', blurb: 'llama.cpp for AMD GPUs, on ROCm or Vulkan. The default on AMD; runs plain GGUF models.', hw: 'ROCm (default) · Vulkan', eps: '/v1/chat · /v1/embeddings · /v1/rerank' },
-  { prov: 'CPU', ver: 'llama.cpp b11596', blurb: 'llama.cpp on the processor, no GPU needed. A slow fallback for boxes without a supported GPU.', hw: 'CPU', eps: '/v1/chat · /v1/embeddings' },
-  { prov: 'NPU (FastFlowLM)', ver: 'FastFlowLM 0.9.44', blurb: 'Runs supported models on the AMD XDNA 2 NPU, leaving the GPU free.', hw: 'AMD XDNA NPU (opt-in)', eps: '/v1/chat · /v1/embeddings · /v1/audio/transcriptions' },
-  { prov: 'Kokoro speech', ver: 'pinned 0.4.9', blurb: 'Text-to-speech on the CPU. Works on any box, no GPU needed.', hw: 'CPU', eps: '/v1/audio/speech' },
-  { prov: 'Moonshine transcription', ver: 'pinned 20251121', blurb: 'Speech-to-text on the CPU. Works on any box, no GPU or NPU needed.', hw: 'CPU', eps: '/v1/audio/transcriptions' },
-  { prov: 'ComfyUI', ver: 'pinned 0.28.0', blurb: 'Image and video generation on the GPU (ROCm).', hw: 'ROCm', eps: '/v1/images/generations' },
-  { prov: 'Qwen3 TTS', ver: 'optional · pinned 0.1.1', blurb: 'Higher-quality multilingual text-to-speech on the GPU (ROCm). Opt-in; a large download (about 10 GB).', hw: 'ROCm', eps: '/v1/audio/speech' },
-  { prov: 'NVIDIA CUDA', ver: 'optional · llama.cpp b11580', blurb: 'llama.cpp for NVIDIA GPUs. Pick it on a box with an NVIDIA card.', hw: 'CUDA (experimental)', eps: '/v1/chat · /v1/embeddings' },
-];
-
-const tiers = [
-  {
-    cls: 'first-class',
-    tag: 'reference deployment',
-    name: 'Ryzen AI Max+ 395',
-    spec: '"Strix Halo" iGPU + XDNA NPU + 128 GB LPDDR5X-8000 unified memory',
-    stats: [
-      { v: '128', u: 'GB', l: 'unified · BIOS-tunable to ~96 GB GPU' },
-      { v: '96', u: 'K', l: 'default context, Qwen3.8 27B' },
-    ],
-    note: 'All published perf numbers come from this box. Q4 70B fits with room to spare; Q4 MoE 100B+ with a 17–22B active path becomes feasible.',
-  },
-  {
-    cls: 'first-class',
-    tag: 'first-class',
-    name: 'Ryzen AI Max 385 / 390',
-    spec: 'Strix Halo with 64 GB unified',
-    stats: [
-      { v: '64', u: 'GB', l: 'unified memory' },
-      { v: '~70', u: 'B', l: 'Q4 ceiling, shorter context' },
-    ],
-    note: 'Same install path. Every small + mid tier fits; 70B Q4 works with tighter context windows.',
-  },
-  {
-    cls: 'supported',
-    tag: 'experimental',
-    name: 'NVIDIA RTX 30 / 40 / 50',
-    spec: '10–32 GB dedicated VRAM · CUDA runner, optional tier',
-    stats: [
-      { v: '32', u: 'GB', l: 'RTX 5090 VRAM ceiling' },
-      { v: '~30', u: 'B', l: 'Q4 comfortable' },
-    ],
-    note: 'The CUDA runner is opt-in and used when the NVIDIA container toolkit is present. It is not in the release gate yet, so treat it as experimental. Same slot lifecycle, dedicated VRAM instead of UMA.',
-  },
-  {
-    cls: 'supported',
-    tag: 'supported',
-    name: 'AMD Radeon RX 7000',
-    spec: '16–24 GB discrete · Standard runner on ROCm or Vulkan',
-    stats: [
-      { v: '24', u: 'GB', l: '7900 XTX VRAM' },
-      { v: 'ROCm', u: '', l: '· Vulkan' },
-    ],
-    note: 'Discrete AMD path on the same Standard runner and hal0-slot@<name> lifecycle as Strix Halo, on either lane.',
-  },
-  {
-    cls: 'supported',
-    tag: 'fallback',
-    name: 'CPU-only x86_64',
-    spec: 'CPU runner · llama.cpp on the processor',
-    stats: [
-      { v: '0.5–4', u: 'B', l: 'practical model size' },
-      { v: '0', u: 'GPU', l: 'needed for Kokoro + Moonshine' },
-    ],
-    note: 'A real CPU-only llama.cpp runner ships, so a box with no supported GPU installs and serves. Fine for small models, speech and smoke tests, not the headline experience.',
-  },
-  {
-    cls: 'supported',
-    tag: 'supported',
-    name: 'Proxmox LXC',
-    spec: 'privileged Ubuntu LXC · iGPU + XDNA passthrough',
-    stats: [
-      { v: '1', u: 'script', l: 'quick-start builds the LXC' },
-      { v: 'segmented', u: '', l: 'host-pressure overlay' },
-    ],
-    note: 'The quick-start script builds a privileged LXC with GPU and NPU passthrough already wired. Add a read-only PVEAuditor token in Settings and the memory bar shows other tenants and ZFS ARC pressure.',
-  },
-];
-
-const compareCols = ['hal0', 'ollama', 'LM Studio', 'OpenAI cloud'];
-const compareRows = [
-  { lbl: 'OpenAI-compatible /v1/*', cells: ['chat · embed · rerank · STT · TTS · img', 'chat · embed', 'chat · embed', 'chat · embed · STT · TTS · img'] },
-  { lbl: 'Concurrent slots', cells: ['as memory fits', 'one at a time', 'one at a time', 'fully concurrent'] },
-  { lbl: 'Slot lifecycle state machine', cells: ['typed, atomic, SSE-streamed', 'no', 'no', '—'] },
-  { lbl: 'UMA-aware hardware probe', cells: ['Strix Halo · NPU · platform-aware', 'CPU / GPU only', 'CPU / GPU only', '—'] },
-  { lbl: 'XDNA NPU support', cells: ['first-class via FLM', 'no', 'no', '—'] },
-  { lbl: 'Tune portability', cells: ['named profiles you fork, export, import', 'per-model flags', 'GUI presets', 'n/a'] },
-  { lbl: 'Dispatcher with upstreams', cells: ['OpenRouter · Anthropic · OpenAI · custom', 'no', 'no', '—'] },
-  { lbl: 'Signed updates + component convergence', cells: ['signed, converges every component, one-flag rollback', 'no', 'auto-update', '—'] },
-  { lbl: 'Headless / Linux-first', cells: ['systemd-required, headless', 'cross-platform', 'GUI required', 'cloud'] },
-  { lbl: 'Your data, your hardware', cells: ['yes', 'yes', 'yes', 'no'] },
-  { lbl: 'Cost per million tokens', cells: ['$0 + electricity', '$0 + electricity', '$0 + electricity', '$0.50 – $60'] },
-];
-
-const whatsNew = [
-  { tag: 'runners', title: 'One name per runner', body: 'The AMD llama.cpp runner is now Standard, built from upstream llama.cpp for ROCm and Vulkan. One pin table drives every runner image, each tag is immutable and hardware-gated, and the catalogue syncs itself.' },
-  { tag: 'profiles', title: 'Tune once, run many ways', body: 'Context, thinking, vision, MTP, flags and runtime moved off the model and the slot onto the profile. Existing installs convert automatically, with a backup.' },
-  { tag: 'models', title: 'A bigger default model', body: 'A box with a 32 GB or larger memory pool now seeds Qwen3.8 27B with vision at 96K context. Smaller boxes keep Qwen3.5 9B or Qwen3 4B.' },
-  { tag: 'memory', title: 'Memory that lands or refuses', body: 'Writes that used to vanish on a slow box now land, or are refused up front with a reason. Extraction limits live under Settings ▸ Memory.' },
-  { tag: 'open webui', title: 'Open WebUI, fully wired', body: 'Document uploads go through RAG on hal0 embeddings and the image button generates through ComfyUI as soon as the matching slots are bound. It keeps working with auth on.' },
-  { tag: 'updates', title: 'Updates that finish the job', body: 'hal0 update converges Open WebUI, runner images, Hermes and Hindsight, restarts slots whose runner image changed, and rolls back with one flag.' },
-];
-
-const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${name}@2x.png 2x`;
-
+const faqPage = {
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+};
 ---
 
-<MarketingLayout
-  title="hal0 — Strix Halo native AI inference, image gen & agents for homelabs."
-  description={metaDescription}
->
-  <!-- HERO -->
-  <header class="hero">
+<MarketingLayout title={TITLE} description={DESCRIPTION} jsonLd={[softwareApplication, faqPage]}>
+  <!-- 1. HERO -->
+  <section class="hero">
     <div class="shell-wide hero-grid">
       <div class="hero-copy">
-        <div class="eyebrow">
+        <div class="hero-eyebrow">
           <span class="blip"></span> {version ? `latest stable ${version} · ` : ''}Apache-2.0
         </div>
-        <h1 class="h1 hero-h1">
+        <h1 class="hero-h1">
           <span class="h1-line">Own Your</span>
-          <span class="h1-line"><span class="accent">Inference</span></span>
+          <span class="h1-line accent">Inference</span>
         </h1>
         <p class="hero-tagline">All local. All yours.</p>
         <p class="lede">
-          Chat, speech, images, embeddings — every modality, served from one
-          OpenAI-compatible API on your <strong>Strix Halo</strong> box or any Linux machine.
+          hal0 runs several specialised models side by side on your own hardware, each in a <strong>named slot</strong>.
+          Your apps and agents talk to the slot, so you swap the model behind it from a dropdown and
+          nothing else changes.
         </p>
-
         <div class="cta-row">
-          <a href="https://forum.hal0.dev/t/hal0-documentation/19" class="btn">Read the docs →</a>
-          <a href="https://github.com/hal0ai/hal0" rel="noopener" class="btn ghost">★ Star on GitHub</a>
-          <span class="cta-meta">Apache-2.0 · Linux + systemd</span>
+          <a href={DOCS_URL} class="btn lg">Read the docs</a>
+          <a href={GITHUB_URL} rel="noopener" class="btn ghost lg">★ Star on GitHub</a>
+          <span class="cta-meta">Linux + systemd · one-line install</span>
         </div>
-
         <div class="ticker">
-          <span class="tk"><span class="dot"></span> hal0-api</span>
-          <span class="tk"><b>:8080</b> ready</span>
-          <span class="tk-sep">·</span>
-          <span class="tk">all slots <b>up</b></span>
-          <span class="tk-sep">·</span>
-          <span class="tk">GTT <b>9.2 / 96 GB</b></span>
-          <span class="tk-sep">·</span>
-          <span class="tk">probe <b>strix-halo</b></span>
+          <span><span class="mdot"></span> hal0-api <b>:8080</b> ready</span>
+          <span class="sep">·</span>
+          <span>slots <b>{slotsUp}</b> up</span>
+          <span class="sep">·</span>
+          <span>unified memory <b>{memoryUsed} / 116 GB</b></span>
+          <span class="sep">·</span>
+          <span>probe <b>strix-halo</b></span>
         </div>
       </div>
 
@@ -243,401 +159,284 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
         </div>
         <div class="install-body">
           <span class="prompt">$</span>
-          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | sudo bash</span>
-          <span class="caret"></span>
-          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | sudo bash">copy</button>
+          <span class="cmd">{INSTALL_COMMAND}</span>
+          <button type="button" class="btn ghost sm" data-copy={INSTALL_COMMAND}>copy</button>
         </div>
       </div>
     </div>
-  </header>
+  </section>
 
-  <!-- STACK -->
-  <section class="section section-tight" id="stack">
+  <!-- 2. THE IDEA -->
+  <section class="section rule" id="idea">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
-          <div class="sec-tag">/ runner images</div>
-          <h2 class="sec-title">Six default runners,<br />one <span class="accent">/v1/*</span> surface.</h2>
+          <div class="sec-tag">/ the idea</div>
+          <h2 class="sec-title">One giant model is the wrong shape for a home box.</h2>
         </div>
         <p class="sec-sub">
-          Chat, embeddings, rerank, speech both ways and image generation, each
-          served by a runner image on the accelerator that suits it, behind one
-          OpenAI-compatible API. Every tag is immutable and hardware-gated. Six
-          runners ship by default; Qwen3 TTS and CUDA are opt-in.
+          A 128 GB box has room for several specialists. hal0 gives each job its own slot with its
+          own model and tune, behind one OpenAI-compatible API. Clients name the slot; hal0 keeps
+          the model, the flags and the placement straight.
         </p>
       </div>
 
-      <div class="matrix">
-        <div class="matrix-row head">
-          <div>Runner</div>
-          <div>What it runs</div>
-          <div>Hardware</div>
-          <div>Endpoints</div>
-        </div>
-        {runners.map((r) => (
-          <div class="matrix-row">
-            <div class="prov">
-              <span class="prov-name">{r.prov}</span>
-              <span class="prov-ver">{r.ver}</span>
-            </div>
-            <div class="uses">{r.blurb}</div>
-            <div class="hw">{r.hw}</div>
-            <div class="ep">
-              {r.eps.split(' · ').map((e) => <span class="ep-chip">{e}</span>)}
-            </div>
+      <div class="idea-cols">
+        {IDEA_COLUMNS.map((col) => (
+          <div class="idea">
+            <div class="k">{col.key}</div>
+            <h3>{col.title}</h3>
+            <p>{col.body}</p>
+            <div class="ex">{col.examples}</div>
           </div>
         ))}
       </div>
-    </div>
-  </section>
 
-  <!-- WHAT'S IN THE BOX -->
-  <section class="section" id="what">
-    <div class="shell-wide">
-      <div class="sec-head">
-        <div>
-          <div class="sec-tag">/ what's in the box</div>
-          <h2 class="sec-title">More than models.<br />A whole <span class="accent">AI stack</span>.</h2>
-        </div>
-        <p class="sec-sub">
-          Agents, profiles, memory, voice and image generation ship in the box
-          and come up wired to each other. Not a model runner you then spend a
-          weekend assembling a platform around.
-        </p>
-      </div>
-
-      <div class="feat-grid">
-        {features.map((f) => (
-          <article class="feat-card">
-            <div class="feat-tag">{f.tag}</div>
-            <div class="feat-title">{f.title}</div>
-            <p class="feat-body">{f.body}</p>
-          </article>
+      <p class="routing-note">{ROUTING_NOTE}</p>
+      <div class="endpoint-map" role="group" aria-label="Which endpoint lands on which slot">
+        {ENDPOINT_MAP.map((ep) => (
+          <div class="ep">
+            <span class="path">{ep.path}</span>
+            <span class="slot"><span class="mdot"></span>{ep.slot}</span>
+          </div>
         ))}
       </div>
-
+      <p class="par-note">{PARALLEL_NOTE}</p>
     </div>
   </section>
 
-  <!-- USE CASES — outcome-led. Used to sit directly under the hero, where the
-       hero supplied its spacing and context; now that it follows the feature
-       grid it carries its own header and section rhythm. -->
-  <section class="section section-tight usecases" id="use-cases">
+  <!-- 3. SWAP -->
+  <section class="section" id="swap">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
-          <div class="sec-tag">/ what people run it for</div>
-          <h2 class="sec-title">One box,<br />three <span class="accent">day jobs</span>.</h2>
+          <div class="sec-tag">/ slots as models</div>
+          <h2 class="sec-title">Swap the model, keep the name.</h2>
         </div>
         <p class="sec-sub">
-          The same install serves all three at once — the slots share the
-          accelerator instead of taking turns with it.
+          Open WebUI, Hermes, pi and the memory engine are pointed at slot names, not model files.
+          When a better model lands, pick it from the slot's dropdown. The slot reloads and every
+          client keeps the config it already has.
         </p>
       </div>
-      <div class="uc-grid">
-      <article class="uc-card">
-        <div class="uc-eye">/ local coding stack</div>
-        <h3 class="uc-title">Point your editor at your own box</h3>
-        <p class="uc-body">
-          Aim any OpenAI-compatible client at <code class="mono accent-mono">:8080/v1</code> —
-          chat, completions, and a dedicated coder slot. Your code never leaves the LAN,
-          and there's no per-token bill.
-        </p>
-      </article>
-      <article class="uc-card">
-        <div class="uc-eye">/ private knowledge &amp; RAG</div>
-        <h3 class="uc-title">Retrieval grounded on your data</h3>
-        <p class="uc-body">
-          Embeddings, reranking, Open WebUI document uploads that go through RAG on
-          hal0 embeddings, and a bundled agent with memory and MCP tools. Retrieval
-          runs on your hardware, not someone else's server.
-        </p>
-      </article>
-      <article class="uc-card">
-        <div class="uc-eye">/ voice &amp; image lab</div>
-        <h3 class="uc-title">Speech and images, one control plane</h3>
-        <p class="uc-body">
-          Transcription, text-to-speech and local image generation behind the same API.
-          STT runs on the XDNA NPU or the CPU, TTS on the CPU or the GPU, and ComfyUI on
-          the iGPU, switched cleanly so they share the box.
-        </p>
-      </article>
+
+      <div class="swap-grid">
+        <div>
+          <ul class="defaults" aria-label="What each client points at">
+            {CLIENT_DEFAULTS.map((row) => (
+              <li>
+                <span class="c">{row.client}</span>
+                <span class="d" set:html={codeSpans(row.detail)} />
+              </li>
+            ))}
+          </ul>
+          <div class="how">
+            {SWAP_STEPS.map((step) => <div set:html={codeSpans(step)} />)}
+          </div>
+        </div>
+        <div class="shots-2">
+          {swapShots.map((shot) => <ConsoleShotFrame shot={shot} />)}
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Bench highlights — first-party roster sweep. ROSTER is a committed
-       snapshot, not a live fetch, so there is no unreachable case; only an
-       aging ROSTER_DATE, which the section surfaces itself. -->
-  <div class="shell-wide">
-    <BenchHighlights />
-  </div>
-
-  <!-- HARDWARE -->
-  <section class="section" id="hardware">
-    <div class="shell-wide">
-      <div class="sec-head">
-        <div>
-          <div class="sec-tag">/ hardware</div>
-          <h2 class="sec-title">Strix Halo native.<br />Not Strix-Halo-<span class="accent">only</span>.</h2>
-        </div>
-        <p class="sec-sub">
-          The probe is UMA-aware on Strix Halo and falls back to portable
-          parsers on every other host. The dashboard only labels memory
-          "unified" when it actually is. Linux + systemd is the only hard
-          requirement.
+  <!-- 4. PRIVACY -->
+  <section class="section rule" id="privacy">
+    <div class="shell-wide priv">
+      <div>
+        <div class="sec-tag">/ privacy</div>
+        <h2 class="sec-title priv-title">Your prompts stay on your box.</h2>
+        <p class="priv-lede">
+          {PRIVACY_LEDE.before}<em>{PRIVACY_LEDE.aside}</em>{PRIVACY_LEDE.after}
         </p>
       </div>
-
-      <div class="tiers">
-        {tiers.map((t) => (
-          <article class={`tier ${t.cls}`}>
-            <div class="tier-tag">{t.tag}</div>
-            <div class="tier-name">{t.name}</div>
-            <div class="tier-spec">{t.spec}</div>
-            <div class="tier-stats">
-              {t.stats.map((s) => (
-                <div class="tier-stat">
-                  <div class="v">{s.v}{s.u && <span class="u">{s.u}</span>}</div>
-                  <div class="l">{s.l}</div>
-                </div>
-              ))}
-            </div>
-            <div class="tier-note">{t.note}</div>
-          </article>
+      <div class="facts">
+        {PRIVACY_FACTS.map((fact) => (
+          <div class="fact">
+            <h3><span class="mdot"></span>{fact.title}</h3>
+            <p>{fact.body}</p>
+          </div>
         ))}
+        <div class="lan-note"><b>on your LAN</b> {LAN_NOTE}</div>
       </div>
     </div>
   </section>
 
-  <!-- COMPARE -->
-  <section class="section">
+  <!-- 5. WIRED -->
+  <section class="section" id="wired">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
-          <div class="sec-tag">/ vs. the alternatives</div>
-          <h2 class="sec-title">The <span class="accent">orchestration</span> layer<br />around your inference engine.</h2>
+          <div class="sec-tag">/ wired on first boot</div>
+          <h2 class="sec-title">The apps come configured.</h2>
         </div>
         <p class="sec-sub">
-          Slots survive <code class="mono accent-mono">hal0-api</code> restarts. Embeddings, rerank,
-          STT, TTS, and image gen all sit behind the same
-          <code class="mono accent-mono">/v1/*</code> surface. UMA-aware hardware probe and
-          slot-fit warnings are first-class, not a slash command in a chat window.
+          One install brings up the API, the slots, a chat UI, an agent, image generation and
+          memory, already pointed at each other. Add a slot and it appears in Open WebUI and Hermes
+          within seconds; pi sees it after a restart.
         </p>
       </div>
 
-      <div class="compare">
-        <div class="cmp-row head">
-          <div></div>
-          {compareCols.map((c, i) => (
-            <div class={i === 0 ? 'us' : ''}>{c}{i === 0 && ' (this)'}</div>
-          ))}
-        </div>
-        {compareRows.map((r) => (
-          <div class="cmp-row">
-            <div class="lbl">{r.lbl}</div>
-            {r.cells.map((c, j) => (
-              <div class={j === 0 ? 'us-cell' : ''}>{c}</div>
+      <div class="wired-grid">
+        <div>
+          <div class="tiles">
+            {WIRED_TILES.map((tile) => (
+              <div class="tile card-hover">
+                <div class="tag">{tile.tag}</div>
+                <h3>{tile.title}</h3>
+                <p set:html={codeSpans(tile.body)} />
+              </div>
             ))}
           </div>
-        ))}
+          <p class="wired-note" set:html={codeSpans(WIRED_NOTE)} />
+        </div>
+        <div class="hermes-card-wrap">
+          <HermesCard />
+        </div>
       </div>
-      <p class="cmp-note">
-        Competitor capabilities reflect each project's published docs as of October 2026
-        and move fast — treat this as a snapshot, not a live scorecard.
-      </p>
     </div>
   </section>
 
-  <!-- OPERATOR CONSOLE — real dashboard screenshots (1440×900 with @2x, dark, live hal0 instance) -->
-  <section class="section section-tight" id="console">
+  <!-- 6. MEMORY -->
+  <section class="section rule" id="memory">
+    <div class="shell-wide mem-grid">
+      <div>
+        <div class="sec-tag">/ memory</div>
+        <h2 class="sec-title">One memory your agents share.</h2>
+        <p class="sec-sub mem-sub">
+          A Hindsight engine runs on loopback with local embeddings. Hermes and pi are wired to it
+          automatically, with shared and private banks. Anything that speaks MCP can connect to it.
+        </p>
+        <ul class="mem-list">
+          {MEMORY_POINTS.map((point) => <li><b>{point.term}</b> {point.text}</li>)}
+        </ul>
+        <div class="cta-row mem-cta">
+          <a class="btn" href="https://forum.hal0.dev/t/agents-hal0-docs/23">Agents &amp; memory docs</a>
+        </div>
+      </div>
+      <ConsoleShotFrame shot={memoryShot} />
+    </div>
+  </section>
+
+  <!-- 7. CONSOLE -->
+  <section class="section" id="console">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
           <div class="sec-tag">/ the console</div>
-          <h2 class="sec-title">Slots, profiles and memory,<br /><span class="accent">one console</span>.</h2>
+          <h2 class="sec-title">Every slot, model and agent in one console.</h2>
         </div>
         <p class="sec-sub">
-          Slots, models, profiles, image generation, agent memory, an agent task
-          board, MCP and logs: every surface in one React operator console.
-          SSE-backed, dark by default. Real screenshots from a live hal0 instance.
+          Slots with their pickers and live metrics, a dock with the GPU's state and a merged event
+          feed, profiles, stacks, image generation, memory, MCP, logs and settings. Dark by default,
+          works on a phone.
         </p>
       </div>
 
-      <figure class="shot-hero">
-        <img
-          src="/screenshots/dashboard-overview.png"
-          srcset={shotSet('dashboard-overview')}
-          alt="hal0 dashboard overview with slots, throughput and live service health"
-          width="1440"
-          height="900"
-          loading="lazy"
-          decoding="async"
-        />
-      </figure>
-
-      <div class="shot-grid">
-        <figure class="shot">
-          <img src="/screenshots/slots-inference.png" srcset={shotSet('slots-inference')} alt="Slots view with a card per slot, each showing its model, profile and context" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Slots</strong>: each card carries a model picker, a profile picker and a context chip, so you see what runs where and swap it in place.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="/screenshots/profiles-tab.png" srcset={shotSet('profiles-tab')} alt="Profiles tab listing the seed templates with their context, thinking, vision, MTP, runner and flags" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Profiles</strong>: the whole tune (context, thinking, vision, MTP, flags, runtime) is a named object a slot picks. Seed templates ship with hal0; duplicate one to make it yours.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="/screenshots/memory-graph.png" srcset={shotSet('memory-graph')} alt="Agent memory rendered as a navigable semantic and temporal knowledge graph" width="1440" height="900" loading="lazy" decoding="async" />
-          <figcaption class="shot-cap"><strong>Graph memory</strong>: facts become a navigable semantic and temporal graph, shared or private per agent.</figcaption>
-        </figure>
+      <ConsoleShotFrame shot={heroShot} hero />
+      <div class="console-grid">
+        {gridShots.map((shot) => <ConsoleShotFrame shot={shot} />)}
       </div>
-
-      <p class="shot-note">
-        Plus the Hermes agent, the Operator Board kanban wired to it, the Runner
-        Images page and the Services page. See <a href="#whats-new">what's new</a>
-        for recent changes.
-      </p>
     </div>
   </section>
 
-  <!-- AGENTS, TOOLS + MEMORY — the bundled agent as the dashboard's collectible
-       foil card, then the three surfaces that make it more than a chatbot:
-       hal0-brain, the MCP servers, and memory. Every claim here is verified
-       against the product repo; see the card bodies for the honest limits. -->
-  <section class="section" id="agents">
-    <div class="shell-wide hermes-sec">
-      <div class="hermes-copy">
-        <div class="sec-tag">/ agents, tools + memory</div>
-        <h2 class="sec-title">Agents that<br /><span class="accent">live on the box</span>.</h2>
-        <p class="sec-sub">
-          Hermes installs and bootstraps itself on first run, confined by its own
-          systemd unit and prewired to the local <code class="mono accent-mono">/v1</code> API,
-          hal0's MCP servers and memory. Reach it from Telegram or Discord; it
-          chains tool calls unattended for hours and writes each run back to memory.
-        </p>
-        <ul class="hermes-points">
-          <li>Self-bootstraps: env probe → model wiring → MCP memory → persona.</li>
-          <li><code class="mono">hal0-agent@hermes.service</code>: NoNewPrivileges, ProtectSystem=strict, a pinned ReadWritePaths set, and the terminal off by default.</li>
-          <li>Smart command approvals: your local <code class="mono">hal0/agent</code> model pre-screens risky shell commands and falls back to asking you. Manual mode asks every time.</li>
-          <li>Gated MCP tools wait in an approval queue for a human.</li>
-        </ul>
-        <div class="hermes-cta">
-          <a href="https://forum.hal0.dev/t/agents-hal0-docs/23" class="btn">Agents &amp; memory →</a>
-          <span class="hermes-hint">hover to tilt · click to flip</span>
-        </div>
-      </div>
-      <div class="hermes-card-wrap">
-        <HermesCard />
-      </div>
-    </div>
-
-    <div class="shell-wide agent-tiles">
-      <article class="agent-tile">
-        <div class="at-tag">hal0-brain</div>
-        <h3 class="at-title">A resident operator, not a chatbot</h3>
-        <p class="at-body">
-          hal0's own small always-on model, wired to hal0's admin catalog and
-          reachable from the dashboard's Agent Chat or{' '}
-          <code class="mono">hal0 chat --brain</code> on a headless box. Ask it what's
-          loaded, what the box is doing, what's eating the memory pool. It ships
-          read-only: it reads and explains out of the box, and one config line
-          lets it act.
-        </p>
-        <div class="at-foot">its own small model · <strong>no</strong> dependency on Hermes</div>
-      </article>
-
-      <article class="agent-tile">
-        <div class="at-tag">mcp</div>
-        <h3 class="at-title">The platform is the tool catalog</h3>
-        <p class="at-body">
-          Two Streamable-HTTP servers mount onto the API,
-          <code class="mono">/mcp/admin</code> and <code class="mono">/mcp/memory</code>,
-          so any MCP client can drive the box: models, slots, profiles, stacks,
-          memory, bench, telemetry and the updater. A validator keeps the gating
-          tiers from overlapping, so the catalog cannot drift quietly.
-        </p>
-        <div class="at-foot">destructive calls wait in an <strong>approval queue</strong> for a human</div>
-      </article>
-
-      <article class="agent-tile">
-        <div class="at-tag">memory</div>
-        <h3 class="at-title">Recall that reaches no one</h3>
-        <p class="at-body">
-          Memory runs on a local Hindsight engine bound to loopback, local
-          embeddings included. Writes go to a shared namespace by
-          default or to an agent's private one; recall merges, ranks and fits the
-          result to a token budget.
-        </p>
-        <div class="at-foot"><strong>26</strong> memory tools · destructive ops write an attributable audit row</div>
-      </article>
-    </div>
-
-    <div class="shell-wide">
-      <p class="shot-note">
-        Key auth is optional and off by default, the trusted-LAN posture. Once you
-        set an admin key, off-box callers need it for admin routes. hal0 has no TLS
-        of its own: put your reverse proxy in front and allow its origin with{' '}
-        <code class="mono">hal0 network public-url set</code>. Updates are signed, the
-        agent runs in a contained unit, and destructive memory operations are audited.
-      </p>
-    </div>
-  </section>
-
-  <!-- WHAT'S NEW — recent product changes in brief. The empty #roadmap anchor
-       keeps old /#roadmap links (footer, README, _redirects history) landing here. -->
-  <div id="roadmap" aria-hidden="true"></div>
-  <section class="section section-tight" id="whats-new">
+  <!-- 8. HARDWARE -->
+  <section class="section rule" id="hardware">
     <div class="shell-wide">
       <div class="sec-head">
         <div>
-          <div class="sec-tag">/ what's new</div>
-          <h2 class="sec-title">What the latest<br />releases <span class="accent">changed</span>.</h2>
+          <div class="sec-tag">/ hardware</div>
+          <h2 class="sec-title">Strix Halo first. Linux everywhere.</h2>
         </div>
         <p class="sec-sub">
-          The short version. The changelog has every line, and the docs cover each
-          change in depth.
+          Built and benchmarked on the Ryzen AI Max+ 395 with its 128 GB unified pool, XDNA NPU and
+          RDNA 3.5 iGPU. The same install runs on other Linux boxes, with less headroom.
         </p>
       </div>
 
-      <div class="feat-grid">
-        {whatsNew.map((f) => (
-          <a class="feat-card feat-link" href="/releases">
-            <div class="feat-tag">{f.tag}</div>
-            <div class="feat-title">{f.title}</div>
-            <p class="feat-body">{f.body}</p>
-          </a>
+      <div class="tier-row">
+        {HARDWARE_TIERS.map((hw) => (
+          <div class:list={['tier', { ref: hw.reference }]}>
+            <div class="t">{hw.tier}</div>
+            <div class="n">{hw.name}</div>
+            <div class="s">{hw.note}</div>
+          </div>
         ))}
       </div>
-
-      <div class="cta-row">
-        <a href="/releases" class="btn">Full changelog →</a>
-        <a href="/blog/whats-new-since-1-0/" class="btn ghost">Read the write-up →</a>
-        <a href="https://forum.hal0.dev/t/hal0-documentation/19" class="btn ghost">Read the docs →</a>
-      </div>
+      <p class="hw-note">Linux x86_64 with systemd and podman. No macOS, no Windows, no Docker.</p>
     </div>
   </section>
 
-  <!-- COMMUNITY LAYER — forum, shared profiles and writing. Sits low on the
-       page: it is social proof for someone already sold, not the pitch. The
-       forum section is the one backed by a live fetch (fetchLatestTopics in
-       lib/forum.ts) and renders nothing at all — no skeleton, no error card —
-       when DISCOURSE_URL is unset or unreachable at build time; the page just
-       closes up around it. -->
+  <!-- 9. COMPARE -->
+  <section class="section" id="compare">
+    <div class="shell-wide">
+      <div class="sec-head">
+        <div>
+          <div class="sec-tag">/ alongside the alternatives</div>
+          <h2 class="sec-title">Where hal0 sits.</h2>
+        </div>
+        <p class="sec-sub">
+          hal0 is the orchestration around llama.cpp, FastFlowLM and ComfyUI, not a new engine, so
+          the table compares the layer above the engine. Several of these tools can be configured
+          otherwise; the cells describe their defaults.
+        </p>
+      </div>
+      <CompareTable />
+    </div>
+  </section>
+
+  <!-- 10 + 11. BENCHMARKS + RELEASES -->
+  <div class="two-up-wrap">
+    <div class="shell-wide two-up">
+      <section id="benchmarks">
+        <BenchHighlights />
+        <p class="bench-note">
+          Sweep from {ROSTER_DATE} on hal0 0.5 with the earlier runner. A new sweep on the Standard
+          runner is planned; this page will say when it lands.
+        </p>
+      </section>
+      <section id="releases" class="rel-col">
+        <!-- Old links to /#whats-new and /#roadmap land on the release that replaced them. -->
+        <span id="whats-new"></span>
+        <span id="roadmap"></span>
+        <ReleaseTeaser />
+      </section>
+    </div>
+  </div>
+
+  <!-- 12. FAQ -->
+  <section class="section" id="faq">
+    <div class="shell-wide">
+      <div class="sec-head">
+        <div>
+          <div class="sec-tag">/ questions</div>
+          <h2 class="sec-title">Straight answers.</h2>
+        </div>
+        <p class="sec-sub">The things people ask before they run the installer.</p>
+      </div>
+      <Faq />
+    </div>
+  </section>
+
+  <!-- 13. COMMUNITY: social proof for someone already sold, so it sits low. The
+       forum block renders nothing at all when its fetch fails at build time. -->
   <div class="shell-wide community">
     <ForumTopics />
     <FeaturedProfiles />
     <LatestWriting />
   </div>
 
-  <!-- CTA -->
-  <section class="cta-section">
-    <div class="shell-wide cta-inner">
-      <div class="sec-tag cta-tag">/ get hal0</div>
-      <h2 class="cta-h">Put the whole stack<br />on <span class="accent">your own box.</span></h2>
+  <!-- 14. GET HAL0 -->
+  <section class="cta" id="get">
+    <div class="shell-wide">
+      <div class="sec-tag">/ get hal0</div>
+      <h2>Put the whole stack<br />on <span class="accent">your own box.</span></h2>
       <p class="cta-sub">
-        One command on a fresh Linux box brings up the API, the slots, voice,
-        image gen, and the agent. Apache-2.0, signed releases, no telemetry.
+        One command on a fresh Linux box brings up the API, the slots, the chat UI, the agent, image
+        generation and memory.
       </p>
-      <div class="install cta-holding" id="install-cta">
+      <div class="install" id="install-cta">
         <div class="install-head">
           <div class="install-dots"><i></i><i></i><i></i></div>
           <div class="install-title">install.sh</div>
@@ -645,30 +444,25 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
         </div>
         <div class="install-body">
           <span class="prompt">$</span>
-          <span class="cmd">curl -fsSL https://hal0.dev/install.sh | sudo bash</span>
-          <span class="caret"></span>
-          <button class="copy-btn" data-copy="curl -fsSL https://hal0.dev/install.sh | sudo bash">copy</button>
+          <span class="cmd">{INSTALL_COMMAND}</span>
+          <button type="button" class="btn ghost sm" data-copy={INSTALL_COMMAND}>copy</button>
         </div>
       </div>
       <div class="cta-row cta-row-centered">
-        <a href="https://forum.hal0.dev/t/hal0-documentation/19" class="btn">Read the docs →</a>
-        <a href="https://github.com/hal0ai/hal0" rel="noopener" class="btn ghost">View on GitHub ↗</a>
+        <a href={DOCS_URL} class="btn lg">Read the docs</a>
+        <a href={GITHUB_URL} rel="noopener" class="btn ghost lg">View on GitHub ↗</a>
       </div>
-      <div class="cta-pills">
-        <span class="pill ok">Apache-2.0</span>
-        <span class="pill">Linux + systemd</span>
-        <span class="pill">no telemetry by default</span>
-        <span class="pill">signed releases</span>
+      <div class="cta-chips">
+        <span class="chip ok">Apache-2.0</span>
+        <span class="chip">Linux + systemd</span>
+        <span class="chip">no telemetry</span>
+        <span class="chip">signed releases</span>
       </div>
     </div>
   </section>
 
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(softwareApplicationLd)} />
-
-  <!-- Tab + copy-button interactivity. Tiny and inline; no client framework. -->
   <script is:inline>
     (() => {
-      // Copy buttons
       document.querySelectorAll('button[data-copy]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const cmd = btn.getAttribute('data-copy') || '';
@@ -678,966 +472,352 @@ const shotSet = (name: string) => `/screenshots/${name}.png 1x, /screenshots/${n
           setTimeout(() => { btn.textContent = original; }, 1400);
         });
       });
-
     })();
   </script>
 </MarketingLayout>
 
 <style is:global>
-  /* ============================================================
-   * hal0 v2 landing — design primitives that don't fit Tailwind
-   * cleanly (matrix tables, mem-bar, slot rows).
-   * Scoped to the landing
-   * via the section selectors.
-   * ============================================================ */
-
-  /* `.shell-wide` now lives in site.css as the shared site container —
-   * the landing page's 1600/32 frame became the house width for every
-   * surface (operator decision 2026-08-10), so defining it here as well
-   * would fork the one number the whole site keys off. */
-
-  /* Mono helper */
-  .mono {
-    font-family: var(--hal0-font-mono);
-    font-feature-settings: 'zero' 1, 'ss02' 1, 'calt' 0;
-    letter-spacing: -0.005em;
-  }
-  .accent-mono { color: var(--hal0-accent); }
+  /* Landing-only styles. Shared primitives (.btn, .chip, .card-hover) come from
+   * site-data.css, and components carry their own scoped styles. */
   .accent { color: var(--hal0-accent); }
 
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
+  /* A plain amber marker, for lists. Status dots live on the slot board. */
+  .mdot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     background: var(--hal0-accent);
-    color: #0a0a0a;
-    font-family: var(--hal0-font-mono);
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 4px;
-    border: 1px solid var(--hal0-accent);
-    cursor: pointer;
-    letter-spacing: -0.01em;
-    text-decoration: none;
   }
-  .btn:hover { filter: brightness(1.06); }
-  .btn.ghost {
-    background: transparent;
-    color: var(--hal0-fg);
-    border-color: var(--hal0-border);
-  }
-  .btn.ghost:hover { border-color: var(--hal0-fg-dim); }
 
-  /* HERO */
-  .hero {
-    padding: 80px 0 64px;
-    position: relative;
-    overflow: hidden;
-  }
-  .hero-grid {
+  .cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .cta-meta { margin-left: 6px; font-family: var(--hal0-font-mono); font-size: 11px; color: var(--hal0-fg-dim); }
+
+  /* Sections */
+  .section { padding-block: 96px; }
+  .section[id], .cta[id], .two-up section[id] { scroll-margin-top: 72px; }
+  .section.rule { border-top: 1px solid var(--hal0-border); }
+  .sec-head {
     display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
     gap: 64px;
-    align-items: start;
+    align-items: end;
+    margin-bottom: 48px;
   }
-  .eyebrow {
+  .sec-tag {
+    margin-bottom: 14px;
     font-family: var(--hal0-font-mono);
     font-size: 11px;
-    letter-spacing: 0.12em;
+    letter-spacing: var(--hal0-ls-label);
     text-transform: uppercase;
     color: var(--hal0-accent);
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 10px;
-    border: 1px solid color-mix(in srgb, var(--hal0-accent) 34%, transparent);
-    background: var(--hal0-accent-glow);
-    border-radius: 999px;
-    margin-bottom: 28px;
   }
-  .eyebrow .blip {
-    width: 5px;
-    height: 5px;
-    background: var(--hal0-accent);
-    border-radius: 50%;
-    animation: hal0-blip 1.6s ease-in-out infinite;
-  }
-  @keyframes hal0-blip { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
-
-  .h1 {
+  .sec-title {
+    margin: 0;
     font-family: var(--hal0-font-mono);
-    font-weight: 600;
-    font-size: clamp(44px, 6vw, 80px);
-    line-height: 0.95;
-    letter-spacing: -0.04em;
-    margin: 0 0 20px;
-    font-feature-settings: 'zero' 1;
+    font-size: clamp(28px, 3.2vw, 44px);
+    font-weight: 500;
+    line-height: 1.05;
+    letter-spacing: var(--hal0-ls-display);
+    text-wrap: balance;
   }
-
-  /* Hero headline: two fixed lines, sized off the column width so the
-   * longest line ("Inference", 9 mono glyphs) never wraps and fills
-   * most of the column beside the live artifact. */
-  .hero-copy { container-type: inline-size; }
-  .hero-h1 {
-    font-size: clamp(36px, 15cqi, 88px);
-    line-height: 1.02;
-    margin-bottom: 18px;
-  }
-  .h1-line { display: block; white-space: nowrap; }
-  .hero-tagline {
-    font-family: var(--hal0-font-mono);
-    font-size: clamp(13px, 1.15vw, 16px);
-    letter-spacing: 0.02em;
-    color: var(--hal0-accent);
-    margin: 0 0 20px;
-  }
-  .hero-copy .lede { max-width: 620px; margin-bottom: 26px; }
-
-  /* Featured installer: its own full-width row under the hero grid. */
-  .hero-install {
-    margin-top: 56px;
-    display: flex;
-    justify-content: center;
-  }
-  .install-hero {
-    width: 100%;
-    max-width: 920px;
-    margin-bottom: 0;
-    border-color: color-mix(in srgb, var(--hal0-accent) 38%, var(--hal0-border));
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--hal0-accent) 12%, transparent),
-      0 18px 60px -24px color-mix(in srgb, var(--hal0-accent) 45%, transparent);
-  }
-  .install-hero .install-head { padding: 10px 18px; font-size: 12px; }
-  .install-hero .install-body {
-    padding: 26px 24px 26px 30px;
-    font-size: clamp(15px, 1.6vw, 21px);
-    gap: 16px;
-  }
-  .install-hero .install-body .caret { height: 22px; width: 10px; }
-  .install-hero .copy-btn { font-size: 12px; padding: 7px 14px; }
-  @media (max-width: 640px) {
-    /* Wrap rather than ellipsize: a truncated one-liner can't be read back. */
-    .install-hero .install-body { padding: 18px 16px; font-size: 14px; align-items: flex-start; }
-    .install-hero .install-body .cmd { white-space: normal; overflow-wrap: anywhere; }
-    .install-hero .install-body .caret { display: none; }
-    .install-hero .install-meta { display: none; }
-  }
-
-  .lede {
-    font-size: 18px;
+  .sec-sub {
+    max-width: 560px;
+    margin: 0;
+    font-size: 16px;
     line-height: 1.55;
     color: var(--hal0-fg-muted);
-    max-width: 560px;
-    margin: 0 0 32px;
     text-wrap: pretty;
   }
-  .lede strong { color: var(--hal0-fg); font-weight: 500; }
+  .sec-sub code { font-size: 14px; color: var(--hal0-fg); }
 
-  /* Install code block */
+  /* Install box */
   .install {
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    margin-bottom: 24px;
     overflow: hidden;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+    background: var(--hal0-bg-elevated);
   }
   .install-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--hal0-border);
+    gap: 12px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--hal0-border-soft);
+    background: var(--hal0-bg);
     font-family: var(--hal0-font-mono);
     font-size: 11px;
     color: var(--hal0-fg-dim);
   }
   .install-dots { display: flex; gap: 6px; }
-  .install-dots i {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--hal0-border-strong);
-  }
+  .install-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--hal0-border-strong); }
   .install-title { flex: 1; text-align: center; }
-  .install-meta { opacity: 0.7; }
   .install-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 18px 18px 18px 22px;
     font-family: var(--hal0-font-mono);
     font-size: 15px;
     color: var(--hal0-fg);
-    display: flex;
+  }
+  .prompt { color: var(--hal0-accent); user-select: none; }
+  .cmd { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+
+  /* 1. Hero */
+  .hero { padding-block: 72px 56px; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+  }
+  .hero-eyebrow {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    position: relative;
-  }
-  .install-body .prompt { color: var(--hal0-accent); user-select: none; }
-  .install-body .cmd {
-    color: var(--hal0-fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1 1 auto;
-  }
-  .install-body .caret {
-    display: inline-block;
-    width: 8px;
-    height: 16px;
-    background: var(--hal0-accent);
-    vertical-align: middle;
-    animation: hal0-caret 1s steps(2) infinite;
-  }
-  @keyframes hal0-caret { 50% { opacity: 0; } }
-  .copy-btn {
-    margin-left: auto;
-    background: transparent;
-    border: 1px solid var(--hal0-border);
-    color: var(--hal0-fg-dim);
+    gap: 10px;
+    margin-bottom: 26px;
+    padding: 5px 10px;
+    border: 1px solid var(--hal0-accent-line);
+    border-radius: var(--hal0-rad-pill);
+    background: var(--hal0-accent-soft);
     font-family: var(--hal0-font-mono);
     font-size: 11px;
-    padding: 5px 9px;
-    border-radius: 4px;
-    cursor: pointer;
+    letter-spacing: var(--hal0-ls-label);
+    text-transform: uppercase;
+    color: var(--hal0-accent);
   }
-  .copy-btn:hover { color: var(--hal0-fg); border-color: var(--hal0-fg-dim); }
-
-  .cta-holding {
-    max-width: 640px;
-    margin: 0 auto 28px;
-    justify-content: center;
-    text-align: left;
-  }
-
-  .cta-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .cta-row-centered { justify-content: center; }
-  .cta-meta {
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-fg-dim);
-    margin-left: 8px;
-  }
-
-  /* Ticker */
-  .ticker {
-    margin-top: 22px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-fg-dim);
-    padding: 10px 0;
-    border-top: 1px solid var(--hal0-border);
-    flex-wrap: wrap;
-  }
-  .ticker .tk { display: flex; align-items: center; gap: 5px; }
-  .ticker .tk b { color: var(--hal0-fg); font-weight: 500; }
-  .ticker .dot {
-    width: 6px;
-    height: 6px;
+  .blip {
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: #6fcf97;
-    box-shadow: 0 0 8px #6fcf97;
-    display: inline-block;
-  }
-  .tk-sep { color: var(--hal0-border-strong); }
-
-  /* Live artifact (hero right column) */
-  .artifact {
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    overflow: hidden;
-    font-family: var(--hal0-font-mono);
-    position: relative;
-  }
-  .artifact::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at 80% 0%, var(--hal0-accent-glow), transparent 50%);
-    pointer-events: none;
-  }
-  .art-head {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--hal0-border);
-    font-size: 11px;
-    color: var(--hal0-fg-dim);
-    position: relative;
-    flex-wrap: wrap;
-  }
-  .art-tag { color: var(--hal0-fg-muted); }
-  .art-tag b { color: var(--hal0-fg); font-weight: 500; }
-  .art-sep { color: var(--hal0-border-strong); }
-  .art-pulse {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: #6fcf97;
-  }
-  .art-pulse .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #6fcf97;
-    display: inline-block;
-    box-shadow: 0 0 8px #6fcf97;
-  }
-
-  .slot-row {
-    display: grid;
-    grid-template-columns: 100px 1fr 88px 96px 70px;
-    gap: 16px;
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--hal0-border);
-    align-items: center;
-    font-size: 12px;
-  }
-  .slot-row:last-of-type { border-bottom: none; }
-  .slot-name {
-    color: var(--hal0-fg);
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-  }
-  .slot-name .ring { width: 7px; height: 7px; border-radius: 50%; }
-  .slot-name.ready .ring { background: #6fcf97; box-shadow: 0 0 6px #6fcf97; }
-  .slot-name.serving .ring {
     background: var(--hal0-accent);
-    box-shadow: 0 0 6px var(--hal0-accent);
-    animation: hal0-pulse 1.5s ease-in-out infinite;
+    animation: pulse 1.6s ease-in-out infinite;
   }
-  .slot-name.idle .ring { background: var(--hal0-fg-dim); }
-  @keyframes hal0-pulse { 50% { opacity: 0.4; } }
-
-  .slot-model {
-    color: var(--hal0-fg-muted);
-    font-size: 11px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .slot-state {
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--hal0-fg-muted);
-  }
-  .slot-state.serving { color: var(--hal0-accent); }
-  .slot-state.ready { color: #6fcf97; }
-  .slot-toks {
-    text-align: right;
-    color: var(--hal0-fg);
-    font-variant-numeric: tabular-nums;
-    font-size: 13px;
-  }
-  .slot-toks small { color: var(--hal0-fg-dim); font-size: 10px; }
-  .slot-spark {
-    display: flex;
-    align-items: flex-end;
-    gap: 1px;
-    height: 18px;
-    justify-content: flex-end;
-  }
-  .slot-spark span { width: 3px; background: var(--hal0-accent); opacity: 0.7; }
-
-  .art-foot {
-    padding: 14px 18px;
-    border-top: 1px solid var(--hal0-border);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 18px;
-    align-items: center;
-    font-size: 11px;
-    background: var(--hal0-bg);
-  }
-  .art-foot-mem { display: flex; flex-direction: column; gap: 6px; }
-  .mem-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 11px;
-    color: var(--hal0-fg-muted);
-  }
-  .mem-total b { color: var(--hal0-fg); font-weight: 500; }
-  .mem-cap { color: var(--hal0-fg-dim); }
-  .mem-bar {
-    position: relative;
-    height: 10px;
-    background: var(--hal0-border-strong);
-    border-radius: 2px;
-    overflow: hidden;
-    display: flex;
-  }
-  .mem-bar i { display: block; height: 100%; }
-  .mem-bar i.a { background: var(--hal0-accent); }
-  .mem-bar i.b { background: #6aa4ff; opacity: 0.6; }
-  .mem-bar i.c { background: #6fcf97; opacity: 0.5; }
-  .mem-bar i.d { background: var(--hal0-fg-dim); opacity: 0.4; }
-  .mem-legend {
-    display: flex;
-    gap: 14px;
-    color: var(--hal0-fg-dim);
-    font-size: 11px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-top: 8px;
-  }
-  .mem-legend .sw {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 1px;
-    margin-right: 6px;
-    vertical-align: -1px;
-  }
-  .mem-legend .sw.a { background: var(--hal0-accent); }
-  .mem-legend .sw.b { background: #6aa4ff; opacity: 0.6; }
-  .mem-legend .sw.c { background: #6fcf97; opacity: 0.5; }
-  .mem-legend .sw.d { background: var(--hal0-fg-dim); opacity: 0.4; }
-
-  .disp-lbl { font-size: 11px; color: var(--hal0-fg-dim); margin-bottom: 4px; }
-  .disp-val {
+  /* Two fixed lines, sized off the column so "Inference" never wraps. */
+  .hero-copy { container-type: inline-size; }
+  .hero-h1 {
+    margin: 0 0 16px;
     font-family: var(--hal0-font-mono);
-    font-size: 24px;
-    color: var(--hal0-fg);
-    letter-spacing: -0.02em;
-  }
-  .disp-unit { color: var(--hal0-accent); font-size: 13px; }
-
-  /* Sections */
-  .section { padding: 96px 0; }
-  .section-tight { padding-top: 64px; padding-bottom: 96px; }
-  /* The community sections (forum/profiles/blog) only pad their tops;
-   * close the block with the same bottom rhythm as .section so the last
-   * one doesn't butt into the CTA. */
-  .community { padding-bottom: 96px; }
-  .sec-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-    gap: 64px;
-    margin-bottom: 48px;
-    align-items: end;
-  }
-  .sec-tag {
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--hal0-accent);
-    margin-bottom: 14px;
-  }
-  .sec-title {
-    font-family: var(--hal0-font-mono);
-    font-weight: 500;
-    font-size: clamp(30px, 3.2vw, 44px);
-    letter-spacing: -0.03em;
-    margin: 0;
-    line-height: 1.05;
-  }
-  .sec-sub {
-    color: var(--hal0-fg-muted);
-    font-size: 16px;
-    line-height: 1.55;
-    max-width: 540px;
-    text-wrap: pretty;
-  }
-
-  /* What's in the box — 6-card grid */
-  .feat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-  .feat-card {
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    padding: 24px;
-  }
-  .feat-tag {
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-accent);
-    margin-bottom: 14px;
-    letter-spacing: 0.04em;
-  }
-  .feat-title {
-    font-family: var(--hal0-font-mono);
-    font-size: 17px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    margin-bottom: 10px;
-    color: var(--hal0-fg);
-  }
-  .feat-body {
-    font-size: 13px;
-    color: var(--hal0-fg-muted);
-    line-height: 1.55;
-    text-wrap: pretty;
-    margin: 0;
-  }
-  /* What's new reuses the feature card as a link. */
-  a.feat-link { display: block; color: inherit; text-decoration: none; transition: border-color 0.15s; }
-  a.feat-link:hover { border-color: var(--hal0-accent); }
-  #whats-new .cta-row { margin-top: 24px; }
-
-
-  /* Provider matrix */
-  .matrix {
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    overflow: hidden;
-    font-family: var(--hal0-font-mono);
-    background: var(--hal0-bg-elevated);
-  }
-  .matrix-row {
-    display: grid;
-    grid-template-columns: 200px 1fr 210px 250px;
-    border-bottom: 1px solid var(--hal0-border);
-    font-size: 13px;
-  }
-  .matrix-row:not(.head):hover { background: var(--hal0-bg); }
-  .matrix-row:last-child { border-bottom: none; }
-  .matrix-row.head {
-    background: var(--hal0-bg);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--hal0-fg-dim);
-  }
-  .matrix-row > div {
-    padding: 16px 20px;
-    border-right: 1px solid var(--hal0-border);
-    display: flex;
-    align-items: center;
-    line-height: 1.5;
-  }
-  .matrix-row.head > div { align-items: flex-end; }
-  .matrix-row > div:last-child { border-right: none; }
-  /* Name over version: the version used to sit inline and squeeze the name,
-     which is what made "Kokoro / Qwen3-TTS" wrap into four lines. */
-  .matrix-row .prov {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
-    color: var(--hal0-fg);
-    font-weight: 500;
-  }
-  .prov-name { white-space: nowrap; }
-  .prov-ver {
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--hal0-fg-dim);
-  }
-  .matrix-row .uses { color: var(--hal0-fg-muted); }
-  .matrix-row .hw { color: var(--hal0-fg-muted); }
-  .matrix-row .ep {
-    flex-wrap: wrap;
-    align-content: center;
-    gap: 6px;
-  }
-  .ep-chip {
-    display: inline-block;
-    padding: 2px 8px;
-    border: 1px solid color-mix(in srgb, var(--hal0-accent) 30%, transparent);
-    border-radius: 999px;
-    background: var(--hal0-accent-glow);
-    color: var(--hal0-accent);
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  /* Hardware tiers */
-  .tiers {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-  .tier {
-    background: var(--hal0-bg-elevated);
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    padding: 24px;
-    position: relative;
-    overflow: hidden;
-  }
-  .tier.first-class { border-color: color-mix(in srgb, var(--hal0-accent) 40%, transparent); }
-  .tier.first-class::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--hal0-accent);
-  }
-  .tier-tag {
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--hal0-fg-dim);
-    margin-bottom: 16px;
-  }
-  .tier.first-class .tier-tag { color: var(--hal0-accent); }
-  .tier-name {
-    font-family: var(--hal0-font-mono);
-    font-size: 17px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    color: var(--hal0-fg);
-    margin-bottom: 6px;
-  }
-  .tier-spec {
-    font-family: var(--hal0-font-mono);
-    font-size: 12px;
-    color: var(--hal0-fg-muted);
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
-  .tier-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 18px;
-  }
-  .tier-stat {
-    border-top: 1px solid var(--hal0-border);
-    padding-top: 10px;
-  }
-  .tier-stat .v {
-    font-family: var(--hal0-font-mono);
-    font-size: 20px;
-    color: var(--hal0-fg);
-    font-feature-settings: 'zero' 1;
-    letter-spacing: -0.02em;
-  }
-  .tier-stat .v .u { color: var(--hal0-accent); font-size: 12px; margin-left: 2px; }
-  .tier-stat .l {
-    font-size: 11px;
-    color: var(--hal0-fg-dim);
-    font-family: var(--hal0-font-mono);
-  }
-  .tier-note { font-size: 12px; color: var(--hal0-fg-muted); line-height: 1.5; }
-
-  /* Comparison */
-  .compare {
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--hal0-bg-elevated);
-    font-family: var(--hal0-font-mono);
-  }
-  .cmp-row {
-    display: grid;
-    grid-template-columns: 220px repeat(4, 1fr);
-    border-bottom: 1px solid var(--hal0-border);
-    font-size: 12px;
-  }
-  .cmp-row:last-child { border-bottom: none; }
-  .cmp-row > div {
-    padding: 16px 18px;
-    border-right: 1px solid var(--hal0-border);
-  }
-  .cmp-row > div:last-child { border-right: none; }
-  .cmp-row.head { background: var(--hal0-bg); }
-  .cmp-row.head > div {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--hal0-fg-dim);
-  }
-  .cmp-row.head .us { color: var(--hal0-accent); }
-  .cmp-row .lbl { color: var(--hal0-fg); font-weight: 500; }
-  .cmp-row .us-cell { background: var(--hal0-accent-glow); }
-
-  /* CTA */
-  .cta-section {
-    border-top: 1px solid var(--hal0-border);
-    padding: 100px 0 80px;
-    background: radial-gradient(circle at 50% 0%, var(--hal0-accent-glow), transparent 60%);
-  }
-  .cta-inner {
-    text-align: center;
-    max-width: 780px;
-    margin: 0 auto;
-  }
-  .cta-tag { margin-bottom: 18px; }
-  .cta-h {
-    font-family: var(--hal0-font-mono);
-    font-size: clamp(34px, 4vw, 56px);
+    font-size: clamp(36px, 15cqi, 88px);
+    font-weight: 600;
+    line-height: 1.02;
     letter-spacing: -0.04em;
-    line-height: 1;
-    margin: 0 0 18px;
-    font-weight: 500;
+    font-feature-settings: 'zero' 1;
   }
-  .cta-sub {
-    color: var(--hal0-fg-muted);
-    font-size: 17px;
+  .h1-line { display: block; white-space: nowrap; }
+  .hero-tagline {
+    margin: 0 0 18px;
+    font-family: var(--hal0-font-mono);
+    font-size: clamp(13px, 1.1vw, 15px);
+    letter-spacing: 0.02em;
+    color: var(--hal0-accent);
+  }
+  .lede {
     max-width: 580px;
-    margin: 0 auto;
+    margin: 0 0 26px;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--hal0-fg-muted);
     text-wrap: pretty;
   }
-  .cta-install {
-    max-width: 580px;
-    margin: 32px auto 24px;
-    text-align: left;
-  }
-  .cta-pills {
-    margin-top: 28px;
+  .lede strong { font-weight: 500; color: var(--hal0-fg); }
+  .ticker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 22px;
+    padding-top: 12px;
+    border-top: 1px solid var(--hal0-border);
     font-family: var(--hal0-font-mono);
     font-size: 11px;
     color: var(--hal0-fg-dim);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
   }
-
-  .pill {
-    display: inline-block;
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 2px 7px;
-    border-radius: 3px;
-    background: var(--hal0-bg-elevated);
-    color: var(--hal0-fg-muted);
-    border: 1px solid var(--hal0-border);
-  }
-  .pill.ok {
-    color: #6fcf97;
-    border-color: rgba(111, 207, 151, 0.3);
-    background: rgba(111, 207, 151, 0.08);
-  }
-
-  /* Responsive */
-  @media (max-width: 1280px) {
-    .matrix-row { grid-template-columns: 170px 1fr 170px 200px; }
-    .cmp-row { grid-template-columns: 200px repeat(4, 1fr); }
-  }
-
-  @media (max-width: 1080px) {
-    .hero { padding-top: 56px; }
-    .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
-    .hero-grid > * { min-width: 0; }
-    .h1 { font-size: clamp(2.1rem, 11vw, 3rem); }
-    .hero-h1 { font-size: clamp(26px, 9.4cqi, 60px); }
-    .hero-install { margin-top: 40px; }
-    .sec-head { grid-template-columns: 1fr; gap: 24px; }
-    .feat-grid,
-    .tiers { grid-template-columns: 1fr; }
-    .agent-tiles { grid-template-columns: minmax(0, 1fr); }
-    .matrix-row { grid-template-columns: 1fr; }
-    .matrix-row > div { border-right: none; border-bottom: 1px solid var(--hal0-border); }
-    .cmp-row { grid-template-columns: 1fr; }
-    .cmp-row > div { border-right: none; }
-    .slot-row { grid-template-columns: 90px 1fr 70px 80px 60px; gap: 10px; padding: 10px 14px; }
-  }
-
-  /* Operator-console screenshot showcase. Real 1440×900 dark captures;
-   * aspect-ratio is pinned so lazy-loaded images don't shift layout. */
-  .shot-hero {
-    margin-top: 2.5rem;
-    border: 1px solid var(--hal0-border);
-    border-radius: 12px;
-    overflow: hidden;
-    background: var(--hal0-bg-sunken);
+  .ticker b { font-weight: 500; color: var(--hal0-fg); }
+  .ticker .sep { color: var(--hal0-border-strong); }
+  .ticker .mdot { vertical-align: 1px; }
+  .hero-install { display: flex; justify-content: center; margin-top: 48px; }
+  .install-hero {
+    width: 100%;
+    max-width: 920px;
+    border-color: color-mix(in srgb, var(--hal0-accent) 38%, var(--hal0-border));
     box-shadow:
-      0 30px 80px -40px var(--hal0-accent-glow),
-      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+      0 0 0 1px color-mix(in srgb, var(--hal0-accent) 12%, transparent),
+      0 18px 60px -24px color-mix(in srgb, var(--hal0-accent) 45%, transparent);
   }
-  .shot-hero img {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1440 / 900;
-  }
+  .install-hero .install-body { padding: 22px 22px 22px 28px; font-size: clamp(14px, 1.5vw, 19px); }
 
-  .shot-grid {
-    margin-top: 1rem;
+  /* 2. The idea */
+  .idea-cols {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  .shot {
-    position: relative;
-    display: block;
-    margin: 0;
-    border: 1px solid var(--hal0-border);
-    border-radius: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
     overflow: hidden;
-    background: var(--hal0-bg-sunken);
-    transition:
-      border-color 200ms var(--hal0-ease),
-      transform 200ms var(--hal0-ease);
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+    background: var(--hal0-border);
   }
-  .shot:hover {
-    border-color: var(--hal0-border-strong);
-    transform: translateY(-2px);
+  .idea { display: flex; flex-direction: column; gap: 10px; padding: 24px; background: var(--hal0-bg-elevated); }
+  .idea .k { font-family: var(--hal0-font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--hal0-accent); }
+  .idea h3 { margin: 0; font-family: var(--hal0-font-mono); font-size: 18px; font-weight: 500; letter-spacing: var(--hal0-ls-title); }
+  .idea p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--hal0-fg-muted); }
+  .idea .ex {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--hal0-border-soft);
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    color: var(--hal0-fg-dim);
   }
-  .shot img {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1440 / 900;
-    border-bottom: 1px solid var(--hal0-border);
+  .routing-note { margin: 28px 0 0; font-family: var(--hal0-font-mono); font-size: 12.5px; color: var(--hal0-fg-muted); }
+  .endpoint-map { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+  .ep {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad);
+    background: var(--hal0-bg-elevated);
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
   }
-  .shot-cap {
-    display: block;
-    padding: 0.7rem 0.85rem;
-    font-size: 0.82rem;
+  .ep .path { overflow-wrap: anywhere; color: var(--hal0-fg-dim); }
+  .ep .slot { display: flex; align-items: center; gap: 6px; color: var(--hal0-fg); }
+  .par-note { max-width: 760px; margin: 18px 0 0; font-size: 13.5px; color: var(--hal0-fg-dim); }
+
+  /* 3. Swap */
+  .swap-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 40px; align-items: start; }
+  .defaults {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    list-style: none;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+  }
+  .defaults li {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--hal0-border-soft);
+    background: var(--hal0-bg-elevated);
+    font-size: 13px;
+  }
+  .defaults li:last-child { border-bottom: 0; }
+  .defaults .c { font-family: var(--hal0-font-mono); font-size: 12px; color: var(--hal0-fg); }
+  .defaults .d { color: var(--hal0-fg-muted); overflow-wrap: anywhere; }
+  .defaults code { font-size: 12px; color: var(--hal0-accent); }
+  .how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+  .how > div {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad);
+    background: var(--hal0-bg-elevated);
+    font-size: 12.5px;
     line-height: 1.45;
     color: var(--hal0-fg-muted);
   }
-  .shot-cap strong {
-    color: var(--hal0-fg);
-    font-weight: 600;
-  }
-  .shot-note {
-    margin: 1.25rem 0 0;
-    font-size: 0.9rem;
-    color: var(--hal0-fg-muted);
-  }
-  .shot-note a {
-    color: var(--hal0-accent);
-    text-decoration: none;
-  }
-  .shot-note a:hover {
-    color: var(--hal0-accent-hover);
-    text-decoration: underline;
-  }
-  @media (max-width: 720px) {
-    .shot-grid { grid-template-columns: 1fr; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .shot { transition: none; }
-    .shot:hover { transform: none; }
-  }
+  .how code { font-size: 11.5px; color: var(--hal0-fg); }
+  .shots-2 { display: grid; gap: 12px; }
 
-  /* Use-case cards */
-  .usecases .uc-grid { margin-top: 8px; }
-  .uc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-  .uc-card {
-    border: 1px solid var(--hal0-border);
-    border-radius: 12px;
-    background: var(--hal0-bg-elevated);
-    padding: 22px 20px;
-    transition: border-color 200ms var(--hal0-ease), transform 200ms var(--hal0-ease);
-  }
-  .uc-card:hover { border-color: var(--hal0-border-strong); transform: translateY(-2px); }
-  .uc-eye { font-family: var(--hal0-font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--hal0-accent); }
-  .uc-title { margin: 10px 0 8px; font-size: 1.12rem; font-weight: 600; letter-spacing: -0.01em; color: var(--hal0-fg); line-height: 1.25; }
-  .uc-body { font-size: 0.92rem; line-height: 1.55; color: var(--hal0-fg-muted); }
-  @media (max-width: 900px) { .uc-grid { grid-template-columns: 1fr; } }
-
-  .cmp-note {
-    margin: 16px 0 0;
-    font-size: 0.8rem;
-    line-height: 1.5;
-    color: var(--hal0-fg-dim);
-  }
-  /* Agent tiles — hal0-brain / MCP / memory */
-  .agent-tiles {
-    margin-top: 48px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--hal0-border);
-    border: 1px solid var(--hal0-border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .agent-tile {
-    padding: 26px 24px 22px;
-    background: var(--hal0-bg-elevated);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .at-tag {
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-accent);
-  }
-  .at-title {
-    margin: 0;
-    font-size: 17px;
-    letter-spacing: -0.01em;
-    color: var(--hal0-fg);
-  }
-  .at-body {
-    margin: 0;
+  /* 4. Privacy */
+  .priv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 48px; align-items: start; }
+  .priv-title { margin-bottom: 18px; }
+  .priv-lede { max-width: 520px; margin: 0; font-size: 20px; line-height: 1.5; color: var(--hal0-fg); text-wrap: pretty; }
+  .priv-lede em { font-style: normal; color: var(--hal0-accent); }
+  .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .fact { padding: 18px; border: 1px solid var(--hal0-border); border-radius: var(--hal0-rad-lg); background: var(--hal0-bg-elevated); }
+  .fact h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-family: var(--hal0-font-mono); font-size: 14px; font-weight: 500; }
+  .fact p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--hal0-fg-muted); }
+  .lan-note {
+    grid-column: 1 / -1;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--hal0-warn) 30%, transparent);
+    border-radius: var(--hal0-rad);
+    background: color-mix(in srgb, var(--hal0-warn) 10%, transparent);
     font-size: 13px;
-    line-height: 1.6;
     color: var(--hal0-fg-muted);
-    text-wrap: pretty;
   }
-  .at-foot {
-    margin-top: auto;
-    padding-top: 14px;
-    border-top: 1px solid var(--hal0-border);
+  .lan-note b {
+    margin-right: 8px;
     font-family: var(--hal0-font-mono);
     font-size: 11px;
-    color: var(--hal0-fg-dim);
+    font-weight: 500;
+    letter-spacing: var(--hal0-ls-label);
+    text-transform: uppercase;
+    color: var(--hal0-warn);
   }
-  .at-foot strong { color: var(--hal0-accent); font-weight: 500; }
 
-  /* Meet Hermes — copy + the foil card */
-  .hermes-sec {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 56px;
-    align-items: center;
+  /* 5. Wired */
+  .wired-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; }
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .tile { padding: 24px; border: 1px solid var(--hal0-border); border-radius: var(--hal0-rad-lg); background: var(--hal0-bg-elevated); }
+  .tile .tag { margin-bottom: 12px; font-family: var(--hal0-font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--hal0-accent); }
+  .tile h3 { margin: 0 0 10px; font-family: var(--hal0-font-mono); font-size: 17px; font-weight: 500; letter-spacing: var(--hal0-ls-title); }
+  .tile p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--hal0-fg-muted); text-wrap: pretty; }
+  .tile code, .wired-note code { font-size: 12.5px; color: var(--hal0-fg); }
+  .wired-note { max-width: 820px; margin: 18px 0 0; font-size: 14px; color: var(--hal0-fg-muted); }
+  .hermes-card-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  /* 6. Memory */
+  .mem-grid { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 40px; align-items: center; }
+  .mem-sub { margin-top: 16px; }
+  .mem-list { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 0; padding: 0; list-style: none; }
+  .mem-list li { position: relative; padding-left: 16px; font-size: 14px; line-height: 1.5; color: var(--hal0-fg-muted); }
+  .mem-list li::before { content: ''; position: absolute; left: 0; top: 0.7em; width: 6px; height: 1px; background: var(--hal0-accent); }
+  .mem-list b { font-weight: 500; color: var(--hal0-fg); }
+  .mem-cta { margin-top: 20px; }
+
+  /* 7. Console. A lone last shot takes the whole row: the dock is a wide strip. */
+  .console-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+  .console-grid > :last-child:nth-child(3n + 1) { grid-column: 1 / -1; }
+
+  /* 8. Hardware */
+  .tier-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+  .tier { min-width: 0; padding: 14px; border: 1px solid var(--hal0-border); border-radius: var(--hal0-rad-lg); background: var(--hal0-bg-elevated); }
+  .tier.ref { border-color: var(--hal0-accent-line); }
+  .tier .t { margin-bottom: 8px; font-family: var(--hal0-font-mono); font-size: 10px; letter-spacing: var(--hal0-ls-label); text-transform: uppercase; color: var(--hal0-fg-dim); }
+  .tier.ref .t { color: var(--hal0-accent); }
+  .tier .n { margin-bottom: 6px; font-family: var(--hal0-font-mono); font-size: 13px; font-weight: 500; color: var(--hal0-fg); }
+  .tier .s { font-size: 12px; line-height: 1.45; color: var(--hal0-fg-dim); }
+  .hw-note { margin: 14px 0 0; font-family: var(--hal0-font-mono); font-size: 11.5px; color: var(--hal0-fg-dim); }
+
+  /* 10 + 11. Benchmarks and releases. BenchHighlights brings 52px of its own top
+   * padding, so the wrapper gives less and the release column matches it. */
+  .two-up-wrap { padding-block: 44px 96px; border-top: 1px solid var(--hal0-border); }
+  .two-up { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; align-items: start; }
+  .rel-col { padding-top: 52px; }
+  .bench-note { margin: 10px 0 0; font-family: var(--hal0-font-mono); font-size: 11px; color: var(--hal0-fg-dim); }
+
+  /* 13. Community. The sections only pad their tops. */
+  .community { padding-bottom: 96px; }
+
+  /* 14. Get hal0 */
+  .cta {
+    padding-block: 96px 80px;
+    border-top: 1px solid var(--hal0-border);
+    background: radial-gradient(circle at 50% 0%, var(--hal0-accent-glow), transparent 60%);
+    text-align: center;
   }
-  .hermes-copy { min-width: 0; }
-  .hermes-points {
-    list-style: none;
-    margin: 18px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-  }
-  .hermes-points li {
-    position: relative;
-    padding-left: 1.1rem;
-    font-size: 0.92rem;
-    line-height: 1.5;
-    color: var(--hal0-fg-muted);
-  }
-  .hermes-points li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.62em;
-    width: 0.35rem;
-    height: 1px;
-    background: var(--hal0-accent);
-  }
-  .hermes-cta {
-    margin-top: 22px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .hermes-hint {
+  .cta h2 {
+    margin: 14px 0 16px;
     font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-fg-dim);
-    letter-spacing: 0.04em;
+    font-size: clamp(32px, 4vw, 54px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.04em;
   }
-  .hermes-card-wrap { display: flex; justify-content: center; }
-  @media (max-width: 900px) {
-    .hermes-sec { grid-template-columns: minmax(0, 1fr); gap: 36px; }
-    .hermes-card-wrap { order: -1; }
-  }
+  .cta-sub { max-width: 560px; margin: 0 auto 28px; font-size: 17px; color: var(--hal0-fg-muted); text-wrap: pretty; }
+  .cta .install { max-width: 640px; margin: 0 auto 22px; text-align: left; }
+  .cta-row-centered { justify-content: center; }
+  .cta-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 24px; }
 </style>
