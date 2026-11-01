@@ -11,6 +11,8 @@
  * Logs/Persona/Restart controls are visual. Model and context are the public
  * seed values (default agent model, `agent` profile at 64K), never one box.
  */
+import { pictureSources } from '../lib/shot.ts';
+
 const abilities = [
   { name: 'Ghost Relay', cost: 2, pow: '40', desc: 'Reach it from any Telegram or Discord thread.' },
   { name: 'Engram', cost: 2, pow: '60', desc: 'Writes each run back to memory — never relearns it.' },
@@ -24,6 +26,8 @@ const skills = [
   { l: 'embeddings', key: false },
 ];
 const rarity = 3;
+// AVIF/WebP of the portrait (scripts/build-images.mjs): hermes-744 is the 1x, the full 1488px file the 2x.
+const portrait = pictureSources(['/agents/hermes-744', '/agents/hermes']);
 ---
 
 <div class="hermes-card" data-hermes-card>
@@ -33,7 +37,10 @@ const rarity = 3;
       <!-- FRONT -->
       <div class="fc-face fc-front" data-front>
         <div class="foilb-clip">
-          <img class="foilb-img" src="/agents/hermes.png" alt="Hermes — the bundled hal0 agent" width="1488" height="1202" loading="lazy" decoding="async" />
+          <picture>
+            {portrait.sources.map((s) => <source type={s.type} srcset={s.srcset} />)}
+            <img class="foilb-img" src="/agents/hermes.png" srcset={portrait.srcset} alt="Hermes — the bundled hal0 agent" width="1488" height="1202" loading="lazy" decoding="async" />
+          </picture>
           <span class="foilb-vig"></span>
           <span class="foilb-scan"></span>
           <span class="foilb-holo"></span>

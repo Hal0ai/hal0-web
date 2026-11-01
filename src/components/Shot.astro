@@ -1,0 +1,72 @@
+---
+/**
+ * Shot: a console screenshot from public/screenshots/ as a
+ * <figure class="shot"><picture> with AVIF, WebP and PNG, plus an optional caption.
+ *
+ *   <Shot name="slot-card" alt="A slot card with a model picker" caption="Optional." />
+ *
+ * `name` is the file stem. The @2x capture, the AVIF/WebP derivatives
+ * (scripts/build-images.mjs, run by `prebuild`) and the intrinsic width/height
+ * are all found on disk, so the markup never names a file that does not exist.
+ * The <img> keeps the PNG src: public/js/lightbox.js binds on /screenshots/.
+ * Pass `loading="eager"` for the one shot above the fold.
+ */
+import { resolveShot } from '../lib/shot.ts';
+
+interface Props {
+  name: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+  loading?: 'lazy' | 'eager';
+}
+
+const { name, alt, width, height, caption, loading = 'lazy' } = Astro.props;
+const shot = resolveShot(name, { width, height });
+---
+
+<figure class="shot">
+  <picture>
+    {shot.sources.map((s) => <source type={s.type} srcset={s.srcset} />)}
+    <img
+      src={shot.src}
+      srcset={shot.srcset}
+      alt={alt}
+      width={shot.width}
+      height={shot.height}
+      loading={loading}
+      decoding="async"
+      fetchpriority={loading === 'eager' ? 'high' : undefined}
+    />
+  </picture>
+  {caption && <figcaption class="shot-cap">{caption}</figcaption>}
+</figure>
+
+<style>
+  /* Natural size for small captures, the column width for large ones. */
+  .shot {
+    width: fit-content;
+    max-width: 100%;
+    margin: 1.5rem 0;
+    border: 1px solid var(--hal0-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--hal0-bg-sunken);
+  }
+  .shot picture {
+    display: block;
+  }
+  .shot img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  .shot-cap {
+    padding: 0.7rem 0.85rem;
+    border-top: 1px solid var(--hal0-border);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+  }
+</style>

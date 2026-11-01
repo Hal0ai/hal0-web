@@ -3,6 +3,13 @@ dist/
 .astro/
 # PNG icon set rasterized from public/favicon.svg by scripts/build-icons.mjs (prebuild)
 /public/icons/
+# AVIF/WebP siblings of the screenshots and the Hermes portrait, plus the 744px Hermes resize,
+# written by scripts/build-images.mjs (prebuild). The PNGs stay the only committed copy.
+/public/screenshots/*.avif
+/public/screenshots/*.webp
+/public/agents/*.avif
+/public/agents/*.webp
+/public/agents/hermes-744.png
 
 # deps
 node_modules/
