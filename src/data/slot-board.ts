@@ -4,6 +4,8 @@
  * Ports, profiles and context windows are the product's seeds
  * (installer/etc-hal0/slots/*.toml, src/hal0/config/data/seed_profiles.toml).
  * The `coding` and `comfyui` profiles set no window, so those cards show none.
+ * Device is a per-slot choice and the seeds default to ROCm; the demo mixes ROCm
+ * and Vulkan to show that the choice is per slot.
  *
  * Model names are real: hal0's curated catalogue (src/hal0/registry/curated.py,
  * src/hal0/comfyui/catalog.py) or public GGUF repos named in the note, checked

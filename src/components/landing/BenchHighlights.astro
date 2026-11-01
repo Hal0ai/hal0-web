@@ -90,4 +90,9 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
   .fig .n.plain {
     color: var(--fg);
   }
+  @media (max-width: 560px) {
+    .figs {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
 </style>

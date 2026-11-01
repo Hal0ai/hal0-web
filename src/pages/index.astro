@@ -820,4 +820,52 @@ const faqPage = {
   .cta .install { max-width: 640px; margin: 0 auto 22px; text-align: left; }
   .cta-row-centered { justify-content: center; }
   .cta-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 24px; }
+
+  /* Tablet: the two-column layouts stack. */
+  @media (max-width: 1080px) {
+    .section { padding-block: 64px; }
+    .sec-head { grid-template-columns: minmax(0, 1fr); gap: 20px; margin-bottom: 32px; }
+    .hero { padding-block: 48px 40px; }
+    .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+    .hero-install { margin-top: 36px; }
+    .idea-cols { grid-template-columns: minmax(0, 1fr); }
+    .endpoint-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .swap-grid { grid-template-columns: minmax(0, 1fr); }
+    .how { grid-template-columns: minmax(0, 1fr); }
+    .priv { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+    .wired-grid { grid-template-columns: minmax(0, 1fr); }
+    .mem-grid { grid-template-columns: minmax(0, 1fr); }
+    .console-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .console-grid > :last-child:nth-child(3n + 1) { grid-column: auto; }
+    .tier-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .two-up-wrap { padding-block: 12px 64px; }
+    .two-up { grid-template-columns: minmax(0, 1fr); }
+    .rel-col { padding-top: 20px; }
+    .community { padding-bottom: 64px; }
+    .cta { padding-block: 64px 56px; }
+  }
+
+  /* Large phone: card grids drop to one or two columns. */
+  @media (max-width: 720px) {
+    .tiles { grid-template-columns: minmax(0, 1fr); }
+    .facts { grid-template-columns: minmax(0, 1fr); }
+    .console-grid { grid-template-columns: minmax(0, 1fr); }
+    .tier-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* Phone: one column throughout, and the install command wraps. */
+  @media (max-width: 560px) {
+    .endpoint-map { grid-template-columns: minmax(0, 1fr); }
+    .defaults li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .cta-meta { width: 100%; margin-left: 0; }
+    .install-meta { display: none; }
+    .install-body,
+    .install-hero .install-body { padding: 14px; font-size: 13px; }
+    .priv-lede { font-size: 18px; }
+    .lede { font-size: 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blip { animation: none; }
+  }
 </style>

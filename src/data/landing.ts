@@ -99,7 +99,7 @@ export const PRIVACY_FACTS: { title: string; body: string }[] = [
 ];
 
 export const LAN_NOTE =
-  'The API and Open WebUI serve your network with no login and no TLS by default. Keep the box on your LAN, or turn on key auth and put a reverse proxy in front before you share it.';
+  'The API and Open WebUI serve your network with no login and no TLS by default. Keep the box on your LAN, or turn on key auth and put a reverse proxy in front before you share it. Key auth covers the API, not Open WebUI.';
 
 export const WIRED_TILES: { tag: string; title: string; body: string }[] = [
   {

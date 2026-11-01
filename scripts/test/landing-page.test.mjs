@@ -166,6 +166,7 @@ test('copy keeps the claims the product inventory requires', async () => {
   assert.match(data, /GPU chat slots pause/, 'image generation pauses GPU chat slots');
   assert.match(data, /unless you connect an upstream/, 'the privacy frame');
   assert.match(data, /key auth/, 'the LAN note');
+  assert.match(data, /Key auth covers the API, not Open WebUI/, 'Open WebUI sits outside hal0 auth');
   assert.match(data, /503 with Retry-After/, 'what a reload costs');
   assert.ok(!/nothing else leaves/.test(data), 'no universal "nothing leaves" claim');
   assert.match(data, /One API, one slot per medium/, 'routing is by endpoint and model name');
@@ -369,4 +370,121 @@ test('page copy avoids the forbidden words and version numbers', async () => {
   }
   assert.ok(!page.includes('—'), 'no em dash in page copy');
   assert.ok(!/\b1\.\d+(\.\d+)?\b|\brc\b|\bGA\b|new in\b/.test(page), 'no hal0 version in page copy');
+});
+
+// ── C4: responsive and motion ───────────────────────────────────────────────
+
+const CONSOLE_SHOT = 'src/components/landing/ConsoleShot.astro';
+const BENCH = 'src/components/landing/BenchHighlights.astro';
+const CSS_FILES = [PAGE, SLOT_BOARD, COMPARE_TABLE, FAQ_COMPONENT, RELEASE_TEASER, CONSOLE_SHOT, BENCH];
+
+function styleOf(file) {
+  return [...file.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+    .map((m) => m[1])
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+/** Splits CSS into top-level { head, body } blocks, leaving nested bodies intact. */
+function blocks(css) {
+  const found = [];
+  let depth = 0;
+  let start = 0;
+  let head = '';
+  for (let i = 0; i < css.length; i += 1) {
+    if (css[i] === '{') {
+      if (depth === 0) {
+        head = css.slice(start, i).trim();
+        start = i + 1;
+      }
+      depth += 1;
+    } else if (css[i] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        found.push({ head, body: css.slice(start, i) });
+        start = i + 1;
+      }
+    } else if (css[i] === ';' && depth === 0) {
+      start = i + 1;
+    }
+  }
+  return found;
+}
+
+/** Number of tracks in a grid-template-columns value. */
+function trackCount(value) {
+  const repeat = value.match(/^repeat\(\s*(\d+)/);
+  if (repeat) return Number(repeat[1]);
+  let depth = 0;
+  let tracks = 0;
+  let inToken = false;
+  for (const ch of value) {
+    if (ch === '(') depth += 1;
+    if (ch === ')') depth -= 1;
+    if (/\s/.test(ch) && depth === 0) inToken = false;
+    else if (!inToken) {
+      tracks += 1;
+      inToken = true;
+    }
+  }
+  return tracks;
+}
+
+const columnsOf = (body) => body.match(/grid-template-columns:\s*([^;]+);?/)?.[1].trim();
+
+function narrowRules(css) {
+  const rules = [];
+  for (const { head, body } of blocks(css)) {
+    if (/^@media[^{]*max-width/.test(head)) {
+      for (const rule of blocks(body)) rules.push(rule);
+    }
+  }
+  return rules;
+}
+
+const collapses = (selector, tracks, rules) =>
+  rules.some(({ head, body }) => {
+    const columns = columnsOf(body);
+    return columns && head.split(',').map((s) => s.trim()).includes(selector) && trackCount(columns) < tracks;
+  });
+
+test('every repeat() grid in the landing CSS collapses on a narrow screen', async () => {
+  for (const path of CSS_FILES) {
+    const css = styleOf(await source(path));
+    const rules = narrowRules(css);
+    for (const { head, body } of blocks(css)) {
+      if (head.startsWith('@')) continue;
+      const columns = columnsOf(body);
+      if (!columns || !columns.startsWith('repeat(')) continue;
+      for (const selector of head.split(',').map((s) => s.trim())) {
+        assert.ok(collapses(selector, trackCount(columns), rules), `${path}: ${selector} (${columns}) has no narrower rule`);
+      }
+    }
+  }
+});
+
+test('the two-column layout grids collapse too', async () => {
+  const css = styleOf(await source(PAGE));
+  const rules = narrowRules(css);
+  for (const selector of ['.sec-head', '.hero-grid', '.swap-grid', '.priv', '.wired-grid', '.mem-grid']) {
+    assert.ok(collapses(selector, 2, rules), `${selector} stays two-column on a phone`);
+  }
+});
+
+test('breakpoints follow the mockup', async () => {
+  const css = styleOf(await source(PAGE));
+  for (const width of [1080, 720, 560]) {
+    assert.ok(new RegExp(`@media \\(max-width:\\s*${width}px\\)`).test(css), `${width}px breakpoint`);
+  }
+});
+
+test('the compare table scrolls inside its wrapper', async () => {
+  const css = styleOf(await source(COMPARE_TABLE));
+  assert.match(css, /\.tbl-wrap\s*\{[^}]*overflow-x:\s*auto/);
+});
+
+test('motion stops under prefers-reduced-motion', async () => {
+  for (const path of [PAGE, SLOT_BOARD]) {
+    assert.match(styleOf(await source(path)), /@media \(prefers-reduced-motion: reduce\)/, path);
+  }
 });
