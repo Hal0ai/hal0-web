@@ -13,6 +13,7 @@ import path from 'node:path';
 
 import { ROSTER_DATE } from '../../src/data/model-roster.ts';
 import { breadcrumbList, organizationSameAs } from '../../src/lib/seo.ts';
+import { ICONS, renderIcon } from '../build-icons.mjs';
 
 const DIST = fileURLToPath(new URL('../../dist/client/', import.meta.url));
 const built = await access(path.join(DIST, 'index.html')).then(() => true, () => false);
@@ -246,6 +247,70 @@ test('Starlight pages use the same per-scheme theme-color', { skip }, () => {
 	for (const { route, html } of pages.filter((p) => isStarlight(p.route))) {
 		const byScheme = Object.fromEntries(metaTags(html, 'name', 'theme-color').map((c) => [c.media, c.content]));
 		assert.deepEqual(byScheme, { '(prefers-color-scheme: dark)': '#0a0a0a', '(prefers-color-scheme: light)': '#fafaf9' }, route);
+	}
+});
+
+// ---------------------------------------------------------------------------
+// E1.3: icons, manifest, llms.txt
+
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/** Width/height from a PNG's IHDR chunk. */
+function pngSize(buf) {
+	assert.ok(buf.subarray(0, 8).equals(PNG_MAGIC), 'PNG magic bytes');
+	assert.equal(buf.toString('ascii', 12, 16), 'IHDR', 'first chunk is IHDR');
+	return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
+
+const EXPECTED_ICONS = { 'apple-touch-icon-180.png': 180, 'icon-192.png': 192, 'icon-512.png': 512 };
+
+test('build-icons declares the three icon sizes', () => {
+	assert.deepEqual(Object.fromEntries(ICONS.map((i) => [i.file, i.size])), EXPECTED_ICONS);
+});
+
+test('renderIcon rasterizes the favicon to an opaque square PNG of the requested size', async () => {
+	const svg = await readFile(new URL('../../public/favicon.svg', import.meta.url));
+	const png = await renderIcon(svg, 64);
+	assert.deepEqual(pngSize(png), { width: 64, height: 64 });
+});
+
+test('the build writes the icon set at its exact pixel sizes', { skip }, async () => {
+	for (const [file, size] of Object.entries(EXPECTED_ICONS)) {
+		const png = await readFile(path.join(DIST, 'icons', file));
+		assert.deepEqual(pngSize(png), { width: size, height: size }, file);
+	}
+});
+
+test('site.webmanifest parses and names both install icons', { skip }, async () => {
+	const manifest = JSON.parse(await readFile(path.join(DIST, 'site.webmanifest'), 'utf8'));
+	assert.equal(manifest.name, 'hal0');
+	assert.equal(manifest.start_url, '/');
+	assert.equal(manifest.theme_color, '#0a0a0a');
+	assert.equal(manifest.background_color, '#0a0a0a');
+	const bySrc = Object.fromEntries(manifest.icons.map((i) => [i.src, i]));
+	assert.equal(bySrc['/icons/icon-192.png']?.sizes, '192x192');
+	assert.equal(bySrc['/icons/icon-512.png']?.sizes, '512x512');
+	for (const icon of manifest.icons) assert.equal(icon.type, 'image/png');
+});
+
+test('every page head points at the 180px apple-touch-icon and the manifest', { skip }, () => {
+	for (const { route, html } of pages) {
+		const links = linkTags(html);
+		const touch = links.filter((l) => l.rel === 'apple-touch-icon');
+		assert.deepEqual(touch.map((l) => l.href), ['/icons/apple-touch-icon-180.png'], `${route} apple-touch-icon`);
+		assert.deepEqual(links.filter((l) => l.rel === 'manifest').map((l) => l.href), ['/site.webmanifest'], `${route} manifest`);
+	}
+});
+
+test('llms.txt summarises the product and lists the key URLs', { skip }, async () => {
+	const txt = await readFile(path.join(DIST, 'llms.txt'), 'utf8');
+	assert.match(txt, /^# hal0\n/, 'starts with an H1 naming the product');
+	for (const needle of ['hal0.dev/releases', 'forum.hal0.dev', '/benchmarks', '/profiles', '/blog', '/contributing', 'github.com/hal0ai/hal0', 'install.sh']) {
+		assert.ok(txt.includes(needle), `mentions ${needle}`);
+	}
+	// Claims that the product inventory rules out must not creep in.
+	for (const banned of [/content-aware/i, /\bunleash/i, /\bseamless/i, /\brevolutionary/i, /\bsupercharge/i, /\binstantly/i, /\bsandboxed/i, /never leak/i, /\b1\.\d+\b/, /\u2014/]) {
+		assert.ok(!banned.test(txt), `llms.txt avoids ${banned}`);
 	}
 });
 

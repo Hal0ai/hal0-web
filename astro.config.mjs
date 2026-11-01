@@ -267,6 +267,16 @@ export default defineConfig({
 					tag: 'meta',
 					attrs: { name: 'theme-color', content: '#fafaf9', media: '(prefers-color-scheme: light)' },
 				},
+				// Home-screen icon and web manifest, the same pair MarketingLayout
+				// emits (the PNGs are rasterized by scripts/build-icons.mjs).
+				{
+					tag: 'link',
+					attrs: { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon-180.png' },
+				},
+				{
+					tag: 'link',
+					attrs: { rel: 'manifest', href: '/site.webmanifest' },
+				},
 				// Screenshot lightbox — binds /screenshots/ images on docs + blog
 				// pages (shared with the marketing layout; styles in global.css).
 				{
