@@ -8,6 +8,16 @@
  */
 
 export const SITE_URL = 'https://hal0.dev';
+
+/**
+ * Browser chrome colour per colour scheme: the page background of each theme
+ * (`--hal0-bg` in src/styles/tokens.css, pinned by scripts/test/seo.test.mjs).
+ * The dark value is also the fill behind the generated home-screen icons
+ * (scripts/build-icons.mjs). public/site.webmanifest is a literal JSON file and
+ * repeats the dark value; the same test keeps the two in step.
+ */
+export const THEME_COLOR_DARK = '#0a0a0a';
+export const THEME_COLOR_LIGHT = '#fafaf9';
 export const FORUM_URL = 'https://forum.hal0.dev';
 export const ORG_ID = `${SITE_URL}/#org`;
 export const WEBSITE_ID = `${SITE_URL}/#website`;
@@ -56,7 +66,7 @@ export function breadcrumbList(name: string, path: string): Record<string, unkno
   return {
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'hal0', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
       { '@type': 'ListItem', position: 2, name, item: new URL(path, SITE_URL).href },
     ],
   };

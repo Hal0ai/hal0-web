@@ -9,8 +9,8 @@
  *
  * The SVG glyph is amber on a transparent canvas. Home-screen icons must be
  * opaque (iOS paints transparency black, Android pads it unpredictably), so
- * each PNG is flattened onto the brand background #0a0a0a, the same value as
- * the manifest's `background_color`.
+ * each PNG is flattened onto the dark theme colour (THEME_COLOR_DARK in
+ * src/lib/seo.ts), the same value as the manifest's `background_color`.
  *
  * The output directory is gitignored: it is derived from favicon.svg on every
  * build, so there is no second copy to drift. Runs on sharp, already a
@@ -20,11 +20,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import sharp from 'sharp';
+import { THEME_COLOR_DARK } from '../src/lib/seo.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
-export const BACKGROUND = '#0a0a0a';
+export const BACKGROUND = THEME_COLOR_DARK;
 
 /** Every PNG this step writes, relative to public/icons/. */
 export const ICONS = [

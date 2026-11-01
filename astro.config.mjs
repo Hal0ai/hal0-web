@@ -7,6 +7,7 @@ import sitemap from '@astrojs/sitemap';
 import icon from 'astro-icon';
 import tailwindcss from '@tailwindcss/vite';
 import vercel from '@astrojs/vercel';
+import { SITE_URL, THEME_COLOR_DARK, THEME_COLOR_LIGHT } from './src/lib/seo.ts';
 
 const nav = JSON.parse(readFileSync(new URL('./src/data/nav.json', import.meta.url), 'utf8'));
 const socialHref = (id) => nav.social.find((s) => s.id === id).href;
@@ -43,7 +44,7 @@ const docsRedirects = JSON.parse(
 );
 
 export default defineConfig({
-	site: 'https://hal0.dev',
+	site: SITE_URL,
 
 	// /changelog and /releases were merged into one page (the unified
 	// release history, src/pages/releases.astro). /releases is the canonical
@@ -247,7 +248,7 @@ export default defineConfig({
 			head: [
 				{
 					tag: 'meta',
-					attrs: { property: 'og:image', content: 'https://hal0.dev/og-default.png' },
+					attrs: { property: 'og:image', content: `${SITE_URL}/og-default.png` },
 				},
 				{
 					tag: 'meta',
@@ -255,17 +256,17 @@ export default defineConfig({
 				},
 				{
 					tag: 'meta',
-					attrs: { name: 'twitter:image', content: 'https://hal0.dev/og-default.png' },
+					attrs: { name: 'twitter:image', content: `${SITE_URL}/og-default.png` },
 				},
 				// Per-scheme browser chrome colour, same pair as MarketingLayout
 				// (--hal0-bg in dark and light, tokens.css).
 				{
 					tag: 'meta',
-					attrs: { name: 'theme-color', content: '#0a0a0a', media: '(prefers-color-scheme: dark)' },
+					attrs: { name: 'theme-color', content: THEME_COLOR_DARK, media: '(prefers-color-scheme: dark)' },
 				},
 				{
 					tag: 'meta',
-					attrs: { name: 'theme-color', content: '#fafaf9', media: '(prefers-color-scheme: light)' },
+					attrs: { name: 'theme-color', content: THEME_COLOR_LIGHT, media: '(prefers-color-scheme: light)' },
 				},
 				// Home-screen icon and web manifest, the same pair MarketingLayout
 				// emits (the PNGs are rasterized by scripts/build-icons.mjs).
@@ -296,7 +297,7 @@ export default defineConfig({
 			// Pages that are noindex (MarketingLayout's `noindex` prop) must not
 			// be advertised to crawlers either — a sitemap entry that resolves
 			// to a noindex page is flagged as a conflict in Search Console.
-			filter: (page) => !page.startsWith('https://hal0.dev/profiles/submitted'),
+			filter: (page) => !page.startsWith(`${SITE_URL}/profiles/submitted`),
 		}),
 	],
 

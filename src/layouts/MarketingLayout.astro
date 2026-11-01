@@ -32,7 +32,7 @@ import SubNav from '../components/SubNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import Analytics from '../components/Analytics.astro';
 import nav from '../data/nav.json';
-import { organizationSameAs, siteGraph } from '../lib/seo.ts';
+import { SITE_URL, THEME_COLOR_DARK, THEME_COLOR_LIGHT, organizationSameAs, siteGraph } from '../lib/seo.ts';
 
 // Preload the two latin web fonts that drive above-the-fold rendering —
 // without these, the FOUT swap from system fallback → real font pushes
@@ -59,9 +59,9 @@ const {
   jsonLd = [],
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
+const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE_URL).toString();
 // Social crawlers want an absolute image URL, not a root-relative path.
-const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString();
+const ogImageUrl = new URL(ogImage, Astro.site ?? SITE_URL).toString();
 // One @graph per page: the site-wide Organization and WebSite nodes first,
 // then every node the page hands us, in a single script so crawlers see one
 // cross-referenceable document.
@@ -81,8 +81,8 @@ const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Browser chrome colour per scheme: --hal0-bg in dark and light (tokens.css). -->
-    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content={THEME_COLOR_DARK} media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content={THEME_COLOR_LIGHT} media="(prefers-color-scheme: light)" />
 
     <!-- Theme unification (handoff 3.7): marketing pages read the theme
          Starlight's toggle persisted (localStorage 'starlight-theme') so

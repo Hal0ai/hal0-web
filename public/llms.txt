@@ -5,7 +5,7 @@
 > Models run in named slots, several at once as memory allows, and each medium has its own slot behind the one API.
 > Profiles hold the whole tune for a model (runner image, context, flags), so a working configuration can be read, copied and shared.
 > The Hermes agent and Hindsight memory run on the same box, next to Open WebUI and a dashboard for managing slots.
-> Install on Linux with systemd and podman: curl -fsSL https://hal0.dev/install.sh | bash
+> Install on Linux with systemd and podman: curl -fsSL https://hal0.dev/install.sh | sudo bash
 
 ## Key pages
 
