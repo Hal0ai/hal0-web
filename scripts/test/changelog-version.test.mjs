@@ -302,6 +302,21 @@ test('Breaking, Migrations, Security and Highlights are never cut, even at ten b
   }
 });
 
+test('an "Operator migrations" section is never cut either, whatever its case', () => {
+  for (const title of ['Operator migrations', 'Operator Migrations', 'OPERATOR MIGRATIONS']) {
+    const [s] = releaseSections(longSections([title], 10));
+    assert.equal(s.title, title);
+    assert.equal(s.items.length, 10, `${title} keeps all ten bullets`);
+    assert.equal(s.more, 0, `${title} reports nothing cut`);
+  }
+});
+
+test('the protected titles are exact: a longer migrations-ish title is still capped at six', () => {
+  const [s] = releaseSections(longSections(['Operator migrations checklist'], 10));
+  assert.equal(s.items.length, 6);
+  assert.equal(s.more, 4);
+});
+
 test('Added, Changed, Removed and Fixed are cut at six bullets', () => {
   const v = longSections(['Added', 'Changed', 'Removed', 'Fixed'], 10);
   for (const s of releaseSections(v)) {

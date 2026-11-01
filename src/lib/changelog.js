@@ -303,18 +303,19 @@ export function plainText(html) {
 const SECTION_ORDER = ['highlights', 'breaking', 'added', 'changed', 'removed', 'fixed', 'security'];
 
 // Sections an operator must read in full before upgrading: the maintainers'
-// own summary, what breaks, what to migrate, and security fixes. An excerpt
+// own summary, what breaks, what to migrate (hal0's changelog heads that one
+// both "Migrations" and "Operator migrations"), and security fixes. An excerpt
 // never cuts these; a truncated Breaking list is worse than a long page.
-const NEVER_CUT = new Set(['highlights', 'breaking', 'migrations', 'security']);
+const NEVER_CUT = new Set(['highlights', 'breaking', 'migrations', 'operator migrations', 'security']);
 
 /**
  * Bulleted sections of an entry, ready to render as a bounded excerpt.
- * Highlights, Breaking, Migrations and Security are never cut. Every other
- * section (Added, Changed, Removed, Fixed and the rest) keeps its first `max`
- * bullets and reports how many it dropped, so a release with a hundred fixes
- * stays short and points at the full notes. Sections with no bullets (prose,
- * tables) are left out, so a Highlights section that is only prose does not
- * count as Highlights.
+ * Highlights, Breaking, Migrations (also titled "Operator migrations") and
+ * Security are never cut. Every other section (Added, Changed, Removed, Fixed
+ * and the rest) keeps its first `max` bullets and reports how many it dropped,
+ * so a release with a hundred fixes stays short and points at the full notes.
+ * Sections with no bullets (prose, tables) are left out, so a Highlights
+ * section that is only prose does not count as Highlights.
  * @param {ChangelogVersion} version
  * @param {{max?: number, skipHighlights?: boolean}} [opts]
  * @returns {{title: string, kind: ChangelogSection['kind'], items: string[], more: number}[]}
