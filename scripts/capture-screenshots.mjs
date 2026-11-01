@@ -246,16 +246,21 @@ const SHOT_DEFS = [
     // system segment (`.sys`) paints first, from hardware data, so waiting on
     // any `.ov-mem-seg` would pass on a frame whose slot list still says
     // loading and whose stat strip reads "—".
-    expect: '.ov-mem-seg:not(.sys)',
+    // Stable 1.7.x still ships the earlier Overview (`.rd-mem-seg`); the
+    // `.ov-*` band is on nightly only. Accept either so a tagged box works.
+    expect: '.ov-mem-seg:not(.sys), .rd-mem-seg:not(.rd-mem-seg-system)',
     after: 1500,
   },
   {
     // The Overview "now" band: serving mode, live facts and the memory bar.
-    // (`unified-memory-hero` was this same clip and is retired; its PNG stays
-    // on disk for the post that still references it.)
+    // Nightly only: the `.ov-now` band does not exist on stable 1.7.x, where
+    // the Overview's own `expect` fallback passes but this clip would not.
+    // Out of the default sweep for that reason; name it to shoot it on a
+    // nightly box. (`unified-memory-hero` was this same clip and is retired.)
+    skip: true,
     name: 'overview-now',
     route: '#dashboard',
-    expect: '.ov-mem-seg:not(.sys)',
+    expect: '.ov-mem-seg:not(.sys), .rd-mem-seg:not(.rd-mem-seg-system)',
     clip: '.ov-now',
   },
   {
@@ -403,27 +408,30 @@ const SHOT_DEFS = [
 
   // ── Slot editor (drawer) ────────────────────────────────────────────────
   // The slot drawer is route-addressable: #slots/<name> opens it over the
-  // slots view, which is also what clicking a slot row does.
-  // (`slot-detail` is dropped: the docs/blog/landing use `slot-drawer`.)
+  // slots view, which is also what clicking a slot row does. The frame keeps
+  // the slots page behind the drawer; the taller viewport fits the what-runs
+  // block (model, profile, tune) without scrolling.
+  // (`slot-detail` and the drawer-only crop `slot-drawer` are dropped: the
+  // landing uses `slot-edit-drawer`.)
   {
-    name: 'slot-drawer',
+    name: 'slot-edit-drawer',
     route: '#slots/agent',
     act: scrollTo('[data-testid="slot-profile"]'),
     expect: '[data-testid="slot-profile"]',
-    area: ['.drawer.open'],
-    pad: 0,
+    viewport: { width: 1440, height: 1180 },
   },
 
   // ── Model editor (drawer) ───────────────────────────────────────────────
   // No route of its own: it opens from the pencil on a slot card, or from the
-  // same button inside the slot drawer (slot-model-edit-open).
+  // same button inside the slot drawer (slot-model-edit-open). Framed like
+  // slot-edit-drawer: the drawer over the slots page, tall enough for the file
+  // facts, runner compatibility and source paths.
   {
     name: 'model-edit-drawer',
     route: '#slots',
     act: (page) => page.click('[data-testid="infer-model-edit-agent"]'),
     expect: '[data-testid="model-facts"]',
-    area: ['.drawer.open'],
-    pad: 0,
+    viewport: { width: 1440, height: 1180 },
   },
 
   // ── Profile editor (drawer) ─────────────────────────────────────────────
@@ -465,6 +473,19 @@ const SHOT_DEFS = [
     expect: '[data-testid="agent-card-hermes"]',
   },
   {
+    // The Hermes card flipped to its console (Status, Controls, Lore,
+    // Lifecycle) beside the pi card's front: both faces of a card in one frame.
+    // The flip is a Web Animations rotate; `after` lets it land and gives the
+    // status strip time to repaint (it reads 0/0 for a moment after the flip).
+    name: 'agent-card-console',
+    route: '#agent',
+    act: async (page) => {
+      await page.click('[data-testid="agent-flip-hermes"]');
+    },
+    expect: '[data-testid="agent-unflip-hermes"]',
+    after: 4000,
+  },
+  {
     // DISABLED — do not re-enable without reading this first.
     //
     // The Memory *overview* cannot be pinned to one bank the way the bank and
@@ -504,12 +525,15 @@ const SHOT_DEFS = [
   },
   {
     // Graph explorer — the `web` view renders the whole bank as a
-    // force-directed semantic/temporal graph.
+    // force-directed semantic/temporal graph. The workspace sits below the
+    // bank bar, so it is scrolled to the top of the frame: the graph, not the
+    // reflect box, is the subject.
     name: 'memory-graph',
     route: '#memory/bank',
     act: async (page) => {
       await pinAgentsBank(page);
       await page.click('[data-testid="mv-view-web"]');
+      await scrollTo('[data-testid="mv-workspace"]', 'start')(page);
     },
     expect: '[data-testid="mv-workspace"] svg',
     after: 5000, // the force layout needs a few seconds to stop moving
