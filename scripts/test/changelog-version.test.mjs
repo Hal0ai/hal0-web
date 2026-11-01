@@ -338,8 +338,15 @@ test('releaseSections skips sections without list items and can skip Highlights'
 // A failed fetch must keep the committed snapshot, never fail the build, and
 // say so in exactly one stderr line that names the URL and why it failed.
 
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdtemp, symlink, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const run = promisify(execFile);
 
 const TAGS_FILE = new URL('../../src/data/release-tags.json', import.meta.url);
 const CHANGELOG_FILE = new URL('../../src/data/changelog.md', import.meta.url);
@@ -352,18 +359,22 @@ async function closedPort() {
   return port;
 }
 
-async function withStatus(status, fn) {
-  const srv = createServer((_req, res) => {
-    res.statusCode = status;
-    res.end('nope');
-  });
+async function withServer(handler, fn) {
+  const srv = createServer(handler);
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   try {
     return await fn(srv.address().port);
   } finally {
+    srv.closeAllConnections();
     await new Promise((r) => srv.close(r));
   }
 }
+
+const withStatus = (status, fn) =>
+  withServer((_req, res) => {
+    res.statusCode = status;
+    res.end('nope');
+  }, fn);
 
 function captureWarnings() {
   const lines = [];
@@ -371,6 +382,11 @@ function captureWarnings() {
   console.warn = (...args) => lines.push(args.join(' '));
   return { lines, restore: () => (console.warn = orig) };
 }
+
+// What a warning may say went wrong: an error name (ECONNREFUSED, timeout,
+// empty release list) or an HTTP status. Never a bare number such as the
+// DOMException code 23 a timeout carries.
+const REASON = '(?:HTTP \\d{3}|[A-Za-z][A-Za-z_ ]*[A-Za-z])';
 
 const deadPort = await closedPort();
 process.env.HAL0_RELEASES_URL = `http://127.0.0.1:${deadPort}/releases?per_page=100`;
@@ -390,7 +406,7 @@ test('release-tag sync resolves to the committed tags and warns once when the AP
   assert.equal(cap.lines.length, 1, `one warning line, got ${JSON.stringify(cap.lines)}`);
   assert.match(
     cap.lines[0],
-    new RegExp(`^\\[sync-changelog\\] http://127\\.0\\.0\\.1:${deadPort}/releases\\?per_page=100 failed \\(.+\\); using committed snapshot$`),
+    new RegExp(`^\\[sync-changelog\\] http://127\\.0\\.0\\.1:${deadPort}/releases\\?per_page=100 failed \\(${REASON}\\); using committed snapshot$`),
   );
   assert.equal(await readFile(TAGS_FILE, 'utf8'), before, 'the committed snapshot is untouched');
 });
@@ -406,7 +422,10 @@ test('changelog sync resolves to the committed markdown and warns once when the 
   }
   assert.equal(md, before);
   assert.equal(cap.lines.length, 1);
-  assert.match(cap.lines[0], /^\[sync-changelog\] http:\/\/127\.0\.0\.1:\d+\/CHANGELOG\.md failed \(.+\); using committed snapshot$/);
+  assert.match(
+    cap.lines[0],
+    new RegExp(`^\\[sync-changelog\\] http://127\\.0\\.0\\.1:\\d+/CHANGELOG\\.md failed \\(${REASON}\\); using committed snapshot$`),
+  );
   assert.equal(await readFile(CHANGELOG_FILE, 'utf8'), before);
 });
 
@@ -425,4 +444,76 @@ test('an HTTP error names the status in the warning', async () => {
     assert.deepEqual(cap.lines, [`[sync-changelog] ${url} failed (HTTP 403); using committed snapshot`]);
   });
   assert.equal(await readFile(TAGS_FILE, 'utf8'), before);
+});
+
+test('a request timeout is reported as "timeout", not the DOMException code', async () => {
+  const before = await readFile(TAGS_FILE, 'utf8');
+  await withServer(() => {}, async (port) => {
+    const url = `http://127.0.0.1:${port}/releases`;
+    const cap = captureWarnings();
+    let tags;
+    try {
+      tags = await sync.syncReleaseTags({ source: url, timeoutMs: 50 });
+    } finally {
+      cap.restore();
+    }
+    assert.deepEqual(tags, JSON.parse(before).tags);
+    assert.deepEqual(cap.lines, [`[sync-changelog] ${url} failed (timeout); using committed snapshot`]);
+  });
+  await withServer(() => {}, async (port) => {
+    const url = `http://127.0.0.1:${port}/CHANGELOG.md`;
+    const cap = captureWarnings();
+    try {
+      await sync.syncChangelog({ source: url, timeoutMs: 50 });
+    } finally {
+      cap.restore();
+    }
+    assert.deepEqual(cap.lines, [`[sync-changelog] ${url} failed (timeout); using committed snapshot`]);
+  });
+  assert.equal(await readFile(TAGS_FILE, 'utf8'), before);
+});
+
+test('an empty release list counts as a failed fetch and keeps the committed tags', async () => {
+  // Work on a copy: a regression here would otherwise overwrite the real snapshot.
+  const dir = await mkdtemp(join(tmpdir(), 'sync-empty-'));
+  const dest = join(dir, 'release-tags.json');
+  const before = await readFile(TAGS_FILE, 'utf8');
+  await writeFile(dest, before);
+  try {
+    await withServer(
+      (_req, res) => {
+        res.setHeader('content-type', 'application/json');
+        res.end('[]');
+      },
+      async (port) => {
+        const url = `http://127.0.0.1:${port}/releases`;
+        const cap = captureWarnings();
+        let tags;
+        try {
+          tags = await sync.syncReleaseTags({ source: url, dest });
+        } finally {
+          cap.restore();
+        }
+        assert.deepEqual(cap.lines, [`[sync-changelog] ${url} failed (empty release list); using committed snapshot`]);
+        assert.deepEqual(tags, JSON.parse(before).tags, 'an empty list must not replace the snapshot');
+      },
+    );
+    assert.equal(await readFile(dest, 'utf8'), before, 'the snapshot file is untouched');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('running the script through a symlink still runs the sync', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'sync-link-'));
+  try {
+    const link = join(dir, 'sync.mjs');
+    await symlink(fileURLToPath(new URL('../sync-changelog.mjs', import.meta.url)), link);
+    const { stderr } = await run(process.execPath, [link], {
+      env: { ...process.env, HAL0_RELEASES_URL: process.env.HAL0_RELEASES_URL, HAL0_CHANGELOG_URL: process.env.HAL0_CHANGELOG_URL },
+    });
+    assert.match(stderr, /using committed snapshot/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

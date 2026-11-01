@@ -24,6 +24,7 @@
  * (functions/_middleware.ts + public/releases/*.json) — do not conflate.
  */
 import { writeFile, readFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -36,6 +37,8 @@ const TAGS_DEST = resolve(__dirname, '../src/data/release-tags.json');
 const SOURCE =
   process.env.HAL0_CHANGELOG_URL ??
   'https://raw.githubusercontent.com/hal0ai/hal0/main/CHANGELOG.md';
+
+const TIMEOUT_MS = 10_000;
 
 const RELEASES_SOURCE =
   process.env.HAL0_RELEASES_URL ??
@@ -50,6 +53,9 @@ function warnFallback(url, err) {
 
 function describe(err) {
   if (err instanceof HttpError) return `HTTP ${err.status}`;
+  // AbortSignal.timeout() rejects with a DOMException whose numeric `code`
+  // is 23; say what happened instead of printing that number.
+  if (err?.name === 'TimeoutError') return 'timeout';
   // fetch() rejects with TypeError('fetch failed') and the real reason on cause.
   return err?.cause?.code ?? err?.code ?? err?.message ?? String(err);
 }
@@ -65,10 +71,10 @@ class HttpError extends Error {
  * Pull CHANGELOG.md. Resolves to the markdown now on disk: the fresh copy
  * when the fetch succeeded, the committed snapshot when it did not.
  */
-export async function syncChangelog({ source = SOURCE, dest = DEST } = {}) {
+export async function syncChangelog({ source = SOURCE, dest = DEST, timeoutMs = TIMEOUT_MS } = {}) {
   const committed = await readFile(dest, 'utf8').catch(() => '');
   try {
-    const res = await fetch(source, { signal: AbortSignal.timeout(10_000) });
+    const res = await fetch(source, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) throw new HttpError(res.status);
     const md = await res.text();
     if (!md.includes('# Changelog')) {
@@ -92,7 +98,11 @@ export async function syncChangelog({ source = SOURCE, dest = DEST } = {}) {
  * the fresh list when every page was fetched, the committed snapshot when
  * any request failed (a half-fetched list is never written).
  */
-export async function syncReleaseTags({ source = RELEASES_SOURCE, dest = TAGS_DEST } = {}) {
+export async function syncReleaseTags({
+  source = RELEASES_SOURCE,
+  dest = TAGS_DEST,
+  timeoutMs = TIMEOUT_MS,
+} = {}) {
   const prevRaw = await readFile(dest, 'utf8').catch(() => '');
   let prevTags = null;
   try {
@@ -105,7 +115,7 @@ export async function syncReleaseTags({ source = RELEASES_SOURCE, dest = TAGS_DE
     // Follow the Link header: nightlies push the real releases past one page.
     const releases = [];
     for (let page = 0; url && page < 20; page++) {
-      const res = await fetch(url, { headers, signal: AbortSignal.timeout(10_000) });
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) throw new HttpError(res.status);
       const batch = await res.json();
       if (
@@ -120,6 +130,10 @@ export async function syncReleaseTags({ source = RELEASES_SOURCE, dest = TAGS_DE
       // can never redirect the Authorization header elsewhere.
       url = next && new URL(next[1]).origin === new URL(source).origin ? next[1] : null;
     }
+    // A repo with releases never answers with none: an empty list means the
+    // API or an upstream proxy misbehaved, and writing it would empty the
+    // tag set (every changelog heading would then read as unreleased).
+    if (releases.length === 0) throw new Error('empty release list');
     const tags = releases.map((r) => r.tag_name);
     if (prevTags && JSON.stringify(prevTags) === JSON.stringify(tags)) {
       console.log('[sync-changelog] release tags up to date — no change');
@@ -142,6 +156,14 @@ async function main() {
 
 // Importable for tests; only a direct `node scripts/sync-changelog.mjs`
 // (npm prebuild, `npm run sync:changelog`) runs the sync.
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
+// argv[1] is the path as typed, so resolve symlinks before comparing.
+if (isMain()) main();
+
+function isMain() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
 }
