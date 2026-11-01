@@ -5,16 +5,23 @@
  * — marketing, blog, 404 — reports to the same property.
  *
  * Renders NOTHING unless PUBLIC_GA_MEASUREMENT_ID is set at build time to a
- * valid G-XXXXXXXXXX value; see src/lib/analytics.ts for the rules and the
- * cross-domain (forum.hal0.dev) linker setup.
+ * valid G-XXXXXXXXXX value, or the build is a Vercel production build (then
+ * the committed hal0.dev ID applies); see src/lib/analytics.ts for the rules
+ * and the cross-domain (forum.hal0.dev) linker setup.
  *
  * The loader is `async` so it never blocks parsing or first paint; the
  * bootstrap is inline and tiny. Both are `is:inline` so Astro ships them
  * verbatim instead of bundling.
  */
-import { gtagInlineScript, gtagScriptSrc, resolveMeasurementId } from '../lib/analytics';
+import { gtagInlineScript, gtagScriptSrc, resolveSiteMeasurementId } from '../lib/analytics';
 
-const measurementId = resolveMeasurementId(import.meta.env.PUBLIC_GA_MEASUREMENT_ID);
+// VERCEL_ENV is a system env var on the build machine, not a PUBLIC_ var, so
+// it is read from process.env here (build time, server side) rather than
+// import.meta.env.
+const measurementId = resolveSiteMeasurementId({
+	PUBLIC_GA_MEASUREMENT_ID: import.meta.env.PUBLIC_GA_MEASUREMENT_ID,
+	VERCEL_ENV: process.env.VERCEL_ENV,
+});
 ---
 
 {

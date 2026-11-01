@@ -10,9 +10,11 @@ import { access, readFile } from 'node:fs/promises';
 
 import {
 	GA_LINKER_DOMAINS,
+	GA_PRODUCTION_ID,
 	gtagInlineScript,
 	gtagScriptSrc,
 	resolveMeasurementId,
+	resolveSiteMeasurementId,
 } from '../../src/lib/analytics.ts';
 
 test('resolveMeasurementId accepts a GA4 ID and normalises case/whitespace', () => {
@@ -24,6 +26,18 @@ test('resolveMeasurementId rejects unset, empty, UA- and malformed values', () =
 	for (const bad of [undefined, null, '', '   ', 'UA-12345-1', 'GTM-ABC123', 'G-', 'G-abc', 'G-ABC123"><script>']) {
 		assert.equal(resolveMeasurementId(bad), null, `rejects ${JSON.stringify(bad)}`);
 	}
+});
+
+test('resolveSiteMeasurementId: override wins, production falls back, everything else is silent', () => {
+	assert.match(GA_PRODUCTION_ID, /^G-[A-Z0-9]{6,12}$/, 'committed production ID is a GA4 ID');
+	assert.equal(resolveSiteMeasurementId({ VERCEL_ENV: 'production' }), GA_PRODUCTION_ID);
+	assert.equal(resolveSiteMeasurementId({ VERCEL_ENV: 'preview' }), null);
+	assert.equal(resolveSiteMeasurementId({ VERCEL_ENV: 'development' }), null);
+	assert.equal(resolveSiteMeasurementId({}), null, 'local build with nothing set stays tag-free');
+	assert.equal(resolveSiteMeasurementId({ PUBLIC_GA_MEASUREMENT_ID: 'G-OVERRIDE01', VERCEL_ENV: 'production' }), 'G-OVERRIDE01');
+	assert.equal(resolveSiteMeasurementId({ PUBLIC_GA_MEASUREMENT_ID: 'G-OVERRIDE01', VERCEL_ENV: 'preview' }), 'G-OVERRIDE01', 'an explicit ID also tags previews');
+	assert.equal(resolveSiteMeasurementId({ PUBLIC_GA_MEASUREMENT_ID: 'UA-bad', VERCEL_ENV: 'production' }), null, 'a malformed override disables the tag instead of falling back');
+	assert.equal(resolveSiteMeasurementId({ PUBLIC_GA_MEASUREMENT_ID: '  ', VERCEL_ENV: 'production' }), GA_PRODUCTION_ID, 'blank override is treated as unset');
 });
 
 test('gtag loader URL and inline bootstrap carry the ID and the cross-domain linker', () => {
@@ -55,8 +69,8 @@ test('GA tag is present on every surface or on none', { skip: !built && 'run npm
 	const values = new Set(Object.values(tagged));
 	assert.equal(values.size, 1, `GA tag must be all-or-nothing across surfaces, got ${JSON.stringify(tagged)}`);
 
-	const expected = resolveMeasurementId(process.env.PUBLIC_GA_MEASUREMENT_ID) !== null;
-	assert.equal(tagged.landing, expected, 'tag presence follows PUBLIC_GA_MEASUREMENT_ID at build time');
+	const expected = resolveSiteMeasurementId(process.env) !== null;
+	assert.equal(tagged.landing, expected, 'tag presence follows PUBLIC_GA_MEASUREMENT_ID / VERCEL_ENV at build time');
 });
 
 test('/profiles/submitted is noindex and absent from the sitemap', { skip: !built && 'run npm run build first' }, async () => {

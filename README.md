@@ -147,21 +147,26 @@ Pages host; Vercel ignores it.
 Google Analytics 4 is wired through `src/components/Analytics.astro`, which
 `MarketingLayout.astro` and the Starlight `Head` override
 (`src/components/StarlightHead.astro`) both render, so every page on
-hal0.dev reports to the same property. It emits **nothing** unless the
-build sees `PUBLIC_GA_MEASUREMENT_ID` set to a GA4 ID (`G-XXXXXXXXXX`), so
-local builds and preview deploys stay tag-free.
+hal0.dev reports to the same property. A Vercel **production** build tags
+every page with the committed hal0.dev measurement ID (`GA_PRODUCTION_ID` in
+`src/lib/analytics.ts`). Any other build emits **nothing** unless it sees
+`PUBLIC_GA_MEASUREMENT_ID` set to a GA4 ID (`G-XXXXXXXXXX`), so local builds
+and preview deploys stay tag-free. Setting `PUBLIC_GA_MEASUREMENT_ID` on a
+production build overrides the committed ID (use it to point at a test
+property); a malformed value disables the tag rather than falling back.
 
-To turn it on:
+Already done for hal0.dev: the production ID is committed. Still operator
+steps:
 
 1. In GA4, create one property with one web data stream for `hal0.dev`.
    Under *Admin › Data streams › Configure tag settings › Configure your
    domains*, list both `hal0.dev` and `forum.hal0.dev` so a landing-page
    visit that continues on the forum counts as one session.
-2. Vercel › Project › Settings › Environment Variables: add
-   `PUBLIC_GA_MEASUREMENT_ID` = the measurement ID, scoped to Production
-   only. Redeploy.
-3. Discourse admin › Settings on forum.hal0.dev, same measurement ID:
-   `ga universal tracking code` = `G-…`, `ga version` = `v4_gtag`,
+2. (Optional) Vercel › Project › Settings › Environment Variables:
+   `PUBLIC_GA_MEASUREMENT_ID` overrides the committed ID for any target.
+3. Discourse admin › Settings on forum.hal0.dev, with the forum's own
+   measurement ID (`G-E270CZCHPE`, a second data stream):
+   `ga universal tracking code` = `G-E270CZCHPE`, `ga version` = `v4_gtag`,
    `ga universal auto link domains` = `hal0.dev`.
 
 `src/lib/analytics.ts` holds the ID validation and the gtag bootstrap; the
