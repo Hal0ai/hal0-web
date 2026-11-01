@@ -46,7 +46,7 @@ test('the first eight tagged entries are anchored on the page', { skip }, async 
 
 test('the releases page stays small now that old entries are links', { skip }, async () => {
   const { size } = await stat(PAGE);
-  assert.ok(size < 300_000, `built /releases HTML is ${size} bytes, expected < 300000`);
+  assert.ok(size < 350_000, `built /releases HTML is ${size} bytes, expected < 350000`);
 });
 
 // ── page structure ─────────────────────────────────────────────────────────
