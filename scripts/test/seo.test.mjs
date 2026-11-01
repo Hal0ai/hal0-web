@@ -384,6 +384,26 @@ test('benchmarks.astro takes the model count from the roster, never a literal', 
 	assert.deepEqual(source.match(/\b\d+ models\b/g) ?? [], [], 'no "<number> models" literal');
 });
 
+// /profiles/ was the one page that scrolled sideways at a 390px phone: its card grid asked for
+// minmax(380px, 1fr) tracks inside a 358px content box. A browser is the real check; this pins the cause.
+test('/profiles/ declares no min-width or grid track minimum wider than a 360px phone column', async () => {
+	const source = await readFile(new URL('../../src/pages/profiles.astro', import.meta.url), 'utf8');
+	const LIMIT = 360;
+	const px = (n, unit) => (unit === 'rem' ? n * 16 : n);
+	const css = source
+		.replace(/\/\*[\s\S]*?\*\//g, '')
+		// min(<n>px, 100%) never exceeds the container, so it is the sanctioned way to keep a large preferred width.
+		.replace(/min\(\s*[\d.]+(?:px|rem)\s*,\s*100%\s*\)/g, '100%');
+	const offenders = [];
+	for (const m of css.matchAll(/min-width\s*:\s*([\d.]+)(px|rem)\b/g)) {
+		if (px(parseFloat(m[1]), m[2]) > LIMIT) offenders.push(m[0]);
+	}
+	for (const m of css.matchAll(/minmax\(\s*([\d.]+)(px|rem)\b/g)) {
+		if (px(parseFloat(m[1]), m[2]) > LIMIT) offenders.push(m[0]);
+	}
+	assert.deepEqual(offenders, [], `wider than ${LIMIT}px minimums overflow a 390px viewport`);
+});
+
 // Unit checks for src/lib/seo.ts (no build needed).
 
 test('organizationSameAs reduces the GitHub repo link to its organization', () => {
