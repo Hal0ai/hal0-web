@@ -14,8 +14,9 @@
  *      callout when the entry has one, the install and update commands and
  *      the GitHub link;
  *   2. the eight most recent tagged entries as collapsible <details>, each
- *      an excerpt (Highlights in full, every other section cut to its first
- *      few bullets with a "+N more" link) so the page stays small;
+ *      an excerpt: Highlights, Breaking, Migrations and Security in full;
+ *      Added, Changed, Removed, Fixed and the rest cut to their first six
+ *      bullets with a "+N more on GitHub" link, so the page stays small;
  *   3. an archive: every older version as a version + date link to its
  *      GitHub release. This replaced one 1.09 MB page that inlined the
  *      whole history.
@@ -59,10 +60,12 @@ const CARD_MAX = 8;
 const cardAll = latest ? releaseHighlights(latest, 3) : [];
 const cardItems = cardAll.slice(0, CARD_MAX);
 const cardMore = cardAll.length - cardItems.length;
-const cardHasHighlights = !!latest && latest.sections.some((s) => isHighlights(s.title));
-const breaking = latest
-  ? releaseSections(latest, { max: 1 }).find((s) => s.kind === 'breaking')
-  : undefined;
+// Only a Highlights section that actually has bullets counts (releaseSections
+// leaves out sections with none); otherwise the card falls back to Added,
+// Changed, Fixed and says "What changed".
+const latestSections = latest ? releaseSections(latest) : [];
+const cardHasHighlights = latestSections.some((s) => isHighlights(s.title));
+const breaking = latestSections.find((s) => /^breaking/i.test(s.title.trim()));
 
 // ── recent entries ──
 // One line for the collapsed row: the first highlight (or first bullet),
@@ -89,7 +92,6 @@ const entries = recent.map((v) => {
   // The card already shows the latest entry's Highlights; the entry below
   // repeats them only when the card had to cut some.
   const sections = releaseSections(v, {
-    max: 4,
     skipHighlights: isLatest && cardHasHighlights && cardMore === 0,
   });
   return { v, isLatest, sections, one: oneLine(v), status: status(v) };
@@ -99,22 +101,17 @@ const title = 'hal0 Changelog: Release Notes for the Local AI Server';
 const description =
   'Every hal0 release, newest first: new features, fixes and breaking changes for the self-hosted AI inference server, with install and upgrade commands.';
 
-// Mirrors the BreadcrumbList the other inner pages carry. MarketingLayout has
-// no head slot, so this sits in the body, which search engines read equally.
+// MarketingLayout turns the nodes in `jsonLd` into the page's single @graph.
 const breadcrumbs = {
-  '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://hal0.dev/' },
     { '@type': 'ListItem', position: 2, name: 'Releases', item: 'https://hal0.dev/releases/' },
   ],
 };
-const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
 ---
 
-<MarketingLayout title={title} description={description}>
-  <script is:inline type="application/ld+json" set:html={breadcrumbsJson} />
-
+<MarketingLayout title={title} description={description} jsonLd={[breadcrumbs]}>
   <div class="wrap wide">
     <div class="phead phead-row">
       <div>
@@ -125,7 +122,7 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
           <code>install.sh</code> installs and what <code>hal0 update</code> moves you to.
         </p>
       </div>
-      <div class="rel-channels" aria-label="Update channels">
+      <div class="rel-channels">
         <span class="chip ok">stable &middot; default</span>
         <span class="chip">preview &middot; next line</span>
         <span class="chip">nightly &middot; ahead of stable</span>
@@ -134,6 +131,7 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
 
     {latest && (
       <article class="rel-latest" data-latest-release>
+        <h2 class="sr-only">Latest stable release</h2>
         <div class="rel-lcard">
           <div class="rel-lcard-h">
             <span class="chip ok">latest stable</span>
@@ -144,7 +142,7 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
             {cardItems.length > 0 && (
               <>
                 <h3>{cardHasHighlights ? 'Highlights' : 'What changed'}</h3>
-                <ul class="rel-hl">
+                <ul class="rel-hl" role="list">
                   {cardItems.map((item) => <li set:html={item} />)}
                 </ul>
                 {cardMore > 0 && (
@@ -156,9 +154,9 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
               <div class="rel-brk">
                 <b>breaking</b>
                 <span set:html={breaking.items[0]} />
-                {breaking.more > 0 && (
+                {breaking.items.length > 1 && (
                   <>
-                    {' '}<a href={`#${latest.slug}`}>More under Breaking in the notes below.</a>
+                    {' '}<a href={`#${latest.slug}`}>{breaking.items.length - 1} more under Breaking in the notes below.</a>
                   </>
                 )}
               </div>
@@ -200,7 +198,7 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
       {entries.map(({ v, isLatest, sections, one, status: st }) => (
         <details class="rel-entry" id={v.slug} open={isLatest}>
           <summary>
-            <span class="v">{v.version}</span>
+            <h3 class="v">{v.version}</h3>
             {v.date && <span class="d">{v.date}</span>}
             {one && <span class="one">{one}</span>}
             <span class={st.cls}>{st.label}</span>
@@ -233,10 +231,10 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
     {archive.length > 0 && (
       <section class="rel-list" id="archive" aria-labelledby="archive-h">
         <h2 id="archive-h">Archive</h2>
-        <ul class="rel-archive">
+        <ul class="rel-archive" role="list">
           {archive.map((v) => (
             <li>
-              <a href={entryUrl(v)} rel="noopener" data-slug={v.slug}>
+              <a class="card-hover" href={entryUrl(v)} rel="noopener" data-slug={v.slug}>
                 <span class="k">{v.version}</span>
                 <span>{v.untagged ? 'unreleased' : (v.date ?? '')}</span>
               </a>
@@ -487,6 +485,17 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
   .rel-entry summary::-webkit-details-marker {
     display: none;
   }
+  /* The card clips its overflow (rounded corners), so the global 3px outset
+   * focus ring would be cut off on the summary: draw it inside instead. */
+  .rel-entry summary:focus-visible {
+    outline-offset: -3px;
+  }
+  .rel-entry summary h3 {
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
   .rel-entry summary .v {
     min-width: 64px;
     font-weight: 600;
@@ -659,7 +668,12 @@ const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
   // archived version (old /changelog#<version> links) goes to that
   // version's GitHub release, since the archive no longer inlines bodies.
   function followHash() {
-    const id = decodeURIComponent(location.hash.slice(1));
+    let id = '';
+    try {
+      id = decodeURIComponent(location.hash.slice(1));
+    } catch {
+      return; // a malformed %-escape in the fragment: leave the page alone
+    }
     if (!id) return;
     const target = document.getElementById(id);
     if (target instanceof HTMLDetailsElement) {

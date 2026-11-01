@@ -7,6 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access, stat } from 'node:fs/promises';
+import vm from 'node:vm';
 import { parseChangelog, releaseTagUrl, splitReleases } from '../../src/lib/changelog.js';
 
 const PAGE = new URL('../../dist/client/releases/index.html', import.meta.url);
@@ -45,7 +46,7 @@ test('the first eight tagged entries are anchored on the page', { skip }, async 
 
 test('the releases page stays small now that old entries are links', { skip }, async () => {
   const { size } = await stat(PAGE);
-  assert.ok(size < 250_000, `built /releases HTML is ${size} bytes, expected < 250000`);
+  assert.ok(size < 300_000, `built /releases HTML is ${size} bytes, expected < 300000`);
 });
 
 // ── page structure ─────────────────────────────────────────────────────────
@@ -81,7 +82,11 @@ test('one latest-release card names the latest tagged stable version', { skip },
   assert.ok(card.includes(`href="${releaseTagUrl(parsed.latestTagged.version)}"`), 'card links the GitHub release');
   assert.ok(card.includes('curl -fsSL https://hal0.dev/install.sh | sudo bash'), 'card has the install one-liner');
   assert.ok(card.includes('sudo hal0 update'), 'card has the upgrade command');
-  const hasBreaking = parsed.latestTagged.sections.some((s) => s.kind === 'breaking');
+  // The callout is for a section titled Breaking; "Supported upgrades" and
+  // "Upgrade notes" classify as breaking-kind but are not breaking changes.
+  const hasBreaking = parsed.latestTagged.sections.some(
+    (s) => /^breaking/i.test(s.title.trim()) && /<li[\s>]/.test(s.html),
+  );
   assert.equal(/class="rel-brk\b/.test(card), hasBreaking, 'Breaking block iff the entry has a breaking section');
 });
 
@@ -138,17 +143,30 @@ test('the archive lists every remaining version with a GitHub link', { skip }, a
   }
 });
 
-test('leading untagged entries keep their unreleased badge', { skip: skip || leadingUntagged < 1 }, async () => {
+test('only untagged entries carry the unreleased badge in their summary', { skip }, async () => {
   const html = await readFile(PAGE, 'utf8');
-  assert.ok(html.includes('unreleased'));
+  const entries = html.split(/<details class="rel-entry\b[^"]*"/).slice(1);
+  assert.equal(entries.length, expectedRecent);
+  let untaggedSeen = 0;
+  for (const chunk of entries) {
+    const slug = chunk.match(/id="([^"]+)"/)?.[1];
+    const v = parsed.versions.find((x) => x.slug === slug);
+    const summary = chunk.slice(chunk.indexOf('<summary'), chunk.indexOf('</summary>'));
+    assert.equal(summary.includes('>unreleased<'), v.untagged, `${v.version}: unreleased badge iff untagged`);
+    if (v.untagged) untaggedSeen += 1;
+  }
+  assert.equal(untaggedSeen, Math.max(leadingUntagged, 0), 'every leading untagged entry was checked');
 });
 
 test('BreadcrumbList structured data lists Home then the page', { skip }, async () => {
   const html = await readFile(PAGE, 'utf8');
-  const blocks = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map((m) =>
-    JSON.parse(m[1]),
-  );
-  const nodes = blocks.flatMap((b) => (Array.isArray(b['@graph']) ? b['@graph'] : [b]));
+  // MarketingLayout emits one @graph script in <head> from the jsonLd prop;
+  // the page must not carry a second, hand-written one.
+  const scripts = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)];
+  assert.equal(scripts.length, 1, 'exactly one ld+json script');
+  assert.ok(html.indexOf(scripts[0][0]) < html.indexOf('</head>'), 'it lives in <head>');
+  const graph = JSON.parse(scripts[0][1]); // the layout writes "<" as \u003c; JSON.parse decodes it
+  const nodes = Array.isArray(graph['@graph']) ? graph['@graph'] : [graph];
   const crumbs = nodes.find((n) => n['@type'] === 'BreadcrumbList');
   assert.ok(crumbs, 'a BreadcrumbList node exists');
   const items = crumbs.itemListElement;
@@ -177,4 +195,96 @@ test('the retired changelog rail and Get hal0 block are gone', { skip }, async (
   const html = await readFile(PAGE, 'utf8');
   assert.ok(!html.includes('data-cl-side'), 'no sticky release rail');
   assert.ok(!html.includes('cl-get'), 'no old Get hal0 block');
+});
+
+// ── never-cut sections, headings, a11y, scripts ────────────────────────────
+
+// Top-level <li> count of a rendered list (nested lists do not add items).
+function topLevelCount(html) {
+  let depth = 0;
+  let n = 0;
+  for (const m of html.matchAll(/<(\/?)li[\s>]/g)) {
+    if (m[1] === '') {
+      if (depth === 0) n += 1;
+      depth += 1;
+    } else depth = Math.max(0, depth - 1);
+  }
+  return n;
+}
+
+test('Highlights, Breaking, Migrations and Security render whole in every entry', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const entries = html.split(/<details class="rel-entry\b[^"]*"/).slice(1);
+  let checked = 0;
+  for (const chunk of entries) {
+    const slug = chunk.match(/id="([^"]+)"/)?.[1];
+    const v = parsed.versions.find((x) => x.slug === slug);
+    const body = chunk.slice(0, chunk.indexOf('</details>'));
+    for (const section of v.sections) {
+      const title = section.title.trim().toLowerCase();
+      if (!['highlights', 'breaking', 'migrations', 'security'].includes(title)) continue;
+      const expected = topLevelCount(section.html);
+      if (expected === 0) continue;
+      const at = body.search(new RegExp(`<h4[^>]*>${section.title.trim()}</h4>`));
+      if (at === -1) continue; // the newest entry's Highlights live in the card above
+      const list = body.slice(at, body.indexOf('</ul>', at));
+      assert.ok(!list.includes('rel-more'), `${v.version} ${section.title} has no "+N more" cut`);
+      assert.equal(topLevelCount(list), expected, `${v.version} ${section.title} shows all ${expected} bullets`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked >= 3, `checked several never-cut sections, got ${checked}`);
+});
+
+test('the heading outline is h1, then h2 sections, then an h3 per entry', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const main = html.slice(html.indexOf('<main'), html.indexOf('</main>'));
+  const levels = [...main.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+  assert.equal(levels.filter((n) => n === 1).length, 1, 'one h1');
+  for (let i = 1; i < levels.length; i++) {
+    assert.ok(levels[i] - levels[i - 1] <= 1, `heading levels never skip: ${levels.slice(0, i + 1).join('>')}`);
+  }
+  const entries = main.split(/<details class="rel-entry\b[^"]*"/).slice(1);
+  for (const chunk of entries) {
+    const slug = chunk.match(/id="([^"]+)"/)?.[1];
+    const v = parsed.versions.find((x) => x.slug === slug);
+    const summary = chunk.slice(chunk.indexOf('<summary'), chunk.indexOf('</summary>'));
+    assert.match(summary, new RegExp(`<h3[^>]*>[^<]*${v.version.replace(/\./g, '\\.')}[^<]*</h3>`), `${v.version}: summary carries an h3 with the version`);
+  }
+});
+
+test('borderless lists keep list semantics and the plain channel div has no stray label', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  assert.match(html, /<ul class="rel-hl" role="list"/);
+  assert.match(html, /<ul class="rel-archive" role="list"/);
+  assert.doesNotMatch(html, /<div class="rel-channels"[^>]*aria-label/, 'aria-label on a role-less div is ignored');
+});
+
+test('the entry summary keeps a visible focus ring inside the clipped card', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  let css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+  for (const m of html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)) {
+    const file = await readFile(new URL(`../../dist/client${m[1]}`, import.meta.url), 'utf8').catch(() => '');
+    if (file.includes('.rel-entry')) css += `\n${file}`;
+  }
+  assert.match(css, /\.rel-entry summary:focus-visible\s*\{[^}]*outline-offset:\s*-3px/);
+});
+
+test('a malformed URL fragment does not throw in the page script', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const source = [...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)]
+    .map((m) => m[1])
+    .find((code) => code.includes('data-copy'));
+  assert.ok(source, 'found the page script');
+  const noop = () => {};
+  const context = {
+    document: { querySelectorAll: () => [], getElementById: () => null, querySelector: () => null },
+    window: { addEventListener: noop },
+    location: { hash: '#%E0%A4%A', replace: noop },
+    HTMLDetailsElement: class {},
+    CSS: { escape: (x) => x },
+    setTimeout: noop,
+    navigator: {},
+  };
+  vm.runInNewContext(source, context);
 });
