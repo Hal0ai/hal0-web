@@ -1,0 +1,19 @@
+---
+/**
+ * Head override for Starlight pages (/blog and anything else Starlight
+ * renders): Starlight's default <head> content, then the shared Google
+ * Analytics tag so blog traffic lands in the same GA4 property as the
+ * marketing pages (which get it from MarketingLayout.astro).
+ *
+ * Default is a passthrough of Astro.locals.starlightRoute.head, so the
+ * site-wide `head` entries in astro.config.mjs (OG defaults, lightbox and
+ * RSS-button scripts) still render exactly as before; Analytics.astro
+ * renders nothing when PUBLIC_GA_MEASUREMENT_ID is unset, so without it
+ * this override is byte-identical to Starlight's own Head.
+ */
+import Default from '@astrojs/starlight/components/Head.astro';
+import Analytics from './Analytics.astro';
+---
+
+<Default {...Astro.props}><slot /></Default>
+<Analytics />
