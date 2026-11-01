@@ -9,6 +9,7 @@ import tailwindcss from '@tailwindcss/vite';
 import vercel from '@astrojs/vercel';
 import { SITE_URL, THEME_COLOR_DARK, THEME_COLOR_LIGHT } from './src/lib/seo.ts';
 import { sitemapFilter } from './src/lib/sitemap-filter.mjs';
+import { versioned } from './src/lib/public-asset.mjs';
 
 const nav = JSON.parse(readFileSync(new URL('./src/data/nav.json', import.meta.url), 'utf8'));
 const socialHref = (id) => nav.social.find((s) => s.id === id).href;
@@ -283,14 +284,14 @@ export default defineConfig({
 				// pages (shared with the marketing layout; styles in global.css).
 				{
 					tag: 'script',
-					attrs: { src: '/js/lightbox.js', defer: true },
+					attrs: { src: versioned('/js/lightbox.js'), defer: true },
 				},
 				// Blog index RSS button — see public/js/blog-rss-button.js for why
 				// this is a progressive-enhancement script rather than a template
 				// override (starlight-blog's blog index route has no override seam).
 				{
 					tag: 'script',
-					attrs: { src: '/js/blog-rss-button.js', defer: true },
+					attrs: { src: versioned('/js/blog-rss-button.js'), defer: true },
 				},
 			],
 		}),

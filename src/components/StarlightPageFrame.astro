@@ -50,6 +50,7 @@
  * additive) can ever affect blog.
  */
 import Default from '@astrojs/starlight/components/PageFrame.astro';
+import { versioned } from '../lib/public-asset.mjs';
 import SiteFooter from './SiteFooter.astro';
 
 const { entry } = Astro.locals.starlightRoute;
@@ -100,5 +101,5 @@ const isBlogIndex = !isBlog && !isLongForm && !isDocs && (path === '/blog' || /^
   * result rows with a docs/kb/blog tag on every Starlight page; see
   * public/js/search-source-tags.js. (KB was excluded while the byte-
   * parity freeze stood; the 2026-08-09 unification pass retired it.) */}
-<script is:inline src="/js/search-source-tags.js" defer />
+<script is:inline src={versioned('/js/search-source-tags.js')} defer />
 <SiteFooter />
