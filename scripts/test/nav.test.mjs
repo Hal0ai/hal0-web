@@ -49,14 +49,14 @@ test('labels are lowercase everywhere, including sub and footer column links', (
   }
 });
 
-test('the header is the same five entries, in order, with nothing hidden', () => {
+test('the header is the same six entries, in order, with nothing hidden', () => {
   // The unified chrome: hal0.dev and forum.hal0.dev carry this exact list.
   // `forum` used to be hidden here (the site linked it only from the footer);
   // it is a first-class header entry now, and the Discourse theme drops it
   // from its own copy because that host IS the forum.
   assert.deepEqual(
     nav.header.map((l) => l.label),
-    ['home', 'docs', 'benchmarks', 'profiles', 'forum'],
+    ['home', 'docs', 'benchmarks', 'profiles', 'releases', 'forum'],
   );
   for (const link of nav.header) {
     assert.ok(!link.hidden, `${link.label} must not be hidden`);
@@ -93,7 +93,7 @@ test('header links that carry match use string or array form (forum has none by 
   // forum.hal0.dev now, so no hal0.dev route can light them. They rely on
   // the exact-href test in nav.ts's isActive instead.
   const withMatch = nav.header.filter((l) => l.match !== undefined).map((l) => l.label).sort();
-  assert.deepEqual(withMatch, ['benchmarks', 'profiles']);
+  assert.deepEqual(withMatch, ['benchmarks', 'profiles', 'releases']);
 });
 
 // nav.ts is TypeScript and can't be imported under node --test, so this
@@ -144,6 +144,36 @@ test('docs and the knowledge base both live on the forum', () => {
     .flatMap((c) => c.links)
     .find((l) => l.label === 'knowledge base');
   assert.match(kb.href, /^https:\/\/forum\.hal0\.dev\/c\/kb\//);
+});
+
+test('isActive: releases lights on /releases and its fragments only', () => {
+  const releases = nav.header.find((l) => l.label === 'releases');
+  assert.equal(releases.href, '/releases');
+  assert.ok(isActiveJs('/releases', releases));
+  assert.ok(isActiveJs('/releases/', releases));
+  assert.ok(!isActiveJs('/profiles', releases));
+  assert.ok(!isActiveJs('/benchmarks/', releases));
+});
+
+test('releases replaces the changelog and GitHub-releases footer links', () => {
+  const learn = nav.footerColumns.find((c) => c.heading === 'learn');
+  const labels = learn.links.map((l) => l.label);
+  assert.ok(labels.includes('releases'), 'learn column has a releases link');
+  assert.ok(!labels.includes('changelog'), 'learn column no longer says changelog');
+  assert.equal(learn.links.find((l) => l.label === 'releases').href, '/releases');
+  assert.ok(
+    !learn.links.some((l) => l.href === 'https://github.com/Hal0ai/hal0/releases'),
+    'the GitHub releases line is gone from the learn column',
+  );
+  const all = [...nav.footerColumns.flatMap((c) => c.links), ...nav.footerBase];
+  assert.ok(!all.some((l) => l.href === '/changelog'), '/changelog is a redirect now, nothing links to it');
+  assert.ok(nav.footerBase.some((l) => l.href === '/releases'), 'footerBase points at /releases');
+});
+
+test('data column what-is-new link targets the releases section of the landing page', () => {
+  const data = nav.footerColumns.find((c) => c.heading === 'data');
+  assert.ok(data.links.some((l) => l.href === '/#releases'));
+  assert.ok(!data.links.some((l) => l.href === '/#whats-new'));
 });
 
 test('isActive: profiles is its own section', () => {

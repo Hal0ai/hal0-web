@@ -2,10 +2,10 @@
  * changelog.js — parse hal0's CHANGELOG.md into structured data.
  *
  * Source: src/data/changelog.md (synced from the product repo by
- * scripts/sync-changelog.mjs at build time). Consumed by /changelog (the
+ * scripts/sync-changelog.mjs at build time). Consumed by /releases (the
  * unified page — /changelog and /releases used to be separate pages both
- * calling this; they're merged now, with /releases redirecting into
- * /changelog). Markdown bodies are rendered to HTML with `marked` so the
+ * calling this; they're merged now, with /changelog redirecting into
+ * /releases). Markdown bodies are rendered to HTML with `marked` so the
  * branded page can keep the prose, links, and lists from the source.
  *
  * The CHANGELOG grammar (Keep-a-Changelog-ish):
@@ -184,4 +184,152 @@ export function releaseTagUrl(version) {
   // prefix ([1.0.0-rc.3]), so normalise here.
   const tag = /^v/i.test(version) ? version : `v${version}`;
   return `https://github.com/hal0ai/hal0/releases/tag/${tag}`;
+}
+
+/**
+ * Inner HTML of every top-level `<li>` in a rendered section, in order.
+ * Sections are already HTML (marked), so this walks the `<li>` / `</li>`
+ * tags with a depth counter: a nested list's items stay inside their parent
+ * and are dropped from the excerpt (a preview wants the headline bullet, not
+ * its sub-points). A lone `<p>` wrapper from a loose list is unwrapped so the
+ * result drops straight into an `<li>` or a card without extra block margins.
+ * @param {string} html
+ * @returns {string[]}
+ */
+function topLevelItems(html) {
+  const items = [];
+  const tag = /<(\/?)li(?:\s[^>]*)?>/gi;
+  let depth = 0;
+  let start = 0;
+  let m;
+  while ((m = tag.exec(html))) {
+    if (m[1] === '') {
+      if (depth === 0) start = m.index + m[0].length;
+      depth += 1;
+    } else if (depth > 0) {
+      depth -= 1;
+      if (depth === 0) {
+        let inner = html.slice(start, m.index);
+        // Drop nested lists from the excerpt.
+        inner = inner.replace(/<(ul|ol)[\s\S]*<\/\1>/i, '').trim();
+        const para = inner.match(/^<p>([\s\S]*)<\/p>$/);
+        if (para && !para[1].includes('<p>')) inner = para[1].trim();
+        if (inner) items.push(inner);
+      }
+    }
+  }
+  return items;
+}
+
+/**
+ * Short list of what a release is about, as `<li>` inner-HTML strings.
+ * Prefers the entry's `### Highlights` bullets; entries without one fall back
+ * to the first bullets of its Added, then Changed, then Fixed sections, so
+ * older releases still get a summary. Entries with no bullets at all (an
+ * intro paragraph and nothing else) return `[]`.
+ * @param {ChangelogVersion} version
+ * @param {number} [max]
+ * @returns {string[]}
+ */
+export function releaseHighlights(version, max = 3) {
+  const byTitle = (name) =>
+    (version.sections ?? []).filter((s) => s.title.trim().toLowerCase() === name);
+
+  const highlights = byTitle('highlights').flatMap((s) => topLevelItems(s.html));
+  if (highlights.length) return highlights;
+
+  const picked = [];
+  for (const name of ['added', 'changed', 'fixed']) {
+    for (const s of byTitle(name)) {
+      for (const item of topLevelItems(s.html)) {
+        picked.push(item);
+        if (picked.length >= max) return picked;
+      }
+    }
+  }
+  return picked;
+}
+
+/**
+ * Split the version list into the entries the releases page renders in full
+ * and the ones it only links. `recent` is the first `recent` tagged entries,
+ * plus any untagged entry that sits among them: content the changelog
+ * documents ahead of its git tag (typically the top entry) must stay visible
+ * with its "unreleased" badge, and does not count against the quota. Once
+ * `recent` tagged entries are in, everything after goes to `archive`, so
+ * long-dead untagged history (a heading that never got a GitHub release) is
+ * archived with the rest rather than resurfacing.
+ * @param {ChangelogVersion[]} versions newest first
+ * @param {number} [recent]
+ * @returns {{recent: ChangelogVersion[], archive: ChangelogVersion[]}}
+ */
+export function splitReleases(versions, recent = 8) {
+  const head = [];
+  const archive = [];
+  let tagged = 0;
+  for (const v of versions) {
+    if (tagged >= recent) archive.push(v);
+    else {
+      head.push(v);
+      if (!v.untagged) tagged += 1;
+    }
+  }
+  return { recent: head, archive };
+}
+
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+/**
+ * Plain text of a rendered HTML fragment: tags dropped, the entities `marked`
+ * emits decoded, whitespace collapsed. For one-line summaries, where the
+ * result is escaped again by the template.
+ * @param {string} html
+ * @returns {string}
+ */
+export function plainText(html) {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (whole, dec, hex, name) => {
+      if (dec) return String.fromCodePoint(Number(dec));
+      if (hex) return String.fromCodePoint(parseInt(hex, 16));
+      return ENTITIES[name.toLowerCase()] ?? whole;
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Display order for an entry's sections: what a reader needs first. Titles not
+// listed keep their changelog order after these.
+const SECTION_ORDER = ['highlights', 'breaking', 'added', 'changed', 'removed', 'fixed', 'security'];
+
+// Sections an operator must read in full before upgrading: the maintainers'
+// own summary, what breaks, what to migrate, and security fixes. An excerpt
+// never cuts these; a truncated Breaking list is worse than a long page.
+const NEVER_CUT = new Set(['highlights', 'breaking', 'migrations', 'security']);
+
+/**
+ * Bulleted sections of an entry, ready to render as a bounded excerpt.
+ * Highlights, Breaking, Migrations and Security are never cut. Every other
+ * section (Added, Changed, Removed, Fixed and the rest) keeps its first `max`
+ * bullets and reports how many it dropped, so a release with a hundred fixes
+ * stays short and points at the full notes. Sections with no bullets (prose,
+ * tables) are left out, so a Highlights section that is only prose does not
+ * count as Highlights.
+ * @param {ChangelogVersion} version
+ * @param {{max?: number, skipHighlights?: boolean}} [opts]
+ * @returns {{title: string, kind: ChangelogSection['kind'], items: string[], more: number}[]}
+ */
+export function releaseSections(version, { max = 6, skipHighlights = false } = {}) {
+  const rank = (title) => {
+    const i = SECTION_ORDER.indexOf(title.trim().toLowerCase());
+    return i === -1 ? SECTION_ORDER.length : i;
+  };
+  return (version.sections ?? [])
+    .map((s, index) => ({ s, index, all: topLevelItems(s.html) }))
+    .filter(({ s, all }) => all.length && !(skipHighlights && rank(s.title) === 0))
+    .sort((a, b) => rank(a.s.title) - rank(b.s.title) || a.index - b.index)
+    .map(({ s, all }) => {
+      const shown = NEVER_CUT.has(s.title.trim().toLowerCase()) ? all : all.slice(0, max);
+      return { title: s.title, kind: s.kind, items: shown, more: all.length - shown.length };
+    });
 }

@@ -15,7 +15,7 @@
 		['/docs/', 'docs'],
 		['/kb/', 'kb'],
 		['/blog/', 'blog'],
-		['/changelog', 'changelog'],
+		['/releases', 'releases'],
 	];
 
 	const tagFor = (href) => {

@@ -33,7 +33,7 @@ test('applyHeaderRoutes inserts before the filesystem handler and is idempotent'
 	const base = {
 		version: 3,
 		routes: [
-			{ src: '^/releases$', headers: { Location: '/changelog' }, status: 301 },
+			{ src: '^/changelog/?$', headers: { Location: '/releases' }, status: 301 },
 			{ handle: 'filesystem' },
 			{ src: '^/api/(.*)$', dest: '_render' },
 		],

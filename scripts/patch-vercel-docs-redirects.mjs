@@ -51,8 +51,10 @@ const FORUM_PREFIX = 'https://forum.hal0.dev/';
 // than reaching the hub's knowledge-base section. Listing the slash form in
 // astro.config.mjs does not help -- Astro normalizes it off the key before
 // compiling -- so the tolerance is added here, where it already is for the
-// forum routes.
-const LOCAL_SRCS_NEEDING_SLASH_TOLERANCE = new Set(['^/kb$']);
+// forum routes. `/changelog` (now a redirect to the /releases page) is the
+// same case: it used to be a page, so `/changelog/` is the form crawlers and
+// bookmarks hold.
+const LOCAL_SRCS_NEEDING_SLASH_TOLERANCE = new Set(['^/kb$', '^/changelog$']);
 
 async function main() {
 	let raw;

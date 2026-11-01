@@ -23,7 +23,7 @@ const SURFACES = [
 	['docs-section', '/docs/concepts/'],
 	['blog-index', '/blog/'],
 	['blog-post', '/blog/whats-new-in-the-v0-8-line/'],
-	['changelog', '/changelog/'],
+	['releases', '/releases/'],
 	['benchmarks', '/benchmarks/'],
 	['profiles', '/profiles/'],
 ];

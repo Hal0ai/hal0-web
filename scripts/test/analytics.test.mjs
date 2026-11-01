@@ -56,7 +56,7 @@ test('gtag loader URL and inline bootstrap carry the ID and the cross-domain lin
 const pages = {
 	landing: new URL('../../dist/client/index.html', import.meta.url),
 	blog: new URL('../../dist/client/blog/index.html', import.meta.url),
-	changelog: new URL('../../dist/client/changelog/index.html', import.meta.url),
+	releases: new URL('../../dist/client/releases/index.html', import.meta.url),
 };
 const built = await access(pages.landing).then(() => true, () => false);
 

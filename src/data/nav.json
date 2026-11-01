@@ -36,6 +36,11 @@
       "match": "/profiles"
     },
     {
+      "label": "releases",
+      "href": "/releases",
+      "match": "/releases"
+    },
+    {
       "label": "forum",
       "href": "https://forum.hal0.dev",
       "external": true
@@ -60,13 +65,8 @@
           "href": "/blog"
         },
         {
-          "label": "changelog",
-          "href": "/changelog"
-        },
-        {
           "label": "releases",
-          "href": "https://github.com/Hal0ai/hal0/releases",
-          "external": true
+          "href": "/releases"
         }
       ]
     },
@@ -115,7 +115,7 @@
         },
         {
           "label": "what's new",
-          "href": "/#whats-new"
+          "href": "/#releases"
         }
       ]
     }
@@ -135,7 +135,7 @@
   "footerBase": [
     {
       "label": "changelog",
-      "href": "/changelog"
+      "href": "/releases"
     },
     {
       "label": "rss",

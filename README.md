@@ -29,7 +29,7 @@ Licensed **Apache-2.0** (matches the upstream hal0 product repo).
 | Path                 | Source                                                                 |
 | -------------------- | ---------------------------------------------------------------------- |
 | `/`                  | `src/pages/index.astro` (landing page)                                 |
-| `/changelog`         | `src/pages/changelog.astro`, rendered from the synced product `CHANGELOG.md` |
+| `/releases`          | `src/pages/releases.astro`, rendered from the synced product `CHANGELOG.md` |
 | `/benchmarks`        | `src/pages/benchmarks.astro`, model roster leaderboard                 |
 | `/profiles`          | `src/pages/profiles.astro`, community profile gallery                  |
 | `/profiles/submit`   | `src/pages/profiles/submit.astro`, in-browser validated submission     |
@@ -52,7 +52,7 @@ Marketing pages render through `src/layouts/MarketingLayout.astro`.
 - `/kb` and `/kb/<category>/<page>` to the forum knowledge base, from
   `src/data/kb-redirects.json`.
 - `/first-run-guide` to the forum's Getting started category.
-- `/releases` to `/changelog`.
+- `/changelog` to `/releases`.
 
 `scripts/patch-vercel-docs-redirects.mjs` runs as `postbuild` and makes the
 forum redirects match with and without a trailing slash.
