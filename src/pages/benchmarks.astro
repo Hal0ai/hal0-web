@@ -21,7 +21,7 @@ import '../styles/site-data.css';
 import CapGlyphs from '../components/bench/CapGlyphs.astro';
 import BucketMeter from '../components/bench/BucketMeter.astro';
 import RunDrawer from '../components/bench/RunDrawer.astro';
-import { ROSTER, HARDWARE, BINARY, ROSTER_DATE } from '../data/model-roster.ts';
+import { ROSTER, HARDWARE, BINARY, ROSTER_DATE, ROSTER_MEASURED } from '../data/model-roster.ts';
 import BENCH_SNAPSHOT from '../data/bench-snapshot.json';
 import { selectInitialRows, capCounts, DEFAULT_WORKLOAD } from '../lib/bench-view.mjs';
 
@@ -71,11 +71,13 @@ const SNAPSHOT_LANE = 'rocm';
 // only recomputes them if the corpus itself changes (snapshot → live).
 const CAP_COUNTS = capCounts(rows, CAPS);
 
-const description =
-  'The hal0 model roster benchmark: decode/prefill throughput, MTP accept rate and memory footprint for 26 models measured end to end on one Strix Halo box.';
+// Search-result title/description (≤60 / ≤155 chars): the model count comes
+// from the roster so a new sweep never leaves a stale number in the SERP.
+const title = `Strix Halo LLM Benchmarks: ${ROSTER_MEASURED} Models, Tokens/sec | hal0`;
+const description = `Tokens per second for ${ROSTER_MEASURED} local LLMs on one AMD Ryzen AI Max+ 395 (Strix Halo, 128 GB): decode, prefill, MTP accept rate and memory use per model.`;
 ---
 
-<MarketingLayout title="Benchmarks — hal0" description={description}>
+<MarketingLayout title={title} description={description}>
   <div class="wrap wide phead">
     <div class="phead-row">
       <div>

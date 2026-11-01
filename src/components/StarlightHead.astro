@@ -10,9 +10,28 @@
  * RSS-button scripts) still render exactly as before; Analytics.astro
  * renders nothing when PUBLIC_GA_MEASUREMENT_ID is unset, so without it
  * this override is byte-identical to Starlight's own Head.
+ *
+ * One exception: the blog index. starlight-blog renders it as a page called
+ * "Blog" (the visible h1 and nav label) with no seam to give the page a
+ * search title, so its <title> and og:title are replaced here with the
+ * keyword title from the SEO audit (B7). Everything else about the page,
+ * including the visible heading, is untouched.
  */
 import Default from '@astrojs/starlight/components/Head.astro';
 import Analytics from './Analytics.astro';
+
+const BLOG_INDEX_TITLE = 'hal0 Blog: Self-Hosted AI, Strix Halo & Releases';
+
+const route = Astro.locals.starlightRoute;
+if (/^\/blog\/?$/.test(Astro.url.pathname)) {
+  route.head = route.head.map((entry) => {
+    if (entry.tag === 'title') return { ...entry, content: BLOG_INDEX_TITLE };
+    if (entry.tag === 'meta' && entry.attrs?.property === 'og:title') {
+      return { ...entry, attrs: { ...entry.attrs, content: BLOG_INDEX_TITLE } };
+    }
+    return entry;
+  });
+}
 ---
 
 <Default {...Astro.props}><slot /></Default>

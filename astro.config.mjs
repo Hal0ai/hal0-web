@@ -119,7 +119,11 @@ export default defineConfig({
 		icon({ include: { lucide: ['*'] } }),
 		starlight({
 			title: 'hal0',
-			description: 'Local AI for your home. Strix Halo native.',
+			// Fallback <meta name="description"> for every Starlight page without
+			// its own: the blog index, tag and author pages. Posts carry their own
+			// `description:` frontmatter. (Also the RSS feed description.)
+			description:
+				'Release write-ups and field notes on running local LLMs, speech and image generation at home with hal0 on AMD Strix Halo and other Linux hardware.',
 			// Blog nests under the docs Starlight instance (/blog) so it inherits
 			// the dark-first brand chrome. The marketing apex is untouched.
 			plugins: [
