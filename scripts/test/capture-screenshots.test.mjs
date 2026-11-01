@@ -74,12 +74,15 @@ test('retired shots are gone', () => {
 });
 
 test('Overview selectors follow the redesigned Overview', () => {
-  assert.equal(byName('dashboard-overview').expect, '.ov-mem-seg:not(.sys)');
-  assert.equal(byName('overview-now').expect, '.ov-mem-seg:not(.sys)');
+  assert.equal(byName('dashboard-overview').expect, '.ov-mem-seg:not(.sys), .rd-mem-seg:not(.rd-mem-seg-system)');
+  assert.equal(byName('overview-now').expect, '.ov-mem-seg:not(.sys), .rd-mem-seg:not(.rd-mem-seg-system)');
   assert.equal(byName('overview-now').clip, '.ov-now');
+  // The one `.rd-` selector allowed is the stable Overview's memory segment,
+  // kept as a comma fallback until a tagged release ships the `.ov-*` band.
   for (const s of SHOTS) {
     const sel = `${s.expect ?? ''} ${s.clip ?? ''} ${(s.area ?? []).join(' ')}`;
-    assert.ok(!sel.includes('.rd-'), `${s.name} still uses a pre-redesign .rd- selector`);
+    const stripped = sel.replace(/\.rd-mem-seg:not\(\.rd-mem-seg-system\)/g, '');
+    assert.ok(!stripped.includes('.rd-'), `${s.name} still uses a pre-redesign .rd- selector`);
   }
 });
 

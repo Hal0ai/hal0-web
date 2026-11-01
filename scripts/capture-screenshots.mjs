@@ -246,7 +246,9 @@ const SHOT_DEFS = [
     // system segment (`.sys`) paints first, from hardware data, so waiting on
     // any `.ov-mem-seg` would pass on a frame whose slot list still says
     // loading and whose stat strip reads "—".
-    expect: '.ov-mem-seg:not(.sys)',
+    // Stable 1.7.x still ships the earlier Overview (`.rd-mem-seg`); the
+    // `.ov-*` band is on nightly only. Accept either so a tagged box works.
+    expect: '.ov-mem-seg:not(.sys), .rd-mem-seg:not(.rd-mem-seg-system)',
     after: 1500,
   },
   {
@@ -255,7 +257,7 @@ const SHOT_DEFS = [
     // on disk for the post that still references it.)
     name: 'overview-now',
     route: '#dashboard',
-    expect: '.ov-mem-seg:not(.sys)',
+    expect: '.ov-mem-seg:not(.sys), .rd-mem-seg:not(.rd-mem-seg-system)',
     clip: '.ov-now',
   },
   {
