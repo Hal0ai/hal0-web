@@ -287,3 +287,96 @@ test('releaseSections skips sections without list items and can skip Highlights'
   assert.ok(!releaseSections(v).some((s) => s.title === 'Audience'));
   assert.ok(!releaseSections(v, { skipHighlights: true }).some((s) => s.title === 'Highlights'));
 });
+
+// ── sync-changelog fallback ────────────────────────────────────────────────
+// A failed fetch must keep the committed snapshot, never fail the build, and
+// say so in exactly one stderr line that names the URL and why it failed.
+
+import { readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+
+const TAGS_FILE = new URL('../../src/data/release-tags.json', import.meta.url);
+const CHANGELOG_FILE = new URL('../../src/data/changelog.md', import.meta.url);
+
+async function closedPort() {
+  const srv = createServer();
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const { port } = srv.address();
+  await new Promise((r) => srv.close(r));
+  return port;
+}
+
+async function withStatus(status, fn) {
+  const srv = createServer((_req, res) => {
+    res.statusCode = status;
+    res.end('nope');
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    return await fn(srv.address().port);
+  } finally {
+    await new Promise((r) => srv.close(r));
+  }
+}
+
+function captureWarnings() {
+  const lines = [];
+  const orig = console.warn;
+  console.warn = (...args) => lines.push(args.join(' '));
+  return { lines, restore: () => (console.warn = orig) };
+}
+
+const deadPort = await closedPort();
+process.env.HAL0_RELEASES_URL = `http://127.0.0.1:${deadPort}/releases?per_page=100`;
+process.env.HAL0_CHANGELOG_URL = `http://127.0.0.1:${deadPort}/CHANGELOG.md`;
+const sync = await import('../sync-changelog.mjs');
+
+test('release-tag sync resolves to the committed tags and warns once when the API is unreachable', async () => {
+  const before = await readFile(TAGS_FILE, 'utf8');
+  const cap = captureWarnings();
+  let tags;
+  try {
+    tags = await sync.syncReleaseTags();
+  } finally {
+    cap.restore();
+  }
+  assert.deepEqual(tags, JSON.parse(before).tags);
+  assert.equal(cap.lines.length, 1, `one warning line, got ${JSON.stringify(cap.lines)}`);
+  assert.match(
+    cap.lines[0],
+    new RegExp(`^\\[sync-changelog\\] http://127\\.0\\.0\\.1:${deadPort}/releases\\?per_page=100 failed \\(.+\\); using committed snapshot$`),
+  );
+  assert.equal(await readFile(TAGS_FILE, 'utf8'), before, 'the committed snapshot is untouched');
+});
+
+test('changelog sync resolves to the committed markdown and warns once when the source is unreachable', async () => {
+  const before = await readFile(CHANGELOG_FILE, 'utf8');
+  const cap = captureWarnings();
+  let md;
+  try {
+    md = await sync.syncChangelog();
+  } finally {
+    cap.restore();
+  }
+  assert.equal(md, before);
+  assert.equal(cap.lines.length, 1);
+  assert.match(cap.lines[0], /^\[sync-changelog\] http:\/\/127\.0\.0\.1:\d+\/CHANGELOG\.md failed \(.+\); using committed snapshot$/);
+  assert.equal(await readFile(CHANGELOG_FILE, 'utf8'), before);
+});
+
+test('an HTTP error names the status in the warning', async () => {
+  const before = await readFile(TAGS_FILE, 'utf8');
+  await withStatus(403, async (port) => {
+    const url = `http://127.0.0.1:${port}/releases`;
+    const cap = captureWarnings();
+    let tags;
+    try {
+      tags = await sync.syncReleaseTags({ source: url });
+    } finally {
+      cap.restore();
+    }
+    assert.deepEqual(tags, JSON.parse(before).tags);
+    assert.deepEqual(cap.lines, [`[sync-changelog] ${url} failed (HTTP 403); using committed snapshot`]);
+  });
+  assert.equal(await readFile(TAGS_FILE, 'utf8'), before);
+});
