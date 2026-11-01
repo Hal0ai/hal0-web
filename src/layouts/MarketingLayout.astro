@@ -28,6 +28,7 @@
  */
 import '../styles/global.css';
 import SiteHeader from '../components/SiteHeader.astro';
+import { versioned } from '../lib/public-asset.mjs';
 import SubNav from '../components/SubNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import Analytics from '../components/Analytics.astro';
@@ -154,8 +155,8 @@ const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
     <SiteFooter />
 
     <!-- Screenshot lightbox (shared with the docs/blog via astro.config head). -->
-    <script is:inline src="/js/lightbox.js" defer></script>
+    <script is:inline src={versioned('/js/lightbox.js')} defer></script>
     <!-- ⌘K search palette over the Pagefind index (see public/js/site-search.js). -->
-    <script is:inline src="/js/site-search.js" defer></script>
+    <script is:inline src={versioned('/js/site-search.js')} defer></script>
   </body>
 </html>
