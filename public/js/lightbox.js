@@ -3,13 +3,16 @@
  * Binds every image whose src points at /screenshots/ (apex showcase, docs,
  * blog) so a click opens it in a dismissible overlay, as large as the
  * viewport allows, with the page's other screenshots one step left or right:
- * the ‹ › buttons, the arrow keys, or a horizontal swipe. The overlay mirrors
- * the figure's <picture> sources (AVIF, WebP, PNG; the @2x capture on a
- * retina screen), shows the figure's caption and a "3 / 12" counter, and
- * preloads the neighbours. Styling lives in src/styles/global.css
- * (.hal0-lightbox*). Loaded on the marketing layout and on Starlight pages
- * (see astro.config.mjs head). Idempotent + handles Starlight's client-side
- * view transitions by re-binding on navigation.
+ * a click on the left or right half of the picture (a thin accent line lights
+ * the edge under the pointer, so there is visibly more), the arrow keys, or a
+ * horizontal swipe. The ‹ › buttons stay for keyboard and screen-reader
+ * users, visible only while focused. The overlay mirrors the figure's
+ * <picture> sources (AVIF, WebP, PNG; the @2x capture on a retina screen),
+ * shows the figure's caption and a "3 / 12" counter, and preloads the
+ * neighbours. Styling lives in src/styles/global.css (.hal0-lightbox*).
+ * Loaded on the marketing layout and on Starlight pages (see astro.config.mjs
+ * head). Idempotent + handles Starlight's client-side view transitions by
+ * re-binding on navigation.
  */
 (() => {
   const SELECTOR = 'img[src*="/screenshots/"]';
@@ -24,6 +27,9 @@
   let closeBtn = null;
   let prevBtn = null;
   let nextBtn = null;
+  let halfPrev = null; // the left half of the picture: steps back
+  let halfNext = null; // the right half: steps forward
+  const flashTimers = new WeakMap(); // half → the timer that ends its tap flash
   let items = []; // the page's screenshots in DOM order
   let index = -1;
   let lastFocus = null;
@@ -52,14 +58,21 @@
     nextBtn.textContent = '›';
 
     stage = el('figure', 'hal0-lightbox-stage');
+    // The frame: the picture under two invisible halves. Each half lights a
+    // line along its own edge while hovered (CSS) and steps on click; they are
+    // pointer-only, so hidden from assistive tech, which has the buttons.
+    const pic = el('div', 'hal0-lightbox-pic');
     picture = el('picture');
     overlayImg = el('img', '', { alt: '', draggable: 'false' });
     picture.appendChild(overlayImg);
+    halfPrev = el('div', 'hal0-lightbox-half hal0-lightbox-half-prev', { 'aria-hidden': 'true' });
+    halfNext = el('div', 'hal0-lightbox-half hal0-lightbox-half-next', { 'aria-hidden': 'true' });
+    pic.append(picture, halfPrev, halfNext);
     const caption = el('figcaption', 'hal0-lightbox-cap');
     captionText = el('span', 'hal0-lightbox-text');
     counter = el('span', 'hal0-lightbox-count');
     caption.append(captionText, counter);
-    stage.append(picture, caption);
+    stage.append(pic, caption);
 
     overlay.append(closeBtn, prevBtn, stage, nextBtn);
     document.body.appendChild(overlay);
@@ -72,8 +85,10 @@
       const target = e.target;
       if (prevBtn.contains(target)) return step(-1);
       if (nextBtn.contains(target)) return step(1);
+      if (halfPrev.contains(target)) return tap(halfPrev, -1);
+      if (halfNext.contains(target)) return tap(halfNext, 1);
       if (closeBtn.contains(target)) return closeBox();
-      // The picture and caption are the content; everywhere else is backdrop.
+      // The caption is content; everywhere else is backdrop.
       if (stage.contains(target)) return;
       closeBox();
     });
@@ -155,6 +170,19 @@
   }
 
   /**
+   * A half of the picture was clicked. With a pointer that hovers, the edge
+   * was already lit; on a touch screen it flashes for a moment so the tap
+   * reads as "there is more this way".
+   */
+  function tap(half, delta) {
+    step(delta);
+    if (matchMedia('(hover: hover)').matches) return;
+    half.classList.add('is-flash');
+    clearTimeout(flashTimers.get(half)); // a second tap restarts the flash
+    flashTimers.set(half, setTimeout(() => half.classList.remove('is-flash'), 350));
+  }
+
+  /**
    * A view transition swaps the body and takes the overlay with it. Forget the
    * detached overlay (the next click builds a fresh one) and give the page its
    * scroll back in case it was open at the time.
@@ -199,8 +227,9 @@
       return step(1);
     }
     if (e.key === 'Tab') {
-      // Keep focus inside the dialog: close, previous, next, and around again
-      // (the side buttons are display: none on a page with one screenshot).
+      // Keep focus inside the dialog: close, previous, next, and around again.
+      // The side buttons are clipped away until focused, and display: none on
+      // a page with one screenshot.
       const buttons = [closeBtn, prevBtn, nextBtn].filter((b) => getComputedStyle(b).display !== 'none');
       const at = buttons.indexOf(document.activeElement);
       const to = at < 0 ? 0 : (at + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;

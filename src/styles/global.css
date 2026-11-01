@@ -150,10 +150,13 @@ code, pre, kbd, .tabular {
  * Zero-dependency. The script (/js/lightbox.js) is loaded on both the
  * marketing layout and the Starlight docs/blog, and binds any image whose
  * src points at /screenshots/. Styling lives here so it's shared by both.
- * The overlay is a stage (picture + caption) with a close button and a
- * previous/next button over each side; a page with one screenshot hides the
- * side buttons (data-single). The picture takes the viewport minus the room
- * for the caption and, from 640px up, the side buttons. The stage centres
+ * The overlay is a stage (picture + caption) with a close button. The picture
+ * sits in a frame under two invisible halves: hovering one lights a thin
+ * accent line, with a glow, along that edge of the picture (there is more
+ * that way), and a click on it steps. The previous/next buttons remain for
+ * the keyboard and screen readers, clipped away until focused; a page with
+ * one screenshot hides buttons and halves alike (data-single). The picture
+ * takes the viewport minus the room for the caption. The stage centres
  * itself with auto margins and scrolls inside the overlay, so a long caption
  * on a short viewport stays reachable while the buttons stay put (the
  * overlay's backdrop-filter would make fixed children scroll with it).
@@ -197,6 +200,21 @@ img[src*="/screenshots/"] {
 	padding: 1rem;
 	cursor: default;
 }
+/* The frame carries the border, radius and shadow (not the img), so the edge
+ * line below is clipped to the rounded corners. flex: none keeps it as tall
+ * as its picture when a long caption overflows the stage: a flex item that
+ * hides overflow would otherwise shrink and clip the picture instead of
+ * letting the stage scroll. */
+.hal0-lightbox-pic {
+	flex: none;
+	position: relative;
+	max-width: 100%;
+	line-height: 0;
+	overflow: hidden;
+	border-radius: 8px;
+	border: 1px solid var(--hal0-border-strong, #3a3a3a);
+	box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.85);
+}
 .hal0-lightbox picture {
 	display: block;
 	line-height: 0;
@@ -209,12 +227,54 @@ img[src*="/screenshots/"] {
 	max-height: calc(100vh - 6.5rem);
 	max-height: calc(100dvh - 6.5rem);
 	object-fit: contain;
-	border-radius: 8px;
-	border: 1px solid var(--hal0-border-strong, #3a3a3a);
-	box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.85);
 	cursor: default;
 	user-select: none;
 	-webkit-user-drag: none;
+}
+/* Each half of the picture steps on click; a 2px accent line with a glow
+ * lights its edge while the pointer is over it, or for a moment after a tap
+ * (.is-flash, script) where nothing hovers. */
+.hal0-lightbox-half {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 50%;
+	cursor: pointer;
+}
+.hal0-lightbox-half-prev {
+	left: 0;
+}
+.hal0-lightbox-half-next {
+	right: 0;
+}
+.hal0-lightbox-half::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background: var(--hal0-accent, #ffb000);
+	box-shadow: 0 0 12px 1px var(--hal0-accent, #ffb000);
+	opacity: 0;
+	transition: opacity 120ms ease;
+	pointer-events: none;
+}
+.hal0-lightbox-half-prev::before {
+	left: 0;
+}
+.hal0-lightbox-half-next::before {
+	right: 0;
+}
+@media (hover: hover) {
+	.hal0-lightbox-half:hover::before {
+		opacity: 1;
+	}
+}
+.hal0-lightbox-half.is-flash::before {
+	opacity: 1;
+}
+.hal0-lightbox[data-single='true'] .hal0-lightbox-half {
+	display: none;
 }
 .hal0-lightbox-cap {
 	display: flex;
@@ -261,6 +321,8 @@ img[src*="/screenshots/"] {
 	height: 2.25rem;
 	font-size: 1.4rem;
 }
+/* The side buttons serve the keyboard and screen readers. Clipped to nothing
+ * (no pointer target either), they appear in place once focused. */
 .hal0-lightbox-nav {
 	top: 50%;
 	width: 2.75rem;
@@ -268,6 +330,12 @@ img[src*="/screenshots/"] {
 	font-size: 1.9rem;
 	padding-bottom: 0.2rem;
 	transform: translateY(-50%);
+	clip-path: inset(50%);
+	opacity: 0;
+}
+.hal0-lightbox-nav:focus-visible {
+	clip-path: none;
+	opacity: 1;
 }
 .hal0-lightbox-prev {
 	left: 0.75rem;
@@ -297,16 +365,9 @@ img[src*="/screenshots/"] {
 		right: 1.25rem;
 	}
 }
-/* On a phone the side buttons would sit on the picture; they move to the
- * bottom corners under the caption, and a swipe does the same job. */
+/* On a phone a focused side button would sit on the picture; it shows at a
+ * bottom corner instead. A tap on a half or a swipe does the same job. */
 @media (max-width: 639px) {
-	.hal0-lightbox-stage {
-		padding-bottom: 4.5rem;
-	}
-	.hal0-lightbox img {
-		max-height: calc(100vh - 11rem);
-		max-height: calc(100dvh - 11rem);
-	}
 	.hal0-lightbox-nav {
 		top: auto;
 		bottom: 1rem;
@@ -317,7 +378,8 @@ img[src*="/screenshots/"] {
 	}
 }
 @media (prefers-reduced-motion: reduce) {
-	.hal0-lightbox {
+	.hal0-lightbox,
+	.hal0-lightbox-half::before {
 		transition: none;
 	}
 }
