@@ -11,6 +11,7 @@
 	--hal0-accent-hover:  #ffc533;
 	--hal0-accent-muted:  #7a5500;
 	--hal0-accent-glow:   rgba(255, 176, 0, 0.18);
+	--hal0-accent-bg:     #2a1d00; /* selected / active row wash */
 
 	/* Dark surfaces (default theme) */
 	--hal0-bg:           #0a0a0a;
@@ -73,13 +74,21 @@
 	--hal0-rad-sm:   4px;   /* buttons, inset fields */
 	--hal0-rad-lg:  10px;   /* cards, panels */
 	--hal0-rad-pill: 999px;
+	--hal0-rad-xs:   3px;   /* chips, kbd, swatches */
 
 	/* Motion */
 	--hal0-ease:     cubic-bezier(0.22, 1, 0.36, 1);
 	--hal0-dur-fast: 0.12s;
+	--hal0-dur:      0.18s;
+	--hal0-dur-slow: 0.22s;
+
+	/* Status glows — halo behind a live-state dot */
+	--hal0-ok-glow:   rgba(111,207,151,0.35);
+	--hal0-warn-glow: rgba(232,185,78,0.35);
 
 	/* Elevation */
 	--hal0-shadow-menu: 0 16px 48px -8px rgba(0,0,0,0.7);
+	--hal0-shadow-hover: 0 6px 20px rgba(0,0,0,0.28); /* interactive card hover */
 
 	/* Drawers only (README §Elevation) — the 580px right-anchored run/profile
 	 * drawer is the one surface allowed its own shadow beyond --shadow-menu. */
@@ -111,6 +120,8 @@
 	--hal0-accent-soft:   rgba(184, 120, 0, 0.09);
 	--hal0-accent-line:   rgba(184, 120, 0, 0.34);
 	--hal0-accent-glow:   rgba(184, 120, 0, 0.16);
+	--hal0-accent-bg:     #fdf3d7;
+	--hal0-shadow-hover:  0 6px 20px rgba(0,0,0,0.10);
 
 	/* Status + device hues — the dark values fail AA on white; these light
 	 * overrides come from the design handoff README ("Colour — light
