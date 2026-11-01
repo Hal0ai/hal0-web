@@ -5,7 +5,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SHOTS, parseArgs, parseLaunchArgs, openWebUiUrl, variantFile } from '../capture-screenshots.mjs';
+import { SHOTS, capture, parseArgs, parseLaunchArgs, openWebUiUrl, variantFile } from '../capture-screenshots.mjs';
 
 const byName = (name) => SHOTS.find((s) => s.name === name);
 
@@ -150,6 +150,83 @@ test('openWebUiUrl falls back to the dashboard host on port 3001', () => {
   assert.equal(openWebUiUrl({}, 'http://hal0.local:8080'), 'http://hal0.local:3001');
   assert.equal(openWebUiUrl({}, 'http://localhost:8080'), 'http://localhost:3001');
   assert.equal(openWebUiUrl({ HAL0_OPENWEBUI_URL: '  ' }, 'http://hal0.local:8080/'), 'http://hal0.local:3001');
+});
+
+// A page that records what the shot drives, for the act() and capture() tests.
+function recordingPage(log) {
+  const locator = (sel) => ({
+    first: () => locator(sel),
+    isVisible: async () => (log.push(`locator ${sel}`), false),
+  });
+  return {
+    goto: async (url) => void log.push(`goto ${url}`),
+    setViewportSize: async () => {},
+    waitForTimeout: async (ms) => void log.push(`wait ${ms}`),
+    waitForSelector: async (sel) => void log.push(`expect ${sel}`),
+    selectOption: async (sel, value) => void log.push(`select ${sel} ${value}`),
+    click: async (sel) => void log.push(`click ${sel}`),
+    screenshot: async () => void log.push('screenshot'),
+    locator,
+  };
+}
+
+test('every #memory/bank shot pins the agents bank before anything else', async () => {
+  const shots = SHOTS.filter((s) => s.route === '#memory/bank' && s.act);
+  assert.deepEqual(
+    shots.map((s) => s.name).sort(),
+    ['memory-bank', 'memory-graph', 'memory-reflect'],
+  );
+  for (const s of shots) {
+    const log = [];
+    await s.act(recordingPage(log));
+    assert.equal(log[0], 'select [data-testid="mv-bank-select"] agents', s.name);
+    assert.match(log[1], /^wait \d+$/, `${s.name} waits for the bank to load`);
+  }
+});
+
+test('the bank shots then do their own step', async () => {
+  const run = async (name) => {
+    const log = [];
+    await byName(name).act(recordingPage(log));
+    return log.slice(1);
+  };
+  assert.deepEqual(await run('memory-bank'), ['wait 1200']);
+  assert.deepEqual(await run('memory-reflect'), ['wait 1000', 'click [data-testid="mv-reflect-tab"]']);
+  assert.deepEqual(await run('memory-graph'), ['wait 1000', 'click [data-testid="mv-view-web"]']);
+});
+
+test('capture waits for the settle time once, before act, on a dashboard route', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const log = [];
+  const shot = {
+    name: 't', file: 't.png', route: '#dashboard', expect: '.x', settle: 7, after: 9,
+    act: async () => void log.push('act'),
+  };
+  await capture(recordingPage(log), shot, '', '/tmp/out');
+  assert.deepEqual(log.filter((e) => e.startsWith('goto ')), ['goto about:blank', 'goto /#dashboard']);
+  assert.equal(log.filter((e) => e === 'wait 7').length, 1);
+  const at = (e) => log.indexOf(e);
+  // sign-in check, then the settle wait, then banners, then act
+  assert.ok(at('locator [data-testid="login-key-input"]') < at('wait 7'));
+  assert.ok(at('wait 7') < at('locator .banner-dismiss'));
+  assert.ok(at('locator .banner-dismiss') < at('act'));
+  assert.ok(at('act') < at('expect .x'));
+  assert.ok(at('expect .x') < at('wait 9'));
+  assert.ok(at('wait 9') < at('screenshot'));
+});
+
+test('capture loads a url shot as given and skips the dashboard sign-in and banners', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const log = [];
+  const shot = {
+    name: 't', file: 't.png', url: 'http://chat.example:3001', expect: '.x', settle: 7,
+    act: async () => void log.push('act'),
+  };
+  await capture(recordingPage(log), shot, '@2x', '/tmp/out');
+  assert.deepEqual(log.filter((e) => e.startsWith('goto ')), ['goto about:blank', 'goto http://chat.example:3001']);
+  assert.equal(log.filter((e) => e === 'wait 7').length, 1);
+  assert.deepEqual(log.filter((e) => e.startsWith('locator ')), []);
+  assert.ok(log.indexOf('wait 7') < log.indexOf('act'));
 });
 
 test('parseLaunchArgs keeps a quoted argument whole and strips the quotes', () => {

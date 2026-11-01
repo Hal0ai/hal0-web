@@ -79,9 +79,8 @@ const SCALES = [
  * A shot is one output file:
  *
  *   name    output basename, kebab-case; also used by docs/marketing `src`s
- *   file    the 1× output file, `<name>.png` unless a shot overrides it. The
- *           2× variant is derived from it (`<name>@2x.png`). No two shots may
- *           share one
+ *   file    the 1× output file, always `<name>.png` (filled in below, never
+ *           set by hand). The 2× variant is `<name>@2x.png`
  *   route   hash route to load (the SPA is remounted for every shot)
  *   url     full URL to load instead of a dashboard route, for a surface on
  *           another origin (Open WebUI on :3001). Such a shot skips the
@@ -115,6 +114,17 @@ const scrollTo =
     await page.locator(selector).first().evaluate((el, b) => el.scrollIntoView({ block: b }), block);
     await page.waitForTimeout(400);
   };
+
+/**
+ * act() helper: pin the Memory bank workspace to the `agents` bank. Its facts
+ * are about the runtime itself, so the frame stays on-product instead of
+ * showing whatever the box's own project banks happen to hold. `settleMs` is
+ * how long the bank's data gets to load before the shot moves on.
+ */
+const pinAgentsBank = async (page, settleMs = 1000) => {
+  await page.selectOption('[data-testid="mv-bank-select"]', 'agents');
+  await page.waitForTimeout(settleMs);
+};
 
 /**
  * act() helper: open the edit-a-copy drawer for the seed profile `agent`
@@ -472,15 +482,10 @@ const SHOT_DEFS = [
     expect: '[data-testid="mem-tab-bank"]',
   },
   {
-    // The bank workspace. Pinned to the `agents` bank: its facts are about the
-    // runtime itself, so the frame stays on-product instead of showing
-    // whatever the box's own project banks happen to hold.
+    // The bank workspace, pinned to the `agents` bank.
     name: 'memory-bank',
     route: '#memory/bank',
-    act: async (page) => {
-      await page.selectOption('[data-testid="mv-bank-select"]', 'agents');
-      await page.waitForTimeout(1200);
-    },
+    act: (page) => pinAgentsBank(page, 1200),
     expect: '[data-testid="mv-workspace"]',
   },
   {
@@ -491,8 +496,7 @@ const SHOT_DEFS = [
     name: 'memory-reflect',
     route: '#memory/bank',
     act: async (page) => {
-      await page.selectOption('[data-testid="mv-bank-select"]', 'agents');
-      await page.waitForTimeout(1000);
+      await pinAgentsBank(page);
       await page.click('[data-testid="mv-reflect-tab"]');
     },
     expect: '[data-testid="mv-reflect-q"]',
@@ -504,8 +508,7 @@ const SHOT_DEFS = [
     name: 'memory-graph',
     route: '#memory/bank',
     act: async (page) => {
-      await page.selectOption('[data-testid="mv-bank-select"]', 'agents');
-      await page.waitForTimeout(1000);
+      await pinAgentsBank(page);
       await page.click('[data-testid="mv-view-web"]');
     },
     expect: '[data-testid="mv-workspace"] svg',
@@ -592,11 +595,8 @@ const SHOT_DEFS = [
   // capturing from a box whose board actually has cards in flight.
 ];
 
-/**
- * SHOT_DEFS with `file` filled in. A shot may set its own `file`; the default
- * is `<name>.png`, and the retina variant is derived from whatever it is.
- */
-export const SHOTS = SHOT_DEFS.map((shot) => ({ file: `${shot.name}.png`, ...shot }));
+/** SHOT_DEFS with each shot's output `file` (`<name>.png`) filled in. */
+export const SHOTS = SHOT_DEFS.map((shot) => ({ ...shot, file: `${shot.name}.png` }));
 
 async function reachable(url) {
   try {
@@ -621,7 +621,7 @@ async function dismissBanners(page) {
   }
 }
 
-async function capture(page, shot, suffix, outDir) {
+export async function capture(page, shot, suffix, outDir) {
   const file = variantFile(shot.file, suffix);
   const out = resolve(outDir, file);
 
@@ -629,17 +629,13 @@ async function capture(page, shot, suffix, outDir) {
   // without this a drawer opened by the previous shot bleeds into this one.
   await page.goto('about:blank');
   await page.setViewportSize(shot.viewport ?? VIEWPORT);
-  if (shot.url) {
-    // Another origin (Open WebUI): the dashboard's sign-in gate and banners
-    // are not there, so skip the helpers that look for them.
-    await page.goto(shot.url, { waitUntil: 'networkidle', timeout: 30_000 });
-    await page.waitForTimeout(shot.settle ?? SETTLE_MS);
-  } else {
-    await page.goto(`/${shot.route}`, { waitUntil: 'networkidle', timeout: 30_000 });
-    await loginIfAsked(page, shot.route);
-    await page.waitForTimeout(shot.settle ?? SETTLE_MS);
-    await dismissBanners(page);
-  }
+  // A `url` shot is on another origin (Open WebUI): the dashboard's sign-in
+  // gate and banners are not there, so those helpers are skipped for it.
+  const dashboard = !shot.url;
+  await page.goto(shot.url ?? `/${shot.route}`, { waitUntil: 'networkidle', timeout: 30_000 });
+  if (dashboard) await loginIfAsked(page, shot.route);
+  await page.waitForTimeout(shot.settle ?? SETTLE_MS);
+  if (dashboard) await dismissBanners(page);
 
   if (shot.act) await shot.act(page);
   if (shot.expect) {
