@@ -1,0 +1,106 @@
+---
+/**
+ * ConsoleShot: one framed screenshot with its caption. A shot with no capture yet
+ * renders a placeholder frame and a TODO(shots) comment naming the file, which
+ * the re-capture lane greps for. Used by the swap, memory and console sections.
+ */
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import type { ConsoleShot } from '../../data/landing';
+
+interface Props {
+  shot: ConsoleShot;
+  hero?: boolean;
+}
+
+const { shot, hero = false } = Astro.props;
+const [label, ...rest] = shot.caption.split('. ');
+const [width, height] = shot.size ?? [1440, 900];
+const src = `/screenshots/${shot.file}.png`;
+// Only advertise a 2x candidate that the build will actually serve.
+const has2x = existsSync(join(process.cwd(), 'public', 'screenshots', `${shot.file}@2x.png`));
+const srcset = has2x ? `${src} 1x, /screenshots/${shot.file}@2x.png 2x` : undefined;
+---
+
+<figure class:list={['shot', { 'hero-shot': hero }]}>
+  {shot.todo ? (
+    <Fragment>
+      <Fragment set:html={`<!-- TODO(shots): ${shot.file} -->`} />
+      <div class="placeholder" role="img" aria-label={shot.alt}>
+        <span>{shot.alt}</span>
+        <span class="pending">screenshot pending</span>
+      </div>
+    </Fragment>
+  ) : (
+    <img
+      src={src}
+      srcset={srcset}
+      alt={shot.alt}
+      width={width}
+      height={height}
+      loading="lazy"
+      decoding="async"
+      class:list={{ contain: !!shot.size }}
+    />
+  )}
+  <figcaption><b>{label}.</b> {rest.join('. ')}</figcaption>
+</figure>
+
+<style>
+  .shot {
+    position: relative;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+    background: var(--hal0-bg-sunken);
+  }
+  .hero-shot {
+    box-shadow: 0 30px 80px -40px var(--hal0-accent-glow);
+  }
+  img,
+  .placeholder {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1440 / 900;
+  }
+  img {
+    object-fit: cover;
+    object-position: top;
+  }
+  img.contain {
+    object-fit: contain;
+    object-position: center;
+  }
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px;
+    font-family: var(--hal0-font-mono);
+    font-size: 12px;
+    text-align: center;
+    color: var(--hal0-fg-dim);
+  }
+  .pending {
+    font-size: 10px;
+    letter-spacing: var(--hal0-ls-label);
+    text-transform: uppercase;
+    color: var(--hal0-fg-faint);
+  }
+  figcaption {
+    padding: 10px 14px;
+    border-top: 1px solid var(--hal0-border-soft);
+    background: var(--hal0-bg);
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+  }
+  b {
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+</style>

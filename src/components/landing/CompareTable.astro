@@ -1,0 +1,94 @@
+---
+/**
+ * CompareTable: hal0 next to the closest alternatives, layer above the engine.
+ * Cells and their sources live in src/data/landing.ts. A real <table> so screen
+ * readers announce the row and column; it scrolls sideways inside its wrapper on
+ * a phone rather than crushing the columns.
+ */
+import { COMPARE_COLUMNS, COMPARE_ROWS, COMPARE_NOTE } from '../../data/landing';
+---
+
+<div class="tbl-wrap" tabindex="0" role="region" aria-label="hal0 compared with Ollama, LM Studio, llama-swap and Lemonade">
+  <table class="cmp">
+    <thead>
+      <tr>
+        <td></td>
+        {COMPARE_COLUMNS.map((col, i) => <th scope="col" class:list={{ us: i === 0 }}>{col}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {COMPARE_ROWS.map((row) => (
+        <tr>
+          <th scope="row">{row.label}</th>
+          {row.cells.map((cell, i) => <td class:list={{ us: i === 0 }}>{cell}</td>)}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+<p class="cmp-note">{COMPARE_NOTE}</p>
+
+<style>
+  .tbl-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+    background: var(--hal0-bg-elevated);
+  }
+  .tbl-wrap:focus-visible {
+    outline: 2px solid var(--hal0-accent);
+    outline-offset: 2px;
+  }
+  .cmp {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+    font-family: var(--hal0-font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  th,
+  td {
+    padding: 12px 14px;
+    border-right: 1px solid var(--hal0-border-soft);
+    border-bottom: 1px solid var(--hal0-border-soft);
+    font-weight: 400;
+    text-align: left;
+    vertical-align: top;
+    color: var(--hal0-fg-muted);
+  }
+  tr > :last-child {
+    border-right: 0;
+  }
+  tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+  tbody tr:hover > * {
+    background: var(--hal0-bg-2);
+  }
+  thead > tr > * {
+    background: var(--hal0-bg);
+    font-size: 10px;
+    letter-spacing: var(--hal0-ls-label);
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
+  }
+  tbody th {
+    width: 200px;
+    font-weight: 500;
+    color: var(--hal0-fg);
+  }
+  .us,
+  tbody tr:hover > .us {
+    background: var(--hal0-accent-soft);
+    color: var(--hal0-fg);
+  }
+  thead .us {
+    color: var(--hal0-accent);
+  }
+  .cmp-note {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    color: var(--hal0-fg-dim);
+  }
+</style>

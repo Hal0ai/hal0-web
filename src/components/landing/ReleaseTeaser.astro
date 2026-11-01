@@ -1,0 +1,173 @@
+---
+/**
+ * ReleaseTeaser: the latest tagged stable release, from the synced changelog.
+ * Version, date, up to three highlights, and a link to /releases. An entry with
+ * nothing to highlight renders the version, date and link alone.
+ *
+ * `releaseHighlightsFallback` has the contract of `releaseHighlights` in
+ * src/lib/changelog.js, which lands with the releases page. Swap it for the
+ * shared helper when that merges.
+ */
+import rawChangelog from '../../data/changelog.md?raw';
+import releaseTags from '../../data/release-tags.json';
+import { parseChangelog } from '../../lib/changelog.js';
+
+type Entry = NonNullable<ReturnType<typeof parseChangelog>['latestTagged']>;
+
+/** Inner HTML of a list's top-level items, with nested lists dropped. */
+function topLevelItems(html: string): string[] {
+  const items: string[] = [];
+  const tag = /<(\/?)li(?:\s[^>]*)?>/gi;
+  let depth = 0;
+  let start = 0;
+  let m: RegExpExecArray | null;
+  while ((m = tag.exec(html))) {
+    if (m[1] === '') {
+      if (depth === 0) start = m.index + m[0].length;
+      depth += 1;
+    } else if (depth > 0) {
+      depth -= 1;
+      if (depth === 0) {
+        let inner = html.slice(start, m.index);
+        inner = inner.replace(/<(ul|ol)[\s\S]*<\/\1>/i, '').trim();
+        const para = inner.match(/^<p>([\s\S]*)<\/p>$/);
+        if (para && !para[1].includes('<p>')) inner = para[1].trim();
+        if (inner) items.push(inner);
+      }
+    }
+  }
+  return items;
+}
+
+/** Highlights bullets, else the first added, changed or fixed bullets, else []. */
+function releaseHighlightsFallback(version: Entry, max = 3): string[] {
+  const byTitle = (name: string) =>
+    (version.sections ?? []).filter((s) => s.title.trim().toLowerCase() === name);
+
+  const highlights = byTitle('highlights').flatMap((s) => topLevelItems(s.html));
+  if (highlights.length) return highlights;
+
+  const picked: string[] = [];
+  for (const name of ['added', 'changed', 'fixed']) {
+    for (const s of byTitle(name)) {
+      for (const item of topLevelItems(s.html)) {
+        picked.push(item);
+        if (picked.length >= max) return picked;
+      }
+    }
+  }
+  return picked;
+}
+
+const { latestTagged } = parseChangelog(rawChangelog, { tags: releaseTags.tags });
+// The helper returns every Highlights bullet; the teaser shows three.
+const bullets = latestTagged ? releaseHighlightsFallback(latestTagged, 3).slice(0, 3) : [];
+---
+
+<div class="mini-head">
+  <h2>Latest release</h2>
+  <a href="/releases">all releases →</a>
+</div>
+{latestTagged && (
+  <div class="rel">
+    <div class="rel-h">
+      <span class="chip ok">stable</span>
+      <span class="v">{latestTagged.version}</span>
+      {latestTagged.date && <span class="d">{latestTagged.date}</span>}
+    </div>
+    {bullets.length > 0 && (
+      <ul>
+        {bullets.map((bullet) => <li set:html={bullet} />)}
+      </ul>
+    )}
+  </div>
+)}
+
+<style>
+  .mini-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  h2 {
+    margin: 0;
+    font-family: var(--hal0-font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: var(--hal0-ls-title);
+    color: var(--hal0-fg);
+  }
+  .mini-head a {
+    font-family: var(--hal0-font-mono);
+    font-size: 12px;
+    color: var(--hal0-accent);
+    text-decoration: none;
+  }
+  .rel {
+    overflow: hidden;
+    border: 1px solid var(--hal0-border);
+    border-radius: var(--hal0-rad-lg);
+    background: var(--hal0-bg-elevated);
+  }
+  .rel-h {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hal0-border-soft);
+    background: var(--hal0-bg);
+    font-family: var(--hal0-font-mono);
+    font-size: 12px;
+  }
+  .rel-h:last-child {
+    border-bottom: 0;
+  }
+  .v {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+  .d {
+    margin-left: auto;
+    color: var(--hal0-fg-dim);
+  }
+  ul {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 14px 16px;
+    list-style: none;
+  }
+  li {
+    position: relative;
+    padding-left: 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--hal0-fg-muted);
+    overflow-wrap: anywhere;
+  }
+  li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 6px;
+    height: 1px;
+    background: var(--hal0-accent);
+  }
+  li :global(strong) {
+    font-weight: 500;
+    color: var(--hal0-fg);
+  }
+  li :global(code) {
+    font-size: 12px;
+    color: var(--hal0-fg);
+  }
+  li :global(a) {
+    color: var(--hal0-accent);
+  }
+</style>
