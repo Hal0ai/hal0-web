@@ -24,9 +24,15 @@ test('the lightbox binds every /screenshots/ image and survives view transitions
   assert.match(script, /overlay\.inert = false/, 'open, it is not');
 });
 
-test('the overlay offers previous and next, by button, arrow key and swipe', () => {
+test('the overlay offers previous and next, by picture half, arrow key, swipe and (for the keyboard) button', () => {
   assert.match(script, /'Previous screenshot'/);
   assert.match(script, /'Next screenshot'/);
+  assert.match(script, /'hal0-lightbox-half hal0-lightbox-half-prev'/, 'the left half of the picture');
+  assert.match(script, /'hal0-lightbox-half hal0-lightbox-half-next'/, 'the right half of the picture');
+  assert.match(script, /halfPrev\.contains\(target\)\) return tap\(halfPrev, -1\)/, 'a click on the left half steps back');
+  assert.match(script, /halfNext\.contains\(target\)\) return tap\(halfNext, 1\)/, 'a click on the right half steps forward');
+  assert.match(script, /matchMedia\('\(hover: hover\)'\)/, 'without hover, a tap flashes the edge instead');
+  assert.match(script, /classList\.add\('is-flash'\)/);
   assert.match(script, /e\.key === 'ArrowLeft'/);
   assert.match(script, /e\.key === 'ArrowRight'/);
   assert.match(script, /e\.key === 'Escape'/);
@@ -48,10 +54,19 @@ test('the overlay mirrors the figure picture and shows its caption and a counter
   assert.match(script, /new Image\(\)/, 'neighbours are preloaded');
 });
 
-test('the stylesheet lays out the stage, the side buttons and the caption bar', () => {
+test('the stylesheet lays out the stage, the edge hint, the keyboard buttons and the caption bar', () => {
   assert.match(css, /\.hal0-lightbox-stage\s*\{/);
   assert.match(css, /\.hal0-lightbox-nav\s*\{/);
   assert.match(css, /\.hal0-lightbox-cap\s*\{/);
+  assert.match(css, /\.hal0-lightbox-pic\s*\{[^}]*overflow:\s*hidden[^}]*border-radius/, 'the frame clips the edge line to its rounded corners');
+  assert.match(css, /\.hal0-lightbox-half\s*\{[^}]*width:\s*50%/, 'each half covers its side of the picture');
+  assert.match(css, /\.hal0-lightbox-half::before\s*\{[^}]*width:\s*2px[^}]*background:\s*var\(--hal0-accent/, 'a 2px accent line along the edge');
+  assert.match(css, /\.hal0-lightbox-half::before\s*\{[^}]*box-shadow:[^;]*var\(--hal0-accent/, 'with a glow');
+  assert.match(css, /@media \(hover: hover\)\s*\{\s*\.hal0-lightbox-half:hover::before\s*\{\s*opacity:\s*1/, 'lit while the pointer is over that half');
+  assert.match(css, /\.hal0-lightbox-half\.is-flash::before\s*\{\s*opacity:\s*1/, 'or briefly after a tap');
+  assert.match(css, /\.hal0-lightbox\[data-single='true'\] \.hal0-lightbox-half\s*\{\s*display:\s*none/, 'a lone screenshot has no halves');
+  assert.match(css, /\.hal0-lightbox-nav\s*\{[^}]*clip-path:\s*inset\(50%\)/, 'the side buttons have no pointer target');
+  assert.match(css, /\.hal0-lightbox-nav:focus-visible\s*\{[^}]*clip-path:\s*none/, 'but show once focused from the keyboard');
   assert.match(css, /\.hal0-lightbox\[data-single='true'\] \.hal0-lightbox-nav\s*\{\s*display:\s*none/);
   assert.match(css, /\.hal0-lightbox\s*\{[^}]*touch-action:\s*pan-y/, 'horizontal swipes reach the script');
   assert.match(css, /\.hal0-lightbox-stage\s*\{[^}]*touch-action:\s*pan-y/, 'the scrolling stage does not claim horizontal drags');
@@ -82,15 +97,16 @@ async function swipe(page, { fromX, toX, y }) {
   await cdp.detach();
 }
 
-test('clicking a console shot opens the overlay; arrows, buttons and swipe move through the set', skipBrowser, async () => {
+test('clicking a console shot opens the overlay; halves, arrows and the keyboard buttons move through the set', skipBrowser, async () => {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch();
   try {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, hasTouch: true });
+    // A desktop page: with touch emulation on, Chromium reports (hover: none) and the edge hint would not light.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(url, { waitUntil: 'networkidle' });
     const shots = page.locator('figure.shot img[src*="/screenshots/"]');
     const total = await shots.count();
-    assert.ok(total >= 3, `the page has ${total} screenshots`);
+    assert.ok(total >= 4, `the page has ${total} screenshots`);
 
     const overlay = page.locator('.hal0-lightbox');
     const state = async () => ({
@@ -121,6 +137,25 @@ test('clicking a console shot opens the overlay; arrows, buttons and swipe move 
     assert.equal(s.src, await shots.nth(2).getAttribute('src'), 'ArrowRight steps forward');
     assert.equal(s.count, `3 / ${total}`);
 
+    // The pointer steps through the picture's halves: the edge under it lights up, a click steps.
+    const half = (side) => overlay.locator(`.hal0-lightbox-half-${side}`);
+    const edge = (side) => half(side).evaluate((h) => getComputedStyle(h, '::before').opacity);
+    await half('next').hover();
+    await page.waitForTimeout(200); // the 120ms fade
+    assert.equal(await edge('next'), '1', 'hovering the right half lights its edge');
+    assert.equal(await edge('prev'), '0', 'the other edge stays dark');
+    await half('next').click();
+    s = await state();
+    assert.equal(s.count, `4 / ${total}`, 'clicking the right half steps forward');
+    assert.equal(s.open, 'true', 'and keeps the box open');
+    await half('prev').hover();
+    await page.waitForTimeout(200);
+    assert.equal(await edge('prev'), '1', 'hovering the left half lights its edge');
+    assert.equal(await edge('next'), '0');
+    await half('prev').click();
+    s = await state();
+    assert.equal(s.count, `3 / ${total}`, 'clicking the left half steps back');
+
     // Tab cycles the dialog's own buttons and never leaves it.
     const inDialog = () => page.evaluate(() => Boolean(document.activeElement && document.activeElement.closest('.hal0-lightbox')));
     for (let i = 0; i < 4; i++) {
@@ -130,28 +165,25 @@ test('clicking a console shot opens the overlay; arrows, buttons and swipe move 
     await page.keyboard.press('Shift+Tab');
     assert.equal(await inDialog(), true, 'Shift+Tab stays in the dialog');
 
-    await overlay.locator('.hal0-lightbox-prev').click();
-    await overlay.locator('.hal0-lightbox-prev').click();
+    // The side buttons are for the keyboard and screen readers: hidden until focused, then they work.
+    const prevBtn = overlay.locator('.hal0-lightbox-prev');
+    const opacity = (loc) => loc.evaluate((b) => getComputedStyle(b).opacity);
+    const focused = () => prevBtn.evaluate((b) => b === document.activeElement);
+    assert.equal(await opacity(prevBtn), '0', 'the previous button is hidden until focused');
+    for (let i = 0; i < 3 && !(await focused()); i++) await page.keyboard.press('Tab');
+    assert.equal(await focused(), true, 'Tab reaches the previous button');
+    assert.equal(await opacity(prevBtn), '1', 'focused, it is visible');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
     s = await state();
     assert.equal(s.src, await shots.nth(0).getAttribute('src'), 'the previous button steps back');
-    assert.equal(s.open, 'true', 'a button click does not close the box');
+    assert.equal(s.open, 'true', 'a button press does not close the box');
 
     await page.keyboard.press('ArrowLeft');
     s = await state();
     assert.equal(s.count, `${total} / ${total}`, 'stepping back from the first wraps to the last');
 
-    // A real touch swipe to the left goes forward (and wraps to the first);
-    // a swipe to the right goes back. Neither closes the box.
     const box = await overlay.boundingBox();
-    const y = box.y + box.height * 0.5;
-    await swipe(page, { fromX: box.x + box.width * 0.6, toX: box.x + box.width * 0.4, y });
-    s = await state();
-    assert.equal(s.count, `1 / ${total}`, 'a left swipe steps forward and wraps');
-    assert.equal(s.open, 'true', 'a swipe does not close the box');
-    await swipe(page, { fromX: box.x + box.width * 0.4, toX: box.x + box.width * 0.6, y });
-    s = await state();
-    assert.equal(s.count, `${total} / ${total}`, 'a right swipe steps back');
-    assert.equal(s.open, 'true');
 
     await page.keyboard.press('Escape');
     s = await state();
@@ -162,12 +194,56 @@ test('clicking a console shot opens the overlay; arrows, buttons and swipe move 
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(() => Boolean(document.activeElement && document.activeElement.closest('.hal0-lightbox'))), false, 'Tab does not land in the closed dialog');
 
-    // The backdrop closes; the picture does not.
+    // The backdrop closes; the picture steps instead.
     await shots.nth(0).click();
-    await overlay.locator('img').click();
-    assert.equal((await state()).open, 'true', 'clicking the picture keeps it open');
+    await half('next').click();
+    s = await state();
+    assert.equal(s.count, `2 / ${total}`, 'clicking the picture steps');
+    assert.equal(s.open, 'true', 'and keeps it open');
     await page.mouse.click(box.x + 60, box.y + box.height - 20);
     assert.equal((await state()).open, 'false', 'clicking the backdrop closes');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('on a touch screen a swipe steps and a tap on a half flashes its edge', skipBrowser, async () => {
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, hasTouch: true });
+    await page.goto(url, { waitUntil: 'networkidle' });
+    const shots = page.locator('figure.shot img[src*="/screenshots/"]');
+    const total = await shots.count();
+    await shots.nth(0).scrollIntoViewIfNeeded();
+    await shots.nth(0).click();
+    const overlay = page.locator('.hal0-lightbox');
+    const count = () => overlay.locator('.hal0-lightbox-count').textContent();
+    assert.equal(await count(), `1 / ${total}`);
+    assert.equal(await page.evaluate(() => matchMedia('(hover: hover)').matches), false, 'nothing hovers on a touch screen');
+
+    // A tap on the right half steps, and flashes that edge in place of a hover.
+    // (Before the swipes: once a raw CDP touch sequence has run, Chromium stops
+    // turning Playwright's taps into clicks, a harness quirk, not the page's.)
+    const half = overlay.locator('.hal0-lightbox-half-next');
+    const lit = () => half.evaluate((h) => Number(getComputedStyle(h, '::before').opacity));
+    const hb = await half.boundingBox();
+    await page.touchscreen.tap(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    await page.waitForTimeout(100); // into the 120ms fade-in
+    assert.ok((await lit()) > 0, 'the tapped edge lights up');
+    assert.equal(await count(), `2 / ${total}`, 'the tap steps forward');
+    await page.waitForTimeout(600); // the 350ms flash, then the fade
+    assert.equal(await lit(), 0, 'and goes dark again');
+
+    // A real touch swipe to the left goes forward; to the right goes back and
+    // wraps. Neither closes the box, and no click follows to step again.
+    const box = await overlay.boundingBox();
+    const y = box.y + box.height * 0.5;
+    await swipe(page, { fromX: box.x + box.width * 0.6, toX: box.x + box.width * 0.4, y });
+    assert.equal(await count(), `3 / ${total}`, 'a left swipe steps forward');
+    assert.equal(await overlay.getAttribute('data-open'), 'true', 'a swipe does not close the box');
+    for (let i = 0; i < 3; i++) await swipe(page, { fromX: box.x + box.width * 0.4, toX: box.x + box.width * 0.6, y });
+    assert.equal(await count(), `${total} / ${total}`, 'right swipes step back and wrap');
   } finally {
     await browser.close();
   }
