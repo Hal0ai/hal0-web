@@ -232,23 +232,36 @@ const SHOT_DEFS = [
   {
     name: 'dashboard-overview',
     route: '#dashboard',
-    // A segment in the memory bar means the slots query has landed; before
-    // that the stat strip reads "—" and the slot list says loading.
-    expect: '.ov-mem-seg',
+    // A slot segment in the memory bar means the slots query has landed. The
+    // system segment (`.sys`) paints first, from hardware data, so waiting on
+    // any `.ov-mem-seg` would pass on a frame whose slot list still says
+    // loading and whose stat strip reads "—".
+    expect: '.ov-mem-seg:not(.sys)',
     after: 1500,
   },
   {
-    name: 'unified-memory-hero',
+    // The Overview "now" band: serving mode, live facts and the memory bar.
+    // (`unified-memory-hero` was this same clip and is retired; its PNG stays
+    // on disk for the post that still references it.)
+    name: 'overview-now',
     route: '#dashboard',
-    expect: '.ov-mem-seg',
+    expect: '.ov-mem-seg:not(.sys)',
     clip: '.ov-now',
   },
   {
-    // The Overview "now" band: serving mode, live facts and the memory bar.
-    name: 'overview-now',
+    // The ⌘K palette, cropped to its panel so the dashboard behind the
+    // backdrop stays out of frame. CHECK THE PIXELS: it lists the box's slots
+    // and models.
+    name: 'command-palette',
     route: '#dashboard',
-    expect: '.ov-mem-seg',
-    clip: '.ov-now',
+    act: async (page) => {
+      // The global handler takes Ctrl or Meta; Ctrl works on every host OS.
+      await page.keyboard.press('Control+k');
+      await page.waitForSelector('.cp-input', { state: 'visible' });
+    },
+    expect: '.cp-input',
+    area: ['.cp-shell'],
+    pad: 24,
   },
   {
     // The header bell, open on its "needs attention" section. Needs one gated
@@ -323,8 +336,11 @@ const SHOT_DEFS = [
     expect: '[data-testid="ri-family-strip"]',
   },
   {
+    // The Engine pane. The bare `#slots/image` route opens Generate or Models,
+    // whichever the installed models call for; the landing's catalogue shot is
+    // image-gen-models.
     name: 'image-gen-comfyui',
-    route: '#slots/image',
+    route: '#slots/image/engine',
     expect: '[data-testid="image-gen-pane"]',
   },
   {

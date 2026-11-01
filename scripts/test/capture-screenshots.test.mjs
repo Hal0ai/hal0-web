@@ -49,6 +49,7 @@ test('required shots exist', () => {
     'dashboard-overview',
     'slots-inference',
     'memory-graph',
+    'command-palette',
     // new surfaces
     'openwebui-picker',
     'openwebui-chat',
@@ -65,17 +66,48 @@ test('required shots exist', () => {
 
 test('retired shots are gone', () => {
   const names = SHOTS.map((s) => s.name);
-  for (const n of ['mtp-control', 'requests-latency-widget']) assert.ok(!names.includes(n), n);
+  // unified-memory-hero duplicates overview-now; its PNG stays on disk for the
+  // v0.7 post that still references it.
+  for (const n of ['mtp-control', 'requests-latency-widget', 'unified-memory-hero']) {
+    assert.ok(!names.includes(n), n);
+  }
 });
 
 test('Overview selectors follow the redesigned Overview', () => {
-  assert.match(byName('dashboard-overview').expect, /\.ov-mem-seg/);
-  assert.equal(byName('unified-memory-hero').clip, '.ov-now');
-  assert.match(byName('image-gen-comfyui').expect, /image-gen-pane/);
+  assert.equal(byName('dashboard-overview').expect, '.ov-mem-seg:not(.sys)');
+  assert.equal(byName('overview-now').expect, '.ov-mem-seg:not(.sys)');
+  assert.equal(byName('overview-now').clip, '.ov-now');
   for (const s of SHOTS) {
     const sel = `${s.expect ?? ''} ${s.clip ?? ''} ${(s.area ?? []).join(' ')}`;
     assert.ok(!sel.includes('.rd-'), `${s.name} still uses a pre-redesign .rd- selector`);
   }
+});
+
+test('a memory-bar guard waits for a slot segment, not the system-only one', () => {
+  // The Overview paints `.ov-mem-seg.sys` from hardware data before any slot
+  // data arrives, so a bare `.ov-mem-seg` passes on a loading frame.
+  for (const s of SHOTS) {
+    const sel = `${s.expect ?? ''} ${s.clip ?? ''} ${(s.area ?? []).join(' ')}`;
+    const bare = sel.replace(/\.ov-mem-seg:not\(\.sys\)/g, '');
+    assert.ok(!bare.includes('.ov-mem-seg'), `${s.name} uses a bare .ov-mem-seg`);
+  }
+});
+
+test('image-gen-comfyui targets the Engine pane', () => {
+  const s = byName('image-gen-comfyui');
+  assert.equal(s.route, '#slots/image/engine');
+  assert.match(s.expect, /image-gen-pane/);
+});
+
+test('command-palette opens the palette with the Ctrl+K chord on the Overview', async () => {
+  const s = byName('command-palette');
+  assert.equal(s.route, '#dashboard');
+  assert.match(s.expect, /cp-input/);
+  assert.ok(s.viewport === undefined || (s.viewport.width === 1440 && s.viewport.height === 900));
+  assert.ok(s.area?.includes('.cp-shell') || s.clip === '.cp-shell', 'crops to the palette');
+  const pressed = [];
+  await s.act({ keyboard: { press: async (k) => void pressed.push(k) }, waitForSelector: async () => {} });
+  assert.deepEqual(pressed, ['Control+k']);
 });
 
 test('new dashboard shots use the routes in the redesign spec', () => {
