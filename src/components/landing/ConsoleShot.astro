@@ -1,0 +1,51 @@
+---
+/**
+ * ConsoleShot: one console screenshot in the landing page's frame, rendered by the
+ * shared Shot component (AVIF, WebP and PNG, sizes read from disk). A shot with no
+ * usable capture renders nothing visible, only a TODO(shots) comment naming the
+ * file, which the re-capture lane greps for. Used by the swap, memory and console
+ * sections.
+ */
+import Shot from '../Shot.astro';
+import type { ConsoleShot } from '../../data/landing';
+
+interface Props {
+  shot: ConsoleShot;
+  hero?: boolean;
+}
+
+const { shot, hero = false } = Astro.props;
+const [label, ...rest] = shot.caption.split('. ');
+---
+
+{shot.todo ? (
+  <Fragment set:html={`<!-- TODO(shots): ${shot.file} -->`} />
+) : (
+  <div class:list={['frame', { hero, contain: shot.contain }]}>
+    <Shot name={shot.file} alt={shot.alt}>
+      <Fragment slot="caption"><strong>{label}.</strong> {rest.join('. ')}</Fragment>
+    </Shot>
+  </div>
+)}
+
+<style>
+  /* Shot sizes itself to small captures; on the landing every frame fills its column. */
+  .frame :global(.shot) {
+    width: 100%;
+    margin: 0;
+    border-radius: var(--hal0-rad-lg);
+  }
+  .hero :global(.shot) {
+    box-shadow: 0 30px 80px -40px var(--hal0-accent-glow);
+  }
+  .frame :global(img) {
+    width: 100%;
+    aspect-ratio: 1440 / 900;
+    object-fit: cover;
+    object-position: top;
+  }
+  .contain :global(img) {
+    object-fit: contain;
+    object-position: center;
+  }
+</style>

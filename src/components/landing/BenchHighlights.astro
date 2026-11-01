@@ -1,28 +1,20 @@
 ---
 /**
- * BenchHighlights — homepage community layer, section (a): headline bench
- * figures + top-5 table.
+ * BenchHighlights: headline figures from the first-party sweep, compact enough
+ * for half a row on the landing page. The full table lives on /benchmarks.
  *
- * Source of truth: ROSTER in src/data/model-roster.ts — the same first-party
- * sweep /benchmarks reads. That page now exists, so the links here point at
- * it; they used to point at /docs/reference/model-roster-benchmark/, which
- * since the docs move 301s off-site to the forum.
- *
- * Rows are measured only, top 5 by decode tok/s. The comp
- * (docs/design/2026-08-09-community-comps/06 Homepage.html) also shows a
- * ttft column sourced from a derived API field that doesn't exist in
- * ROSTER yet — dropped rather than inventing a number; `params` takes its
- * place so the row still differentiates models at a glance.
+ * Source of truth: ROSTER in src/data/model-roster.ts, the same sweep /benchmarks
+ * reads. Figures are measured runs only, and the link carries the sweep's date.
  */
 import { ROSTER, ROSTER_MEASURED, ROSTER_DATE } from '../../data/model-roster';
 
 const BENCH_HREF = '/benchmarks';
-const TOP_N = 5;
 
 const measured = ROSTER.filter((r) => r.measured && r.dec != null);
-const top = [...measured].sort((a, b) => (b.dec ?? 0) - (a.dec ?? 0)).slice(0, TOP_N);
-
-const fastestDecode = top[0]?.dec ?? null;
+const fastest = measured.reduce<(typeof measured)[number] | undefined>(
+  (best, r) => ((r.dec ?? 0) > (best?.dec ?? 0) ? r : best),
+  undefined,
+);
 const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
 ---
 
@@ -37,7 +29,7 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
   <a class:list={['benchstrip', 'card-hover']} href={BENCH_HREF} aria-label="View the full model roster benchmark">
     <div class="figs">
       <div class="fig">
-        <div class="n">{fastestDecode?.toFixed(1) ?? '—'}</div>
+        <div class="n">{fastest?.dec?.toFixed(1) ?? '—'}<span class="fig-model mono">{fastest?.id}</span></div>
         <div class="label">fastest decode · tok/s</div>
       </div>
       <div class="fig">
@@ -48,30 +40,6 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
         <div class="n plain">{peakPrefill.toFixed(0)}</div>
         <div class="label">peak prefill · tok/s</div>
       </div>
-    </div>
-    <div class="bench-table-wrap">
-      <table class="dtable">
-        <thead>
-          <tr>
-            <th>model</th>
-            <th class="n">params</th>
-            <th class="n sorted">decode ▼</th>
-            <th class="n">prefill</th>
-            <th class="n">gb</th>
-          </tr>
-        </thead>
-        <tbody>
-          {top.map((r) => (
-            <tr>
-              <td class="lead bench-model">{r.id}</td>
-              <td class="n">{r.params}</td>
-              <td class="n">{r.dec?.toFixed(1)}</td>
-              <td class="n">{r.pf?.toFixed(0)}</td>
-              <td class="n">{r.gb}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   </a>
 </section>
@@ -100,9 +68,7 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
     color: var(--accent);
   }
   .benchstrip {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 0;
+    display: block;
     border: 1px solid var(--line);
     border-radius: var(--rad-lg);
     background: var(--bg-1);
@@ -111,16 +77,10 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
     color: inherit;
   }
   .figs {
-    border-right: 1px solid var(--line-soft);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
     padding: 18px;
-  }
-  .fig {
-    padding: 10px 0;
-    border-top: 1px solid var(--line-soft);
-  }
-  .fig:first-child {
-    border-top: 0;
-    padding-top: 0;
   }
   .fig .n {
     font-family: var(--jbm);
@@ -130,26 +90,18 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
     font-variant-numeric: tabular-nums;
     font-feature-settings: var(--num-features);
   }
+  .fig-model {
+    margin-left: 8px;
+    font-size: 11px;
+    letter-spacing: 0;
+    color: var(--fg-3);
+  }
   .fig .n.plain {
     color: var(--fg);
   }
-  .bench-table-wrap {
-    overflow-x: auto;
-    min-width: 0;
-    max-width: 100%;
-  }
-  .bench-model {
-    max-width: 300px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  @media (max-width: 1080px) {
-    .benchstrip {
-      grid-template-columns: 1fr;
-    }
+  @media (max-width: 560px) {
     .figs {
-      border-right: 0;
-      border-bottom: 1px solid var(--line-soft);
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>
