@@ -45,7 +45,7 @@ test('required shots exist', () => {
   const required = [
     'slot-card',
     'profile-edit-drawer',
-    'slot-drawer',
+    'slot-edit-drawer',
     'dashboard-overview',
     'slots-inference',
     'memory-graph',
@@ -60,6 +60,7 @@ test('required shots exist', () => {
     'overview-now',
     'memory-reflect',
     'settings-doctor',
+    'agent-card-console',
   ];
   for (const n of required) assert.ok(names.includes(n), n);
 });
@@ -160,6 +161,7 @@ function recordingPage(log) {
   const locator = (sel) => ({
     first: () => locator(sel),
     isVisible: async () => (log.push(`locator ${sel}`), false),
+    evaluate: async () => void log.push(`scroll ${sel}`),
   });
   return {
     goto: async (url) => void log.push(`goto ${url}`),
@@ -195,7 +197,12 @@ test('the bank shots then do their own step', async () => {
   };
   assert.deepEqual(await run('memory-bank'), ['wait 1200']);
   assert.deepEqual(await run('memory-reflect'), ['wait 1000', 'click [data-testid="mv-reflect-tab"]']);
-  assert.deepEqual(await run('memory-graph'), ['wait 1000', 'click [data-testid="mv-view-web"]']);
+  assert.deepEqual(await run('memory-graph'), [
+    'wait 1000',
+    'click [data-testid="mv-view-web"]',
+    'scroll [data-testid="mv-workspace"]',
+    'wait 400',
+  ]);
 });
 
 test('capture waits for the settle time once, before act, on a dashboard route', async (t) => {
