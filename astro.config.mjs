@@ -45,17 +45,14 @@ const docsRedirects = JSON.parse(
 export default defineConfig({
 	site: 'https://hal0.dev',
 
-	// /docs is now a real hub page (src/pages/docs/index.astro) — a map of
-	// every section plus the knowledge base — rather than a redirect that
-	// dropped readers into the middle of Starlight's sidebar. Only
-	// /releases still redirects.
-	//
-	// /changelog and /releases were merged into one page (the KB-shaped
-	// unified release history, src/pages/changelog.astro) that lives at
-	// /changelog — /releases redirects there so old links/bookmarks keep
-	// working.
+	// /changelog and /releases were merged into one page (the unified
+	// release history, src/pages/releases.astro). /releases is the canonical
+	// route (it is a header entry, and the page title says "changelog" for
+	// search); /changelog redirects there so old links, bookmarks and indexed
+	// URLs keep working. scripts/patch-vercel-docs-redirects.mjs makes the
+	// redirect match `/changelog/` as well as `/changelog`.
 	redirects: {
-		'/releases': '/changelog',
+		'/changelog': '/releases',
 		// The first-run guide moved to the forum's Getting started category.
 		'/first-run-guide': 'https://forum.hal0.dev/c/docs/docs-getting-started/19',
 		// Old deep link; the section is now what's-new.

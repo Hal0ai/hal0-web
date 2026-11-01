@@ -96,19 +96,28 @@ test('the patch removed duplicate forum redirect route entries', { skip }, () =>
 	);
 });
 
-test('the /kb and /releases redirects point at the forum KB and the changelog', { skip }, () => {
+test('the /kb redirect points at the forum KB and /changelog redirects to /releases', { skip }, () => {
 	// /kb is compiled to an EXACT-match route, so the bare form never covered
 	// /kb/ and the slash form 404'd; patch-vercel-docs-redirects.mjs gives it
 	// `/?$` tolerance. Its target moved with the content: the KB is forum
 	// categories now, not a section of the /docs hub.
 	const kb = routes.filter((r) => r.headers?.Location === KB_LANDING);
-	const releases = routes.filter((r) => r.headers?.Location === '/changelog');
+	// /releases is the canonical page now and /changelog the redirect. Both
+	// URL forms must land there: /changelog/ is the form crawlers and old
+	// bookmarks hold (it used to be a page), and an exact `^/changelog$` would
+	// 404 it.
+	const changelog = routes.filter((r) => r.headers?.Location === '/releases');
 	assert.deepEqual(
 		kb.map((r) => r.src),
 		['^/kb/?$'],
 	);
 	assert.deepEqual(
-		releases.map((r) => r.src),
-		['^/releases$'],
+		changelog.map((r) => r.src),
+		['^/changelog/?$'],
+	);
+	assert.equal(changelog[0].status, 301);
+	assert.ok(
+		!routes.some((r) => r.src === '^/releases$' || r.headers?.Location === '/changelog'),
+		'/releases is a page, not a redirect',
 	);
 });

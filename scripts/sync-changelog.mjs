@@ -2,7 +2,7 @@
 /**
  * sync-changelog.mjs — pull the canonical CHANGELOG from the product repo.
  *
- * The human-facing /changelog and /releases pages are *derived* from
+ * The human-facing /releases page (and the /changelog redirect to it) is *derived* from
  * hal0's CHANGELOG.md so they can never silently drift from what actually
  * shipped (see CONTRIBUTING — the product repo is the single source of
  * truth). This runs as a `prebuild` step, so every Vercel build refreshes

@@ -1,11 +1,10 @@
 ---
 /**
- * /changelog — the unified release surface (was two pages: /changelog and
+ * /releases — the unified release surface (was two pages: /changelog and
  * /releases, merged per the operator directive to give docs/blog the KB
  * page's shape, extended to changelog: combine the two into one page in
- * that shape. /releases now 301s here via astro.config.mjs's `redirects`
- * map, same pattern as the existing '/docs' → '/docs/getting-started/'
- * entry.
+ * that shape. /changelog now 301s here via astro.config.mjs's `redirects`
+ * map.
  *
  * DERIVED, never hand-maintained: content comes from hal0's CHANGELOG.md
  * (synced to src/data/changelog.md by scripts/sync-changelog.mjs at build
@@ -25,7 +24,7 @@
  * IntersectionObserver — same amber `.on` idiom as the KB sidebar
  * (`box-shadow: inset 2px 0 0 var(--accent)`). `prefers-reduced-motion`
  * downgrades the click-triggered scroll to an instant jump; deep links
- * (`/changelog#v1-0-0-rc-3`) land correctly on load via the plain anchor
+ * (`/releases#v1-0-0-rc-3`) land correctly on load via the plain anchor
  * href — no JS required for that part.
  *
  * The old /releases page's download/asset affordances (latest
@@ -562,7 +561,7 @@ const description =
   // sidebar item tracks scroll position via IntersectionObserver — same
   // amber `.on` idiom as the KB sidebar. Deep links land correctly on load
   // without any of this: the browser's native anchor-jump already handles
-  // `/changelog#v1-0-0-rc-3` before this script runs.
+  // `/releases#v1-0-0-rc-3` before this script runs.
   const links = document.querySelectorAll('[data-cl-side] a[href^="#"]');
   const sections = document.querySelectorAll('[data-cl-section]');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

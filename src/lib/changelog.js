@@ -2,10 +2,10 @@
  * changelog.js — parse hal0's CHANGELOG.md into structured data.
  *
  * Source: src/data/changelog.md (synced from the product repo by
- * scripts/sync-changelog.mjs at build time). Consumed by /changelog (the
+ * scripts/sync-changelog.mjs at build time). Consumed by /releases (the
  * unified page — /changelog and /releases used to be separate pages both
- * calling this; they're merged now, with /releases redirecting into
- * /changelog). Markdown bodies are rendered to HTML with `marked` so the
+ * calling this; they're merged now, with /changelog redirecting into
+ * /releases). Markdown bodies are rendered to HTML with `marked` so the
  * branded page can keep the prose, links, and lists from the source.
  *
  * The CHANGELOG grammar (Keep-a-Changelog-ish):
