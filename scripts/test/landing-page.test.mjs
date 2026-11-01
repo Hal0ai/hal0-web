@@ -190,9 +190,12 @@ test('every console shot exists on disk or is marked todo', async () => {
     assert.ok(shot.alt && shot.caption, `${shot.file} has alt text and a caption`);
   }
   const todo = CONSOLE_SHOTS.filter((s) => s.todo).map((s) => s.file).sort();
-  assert.deepEqual(todo, ['agents-overview', 'approvals-inbox', 'dock-gpu', 'image-gen-models', 'openwebui-picker', 'overview-now']);
-  const overview = CONSOLE_SHOTS.find((s) => s.file === 'overview-now');
+  assert.deepEqual(todo, ['approvals-inbox', 'image-gen-models', 'openwebui-picker']);
+  const overview = CONSOLE_SHOTS.find((s) => s.file === 'dashboard-overview');
   assert.match(overview.caption, /preview/i, 'nightly-only surface is labelled preview');
+  for (const file of ['slot-edit-drawer', 'mcp-tab']) {
+    assert.match(CONSOLE_SHOTS.find((s) => s.file === file).caption, /nightly/i, `${file} names the channel`);
+  }
 });
 
 test('ReleaseTeaser reads the tagged release and links to /releases', async () => {
@@ -293,7 +296,7 @@ test('every screenshot exists on disk or carries its TODO comment', skipUnbuilt,
   for (const name of referenced) {
     assert.ok(await exists(`public/screenshots/${name}.png`), `${name}.png is on disk`);
   }
-  for (const name of ['agents-overview', 'openwebui-picker', 'image-gen-models', 'dock-gpu', 'approvals-inbox', 'overview-now']) {
+  for (const name of ['openwebui-picker', 'image-gen-models', 'approvals-inbox']) {
     assert.ok(html.includes(`<!-- TODO(shots): ${name} -->`), `TODO comment for ${name}`);
     assert.ok(!referenced.has(name), `${name} has no <img> yet`);
   }
@@ -547,7 +550,6 @@ test('a pending shot renders only its TODO comment', skipUnbuilt, async () => {
   assert.ok(!/screenshot pending/i.test(html), 'no visible pending box');
   const shot = await source(CONSOLE_SHOT);
   assert.ok(!/\.placeholder|\.pending|role="img"/.test(shot), 'placeholder markup and CSS are gone');
-  assert.ok(!html.includes('/screenshots/agents-overview'), 'the stale agents shot is not referenced');
   const { CONSOLE_SHOTS } = await import(new URL(LANDING_DATA, root));
   const figures = html.match(/<figure/g) ?? [];
   assert.equal(figures.length, CONSOLE_SHOTS.filter((s) => !s.todo).length, 'one figure per real shot');

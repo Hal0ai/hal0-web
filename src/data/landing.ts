@@ -171,20 +171,25 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     caption: 'Slots. Each card carries a model picker, a profile picker, context and live memory.',
   },
   {
-    file: 'slot-drawer',
-    alt: 'Slot drawer showing the resolved command',
-    caption: 'Slot drawer. The resolved command, every flag labelled by owner.',
+    file: 'slot-edit-drawer',
+    alt: 'Slot drawer open over the slots page: model, profile and the tune block for the agent slot',
+    caption: 'Slot drawer. Model, profile and the tune: context, thinking, effort, budget, vision and speculation, each marked profile or override. Per-slot tune is on nightly today.',
+  },
+  {
+    file: 'model-edit-drawer',
+    alt: 'Model drawer open over the slots page: file facts, runner compatibility and source paths for a GGUF',
+    caption: 'Model drawer. The file and nothing else: quant, size, architecture, drafter, chat template, native context, where it runs.',
+  },
+  {
+    file: 'dashboard-overview',
+    alt: 'hal0 overview page with the memory pool, the slots serving now, agents and delegated runs',
+    caption: 'Overview (preview). What each slot is serving, the memory pool, agents and delegated runs on one page. Nightly channel today.',
+  },
+  {
+    file: 'image-gen-generate',
+    alt: 'Image generation pane on the hal0 console with a prompt, size presets, a fit check and a finished render',
+    caption: 'Image gen. Prompt, size, steps and a fit check before the render; results land beside it.',
     contain: true,
-  },
-  {
-    file: 'stacks-tab',
-    alt: 'Stacks tab listing saved lineups',
-    caption: 'Stacks. Save a lineup, apply it with a plan that says what unloads.',
-  },
-  {
-    file: 'image-gen-comfyui',
-    alt: 'Image generation pane on the hal0 console',
-    caption: 'Image gen. Generate from the console; the ComfyUI editor stays on the LAN.',
   },
   {
     file: 'image-gen-models',
@@ -194,9 +199,24 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
   },
   {
     file: 'agents-overview',
-    alt: 'Agents page with agent cards',
-    caption: 'Agents. Hermes and pi with their profiles, tool policy and approvals.',
-    todo: true,
+    alt: 'Agents page with cards for Hermes, pi and a runtime on the roadmap',
+    caption: 'Agents. Every agent in the runtime as a card: version, model, persona, approvals and health.',
+  },
+  {
+    file: 'agent-card-console',
+    alt: 'The Hermes agent card flipped to its console with restart, logs, persona and approval controls',
+    caption: 'Card console. Flip a card for restart, logs, tool activity, persona and command approvals.',
+  },
+  {
+    file: 'mcp-tab',
+    alt: 'MCP page listing the bundled hal0 servers with their tool counts and the bridge clients that call them',
+    caption: 'MCP. The bundled servers with their tool counts, and the bridge clients that call them. The bridge is on nightly today.',
+    contain: true,
+  },
+  {
+    file: 'memory-view',
+    alt: 'Memory overview with facts retained over 30 days, engine state, graph extraction and the list of banks',
+    caption: 'Memory. Facts retained over time, the engine, graph extraction and every bank on the box.',
   },
   {
     file: 'approvals-inbox',
@@ -205,26 +225,9 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     todo: true,
   },
   {
-    file: 'mcp-tab',
-    alt: 'MCP page listing servers and recent callers',
-    caption: 'MCP. hal0\'s own servers, installed servers, and who has been calling.',
-  },
-  {
-    file: 'settings-security',
-    alt: 'Security settings page',
-    caption: 'Security. Key auth, admin gate, command approvals, origin allowlist.',
-  },
-  {
-    file: 'overview-now',
-    alt: 'Overview page showing what each slot is serving',
-    caption: 'Overview (preview). What each slot is serving, on the nightly channel.',
-    todo: true,
-  },
-  {
     file: 'dock-gpu',
     alt: 'The dock with its GPU tab open',
     caption: 'Dock. GPU state, slot and service health, downloads and a merged event feed.',
-    todo: true,
   },
 ];
 
