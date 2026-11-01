@@ -1,605 +1,672 @@
 ---
 /**
- * /releases — the unified release surface (was two pages: /changelog and
- * /releases, merged per the operator directive to give docs/blog the KB
- * page's shape, extended to changelog: combine the two into one page in
- * that shape. /changelog now 301s here via astro.config.mjs's `redirects`
- * map.
+ * /releases — the release surface (the old /changelog and /releases pages
+ * merged; /changelog 301s here via astro.config.mjs's `redirects` map).
  *
  * DERIVED, never hand-maintained: content comes from hal0's CHANGELOG.md
  * (synced to src/data/changelog.md by scripts/sync-changelog.mjs at build
- * time) via src/lib/changelog.js's parseChangelog — the same function both
- * predecessor pages called, so nothing about the data model changed.
+ * time) through src/lib/changelog.js's parseChangelog, with the GitHub tag
+ * list (src/data/release-tags.json) deciding which headings really shipped.
  *
- * Shape: the KB article shell (docs/design/2026-08-09-community-comps/04
- * Blog and KB.html's `.kbshell`/`.kbside` idiom, ported here as
- * `.clshell`/`.clside` since this is a plain MarketingLayout page, not a
- * Starlight route — there's no `.sl-markdown-content`/right-sidebar seam
- * to hook here). Release list in the sticky left sidebar (newest first,
- * version + date, mono), full history in the center column at the KB
- * article's reading measure (68ch, 16px/1.68 — see .cl-content below).
- * Selecting a sidebar entry smooth-scrolls the center column to that
- * version's section (native anchor href as the no-JS fallback), updates
- * the URL hash, and the active sidebar item tracks scroll position via
- * IntersectionObserver — same amber `.on` idiom as the KB sidebar
- * (`box-shadow: inset 2px 0 0 var(--accent)`). `prefers-reduced-motion`
- * downgrades the click-triggered scroll to an instant jump; deep links
- * (`/releases#v1-0-0-rc-3`) land correctly on load via the plain anchor
- * href — no JS required for that part.
+ * Shape, top to bottom:
+ *   1. a latest-stable card: version, date, its Highlights (or the first
+ *      bullets of Added, Changed, Fixed when it has none), a Breaking
+ *      callout when the entry has one, the install and update commands and
+ *      the GitHub link;
+ *   2. the eight most recent tagged entries as collapsible <details>, each
+ *      an excerpt (Highlights in full, every other section cut to its first
+ *      few bullets with a "+N more" link) so the page stays small;
+ *   3. an archive: every older version as a version + date link to its
+ *      GitHub release. This replaced one 1.09 MB page that inlined the
+ *      whole history.
+ * Untagged headings (changelog content ahead of the next git tag) stay in
+ * the recent list with an "unreleased" badge.
  *
- * The old /releases page's download/asset affordances (latest
- * stable/pre-release headline, install one-liner, upgrade channel
- * commands) are folded into a "Get hal0" block at the top of the center
- * column, above the full version list, rather than duplicated per
- * version — install/upgrade commands don't change per release, so
- * repeating them in every section would be noise, not signal.
+ * Version-neutral copy: every version string below comes from the data.
  *
- * This is unrelated to the machine-readable updater manifest at
- * releases.hal0.dev (functions/_middleware.ts) — do not conflate the two.
+ * Unrelated to the machine-readable updater manifest at releases.hal0.dev
+ * (functions/_middleware.ts) — do not conflate the two.
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
-import CodeBlock from '../components/CodeBlock.astro';
-import CTA from '../components/CTA.astro';
+import '../styles/site-data.css';
 import rawChangelog from '../data/changelog.md?raw';
 import releaseTags from '../data/release-tags.json';
-import { parseChangelog, releaseTagUrl } from '../lib/changelog.js';
+import {
+  parseChangelog,
+  releaseTagUrl,
+  releaseHighlights,
+  releaseSections,
+  splitReleases,
+  plainText,
+} from '../lib/changelog.js';
 
-const { versions, latestPrerelease, latestTagged } = parseChangelog(rawChangelog, {
-  tags: releaseTags.tags,
-});
-
-// A prerelease is only worth showing when it leads the stable line. Once 1.0.0
-// tags, the newest prerelease is 1.0.0-rc.12 — same base version as the stable
-// release it became — and rendering it beside "1.0.0" would imply the RC is
-// newer than the GA it preceded.
-const baseVersion = (v: string) => v.split('-')[0];
-const shownPrerelease =
-  latestPrerelease &&
-    !latestPrerelease.untagged &&
-    (!latestTagged || baseVersion(latestPrerelease.version) !== baseVersion(latestTagged.version))
-    ? latestPrerelease
-    : null;
+const { versions, latestTagged } = parseChangelog(rawChangelog, { tags: releaseTags.tags });
+const { recent, archive } = splitReleases(versions);
 
 // Tagged versions deep-link to their tag; untagged ones (changelog content
-// ahead of the next tag) fall back to the always-valid releases index.
+// ahead of the next tag, or old headings that never got a GitHub release)
+// fall back to the always-valid releases index.
 const RELEASES_URL = 'https://github.com/hal0ai/hal0/releases';
+const entryUrl = (v: { untagged: boolean; version: string }) =>
+  v.untagged ? RELEASES_URL : releaseTagUrl(v.version);
 
-// Badge palette per section kind (brand-token driven, dark-first).
-const entryUrl = (v: { untagged: boolean; version: string }) => (v.untagged ? RELEASES_URL : releaseTagUrl(v.version));
-const isHighlights = (s: { title: string }) => s.title.trim().toLowerCase() === 'highlights';
+const isHighlights = (title: string) => title.trim().toLowerCase() === 'highlights';
+const tagName = (version: string) => (/^v/i.test(version) ? version : `v${version}`);
 
-const KIND_CLASS = {
-  breaking: 'border-red-500/40 bg-red-500/10 text-red-300',
-  added: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-  changed: 'border-sky-500/40 bg-sky-500/10 text-sky-300',
-  removed: 'border-zinc-500/40 bg-zinc-500/10 text-zinc-300',
-  fixed: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-  note: 'border-hal0-border bg-hal0-bg-elevated text-hal0-fg-muted',
-};
+// ── latest-stable card ──
+const latest = latestTagged;
+const CARD_MAX = 8;
+const cardAll = latest ? releaseHighlights(latest, 3) : [];
+const cardItems = cardAll.slice(0, CARD_MAX);
+const cardMore = cardAll.length - cardItems.length;
+const cardHasHighlights = !!latest && latest.sections.some((s) => isHighlights(s.title));
+const breaking = latest
+  ? releaseSections(latest, { max: 1 }).find((s) => s.kind === 'breaking')
+  : undefined;
 
+// ── recent entries ──
+// One line for the collapsed row: the first highlight (or first bullet),
+// else the intro, trimmed at a word boundary.
+function oneLine(v: (typeof versions)[number]): string {
+  const first = releaseHighlights(v, 1)[0] ?? v.intro ?? '';
+  // Changelog bullets open with a bold headline; that is the summary.
+  const lead = first.match(/^\s*(?:<p>)?\s*<strong>([\s\S]*?)<\/strong>/);
+  const text = plainText(lead ? lead[1] : first).replace(/\.$/, '');
+  if (text.length <= 120) return text;
+  const cut = text.slice(0, 120);
+  return `${cut.slice(0, cut.lastIndexOf(' ') > 60 ? cut.lastIndexOf(' ') : 120)}…`;
+}
+
+function status(v: (typeof versions)[number]): { label: string; cls: string } {
+  if (v.untagged) return { label: 'unreleased', cls: 'chip' };
+  if (v.prerelease) return { label: 'pre-release', cls: 'chip amber' };
+  if (v.gaPreview) return { label: 'preview', cls: 'chip warn' };
+  return { label: 'stable', cls: 'chip ok' };
+}
+
+const entries = recent.map((v) => {
+  const isLatest = !!latest && v.slug === latest.slug;
+  // The card already shows the latest entry's Highlights; the entry below
+  // repeats them only when the card had to cut some.
+  const sections = releaseSections(v, {
+    max: 4,
+    skipHighlights: isLatest && cardHasHighlights && cardMore === 0,
+  });
+  return { v, isLatest, sections, one: oneLine(v), status: status(v) };
+});
+
+const title = 'hal0 Changelog: Release Notes for the Local AI Server';
 const description =
-  'Every hal0 release, newest first, with the install and upgrade commands. Derived from the product CHANGELOG so it never drifts from what actually shipped.';
+  'Every hal0 release, newest first: new features, fixes and breaking changes for the self-hosted AI inference server, with install and upgrade commands.';
+
+// Mirrors the BreadcrumbList the other inner pages carry. MarketingLayout has
+// no head slot, so this sits in the body, which search engines read equally.
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://hal0.dev/' },
+    { '@type': 'ListItem', position: 2, name: 'Releases', item: 'https://hal0.dev/releases/' },
+  ],
+};
+const breadcrumbsJson = JSON.stringify(breadcrumbs).replace(/</g, '\\u003c');
 ---
 
-<MarketingLayout title="Changelog — hal0" description={description}>
-  <div class="site">
-    <div class="clshell">
-        <aside class="clpane">
-          <nav class="clside" data-cl-side aria-label="Releases">
-            <span class="label clside-label">releases</span>
-            {versions.map((v) => (
-              <a href={`#${v.slug}`}>
-                <span class="clside-version">
-                  {v.version}
-                  {v.prerelease && <span class="clside-dot" aria-hidden="true" />}
-                </span>
-                {v.date && <span class="clside-date">{v.date}</span>}
-              </a>
-            ))}
-          </nav>
-        </aside>
+<MarketingLayout title={title} description={description}>
+  <script is:inline type="application/ld+json" set:html={breadcrumbsJson} />
 
-        <div class="cl-content">
-          <header class="cl-head">
-            <span class="surface-tag">release history &middot; derived from CHANGELOG.md</span>
-            <h1 class="site-h1" style="margin: 12px 0 10px;">changelog</h1>
-            <p class="site-body" style="max-width: 58ch;">
-              Every hal0 release, newest first — breaking changes, new features, and fixes, straight
-              from
-              <a class="amber" href="https://github.com/hal0ai/hal0/blob/main/CHANGELOG.md" rel="noopener">CHANGELOG.md</a>.
-              No hand-maintained second copy to drift.
-            </p>
-          </header>
-          <section class="cl-get">
-            <h2 class="site-h2" style="margin: 0 0 4px;">Get hal0</h2>
-            <p class="site-sm" style="margin-bottom: 16px;">
-              {latestTagged ? (
-                <>The current <strong style="color: var(--fg);">stable</strong> release is {latestTagged.version}.</>
-              ) : (
-                <>Releases land on the <strong style="color: var(--fg);">stable</strong> channel.</>
-              )}{' '}
-              Preview and nightly carry the next line.
-            </p>
-
-            <div class="cl-get-grid">
-              {shownPrerelease && (
-                <article class="cl-get-card">
-                  <span class="cl-get-tag amber">pre-release</span>
-                  <div class="cl-get-version">{shownPrerelease.version}</div>
-                  {shownPrerelease.date && <p class="cl-get-date">released {shownPrerelease.date}</p>}
-                  <div class="cl-get-links">
-                    <a href={`#${shownPrerelease.slug}`}>what's new &rarr;</a>
-                    <a href={entryUrl(shownPrerelease)} rel="noopener">github release &#8599;</a>
-                  </div>
-                </article>
-              )}
-              {latestTagged && (
-                <article class="cl-get-card">
-                  <span class="cl-get-tag ok">latest release</span>
-                  <div class="cl-get-version">{latestTagged.version}</div>
-                  {latestTagged.date && <p class="cl-get-date">released {latestTagged.date}</p>}
-                  <div class="cl-get-links">
-                    <a href={`#${latestTagged.slug}`}>what's new &rarr;</a>
-                    <a href={RELEASES_URL} rel="noopener">all releases &#8599;</a>
-                  </div>
-                </article>
-              )}
-            </div>
-
-            <div class="cl-get-install">
-              <p class="site-sm" style="margin-bottom: 8px;">
-                One command on a fresh Linux x86_64 host (Python &ge;3.12). AMD (ROCm/Vulkan) is the
-                first-class path; NVIDIA/CUDA is experimental.
-              </p>
-              <CodeBlock lang="sh" title="fresh install">curl -fsSL https://hal0.dev/install.sh | bash</CodeBlock>
-
-              <p class="site-sm" style="margin: 16px 0 8px;">
-                Self-update verifies a cosign-signed tarball and swaps the <code>current</code> symlink
-                atomically. Three channels — tagged releases land on <code>stable</code>:
-              </p>
-              <div class="cl-get-channels">
-                <CodeBlock lang="sh" title="stable channel">hal0 update --channel stable</CodeBlock>
-                <CodeBlock lang="sh" title="preview channel (next line)">hal0 update --channel preview</CodeBlock>
-                <CodeBlock lang="sh" title="nightly channel">hal0 update --channel nightly</CodeBlock>
-              </div>
-              <p class="site-sm" style="margin-top: 12px;">
-                Reverts in one step: <code>hal0 update --rollback</code>. See the{' '}
-                <a class="amber" href="https://forum.hal0.dev/t/update-and-roll-back/41">update &amp; rollback guide</a>.
-              </p>
-            </div>
-          </section>
-
-          <ol class="cl-list">
-            {versions.map((v) => (
-              <li id={v.slug} data-cl-section class="cl-entry">
-                <div class="cl-entry-head">
-                  <h2 class="cl-entry-version">
-                    <a href={`#${v.slug}`}>{v.version}</a>
-                  </h2>
-                  {v.untagged ? (
-                    <span class="rounded border border-zinc-500/40 bg-zinc-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-zinc-300">unreleased</span>
-                  ) : v.prerelease ? (
-                    <span class="rounded border border-hal0-accent/40 bg-hal0-accent/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-hal0-accent">pre-release</span>
-                  ) : v.gaPreview ? (
-                    <span class="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">ga &middot; shipping as rc</span>
-                  ) : (
-                    <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300">stable</span>
-                  )}
-                  {v.date && <span class="cl-entry-date">{v.date}{v.dateNote && ` · ${v.dateNote}`}</span>}
-                  <a class="cl-entry-gh" href={entryUrl(v)} rel="noopener">on github &#8599;</a>
-                </div>
-
-                {v.sections.filter(isHighlights).map((s) => (
-                  <div class="cl-highlights">
-                    <span class="label">{s.title}</span>
-                    <div class="cl-prose" set:html={s.html} />
-                  </div>
-                ))}
-
-                {v.intro && <div class="cl-prose" set:html={v.intro} />}
-
-                {v.sections.filter((s) => !isHighlights(s)).map((s) => (
-                  <div class="cl-section">
-                    <span class={`inline-block rounded border px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider ${KIND_CLASS[s.kind]}`}>{s.title}</span>
-                    <div class="cl-prose" set:html={s.html} />
-                  </div>
-                ))}
-              </li>
-            ))}
-          </ol>
-        </div>
+  <div class="wrap wide">
+    <div class="phead phead-row">
+      <div>
+        <span class="eyebrow">release history &middot; derived from CHANGELOG.md</span>
+        <h1 class="site-h1" style="margin: 10px 0 10px;">Releases</h1>
+        <p class="site-body" style="max-width: 62ch;">
+          Every hal0 release, newest first, from the product changelog. The latest stable is what
+          <code>install.sh</code> installs and what <code>hal0 update</code> moves you to.
+        </p>
       </div>
+      <div class="rel-channels" aria-label="Update channels">
+        <span class="chip ok">stable &middot; default</span>
+        <span class="chip">preview &middot; next line</span>
+        <span class="chip">nightly &middot; ahead of stable</span>
+      </div>
+    </div>
 
-    <CTA
-      title="Read the docs"
-      subtitle="Every guide, concept, and reference page for running hal0."
-      eyebrow="learn more"
-      ctaPrimary={{ href: '/docs/getting-started/', label: 'docs →' }}
-      ctaSecondary={{ href: 'https://github.com/hal0ai/hal0/releases', label: 'all github releases ↗' }}
-    />
+    {latest && (
+      <article class="rel-latest" data-latest-release>
+        <div class="rel-lcard">
+          <div class="rel-lcard-h">
+            <span class="chip ok">latest stable</span>
+            <span class="rel-v">{latest.version}</span>
+            <span class="rel-d">{latest.date ? `${latest.date} · ` : ''}tag {tagName(latest.version)}</span>
+          </div>
+          <div class="rel-lcard-b">
+            {cardItems.length > 0 && (
+              <>
+                <h3>{cardHasHighlights ? 'Highlights' : 'What changed'}</h3>
+                <ul class="rel-hl">
+                  {cardItems.map((item) => <li set:html={item} />)}
+                </ul>
+                {cardMore > 0 && (
+                  <p class="rel-hl-more"><a href={`#${latest.slug}`}>{cardMore} more in the notes below</a></p>
+                )}
+              </>
+            )}
+            {breaking && (
+              <div class="rel-brk">
+                <b>breaking</b>
+                <span set:html={breaking.items[0]} />
+                {breaking.more > 0 && (
+                  <>
+                    {' '}<a href={`#${latest.slug}`}>More under Breaking in the notes below.</a>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <div class="rel-lcard-f">
+            <a class="btn" href={releaseTagUrl(latest.version)} rel="noopener">Release on GitHub &#8599;</a>
+            <a class="btn ghost" href={`#${latest.slug}`}>Full notes below</a>
+          </div>
+        </div>
+
+        <div class="rel-side">
+          <div class="rel-cmd">
+            <div class="rel-cmd-h"><span>fresh box</span><span class="m">Linux x86_64</span></div>
+            <div class="rel-cmd-b">
+              <span class="p" aria-hidden="true">$</span>
+              <code>curl -fsSL https://hal0.dev/install.sh | sudo bash</code>
+              <button type="button" class="btn ghost sm" data-copy="curl -fsSL https://hal0.dev/install.sh | sudo bash">copy</button>
+            </div>
+          </div>
+          <div class="rel-cmd">
+            <div class="rel-cmd-h"><span>existing box</span><span class="m">cosign-verified swap</span></div>
+            <div class="rel-cmd-b">
+              <span class="p" aria-hidden="true">$</span>
+              <code>sudo hal0 update</code>
+              <button type="button" class="btn ghost sm" data-copy="sudo hal0 update">copy</button>
+            </div>
+          </div>
+          <p class="site-sm">
+            Switch lines with <code>hal0 update --channel preview</code> or <code>--channel nightly</code>.
+            <code>hal0 update --rollback</code> reverts the code in one step; config and state do not roll back.
+          </p>
+        </div>
+      </article>
+    )}
+
+    <section class="rel-list" aria-labelledby="recent-h">
+      <h2 id="recent-h">Recent releases</h2>
+      {entries.map(({ v, isLatest, sections, one, status: st }) => (
+        <details class="rel-entry" id={v.slug} open={isLatest}>
+          <summary>
+            <span class="v">{v.version}</span>
+            {v.date && <span class="d">{v.date}</span>}
+            {one && <span class="one">{one}</span>}
+            <span class={st.cls}>{st.label}</span>
+            <span class="car" aria-hidden="true">&#9662;</span>
+          </summary>
+          <div class="rel-body">
+            {sections.map((s) => (
+              <>
+                <h4 class={s.kind === 'breaking' ? 'rel-sec warn' : 'rel-sec'}>{s.title}</h4>
+                <ul>
+                  {s.items.map((item) => <li set:html={item} />)}
+                  {s.more > 0 && (
+                    <li class="rel-more">
+                      <a href={entryUrl(v)} rel="noopener">+{s.more} more on GitHub &#8599;</a>
+                    </li>
+                  )}
+                </ul>
+              </>
+            ))}
+            {sections.length === 0 && v.intro && <div class="rel-intro" set:html={v.intro} />}
+          </div>
+          <div class="rel-foot">
+            <a href={entryUrl(v)} rel="noopener">{v.untagged ? 'all releases on GitHub' : `${tagName(v.version)} on GitHub`} &#8599;</a>
+            <a href={`#${v.slug}`}>link to this entry</a>
+          </div>
+        </details>
+      ))}
+    </section>
+
+    {archive.length > 0 && (
+      <section class="rel-list" id="archive" aria-labelledby="archive-h">
+        <h2 id="archive-h">Archive</h2>
+        <ul class="rel-archive">
+          {archive.map((v) => (
+            <li>
+              <a href={entryUrl(v)} rel="noopener" data-slug={v.slug}>
+                <span class="k">{v.version}</span>
+                <span>{v.untagged ? 'unreleased' : (v.date ?? '')}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
   </div>
 </MarketingLayout>
 
-<style>
-  /* ── shell — the KB ARTICLE's actual page frame, not just its idiom.
-   * Per the operator's site-wide layout baseline ("all pages must fit the
-   * KB page's width/layout system — same content measure, container
-   * widths, and gutter rhythm"), this isn't a wrap.wide-capped, centered
-   * box like every other MarketingLayout page (kb landing, benchmarks,
-   * profiles) — it's full-bleed, edge to edge, matching how Starlight
-   * itself renders the KB/docs/blog article frame: a 300px sidebar
-   * (Starlight's own `--sl-sidebar-width: 18.75rem`, measured off a live
-   * KB article) hard-left, then content filling the rest, uncapped except
-   * by its own reading measure. `padding-inline` on `.clside`/`.cl-content`
-   * mirrors Starlight's `--sl-content-pad-x` (1.5rem ≥72rem viewport).
-   * Sidebar hides below 900px, same breakpoint/behavior as the KB
-   * article's `.kbside` in the comp — content keeps its own scroll, no
-   * secondary nav needed on mobile. */
-  /* Same centered container as every other page (comp `.wrap.wide`).
-   * Deliberately the identical formula to the Starlight frame's
-   * --hal0-page-gutter (site-starlight.css) rather than a max-width +
-   * auto-margin box: the release rail must land on the SAME x as a
-   * docs/KB sidebar at every width, and Starlight's rail is a
-   * fixed-position element offset by this gutter, so the shell has to
-   * pad by it rather than centre a narrower box inside it. */
-  .clshell {
-    --cl-gutter: calc(max(0px, (100% - 1600px) / 2) + 32px);
-    display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
-    padding-inline: var(--cl-gutter);
-  }
-  @media (max-width: 640px) {
-    .clshell {
-      --cl-gutter: 16px;
-    }
-  }
-  /* The pane column — mirrors Starlight's .sidebar-pane (full-height
-   * hairline on the right, sidebar bg), so the rail reads as the same
-   * chrome as a docs/KB article's sidebar, not a floating list. */
-  .clpane {
-    border-right: 1px solid var(--line);
-    background: var(--bg);
-  }
-  .clside {
-    position: sticky;
-    top: 112px;
-    font-family: var(--jbm);
-    font-size: 11.5px;
+<style is:global>
+  /* Reuses the site's .chip / .btn (site-data.css) and the global .phead,
+   * .wrap, .eyebrow and .site-* type classes. Everything else is `rel-`
+   * prefixed, so it is global (no scoping class on the markup) without
+   * colliding with anything. No element min-width above phone width: the layout
+   * is fluid and collapses with max-width queries only. */
+  .rel-channels {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    max-height: calc(100vh - 140px);
-    overflow-y: auto;
-    padding: 28px 1.5rem 24px;
-    /* Same amber scroll block as the Starlight rails — see the
-     * "scroll rails" section in site-starlight.css for the rationale
-     * and the two-mechanism (Firefox / WebKit) split. */
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent-muted, #7a5500) transparent;
-  }
-  .clside:hover {
-    scrollbar-color: var(--accent) transparent;
-  }
-  .clside::-webkit-scrollbar {
-    width: 8px;
-  }
-  .clside::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .clside::-webkit-scrollbar-thumb {
-    background-color: var(--accent-muted, #7a5500);
-    border-radius: 3px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-    transition: background-color var(--dur-fast) var(--ease);
-  }
-  .clside:hover::-webkit-scrollbar-thumb {
-    background-color: var(--accent);
-    background-clip: padding-box;
-  }
-  .clside-label {
-    padding-left: 10px;
-    margin-bottom: 8px;
-  }
-  .clside a {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
     gap: 8px;
-    color: var(--fg-3);
-    padding: 5px 0 5px 10px;
-    line-height: 1.3;
-  }
-  .clside a:hover {
-    color: var(--fg);
-  }
-  .clside a.on {
-    color: var(--accent);
-    box-shadow: inset 2px 0 0 var(--accent);
-  }
-  .clside-version {
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
-  }
-  .clside-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent);
-  }
-  .clside-date {
-    font-size: 10px;
-    color: var(--fg-5);
-    white-space: nowrap;
+    flex-wrap: wrap;
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
   }
 
-  .cl-content {
-    max-width: min(68ch, 100%);
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .cl-content :global(pre) {
-    max-width: 100%;
-    overflow-x: auto;
-    padding-inline: 1.5rem;
-    padding-block: 28px 64px;
-  }
-  .cl-head {
-    padding-bottom: 28px;
-  }
-
-  /* ── "Get hal0" block — the old /releases page's headline + install/
-   * upgrade affordances, folded above the full version history. ── */
-  .cl-get {
-    padding-bottom: 32px;
-    margin-bottom: 32px;
-    border-bottom: 1px solid var(--line);
-  }
-  .cl-get-grid {
+  /* ── latest card ── */
+  .rel-latest {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 16px;
+    margin-top: 10px;
   }
-  .cl-get-card {
-    border: 1px solid var(--line);
+  .rel-lcard {
+    border: 1px solid var(--accent-line);
     border-radius: var(--rad-lg);
     background: var(--bg-1);
-    padding: 14px 16px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
   }
-  .cl-get-tag {
+  .rel-lcard-h {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line-soft);
     font-family: var(--jbm);
-    font-size: 10px;
+  }
+  .rel-v {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .rel-d {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--fg-4);
+  }
+  .rel-lcard-b {
+    padding: 18px;
+    overflow-wrap: anywhere;
+  }
+  .rel-lcard-b h3 {
+    margin: 0 0 10px;
+    font-family: var(--jbm);
+    font-size: 11px;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: var(--ls-label);
-  }
-  .cl-get-tag.amber {
     color: var(--accent);
   }
-  .cl-get-tag.ok {
-    color: var(--ok);
-  }
-  .cl-get-version {
-    font-family: var(--jbm);
-    font-size: 18px;
-    color: var(--fg);
-    margin-top: 8px;
-  }
-  .cl-get-date {
-    font-family: var(--jbm);
-    font-size: 11px;
-    color: var(--fg-4);
-    margin: 2px 0 0;
-  }
-  .cl-get-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    margin-top: 10px;
-    font-family: var(--jbm);
-    font-size: 11.5px;
-  }
-  .cl-get-links a {
-    color: var(--accent);
-  }
-  .cl-get-links a:hover {
-    color: var(--accent-hover);
-  }
-  .cl-get-install :global(code) {
-    font-family: var(--jbm);
-    font-size: 0.85em;
-    background: var(--bg-1);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 0.05rem 0.3rem;
-  }
-  .cl-get-channels {
-    display: grid;
-    gap: 10px;
-    margin-top: 10px;
-  }
-  @media (min-width: 640px) {
-    .cl-get-channels {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  /* ── full version list ── */
-  .cl-list {
+  .rel-hl {
     list-style: none;
     margin: 0;
     padding: 0;
-  }
-  .cl-entry {
-    scroll-margin-top: 96px;
-    border-top: 1px solid var(--line);
-    padding-top: 28px;
-    margin-top: 40px;
-  }
-  .cl-entry:first-child {
-    margin-top: 0;
-  }
-  .cl-entry-head {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
+    flex-direction: column;
     gap: 10px;
   }
-  .cl-entry-version {
-    font-family: var(--jbm);
-    font-size: 21px;
-    font-weight: 500;
-    letter-spacing: var(--ls-tight);
-    color: var(--fg);
-    margin: 0;
-  }
-  .cl-entry-version a {
-    color: inherit;
-  }
-  .cl-entry-version a:hover {
-    color: var(--accent);
-  }
-  .cl-entry-date {
-    font-family: var(--jbm);
-    font-size: 11px;
-    color: var(--fg-4);
-  }
-  .cl-entry-gh {
-    margin-left: auto;
-    font-family: var(--jbm);
-    font-size: 11px;
-    color: var(--fg-4);
-  }
-  .cl-entry-gh:hover {
-    color: var(--accent);
-  }
-
-  .cl-highlights {
-    margin-top: 16px;
-    padding: 12px 16px 6px;
-    border: 1px solid var(--line);
-    border-left: 2px solid var(--accent);
-    border-radius: 6px;
-    background: var(--bg-1);
-  }
-
-  .cl-section {
-    margin-top: 18px;
-  }
-
-  /* Style the marked-rendered changelog bodies (injected via set:html, so
-   * reached with :global under the .cl-prose wrapper). Kept tight to match
-   * the operator-tool voice — no decorative bullets. */
-  .cl-prose {
-    font-size: 16px;
-    line-height: 1.68;
-    color: var(--fg-2);
-    margin-top: 8px;
-  }
-  .cl-prose :global(ul) {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .cl-prose :global(li) {
+  .rel-hl li {
     position: relative;
-    padding-left: 1.1rem;
-    margin: 0.4rem 0;
-    line-height: 1.68;
+    padding-left: 14px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg-2);
   }
-  .cl-prose :global(li)::before {
+  .rel-hl li::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0.7em;
-    width: 0.35rem;
+    top: 0.75em;
+    width: 6px;
     height: 1px;
     background: var(--accent);
   }
-  .cl-prose :global(li > ul) {
-    margin-top: 0.25rem;
-  }
-  .cl-prose :global(p) {
-    margin: 0.5rem 0;
-  }
-  .cl-prose :global(strong) {
+  .rel-hl strong,
+  .rel-brk strong {
     color: var(--fg);
-    font-weight: 600;
+    font-weight: 500;
   }
-  .cl-prose :global(a) {
-    color: var(--accent);
-    text-decoration: none;
-  }
-  .cl-prose :global(a:hover) {
-    color: var(--accent-hover);
-    text-decoration: underline;
-  }
-  .cl-prose :global(code) {
+  .rel-hl code,
+  .rel-brk code,
+  .rel-body code,
+  .rel-intro code,
+  .rel-side code,
+  .rel-side code {
     font-family: var(--jbm);
-    font-size: 0.85em;
-    background: var(--bg-1);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 0.05rem 0.3rem;
+    font-size: 0.86em;
+    color: var(--fg);
+  }
+  .rel-hl a,
+  .rel-body a,
+  .rel-brk a {
+    color: var(--accent);
+  }
+  .rel-brk {
+    margin-top: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--warn-line);
+    border-radius: var(--rad);
+    background: var(--warn-soft);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+  .rel-hl-more {
+    margin: 12px 0 0;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+  }
+  .rel-hl-more a {
+    color: var(--accent);
+  }
+  .rel-brk b {
+    margin-right: 8px;
+    font-family: var(--jbm);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+    color: var(--warn);
+  }
+  .rel-lcard-f {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: var(--bg);
+    border-top: 1px solid var(--line-soft);
   }
 
-  @media (max-width: 900px) {
-    .clshell {
-      grid-template-columns: 1fr;
+  .rel-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .rel-cmd {
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-sunken);
+    overflow: hidden;
+  }
+  .rel-cmd-h {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 12px;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .rel-cmd-h .m {
+    color: var(--fg-4);
+  }
+  .rel-cmd-b {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    font-family: var(--jbm);
+    font-size: 13.5px;
+  }
+  .rel-cmd-b .p {
+    color: var(--accent);
+    user-select: none;
+  }
+  .rel-cmd-b code {
+    flex: 1;
+    min-width: 0;
+    color: var(--fg);
+    overflow-wrap: anywhere;
+  }
+  .rel-cmd-b .btn {
+    flex-shrink: 0;
+  }
+  .rel-side p {
+    color: var(--fg-3);
+  }
+
+  /* ── recent entries + archive ── */
+  .rel-list {
+    margin-top: 48px;
+  }
+  .rel-list h2 {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 14px;
+    font-family: var(--jbm);
+    font-size: 13px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+    color: var(--fg-3);
+  }
+  .rel-list h2::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .rel-entry {
+    margin-bottom: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    overflow: hidden;
+    scroll-margin-top: 96px;
+  }
+  .rel-entry summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    list-style: none;
+    cursor: pointer;
+    font-family: var(--jbm);
+    font-size: 13px;
+  }
+  .rel-entry summary::-webkit-details-marker {
+    display: none;
+  }
+  .rel-entry summary .v {
+    min-width: 64px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .rel-entry summary .d {
+    font-size: 11.5px;
+    color: var(--fg-4);
+  }
+  .rel-entry summary .one {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--geist);
+    font-size: 13.5px;
+    color: var(--fg-2);
+  }
+  .rel-entry summary .chip {
+    margin-left: auto;
+  }
+  .rel-entry summary .one + .chip {
+    margin-left: 0;
+  }
+  .rel-entry summary .car {
+    color: var(--fg-4);
+    transition: transform var(--dur-fast) var(--ease);
+  }
+  .rel-entry[open] summary .car {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+  .rel-entry[open] summary {
+    background: var(--bg);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .rel-body {
+    padding: 14px 16px 16px;
+    overflow-wrap: anywhere;
+  }
+  .rel-sec {
+    margin: 14px 0 8px;
+    font-family: var(--jbm);
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+    color: var(--fg-3);
+  }
+  .rel-sec:first-child {
+    margin-top: 0;
+  }
+  .rel-sec.warn {
+    color: var(--warn);
+  }
+  .rel-body ul {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+  .rel-body li.rel-more {
+    list-style: none;
+    margin-left: -18px;
+    font-family: var(--jbm);
+    font-size: 11.5px;
+  }
+  .rel-intro {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--fg-2);
+  }
+  .rel-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--jbm);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .rel-foot a {
+    color: var(--accent);
+  }
+  .rel-archive {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .rel-archive a {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--rad);
+    background: var(--bg-1);
+    font-family: var(--jbm);
+    font-size: 12px;
+    color: var(--fg-2);
+    overflow-wrap: anywhere;
+  }
+  .rel-archive a span:last-child {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--fg-4);
+  }
+  .rel-archive a:hover {
+    border-color: var(--line-strong);
+    color: var(--fg);
+  }
+
+  @media (max-width: 1000px) {
+    .rel-latest {
+      grid-template-columns: minmax(0, 1fr);
     }
-    .clpane {
+    .rel-archive {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 560px) {
+    .rel-archive {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .rel-entry summary .one {
       display: none;
+    }
+    .rel-entry summary .chip {
+      margin-left: auto;
+    }
+    .rel-d {
+      margin-left: 0;
     }
   }
 </style>
 
 <script>
-  // Progressive enhancement over the plain `href="#slug"` anchors: smooth
-  // scroll on click (honoring prefers-reduced-motion), and the active
-  // sidebar item tracks scroll position via IntersectionObserver — same
-  // amber `.on` idiom as the KB sidebar. Deep links land correctly on load
-  // without any of this: the browser's native anchor-jump already handles
-  // `/releases#v1-0-0-rc-3` before this script runs.
-  const links = document.querySelectorAll('[data-cl-side] a[href^="#"]');
-  const sections = document.querySelectorAll('[data-cl-section]');
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  function setActive(slug = '') {
-    links.forEach((a) => {
-      a.classList.toggle('on', a.getAttribute('href') === `#${slug}`);
-    });
-  }
-
-  links.forEach((a) => {
-    a.addEventListener('click', (event) => {
-      const href = a.getAttribute('href');
-      if (!href) return;
-      const slug = href.slice(1);
-      const target = document.getElementById(slug);
-      if (!target) return;
-      event.preventDefault();
-      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-      history.pushState(null, '', `#${slug}`);
-      setActive(slug);
+  // Copy buttons on the install and update commands.
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const original = btn.textContent;
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+        btn.textContent = 'copied';
+      } catch {
+        btn.textContent = 'failed';
+      }
+      setTimeout(() => {
+        btn.textContent = original;
+      }, 1200);
     });
   });
 
-  if (sections.length && 'IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length === 0) return;
-        const slug = visible[0].target.id;
-        setActive(slug);
-        const hash = `#${slug}`;
-        if (location.hash !== hash) history.replaceState(null, '', hash);
-      },
-      { rootMargin: '-96px 0px -70% 0px', threshold: 0 },
-    );
-    sections.forEach((section) => observer.observe(section));
+  // A fragment that names a collapsed entry opens it; one that names an
+  // archived version (old /changelog#<version> links) goes to that
+  // version's GitHub release, since the archive no longer inlines bodies.
+  function followHash() {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (!id) return;
+    const target = document.getElementById(id);
+    if (target instanceof HTMLDetailsElement) {
+      target.open = true;
+      target.scrollIntoView();
+      return;
+    }
+    if (!target) {
+      const link = document.querySelector<HTMLAnchorElement>(`#archive a[data-slug="${CSS.escape(id)}"]`);
+      if (link) location.replace(link.href);
+    }
   }
+  followHash();
+  window.addEventListener('hashchange', followHash);
 </script>

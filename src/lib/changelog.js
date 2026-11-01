@@ -276,3 +276,53 @@ export function splitReleases(versions, recent = 8) {
   }
   return { recent: head, archive };
 }
+
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+/**
+ * Plain text of a rendered HTML fragment: tags dropped, the entities `marked`
+ * emits decoded, whitespace collapsed. For one-line summaries, where the
+ * result is escaped again by the template.
+ * @param {string} html
+ * @returns {string}
+ */
+export function plainText(html) {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (whole, dec, hex, name) => {
+      if (dec) return String.fromCodePoint(Number(dec));
+      if (hex) return String.fromCodePoint(parseInt(hex, 16));
+      return ENTITIES[name.toLowerCase()] ?? whole;
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Display order for an entry's sections: what a reader needs first. Titles not
+// listed keep their changelog order after these.
+const SECTION_ORDER = ['highlights', 'breaking', 'added', 'changed', 'removed', 'fixed', 'security'];
+
+/**
+ * Bulleted sections of an entry, ready to render as a bounded excerpt.
+ * Highlights are the maintainers' own summary and are never cut; every other
+ * section keeps its first `max` bullets and reports how many it dropped, so
+ * a release with a hundred fixes stays a few lines long and points at the
+ * full notes. Sections with no bullets (prose, tables) are left out.
+ * @param {ChangelogVersion} version
+ * @param {{max?: number, skipHighlights?: boolean}} [opts]
+ * @returns {{title: string, kind: ChangelogSection['kind'], items: string[], more: number}[]}
+ */
+export function releaseSections(version, { max = 4, skipHighlights = false } = {}) {
+  const rank = (title) => {
+    const i = SECTION_ORDER.indexOf(title.trim().toLowerCase());
+    return i === -1 ? SECTION_ORDER.length : i;
+  };
+  return (version.sections ?? [])
+    .map((s, index) => ({ s, index, all: topLevelItems(s.html) }))
+    .filter(({ s, all }) => all.length && !(skipHighlights && rank(s.title) === 0))
+    .sort((a, b) => rank(a.s.title) - rank(b.s.title) || a.index - b.index)
+    .map(({ s, all }) => {
+      const shown = rank(s.title) === 0 ? all : all.slice(0, max);
+      return { title: s.title, kind: s.kind, items: shown, more: all.length - shown.length };
+    });
+}

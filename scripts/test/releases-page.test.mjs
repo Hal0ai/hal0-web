@@ -7,7 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access, stat } from 'node:fs/promises';
-import { parseChangelog } from '../../src/lib/changelog.js';
+import { parseChangelog, releaseTagUrl, splitReleases } from '../../src/lib/changelog.js';
 
 const PAGE = new URL('../../dist/client/releases/index.html', import.meta.url);
 const OLD_PAGE = new URL('../../dist/client/changelog/index.html', import.meta.url);
@@ -46,4 +46,135 @@ test('the first eight tagged entries are anchored on the page', { skip }, async 
 test('the releases page stays small now that old entries are links', { skip }, async () => {
   const { size } = await stat(PAGE);
   assert.ok(size < 250_000, `built /releases HTML is ${size} bytes, expected < 250000`);
+});
+
+// ── page structure ─────────────────────────────────────────────────────────
+
+const B7_TITLE = 'hal0 Changelog: Release Notes for the Local AI Server';
+const B7_DESCRIPTION =
+  'Every hal0 release, newest first: new features, fixes and breaking changes for the self-hosted AI inference server, with install and upgrade commands.';
+
+const tagged = parsed.versions.filter((v) => !v.untagged);
+// Untagged entries ahead of the newest tagged one stay visible in the recent
+// list (with their "unreleased" badge) on top of the eight tagged entries.
+const leadingUntagged = parsed.versions.findIndex((v) => !v.untagged);
+const expectedRecent = Math.max(leadingUntagged, 0) + Math.min(RECENT, tagged.length);
+const archiveVersions = splitReleases(parsed.versions, RECENT).archive;
+
+const attr = (s) => s.replace(/&/g, '&amp;');
+const textOf = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+test('title and meta description are the B7 text', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  assert.equal(html.match(/<title>([^<]*)<\/title>/)?.[1], B7_TITLE);
+  assert.equal(html.match(/<meta name="description" content="([^"]*)"/)?.[1], B7_DESCRIPTION);
+});
+
+test('one latest-release card names the latest tagged stable version', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const marks = html.match(/data-latest-release/g) ?? [];
+  assert.equal(marks.length, 1, 'exactly one data-latest-release element');
+  const start = html.indexOf('data-latest-release');
+  const card = html.slice(start, html.indexOf('</article>', start));
+  assert.ok(textOf(card).includes(parsed.latestTagged.version), 'card shows latestTagged.version');
+  assert.ok(card.includes('latest stable'), 'card carries the "latest stable" chip');
+  assert.ok(card.includes(`href="${releaseTagUrl(parsed.latestTagged.version)}"`), 'card links the GitHub release');
+  assert.ok(card.includes('curl -fsSL https://hal0.dev/install.sh | sudo bash'), 'card has the install one-liner');
+  assert.ok(card.includes('sudo hal0 update'), 'card has the upgrade command');
+  const hasBreaking = parsed.latestTagged.sections.some((s) => s.kind === 'breaking');
+  assert.equal(/class="rel-brk\b/.test(card), hasBreaking, 'Breaking block iff the entry has a breaking section');
+});
+
+test('the channel line names stable, preview and nightly', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const line = html.match(/<div class="rel-channels"[\s\S]*?<\/div>/)?.[0] ?? '';
+  const text = textOf(line);
+  for (const word of ['stable', 'preview', 'nightly']) assert.ok(text.includes(word), `channel line mentions ${word}`);
+});
+
+test('exactly min(8, tagged) entries render as collapsible <details>', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const entries = html.match(/<details class="rel-entry\b[^"]*"/g) ?? [];
+  assert.equal(entries.length, expectedRecent);
+  const open = new RegExp(`<details class="rel-entry\\b[^"]*" id="${tagged[0].slug.replace(/\./g, '\\.')}" open`);
+  assert.match(html, open, 'newest tagged entry opens by default');
+});
+
+test('each entry leads with Highlights when the changelog has them', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const entries = html.split(/<details class="rel-entry\b[^"]*"/).slice(1);
+  // The newest entry's Highlights sit in the latest card above it, so check the rest.
+  let checked = 0;
+  for (const chunk of entries.slice(1)) {
+    const slug = chunk.match(/id="([^"]+)"/)?.[1];
+    const v = parsed.versions.find((x) => x.slug === slug);
+    const hasHighlights = v.sections.some((s) => s.title.trim().toLowerCase() === 'highlights');
+    if (!hasHighlights) continue;
+    const body = chunk.slice(0, chunk.indexOf('</details>'));
+    const firstHeading = body.match(/<h4[^>]*>([^<]*)<\/h4>/)?.[1].trim().toLowerCase();
+    assert.equal(firstHeading, 'highlights', `${v.version} opens with Highlights`);
+    checked += 1;
+  }
+  assert.ok(checked > 0, 'at least one older entry with Highlights was checked');
+});
+
+test('the archive lists every remaining version with a GitHub link', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  assert.equal((html.match(/id="archive"/g) ?? []).length, 1, 'one #archive section');
+  const start = html.indexOf('id="archive"');
+  const section = html.slice(start, html.indexOf('</section>', start));
+  const links = [...section.matchAll(/<a [^>]*href="([^"]+)"[^>]*>/g)].map((m) => m[1]);
+  assert.equal(links.length, archiveVersions.length, 'one link per archived version');
+  for (const v of archiveVersions) {
+    // Untagged history has no tag page; it falls back to the releases index
+    // (same convention the page always had) rather than a 404.
+    const href = v.untagged ? 'https://github.com/hal0ai/hal0/releases' : releaseTagUrl(v.version);
+    assert.ok(links.includes(attr(href)), `archive links ${v.version} to ${href}`);
+    assert.ok(section.includes(`>${v.version}<`), `archive shows ${v.version}`);
+  }
+  // Nothing from the archive is also rendered inline.
+  for (const v of archiveVersions) {
+    assert.ok(!html.includes(`id="${v.slug}" open`) && !new RegExp(`<details[^>]* id="${v.slug.replace(/\./g, '\\.')}"`).test(html), `${v.version} is not inline`);
+  }
+});
+
+test('leading untagged entries keep their unreleased badge', { skip: skip || leadingUntagged < 1 }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  assert.ok(html.includes('unreleased'));
+});
+
+test('BreadcrumbList structured data lists Home then the page', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map((m) =>
+    JSON.parse(m[1]),
+  );
+  const nodes = blocks.flatMap((b) => (Array.isArray(b['@graph']) ? b['@graph'] : [b]));
+  const crumbs = nodes.find((n) => n['@type'] === 'BreadcrumbList');
+  assert.ok(crumbs, 'a BreadcrumbList node exists');
+  const items = crumbs.itemListElement;
+  assert.deepEqual(items.map((i) => i.position), [1, 2]);
+  assert.equal(items[0].item, 'https://hal0.dev/');
+  assert.equal(items[1].item, 'https://hal0.dev/releases/');
+});
+
+test('the page style block has no min-width above phone width', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  let css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+  // Astro may emit the page's CSS as a linked stylesheet instead of inline.
+  for (const m of html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)) {
+    const file = await readFile(new URL(`../../dist/client${m[1]}`, import.meta.url), 'utf8').catch(() => '');
+    if (file.includes('.rel-entry')) css += `\n${file}`;
+  }
+  assert.ok(css.includes('.rel-entry'), 'found the releases page CSS');
+  // `(min-width: Npx)` media queries are breakpoints, not element widths.
+  const bad = [...css.matchAll(/(?<!\()\bmin-width:\s*(\d+(?:\.\d+)?)px/g)]
+    .map((m) => Number(m[1]))
+    .filter((n) => n > 360);
+  assert.deepEqual(bad, [], 'no element min-width wider than a 360px phone');
+});
+
+test('the retired changelog rail and Get hal0 block are gone', { skip }, async () => {
+  const html = await readFile(PAGE, 'utf8');
+  assert.ok(!html.includes('data-cl-side'), 'no sticky release rail');
+  assert.ok(!html.includes('cl-get'), 'no old Get hal0 block');
 });

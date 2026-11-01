@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseChangelog, releaseHighlights, splitReleases } from '../../src/lib/changelog.js';
+import {
+  parseChangelog,
+  releaseHighlights,
+  splitReleases,
+  releaseSections,
+  plainText,
+} from '../../src/lib/changelog.js';
 
 const RAW = `# Changelog
 
@@ -203,4 +209,81 @@ test('splitReleases with fewer entries than recent leaves the archive empty', ()
   const { recent, archive } = splitReleases(versions.slice(0, 3), 8);
   assert.equal(recent.length, 3);
   assert.deepEqual(archive, []);
+});
+
+// ── plainText / releaseSections (releases page entry bodies) ───────────────
+
+test('plainText strips tags, decodes entities and collapses whitespace', () => {
+  assert.equal(
+    plainText('<strong>The dock.</strong> It&#39;s <code>a &lt;b&gt;</code>\n  &amp; more &quot;q&quot;'),
+    'The dock. It\'s a <b> & more "q"',
+  );
+  assert.equal(plainText(''), '');
+});
+
+const SECTIONS_RAW = `# Changelog
+
+## [9.5.0] — 2026-11-01
+
+Intro paragraph.
+
+### Fixed
+
+- fix 1
+- fix 2
+
+### Highlights
+
+- hl 1
+- hl 2
+- hl 3
+- hl 4
+- hl 5
+
+### Breaking
+
+- brk 1
+
+### Added
+
+- add 1
+- add 2
+- add 3
+- add 4
+- add 5
+- add 6
+
+### Audience
+
+Plain paragraph with no list.
+
+### Known issues
+
+- ki 1
+`;
+
+test('releaseSections orders Highlights, Breaking, then added/changed/removed/fixed/security, then the rest', () => {
+  const v = parseChangelog(SECTIONS_RAW).versions[0];
+  assert.deepEqual(
+    releaseSections(v).map((s) => s.title),
+    ['Highlights', 'Breaking', 'Added', 'Fixed', 'Known issues'],
+  );
+});
+
+test('releaseSections caps non-Highlights sections and reports how many were cut', () => {
+  const v = parseChangelog(SECTIONS_RAW).versions[0];
+  const byTitle = Object.fromEntries(releaseSections(v, { max: 4 }).map((s) => [s.title, s]));
+  assert.equal(byTitle.Highlights.items.length, 5, 'Highlights are never cut');
+  assert.equal(byTitle.Highlights.more, 0);
+  assert.equal(byTitle.Added.items.length, 4);
+  assert.equal(byTitle.Added.more, 2);
+  assert.equal(byTitle.Fixed.items.length, 2);
+  assert.equal(byTitle.Fixed.more, 0);
+  assert.equal(byTitle.Breaking.kind, 'breaking');
+});
+
+test('releaseSections skips sections without list items and can skip Highlights', () => {
+  const v = parseChangelog(SECTIONS_RAW).versions[0];
+  assert.ok(!releaseSections(v).some((s) => s.title === 'Audience'));
+  assert.ok(!releaseSections(v, { skipHighlights: true }).some((s) => s.title === 'Highlights'));
 });
