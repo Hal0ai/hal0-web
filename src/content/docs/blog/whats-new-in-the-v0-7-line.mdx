@@ -15,6 +15,7 @@ tags:
 
 import { Aside } from '@astrojs/starlight/components';
 import ForumDiscussLink from '../../../components/ForumDiscussLink.astro';
+import Shot from '../../../components/Shot.astro';
 
 <ForumDiscussLink />
 
@@ -36,7 +37,7 @@ memory + throughput band was lifted above the tabs, and a live-journal footer
 now carries runtime and service-health groups. Slot cards came out of the
 accordion so they read at a glance.
 
-![hal0 dashboard overview](/screenshots/dashboard-overview.png)
+<Shot name="dashboard-overview" alt="hal0 dashboard overview" />
 
 ## ComfyUI image generation, first-class
 
@@ -45,7 +46,7 @@ capability picker, installer, and a V2 Image-Gen pane. Generation flips the GPU
 into exclusive image mode via the iGPU switchover, and an Inference-tab dot
 tracks live state so you always know what the accelerator is doing.
 
-![ComfyUI image generation pane](/screenshots/image-gen-comfyui.png)
+<Shot name="image-gen-comfyui" alt="ComfyUI image generation pane" />
 
 ## NPU occupancy and the Operator Board
 
@@ -54,7 +55,7 @@ with real activity instead of hiding behind a static picker. Alongside it, the
 **Operator Board** is a hal0-skinned kanban wired to the bundled Hermes agent
 (`/api/board/*`), with a live agent-chat drawer and working task creation.
 
-![Operator Board — Hermes kanban](/screenshots/operator-board.png)
+<Shot name="operator-board" alt="Operator Board — Hermes kanban" />
 
 ## Honesty under the hood
 

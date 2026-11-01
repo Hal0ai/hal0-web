@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/sync-changelog.mjs && node scripts/sync-bench.mjs && node scripts/sync-profiles.mjs && astro dev",
     "start": "astro dev",
-    "prebuild": "node scripts/sync-changelog.mjs && node scripts/sync-bench.mjs && node scripts/sync-profiles.mjs && node scripts/build-og.mjs && node scripts/build-icons.mjs",
+    "prebuild": "node scripts/sync-changelog.mjs && node scripts/sync-bench.mjs && node scripts/sync-profiles.mjs && node scripts/build-og.mjs && node scripts/build-icons.mjs && node scripts/build-images.mjs",
     "build": "astro build",
     "postbuild": "node scripts/patch-vercel-docs-redirects.mjs && node scripts/patch-vercel-headers.mjs",
     "preview": "astro preview",
@@ -15,6 +15,7 @@
     "sync:profiles": "node scripts/sync-profiles.mjs",
     "build:og": "node scripts/build-og.mjs",
     "build:icons": "node scripts/build-icons.mjs",
+    "build:images": "node scripts/build-images.mjs",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test 'scripts/test/**/*.mjs'"
   },

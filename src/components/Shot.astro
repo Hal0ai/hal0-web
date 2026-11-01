@@ -1,0 +1,120 @@
+---
+/**
+ * Shot: a console screenshot from public/screenshots/ as a
+ * <figure class="shot"><picture> with AVIF, WebP and PNG, plus an optional caption.
+ *
+ *   <Shot name="slot-card" alt="A slot card with a model picker" />
+ *   <Shot name="slot-card" alt="..." caption="Plain text caption." />
+ *   <Shot name="slot-card" alt="...">
+ *     <Fragment slot="caption"><strong>Slots</strong>: caption with markup.</Fragment>
+ *   </Shot>
+ *
+ * `name` is the file stem. The @2x capture, the AVIF/WebP derivatives
+ * (scripts/build-images.mjs, run by `prebuild`) and the intrinsic width/height
+ * are all found on disk, so the markup never names a file that does not exist.
+ * The <img> keeps the PNG src: public/js/lightbox.js binds on /screenshots/.
+ * Pass `loading="eager"` for the one shot above the fold.
+ *
+ * A name with no PNG fails the build (a typo should not ship a broken image).
+ * For a capture that has not been taken yet pass `placeholder`: the figure
+ * becomes `shot shot-missing`, carrying `<!-- TODO(shots): <name> -->` and a
+ * labelled box sized by width/height (default 1440x900). Once the PNG exists
+ * the same markup renders the real picture. MDX cannot write HTML comments,
+ * so for a blog post <Shot placeholder> is the way to leave that marker.
+ *
+ * The caption is the `caption` prop (plain text, escaped) or the `caption`
+ * slot (markup); the slot wins when both are given.
+ *
+ * The figure sets no margin of its own: Starlight's layered sibling spacing
+ * and the page grids own the gaps, and an unlayered margin here would beat them.
+ */
+import { resolveShot } from '../lib/shot.ts';
+
+interface Props {
+  name: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+  loading?: 'lazy' | 'eager';
+  placeholder?: boolean;
+}
+
+const { name, alt, width, height, caption, loading = 'lazy', placeholder = false } = Astro.props;
+const shot = resolveShot(name, { width, height, placeholder });
+const hasCaption = Boolean(caption) || Astro.slots.has('caption');
+// `name` passed resolveShot's pattern (lowercase letters, digits, hyphens), so it cannot close the comment.
+const todo = `<!-- TODO(shots): ${name} -->`;
+---
+
+<figure class:list={['shot', { 'shot-missing': shot.missing }]}>
+  {
+    shot.missing ? (
+      <>
+        <Fragment set:html={todo} />
+        <div class="shot-ph" role="img" aria-label={alt} style={`aspect-ratio: ${shot.width} / ${shot.height}`} />
+      </>
+    ) : (
+      <picture>
+        {shot.sources.map((s) => <source type={s.type} srcset={s.srcset} />)}
+        <img
+          src={shot.src}
+          srcset={shot.srcset}
+          alt={alt}
+          width={shot.width}
+          height={shot.height}
+          loading={loading}
+          decoding="async"
+          fetchpriority={loading === 'eager' ? 'high' : undefined}
+        />
+      </picture>
+    )
+  }
+  {
+    hasCaption && (
+      <figcaption class="shot-cap">
+        <slot name="caption">{caption}</slot>
+      </figcaption>
+    )
+  }
+</figure>
+
+<style>
+  /* Natural width for small captures, the column width for large ones. */
+  .shot {
+    width: fit-content;
+    max-width: 100%;
+    border: 1px solid var(--hal0-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--hal0-bg-sunken);
+  }
+  .shot picture {
+    display: block;
+  }
+  .shot img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  .shot-cap {
+    padding: 0.7rem 0.85rem;
+    border-top: 1px solid var(--hal0-border);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+  }
+  /* Slotted captions bring their own <strong>, which the scoped selector cannot reach. */
+  .shot-cap :global(strong) {
+    color: var(--hal0-fg);
+    font-weight: 600;
+  }
+  /* A capture not taken yet: a hatched box holding the space the image will take. */
+  .shot-missing {
+    width: 100%;
+  }
+  .shot-ph {
+    width: 100%;
+    background: repeating-linear-gradient(135deg, transparent 0 10px, var(--hal0-border-soft) 10px 11px);
+  }
+</style>
