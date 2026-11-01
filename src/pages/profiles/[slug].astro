@@ -20,10 +20,12 @@ import profilesSnapshot from '../../data/profiles.json';
 import {
   SITE,
   latestHistory,
+  profileCrumbs,
   profileDescription,
   profileJsonLd,
   profileTitle,
   profileTomlUrl,
+  publishableProfiles,
 } from '../../lib/profile-page.mjs';
 
 // Only the slug is guaranteed; everything else may be absent from a record.
@@ -46,8 +48,10 @@ interface Props {
   record: ProfileRecord;
 }
 
+// Records whose slug would shadow a static page (submit, submitted) are
+// skipped with a warning rather than failing the build.
 export function getStaticPaths() {
-  return profilesSnapshot.profiles.map((record) => ({
+  return publishableProfiles(profilesSnapshot.profiles).map((record) => ({
     params: { slug: record.profile.slug },
     props: { record },
   }));
@@ -64,6 +68,7 @@ const canonical = `${SITE}/profiles/${slug}/`;
 const title = profileTitle(record);
 const description = profileDescription(record);
 const jsonLd = profileJsonLd(record, canonical);
+const crumbs = profileCrumbs(record, canonical).map((c) => ({ name: c.name, href: new URL(c.item).pathname }));
 
 // build-og.mjs renders public/og/profiles/<slug>.png on prebuild; fall back to
 // the gallery card if a run skipped it so the tag never points at a 404.
@@ -75,10 +80,18 @@ const laneChip = runner.lane?.startsWith('vulkan') ? 'dev-vulkan' : runner.lane 
 
 <MarketingLayout title={title} description={description} ogImage={ogImage} jsonLd={jsonLd}>
   <div class="wrap wide phead">
-    <nav class="crumbs mono" aria-label="Breadcrumb">
-      <a href="/profiles/">profiles</a>
-      <span aria-hidden="true">/</span>
-      <span aria-current="page">{slug}</span>
+    <nav aria-label="Breadcrumb">
+      <ol class="crumbs mono">
+        {crumbs.map((crumb, i) => (
+          <li>
+            {i < crumbs.length - 1 ? (
+              <a href={crumb.href}>{crumb.name}</a>
+            ) : (
+              <span aria-current="page">{crumb.name}</span>
+            )}
+          </li>
+        ))}
+      </ol>
     </nav>
 
     <div class="phead-row">
@@ -218,12 +231,26 @@ const laneChip = runner.lane?.startsWith('vulkan') ? 'dev-vulkan' : runner.lane 
 
 <style>
   .crumbs {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     font-size: 11.5px;
     color: var(--fg-4);
-    margin-bottom: 18px;
+  }
+  .crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  /* The separator is generated content with an empty alt, so it is not read. */
+  .crumbs li + li::before {
+    content: '›';
+    content: '›' / '';
+    color: var(--fg-5);
   }
   .crumbs a {
     color: var(--fg-3);

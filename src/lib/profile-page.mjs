@@ -10,11 +10,19 @@
 // author, history, ...), so nothing here assumes a field exists and nothing
 // ever interpolates one that doesn't.
 
-export const SITE = 'https://hal0.dev';
+import { SITE_URL } from './seo.ts';
+
+export const SITE = SITE_URL;
 export const TITLE_SUFFIX = ' · llama.cpp profile | hal0';
 export const TITLE_MAX = 60;
 export const DESCRIPTION_MAX = 155;
-export const PROFILES_REPO_BLOB = 'https://github.com/Hal0ai/hal0-profiles/blob/main/profiles';
+export const PROFILES_REPO = 'https://github.com/Hal0ai/hal0-profiles';
+export const PROFILES_REPO_BLOB = `${PROFILES_REPO}/blob/main/profiles`;
+
+// Slugs that would collide with a static page under /profiles/. Static routes
+// win over [slug].astro, so a record with one of these slugs gets no page of
+// its own (and the gallery does not link it).
+export const RESERVED_SLUGS = ['submit', 'submitted'];
 
 /** A trimmed non-empty string, or '' for anything else. */
 function text(value) {
@@ -38,6 +46,29 @@ export function clip(value, max) {
   const whole = /\s/.test(s[max - 1]) ? head : head.replace(/\s+\S*$/, '');
   const base = whole.length >= max / 2 ? whole : head;
   return `${base.replace(/[\s,;:.\-]+$/, '')}…`;
+}
+
+/** True when a profile slug would shadow a static /profiles/<slug>/ page. */
+export function isReservedSlug(slug) {
+  return RESERVED_SLUGS.includes(slug);
+}
+
+/**
+ * The records that get a page. Reserved slugs are dropped with a warning; a
+ * bad record in the registry must not fail the site build.
+ *
+ * @template T
+ * @param {T[]} records - profiles.json `profiles`
+ * @param {(message: string) => void} [warn]
+ * @returns {T[]}
+ */
+export function publishableProfiles(records, warn = console.warn) {
+  return records.filter((record) => {
+    const slug = record?.profile?.slug;
+    if (!isReservedSlug(slug)) return true;
+    warn(`[profiles] no page for "${slug}": /profiles/${slug}/ is a static page. Rename the profile in hal0-profiles.`);
+    return false;
+  });
 }
 
 /** The name a record is shown under: its title, else its slug. */
@@ -99,6 +130,34 @@ export function profileTomlUrl(slug) {
 }
 
 /**
+ * The breadcrumb trail for a profile page, shared by the visible nav and the
+ * BreadcrumbList node so the two cannot drift apart.
+ *
+ * @param {object} record
+ * @param {string} url - the page's canonical URL
+ * @returns {{ name: string, item: string }[]}
+ */
+export function profileCrumbs(record, url) {
+  return [
+    { name: 'Home', item: `${SITE}/` },
+    { name: 'Profiles', item: `${SITE}/profiles/` },
+    { name: nameOf(record), item: url },
+  ];
+}
+
+/**
+ * The author node: hal0 itself for first-party runs, otherwise the GitHub
+ * handle as a Person. Null when the record names nobody.
+ */
+function authorNode(record) {
+  if (record?.profile?.first_party) {
+    return { '@type': 'Organization', name: 'hal0', url: SITE };
+  }
+  const author = text(record?.profile?.author);
+  return author ? { '@type': 'Person', name: author, url: `https://github.com/${author}` } : null;
+}
+
+/**
  * JSON-LD nodes for the page, in @graph order: the breadcrumb trail, then the
  * profile itself as source code (the thing a visitor copies is a config file).
  * Keys with no value are left out rather than written as null.
@@ -108,8 +167,7 @@ export function profileTomlUrl(slug) {
  * @returns {Record<string, unknown>[]}
  */
 export function profileJsonLd(record, url) {
-  const slug = text(record?.profile?.slug);
-  const author = text(record?.profile?.author);
+  const author = authorNode(record);
   const runtime = text(record?.runner?.kind);
   const latest = latestHistory(record);
 
@@ -119,12 +177,10 @@ export function profileJsonLd(record, url) {
     description: profileDescription(record),
     url,
     programmingLanguage: 'TOML',
+    codeRepository: PROFILES_REPO,
   };
-  if (slug) code.codeRepository = profileTomlUrl(slug);
   if (runtime) code.runtimePlatform = runtime;
-  if (author) {
-    code.author = { '@type': 'Person', name: author, url: `https://github.com/${author}` };
-  }
+  if (author) code.author = author;
   if (latest) {
     code.version = String(latest.v);
     if (text(latest.date)) code.dateModified = text(latest.date);
@@ -133,11 +189,11 @@ export function profileJsonLd(record, url) {
   return [
     {
       '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'hal0', item: `${SITE}/` },
-        { '@type': 'ListItem', position: 2, name: 'Profiles', item: `${SITE}/profiles/` },
-        { '@type': 'ListItem', position: 3, name: nameOf(record), item: url },
-      ],
+      itemListElement: profileCrumbs(record, url).map((crumb, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        ...crumb,
+      })),
     },
     code,
   ];
