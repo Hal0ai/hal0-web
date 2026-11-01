@@ -63,8 +63,12 @@ test('/profiles/submitted is noindex and absent from the sitemap', { skip: !buil
 	const submitted = await readFile(new URL('../../dist/client/profiles/submitted/index.html', import.meta.url), 'utf8');
 	assert.match(submitted, /<meta name="robots" content="noindex[^"]*"/);
 	const sitemap = await readFile(new URL('../../dist/client/sitemap-0.xml', import.meta.url), 'utf8');
-	assert.ok(!sitemap.includes('/profiles/submitted/'), 'thank-you page is not a sitemap entry');
-	assert.ok(sitemap.includes('https://hal0.dev/profiles/'), 'real pages are still listed');
+	// Parse every <loc> into a URL and compare host + path, not substrings.
+	const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]));
+	assert.ok(locs.length > 0, 'sitemap has entries');
+	for (const u of locs) assert.equal(u.hostname, 'hal0.dev', `sitemap entry on canonical host: ${u.href}`);
+	assert.ok(!locs.some((u) => u.pathname === '/profiles/submitted/'), 'thank-you page is not a sitemap entry');
+	assert.ok(locs.some((u) => u.pathname === '/profiles/'), 'real pages are still listed');
 });
 
 test('Starlight pages carry an absolute og:image', { skip: !built && 'run npm run build first' }, async () => {
