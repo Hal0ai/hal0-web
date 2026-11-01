@@ -149,7 +149,7 @@ test('benchmarks renders a real <title> and meta description', { skip: !built &&
   const desc = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
   assert.ok(desc.length > 20, 'benchmarks should have a non-trivial meta description');
   assert.ok(
-    html.includes('property="og:image" content="https://hal0.dev/og-default.png"'),
+    html.includes('property="og:image" content="https://hal0.dev/og/default.png"'),
     'benchmarks should fall back to the default OG image',
   );
 });

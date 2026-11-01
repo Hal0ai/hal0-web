@@ -11,7 +11,8 @@ are served at `https://hal0.dev/brand/<name>`).
 | `logo-halo-dark-favico.svg` / `.png` | Mark-only glyph, dark (favicon, touch icon, Discourse large icon) |
 | `logo-halo-light-favico.svg` / `.png` | Mark-only glyph, light |
 | `/favicon.svg` (site root) | Browser favicon |
-| `/og-default.png` (site root) | Default OG/social card (1200×630) |
+| `/og/default.png` (site root) | Default OG/social card (1200×630), rendered at prebuild by `scripts/build-og.mjs` (gitignored) |
+| `/og-default.png` (site root) | Legacy ImageMagick card (`scripts/build-og.sh`); no longer used by site pages, kept for the Discourse OG slot below |
 
 Related sources: the inline wordmark component is `src/components/Wordmark.astro`
 (brand mark: Monomaniac One "hal" + JetBrains Mono slashed "0"); design tokens

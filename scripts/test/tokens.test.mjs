@@ -42,6 +42,8 @@ const NEW_ROOT = {
 const NEW_LIGHT = {
   '--hal0-accent-bg': '#fdf3d7',
   '--hal0-shadow-hover': '0 6px 20px rgba(0,0,0,0.10)',
+  '--hal0-ok-glow': 'rgba(26,127,55,0.30)',
+  '--hal0-warn-glow': 'rgba(138,90,0,0.30)',
 };
 
 for (const [name, value] of Object.entries(NEW_ROOT)) {
@@ -279,4 +281,9 @@ test('site-starlight.css: Pagefind modal gets the same ring, inset stripe and en
 test('site-search.js renders the pal-foot key-hint footer', () => {
   assert.ok(siteSearchJs.includes('pal-foot'), 'pal-foot element');
   assert.ok(siteSearchJs.includes('↑↓ navigate · ↵ open · esc close'), 'key-hint text');
+});
+
+test('site-search.js hides the pal-foot key hints from screen readers', () => {
+  // The footer sits next to the role="listbox" results; read aloud it would sound like an option.
+  assert.match(siteSearchJs, /<div class="pal-foot" aria-hidden="true">/, 'pal-foot is aria-hidden');
 });

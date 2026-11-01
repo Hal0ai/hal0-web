@@ -51,9 +51,9 @@ const FILLS = [
   },
   {
     kind: 'fallback',
-    eyebrow: 'self-hosted ai inference',
-    title: 'Your Strix Halo box, running real /v1/* inference',
-    subtitle: 'One command installs it. Slots, unified memory, an OpenAI-compatible API.',
+    eyebrow: 'Local AI platform',
+    title: 'Own Your Inference',
+    subtitle: 'Self-hosted local AI for AMD Strix Halo. Several models in named slots, one API.',
     meta: 'hal0.dev · Apache-2.0',
   },
 ];
@@ -154,4 +154,58 @@ test('wrapMonospace: every returned line respects maxCharsPerLine', () => {
   const { lines } = wrapMonospace(title, 18, 2);
   assert.ok(lines.length <= 2);
   for (const line of lines) assert.ok(line.length <= 18);
+});
+
+// ── word-boundary wrapping ───────────────────────────────────────────────
+// The default card once read "Your Strix Halo bo / x, running real /…": a word
+// that did not fit on the rest of a line was split mid-way. Lines break between
+// words; only a word wider than a whole line is split, and then with a hyphen.
+
+test('wrapMonospace: a two-word title straddling the limit wraps the second word whole', () => {
+  // 11 + 1 + 9 = 21 chars > 18, so "inference" must start line two, not split as "infere" / "nce".
+  assert.deepEqual(wrapMonospace('self-hosted inference', 18, 2), {
+    lines: ['self-hosted', 'inference'],
+    truncated: false,
+  });
+  // 15 chars on line one, 3 left: "box," (4 chars) moves down whole instead of becoming "bo" / "x,".
+  assert.deepEqual(wrapMonospace('Your Strix Halo box,', 18, 2), {
+    lines: ['Your Strix Halo', 'box,'],
+    truncated: false,
+  });
+});
+
+test('wrapMonospace: a single word longer than the line breaks with a hyphen at the limit', () => {
+  const word = 'supercalifragilisticexpialidocious'; // 34 chars
+  const { lines, truncated } = wrapMonospace(word, 18, 2);
+  assert.deepEqual(lines, ['supercalifragilis-', 'ticexpialidocious']);
+  assert.equal(truncated, false);
+  assert.equal(lines[0].length, 18, 'the hyphen sits inside the 18ch box');
+  assert.equal(lines.join('').replace('-', ''), word, 'no characters lost around the hyphen');
+});
+
+test('wrapMonospace: a hyphen-broken word still truncates with an ellipsis at maxLines', () => {
+  assert.deepEqual(wrapMonospace('supercalifragilisticexpialidocious', 18, 1), {
+    lines: ['supercalifragilis…'],
+    truncated: true,
+  });
+});
+
+test('wrapMonospace: truncation drops whole words, never half of one, before the ellipsis', () => {
+  // Line two would be 17 chars, so the ellipsis fits as-is.
+  assert.deepEqual(wrapMonospace('Your Strix Halo box, running real /v1/* inference', 18, 2), {
+    lines: ['Your Strix Halo', 'box, running real…'],
+    truncated: true,
+  });
+  // "ddd eee fff" fills the 11ch line, so "fff" goes to make room for the ellipsis.
+  assert.deepEqual(wrapMonospace('aaa bbb ccc ddd eee fff ggg hhh', 11, 2), {
+    lines: ['aaa bbb ccc', 'ddd eee…'],
+    truncated: true,
+  });
+});
+
+test('the default social card title fits on one line at the short size', () => {
+  const result = titleLayout('Own Your Inference');
+  assert.deepEqual(result.lines, ['Own Your Inference']);
+  assert.equal(result.fontSize, 62);
+  assert.equal(result.truncated, false);
 });

@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "node scripts/sync-changelog.mjs && node scripts/sync-bench.mjs && node scripts/sync-profiles.mjs && astro dev",
+    "dev": "node scripts/sync-changelog.mjs && node scripts/sync-bench.mjs && node scripts/sync-profiles.mjs && node scripts/build-og.mjs && astro dev",
     "start": "astro dev",
     "prebuild": "node scripts/sync-changelog.mjs && node scripts/sync-bench.mjs && node scripts/sync-profiles.mjs && node scripts/build-og.mjs && node scripts/build-icons.mjs && node scripts/build-images.mjs",
     "build": "astro build",
@@ -46,7 +46,6 @@
     "typescript": "^6.0.3"
   },
   "overrides": {
-    "esbuild": "^0.28.1",
     "sharp": "$sharp",
     "@vercel/cli-config": {
       "zod": "^4.6.7"

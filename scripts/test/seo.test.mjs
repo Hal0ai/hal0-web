@@ -384,6 +384,54 @@ test('benchmarks.astro takes the model count from the roster, never a literal', 
 	assert.deepEqual(source.match(/\b\d+ models\b/g) ?? [], [], 'no "<number> models" literal');
 });
 
+// /profiles/ was the one page that scrolled sideways at a 390px phone: its card grid asked for
+// minmax(380px, 1fr) tracks inside a 358px content box. A browser is the real check; this pins the cause.
+test('/profiles/ declares no min-width or grid track minimum wider than a 360px phone column', async () => {
+	const source = await readFile(new URL('../../src/pages/profiles.astro', import.meta.url), 'utf8');
+	const LIMIT = 360;
+	const px = (n, unit) => (unit === 'rem' ? n * 16 : n);
+	const css = source
+		.replace(/\/\*[\s\S]*?\*\//g, '')
+		// min(<n>px, 100%) never exceeds the container, so it is the sanctioned way to keep a large preferred width.
+		.replace(/min\(\s*[\d.]+(?:px|rem)\s*,\s*100%\s*\)/g, '100%');
+	const offenders = [];
+	for (const m of css.matchAll(/min-width\s*:\s*([\d.]+)(px|rem)\b/g)) {
+		if (px(parseFloat(m[1]), m[2]) > LIMIT) offenders.push(m[0]);
+	}
+	for (const m of css.matchAll(/minmax\(\s*([\d.]+)(px|rem)\b/g)) {
+		if (px(parseFloat(m[1]), m[2]) > LIMIT) offenders.push(m[0]);
+	}
+	assert.deepEqual(offenders, [], `wider than ${LIMIT}px minimums overflow a 390px viewport`);
+});
+
+// Social cards. build-og.mjs renders the site-wide fallback at prebuild, and
+// every page without a card of its own must point og:image / twitter:image at
+// it by absolute URL (card scrapers ignore a root-relative path).
+
+const DEFAULT_CARD = 'https://hal0.dev/og/default.png';
+/** The gallery and each profile page ship their own cards (build-og.mjs). */
+const hasOwnCard = (route) => route === '/profiles/' || (/^\/profiles\/[^/]+\/$/.test(route) && route !== '/profiles/submit/' && route !== '/profiles/submitted/');
+
+test('the default social card is rendered into the build', { skip }, async () => {
+	const png = await readFile(path.join(DIST, 'og', 'default.png'));
+	const { width, height, format } = await sharp(png).metadata();
+	assert.deepEqual({ width, height, format }, { width: 1200, height: 630, format: 'png' });
+});
+
+test('pages without a card of their own carry the absolute default og:image and twitter:image', { skip }, () => {
+	const plain = pages.filter((p) => !hasOwnCard(p.route));
+	assert.ok(plain.length >= 8, `found the pages that use the default card (got ${plain.length})`);
+	for (const { route, html } of plain) {
+		assert.equal(metaContent(html, 'property', 'og:image'), DEFAULT_CARD, `${route}: og:image`);
+		assert.equal(metaContent(html, 'name', 'twitter:image'), DEFAULT_CARD, `${route}: twitter:image`);
+	}
+});
+
+test('no built page still points at the legacy /og-default.png card', { skip }, () => {
+	const stale = pages.filter((p) => p.html.includes('/og-default.png')).map((p) => p.route);
+	assert.deepEqual(stale, []);
+});
+
 // Unit checks for src/lib/seo.ts (no build needed).
 
 test('organizationSameAs reduces the GitHub repo link to its organization', () => {

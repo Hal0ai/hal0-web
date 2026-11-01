@@ -3,6 +3,10 @@ dist/
 .astro/
 # PNG icon set rasterized from public/favicon.svg by scripts/build-icons.mjs (prebuild)
 /public/icons/
+# Social/OG cards rendered by scripts/build-og.mjs (prebuild). satori's text metrics
+# shift between dependency versions, so a committed copy would dirty the tree on
+# every build; the deployed site serves the prebuild output either way.
+/public/og/
 # AVIF/WebP siblings of the screenshots and the Hermes portrait, plus the 744px Hermes resize,
 # written by scripts/build-images.mjs (prebuild). The PNGs stay the only committed copy.
 /public/screenshots/*.avif
