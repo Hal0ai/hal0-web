@@ -75,7 +75,9 @@ Run them individually with `npm run sync:changelog`, `sync:bench`,
 ## OG images
 
 `scripts/build-og.mjs` (satori + resvg, no browser) renders the 1200x630
-social cards into `public/og/` at `prebuild`. `npm run build:og` runs it alone.
+social cards into `public/og/` at `prebuild` and before `npm run dev`. The PNGs
+are gitignored (satori's text metrics shift between versions, so a committed copy
+dirties the tree on every build). `npm run build:og` runs it alone.
 
 ## Screenshots
 
@@ -99,7 +101,7 @@ See [`NOTES.md`](./NOTES.md) for the full rationale.
 
 ```sh
 npm install              # install deps
-npm run dev              # sync scripts, then dev server at http://localhost:4321
+npm run dev              # sync scripts + OG cards, then dev server at http://localhost:4321
 npm run build            # prebuild (sync + OG) then static/Vercel build -> ./dist and .vercel/output
 npm run preview          # serve the build for smoke-testing
 npm test                 # node:test suites in scripts/test/
