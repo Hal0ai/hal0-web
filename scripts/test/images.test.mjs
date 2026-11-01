@@ -3,18 +3,21 @@
 // The image derivative pipeline (scripts/build-images.mjs) and the Shot
 // component (src/components/Shot.astro, src/lib/shot.ts).
 //
-// Three layers:
+// Four layers:
 //   1. hermetic: build-images.mjs and the picture resolver run against a
 //      throwaway directory with generated PNGs, so they never skip;
-//   2. build-dependent: derivatives of the real screenshots in public/ and
+//   2. component: Shot.astro rendered by a real (tiny) `astro build` of a
+//      fixture page, covering what no real page uses yet (caption prop and
+//      slot, placeholder, eager); never skips;
+//   3. build-dependent: derivatives of the real screenshots in public/ and
 //      the built blog pages in dist/client/ (skip with a hint when
 //      `npm run build` has not run, like seo.test.mjs);
-//   3. landing page: the same checks on the built landing page, skipped with
-//      an explicit reason until src/pages/index.astro uses <Shot>.
-import test from 'node:test';
+//   4. landing page: the same checks on the built landing page, skipped with
+//      an explicit reason until it renders <Shot> figures.
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { access, mkdir, mkdtemp, readdir, readFile, rm, stat, utimes } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -144,6 +147,26 @@ test('build-images is incremental: a second run writes nothing, a stale or missi
 	});
 });
 
+test('build-images names the source PNG of a derivative that fails, and still builds the rest', async () => {
+	await withTmp(async (root) => {
+		await seedRoot(root);
+		await writeFile(path.join(root, 'public/screenshots/broken.png'), 'not a png');
+		await assert.rejects(
+			buildImages({ root, log: quiet }),
+			(err) => {
+				assert.match(err.message, /2 derivative\(s\) failed/);
+				assert.match(err.message, /public\/screenshots\/broken\.avif \(from public\/screenshots\/broken\.png\)/);
+				assert.match(err.message, /public\/screenshots\/broken\.webp \(from public\/screenshots\/broken\.png\)/);
+				return true;
+			},
+		);
+		assert.ok(await exists(path.join(root, 'public/screenshots/demo.avif')), 'a healthy screenshot is still built');
+		assert.ok(await exists(path.join(root, 'public/agents/hermes-744.png')), 'so is the Hermes resize');
+		assert.equal(await exists(path.join(root, 'public/screenshots/broken.avif')), false, 'no truncated file is left behind');
+		assert.deepEqual((await readdir(path.join(root, 'public/screenshots'))).filter((f) => f.endsWith('.tmp')), [], 'no temp file is left behind');
+	});
+});
+
 test('build-images tolerates a tree with no screenshots or Hermes portrait', async () => {
 	await withTmp(async (root) => {
 		await mkdir(path.join(root, 'public'), { recursive: true });
@@ -220,6 +243,32 @@ test('resolveShot: explicit width and height win, one alone scales the other, ba
 	});
 });
 
+test('resolveShot: placeholder mode answers a missing PNG with a sized stand-in, never for a bad name', async () => {
+	await withTmp(async (root) => {
+		await seedRoot(root);
+		const publicDir = path.join(root, 'public');
+
+		assert.throws(() => resolveShot('not-captured-yet', { publicDir }), /not-captured-yet/, 'throwing stays the default');
+		assert.throws(() => resolveShot('not-captured-yet', { publicDir, placeholder: false }), /not-captured-yet/);
+
+		const ph = resolveShot('not-captured-yet', { publicDir, placeholder: true });
+		assert.equal(ph.missing, true);
+		assert.deepEqual(ph.sources, []);
+		assert.deepEqual([ph.width, ph.height], [1440, 900], 'defaults to the capture viewport');
+		const half = resolveShot('not-captured-yet', { publicDir, placeholder: true, width: 600 });
+		assert.deepEqual([half.width, half.height], [600, 375], 'one dimension scales the other at 1440:900');
+		const sized = resolveShot('not-captured-yet', { publicDir, placeholder: true, width: 600, height: 300 });
+		assert.deepEqual([sized.width, sized.height], [600, 300]);
+
+		const real = resolveShot('demo', { publicDir, placeholder: true });
+		assert.equal(real.missing, false, 'a PNG that exists renders normally even in placeholder mode');
+		assert.deepEqual([real.width, real.height], [480, 300]);
+		assert.equal(resolveShot('demo', { publicDir }).missing, false);
+
+		assert.throws(() => resolveShot('../secret', { publicDir, placeholder: true }), /name/i, 'a malformed name is a bug, not a missing capture');
+	});
+});
+
 test('pictureSources pairs the Hermes 744 and full-size portraits as 1x and 2x', async () => {
 	await withTmp(async (root) => {
 		await seedRoot(root);
@@ -254,6 +303,8 @@ test('prebuild runs build-images and the derivatives stay out of git', async () 
 		'public/agents/hermes.avif',
 		'public/agents/hermes-744.png',
 		'public/agents/hermes-744.webp',
+		'public/screenshots/x.avif.12345.tmp', // leftover from an interrupted build-images run
+		'public/agents/hermes-744.png.12345.tmp',
 	]) {
 		let ignored = true;
 		try {
@@ -275,7 +326,132 @@ test('prebuild runs build-images and the derivatives stay out of git', async () 
 });
 
 // ---------------------------------------------------------------------------
-// 2. build-dependent: real derivatives and built blog pages
+// 2. Shot.astro rendered by a real astro build of a fixture page
+//
+// The blog posts use neither captions nor placeholders, so the component is
+// built here from a throwaway project under .astro/ (gitignored; inside the repo
+// so astro's own runtime resolves from node_modules). Shot reads public/ from
+// process.cwd(), so the build runs with the repo as cwd and finds the real
+// slot-card capture.
+
+const FIXTURE_PAGE = `---
+import Shot from ${JSON.stringify(path.join(REPO, 'src/components/Shot.astro'))};
+---
+<html lang="en"><head><title>fixture</title></head><body>
+  <Shot name="slot-card" alt="prop caption case" caption="Slots & profiles <b>not bold</b>" />
+  <Shot name="slot-card" alt="slot caption case"><Fragment slot="caption"><strong>Slots</strong>: rich caption</Fragment></Shot>
+  <Shot name="slot-card" alt="slot beats prop case" caption="from the prop"><Fragment slot="caption">from the slot</Fragment></Shot>
+  <Shot name="slot-card" alt="no caption case" />
+  <Shot name="slot-card" alt="eager case" loading="eager" />
+  <Shot name="not-captured-yet" alt="placeholder case" placeholder caption="Coming soon" />
+  <Shot name="not-captured-yet-too" alt="placeholder sized case" placeholder width={600} height={300} />
+  <Shot name="slot-card" alt="placeholder flag, png exists case" placeholder />
+</body></html>
+`;
+
+let fixtureRoot;
+let fixturePromise;
+/** Build the fixture once; resolves to { html, css }. */
+function shotFixture() {
+	fixturePromise ??= (async () => {
+		const base = path.join(REPO, '.astro/test-fixtures');
+		await mkdir(base, { recursive: true });
+		fixtureRoot = await mkdtemp(path.join(base, 'shot-'));
+		await mkdir(path.join(fixtureRoot, 'src/pages'), { recursive: true });
+		await writeFile(path.join(fixtureRoot, 'src/pages/index.astro'), FIXTURE_PAGE);
+		const { build } = await import('astro');
+		const cwd = process.cwd();
+		process.chdir(REPO);
+		try {
+			await build({ root: fixtureRoot, configFile: false, logLevel: 'silent', outDir: path.join(fixtureRoot, 'dist') });
+		} finally {
+			process.chdir(cwd);
+		}
+		const html = await readFile(path.join(fixtureRoot, 'dist/index.html'), 'utf8');
+		const cssDir = path.join(fixtureRoot, 'dist/_astro');
+		const files = (await exists(cssDir)) ? (await readdir(cssDir)).filter((f) => f.endsWith('.css')) : [];
+		const sheets = await Promise.all(files.map((f) => readFile(path.join(cssDir, f), 'utf8')));
+		const inline = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]);
+		return { html, css: [...sheets, ...inline].join('\n') };
+	})();
+	return fixturePromise;
+}
+
+after(async () => {
+	if (fixtureRoot) await rm(fixtureRoot, { recursive: true, force: true });
+});
+
+/** The <figure> whose img alt (or placeholder aria-label) is `alt`. */
+function figureFor(html, alt) {
+	const hit = [...html.matchAll(/<figure\b[\s\S]*?<\/figure>/g)].map((m) => m[0]).find((f) => f.includes(`"${alt}"`));
+	assert.ok(hit, `fixture has a figure for ${JSON.stringify(alt)}`);
+	return hit;
+}
+
+test('Shot caption prop: plain text, escaped', async () => {
+	const { html } = await shotFixture();
+	const fig = figureFor(html, 'prop caption case');
+	assert.match(fig, /<figcaption\b[^>]*\bclass="shot-cap[^"]*"[^>]*>Slots &amp; profiles &lt;b&gt;not bold&lt;\/b&gt;<\/figcaption>/);
+	assert.match(fig, /<picture\b/);
+});
+
+test('Shot caption slot: rich markup is kept, and the slot wins over the prop', async () => {
+	const { html } = await shotFixture();
+	const rich = figureFor(html, 'slot caption case');
+	assert.match(rich, /<figcaption\b[^>]*\bclass="shot-cap[^"]*"[^>]*>\s*<strong>Slots<\/strong>: rich caption\s*<\/figcaption>/);
+	const both = figureFor(html, 'slot beats prop case');
+	assert.match(both, /<figcaption\b[^>]*>\s*from the slot\s*<\/figcaption>/);
+	assert.doesNotMatch(both, /from the prop/);
+});
+
+test('Shot without a caption renders no <figcaption>', async () => {
+	const { html } = await shotFixture();
+	assert.doesNotMatch(figureFor(html, 'no caption case'), /<figcaption/);
+});
+
+test('Shot loading: lazy by default, eager adds fetchpriority=high', async () => {
+	const { html } = await shotFixture();
+	const lazy = figureFor(html, 'no caption case');
+	assert.match(lazy, /\sloading="lazy"/);
+	assert.doesNotMatch(lazy, /fetchpriority/);
+	const eager = figureFor(html, 'eager case');
+	assert.match(eager, /\sloading="eager"/);
+	assert.match(eager, /\sfetchpriority="high"/);
+});
+
+test('Shot placeholder: a missing PNG keeps the TODO(shots) comment and a labelled, sized box', async () => {
+	const { html } = await shotFixture();
+	const fig = figureFor(html, 'placeholder case');
+	assert.match(fig, /^<figure\b[^>]*\bclass="shot shot-missing[^"]*"/);
+	assert.ok(fig.includes('<!-- TODO(shots): not-captured-yet -->'), 'astro keeps the HTML comment in the built output');
+	assert.match(fig, /<div\b[^>]*\brole="img"[^>]*\baria-label="placeholder case"/);
+	assert.match(fig, /aspect-ratio:\s*1440\s*\/\s*900/);
+	assert.doesNotMatch(fig, /<picture|<img\b/);
+	assert.match(fig, /<figcaption\b[^>]*>Coming soon<\/figcaption>/);
+
+	const sized = figureFor(html, 'placeholder sized case');
+	assert.ok(sized.includes('<!-- TODO(shots): not-captured-yet-too -->'));
+	assert.match(sized, /aspect-ratio:\s*600\s*\/\s*300/);
+});
+
+test('Shot placeholder: a PNG that exists renders the normal picture, with no stand-in markers', async () => {
+	const { html } = await shotFixture();
+	const fig = figureFor(html, 'placeholder flag, png exists case');
+	assert.match(fig, /<picture\b/);
+	assert.doesNotMatch(fig, /shot-missing|TODO\(shots\)|role="img"/);
+});
+
+test('Shot styles: no figure margin (Starlight and grids own the gaps), bold stays in slotted captions', async () => {
+	const { css } = await shotFixture();
+	// Any unlayered margin here would beat Starlight's layered sibling spacing between a paragraph and the figure.
+	const figureRules = [...css.matchAll(/(?:^|[}\s])(\.shot(?![-\w])[^{]*)\{([^}]*)\}/g)];
+	assert.ok(figureRules.length > 0, 'found the .shot rule');
+	for (const [, selector, body] of figureRules) assert.doesNotMatch(body, /margin/, `${selector.trim()} sets no margin`);
+	assert.match(css, /\.shot-cap[^{]*\sstrong[^{]*\{[^}]*font-weight:\s*600/, 'slotted <strong> in a caption is bold');
+});
+
+// ---------------------------------------------------------------------------
+// 3. build-dependent: real derivatives and built blog pages
 
 const derived = await exists(path.join(PUBLIC, 'screenshots/dashboard-overview.avif'));
 const builtBlog = await exists(path.join(DIST, 'blog'));
@@ -402,13 +578,20 @@ test('the figure is class="shot" and the lightbox still finds the png', { skip: 
 });
 
 // ---------------------------------------------------------------------------
-// 3. landing page: pending the landing lane
+// 4. landing page: pending the landing lane
+//
+// Un-skips on the BUILT page, not on index.astro's source (which may move or
+// be split into components): once the landing renders a <Shot> figure
+// (`<figure class="shot"><picture>`), both tests below must pass. The picture
+// is part of the trigger because the pre-<Shot> landing already has a
+// hand-written `<figure class="shot">` around a bare <img>.
 
-const landingSource = await readFile(path.join(REPO, 'src/pages/index.astro'), 'utf8');
-const LANDING_USES_SHOT = /<Shot\b/.test(landingSource);
-const skipLanding = !LANDING_USES_SHOT
-	? 'landing lane not merged: src/pages/index.astro does not use <Shot> yet'
-	: skipBlog;
+const landingHtml = await readFile(path.join(DIST, 'index.html'), 'utf8').catch(() => null);
+const LANDING_RENDERS_SHOT = /<figure\b[^>]*\bclass="shot\b[^"]*"[^>]*>\s*<picture\b/.test(landingHtml ?? '');
+const skipLanding =
+	skipBlog || landingHtml === null
+		? 'run npm run build first'
+		: !LANDING_RENDERS_SHOT && 'landing lane not merged: the built landing page has no <Shot> figure yet';
 
 test('landing page: every console shot is a <picture> and no bare screenshot <img> is left', { skip: skipLanding }, async () => {
 	const html = await readFile(path.join(DIST, 'index.html'), 'utf8');

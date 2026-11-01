@@ -8,8 +8,9 @@
  *   public/agents/hermes.png               →  hermes.avif  hermes.webp
  *                                             hermes-744.png  hermes-744.avif  hermes-744.webp
  *
- * hermes-744 is the Hermes portrait at 744px wide: the card shows it at about
- * 372 CSS px, so 744 is its 1x and the full 1488px portrait is its 2x
+ * hermes-744 is the Hermes portrait at 744px wide: the 340x520 card crops it
+ * with object-fit: cover, so the image renders about 644 CSS px wide. 744 px
+ * covers that at 1x and the full 1488px portrait is its 2x
  * (src/components/HermesCard.astro).
  *
  * A derivative is written only when it is missing or older than its source
@@ -149,7 +150,7 @@ export async function buildImages({ root = ROOT, log = console.log } = {}) {
         bytes += await encode(job);
         written.push(rel(job.dest));
       } catch (err) {
-        failures.push(`${rel(job.dest)}: ${err.message}`);
+        failures.push(`${rel(job.dest)} (from ${rel(job.src)}): ${err.message}`);
       }
     }
   };

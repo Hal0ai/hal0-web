@@ -10,6 +10,8 @@ dist/
 /public/agents/*.avif
 /public/agents/*.webp
 /public/agents/hermes-744.png
+# temp files build-images.mjs leaves behind if a build is killed mid-write
+*.tmp
 
 # deps
 node_modules/
