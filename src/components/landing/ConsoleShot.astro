@@ -21,7 +21,7 @@ const [label, ...rest] = shot.caption.split('. ');
 {shot.todo ? (
   <Fragment set:html={`<!-- TODO(shots): ${shot.file} -->`} />
 ) : (
-  <div class:list={['frame', { hero, contain: shot.contain }]}>
+  <div class:list={['frame', { hero, contain: shot.contain, natural: shot.natural }]}>
     <Shot name={shot.file} alt={shot.alt}>
       <Fragment slot="caption"><strong>{label}.</strong> {rest.join('. ')}</Fragment>
     </Shot>
@@ -47,5 +47,9 @@ const [label, ...rest] = shot.caption.split('. ');
   .contain :global(img) {
     object-fit: contain;
     object-position: center;
+  }
+  /* A strip (the dock) keeps its own shape: forcing 1440 / 900 would zoom into its middle. */
+  .natural :global(img) {
+    aspect-ratio: auto;
   }
 </style>

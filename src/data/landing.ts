@@ -145,6 +145,8 @@ export type ConsoleShot = {
   todo?: true;
   /** The capture is not 1440 by 900: fit it inside the frame rather than cropping it. */
   contain?: true;
+  /** The capture is a strip (the dock): the frame takes the image's own shape instead of 1440 by 900. */
+  natural?: true;
 };
 
 export const CONSOLE_SHOTS: ConsoleShot[] = [
@@ -214,9 +216,9 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     contain: true,
   },
   {
-    file: 'memory-view',
-    alt: 'Memory overview with facts retained over 30 days, engine state, graph extraction and the list of banks',
-    caption: 'Memory. Facts retained over time, the engine, graph extraction and every bank on the box.',
+    file: 'memory-graph',
+    alt: 'Memory bank in its web view: facts as a force-directed graph linked by meaning, time and shared entity, with a tag map beside it',
+    caption: 'Memory graph. A bank as a web: related meaning, near in time, shared entity, with the tag map beside it.',
   },
   {
     file: 'approvals-inbox',
@@ -228,6 +230,7 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     file: 'dock-gpu',
     alt: 'The dock with its GPU tab open',
     caption: 'Dock. GPU state, slot and service health, downloads and a merged event feed.',
+    natural: true,
   },
 ];
 

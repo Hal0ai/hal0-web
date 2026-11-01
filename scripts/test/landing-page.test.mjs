@@ -619,3 +619,11 @@ test('the hero lede and the Hermes alt carry the reviewed wording', async () => 
   const card = await source('src/components/HermesCard.astro');
   assert.ok(card.includes('alt="Hermes, the bundled hal0 agent"'));
 });
+
+test('the dock strip keeps its own shape in the console grid', async () => {
+  const { CONSOLE_SHOTS } = await import(new URL(LANDING_DATA, root));
+  assert.equal(CONSOLE_SHOTS.find((s) => s.file === 'dock-gpu').natural, true, 'dock-gpu is a strip');
+  const css = await source(CONSOLE_SHOT);
+  assert.match(css, /\.natural :global\(img\)\s*\{[^}]*aspect-ratio:\s*auto/, 'a natural shot drops the 1440 / 900 frame');
+  assert.ok(!/\.natural[^{]*\{[^}]*object-fit/.test(css), 'nothing crops a natural shot');
+});
