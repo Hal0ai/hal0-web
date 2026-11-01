@@ -306,6 +306,7 @@ Branch `chore/screenshot-pipeline`. Model: sonnet for G1; the lead runs G2.
 
 ### Task G2: capture (lead, gated on the operator bringing CT150 up on stable with the public-safe seed)
 
+- [ ] **Step 0 (operator only, Proxmox host):** CT150 is stopped with its memory still set to 108000 MB (raised from 49152 on 2026-10-30); the host has 124 GB with about 90 GB in use while CT150 is down, and the last start at 108 GB was followed by a host hard reset 46 s later. Before starting it: `pct set 150 -memory 49152` (or lower) and check `free -g` on the pve host. Agents never run `pct`. Ping the hal0 orchestrator session before the start so it can quiesce its test lanes.
 - [ ] **Step 1:** verify the box: `ssh` alias reachable, `hal0 --version` is the stable tag, slots loaded per spec section 10, no private names in `#slots/stacks`, `#benchmarks`, `#memory/bank`, `#mcp`.
 - [ ] **Step 2:** run `scripts/capture-screenshots.sh --out <scratch dir>` with `HAL0_ADMIN_KEY` from the box's service environment (never printed), review every PNG by eye for hostnames, keys, model, stack and tag names.
 - [ ] **Step 3:** copy approved PNGs into `public/screenshots/`, replace each `TODO(shots)` in `src/pages/index.astro`, `src/data/landing.ts` and the blog, delete unreferenced retired files, run `npm run build && npm test`.
