@@ -494,7 +494,7 @@ async function main() {
     kind: 'profile',
     eyebrow: 'profiles',
     title: 'community profile registry',
-    subtitle: 'Find the config for your model, install it, read what it trades.',
+    subtitle: 'Community llama.cpp profiles for Strix Halo. Copy the flags into a profile of your own.',
     meta: 'hal0.dev/profiles',
   });
   const galleryDest = resolve(ROOT, 'public/og/profiles-index.png');
@@ -512,7 +512,7 @@ async function main() {
   // switch over deliberately.
   const fallbackPng = await renderOgCard({
     kind: 'fallback',
-    eyebrow: 'hal0.dev',
+    eyebrow: 'Local AI platform',
     title: 'Own Your Inference',
     subtitle: 'Self-hosted local AI for AMD Strix Halo. Several models in named slots, one API.',
     meta: 'hal0.dev · Apache-2.0',

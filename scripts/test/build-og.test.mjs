@@ -51,7 +51,7 @@ const FILLS = [
   },
   {
     kind: 'fallback',
-    eyebrow: 'hal0.dev',
+    eyebrow: 'Local AI platform',
     title: 'Own Your Inference',
     subtitle: 'Self-hosted local AI for AMD Strix Halo. Several models in named slots, one API.',
     meta: 'hal0.dev · Apache-2.0',
