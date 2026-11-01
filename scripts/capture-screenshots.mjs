@@ -253,8 +253,11 @@ const SHOT_DEFS = [
   },
   {
     // The Overview "now" band: serving mode, live facts and the memory bar.
-    // (`unified-memory-hero` was this same clip and is retired; its PNG stays
-    // on disk for the post that still references it.)
+    // Nightly only: the `.ov-now` band does not exist on stable 1.7.x, where
+    // the Overview's own `expect` fallback passes but this clip would not.
+    // Out of the default sweep for that reason; name it to shoot it on a
+    // nightly box. (`unified-memory-hero` was this same clip and is retired.)
+    skip: true,
     name: 'overview-now',
     route: '#dashboard',
     expect: '.ov-mem-seg:not(.sys), .rd-mem-seg:not(.rd-mem-seg-system)',
