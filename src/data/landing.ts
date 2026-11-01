@@ -18,7 +18,7 @@ export const IDEA_COLUMNS: { key: string; title: string; body: string; examples:
   {
     key: 'slot = placement',
     title: 'A name, a device, a port',
-    body: 'One model in its own container on a loopback port, with a type (chat, embedding, rerank, speech, image), a device (ROCm, Vulkan, NPU, CPU), a priority and a name your apps use. Custom slots are one command.',
+    body: 'One model in its own container behind the API, with a type (chat, embedding, rerank, speech, image), a device (ROCm, Vulkan, NPU, CPU), a priority and a name your apps use. Custom slots are one command.',
     examples: 'agent · coder · brain · embed · rerank · stt · tts · img · custom: research',
   },
   {
@@ -82,11 +82,11 @@ export const PRIVACY_LEDE = {
 export const PRIVACY_FACTS: { title: string; body: string }[] = [
   {
     title: 'Local inference',
-    body: 'Every model runs in a container on your box, on a loopback port. Realtime voice chains local speech-to-text, chat and text-to-speech with no cloud hop.',
+    body: 'Every model runs in a container on your box. Chat, embedding and speech slots sit on loopback ports behind the API. Realtime voice chains local speech-to-text, chat and text-to-speech with no cloud hop.',
   },
   {
     title: 'No telemetry',
-    body: 'hal0 ships no telemetry code. Crash reporting exists, is off, and needs a key you supply. Benchmark bundles and diagnostics never upload on their own.',
+    body: 'hal0\'s own code has no telemetry. Crash reporting exists, is off, and needs a key you supply. Benchmark bundles and diagnostics never upload on their own.',
   },
   {
     title: 'No account',
@@ -99,13 +99,13 @@ export const PRIVACY_FACTS: { title: string; body: string }[] = [
 ];
 
 export const LAN_NOTE =
-  'The API and Open WebUI serve your network with no login and no TLS by default. Keep the box on your LAN, or turn on key auth and put a reverse proxy in front before you share it. Key auth covers the API, not Open WebUI.';
+  'The API, Open WebUI and the ComfyUI editor serve your network with no login and no TLS by default. Keep the box on your LAN, or turn on key auth and put a reverse proxy in front before you share it. Key auth covers the API only.';
 
 export const WIRED_TILES: { tag: string; title: string; body: string }[] = [
   {
     tag: 'chat',
     title: 'Open WebUI',
-    body: 'Installed and started on `:3001`, with every chat slot in its model picker. Voice in and out, document search on hal0 embeddings, and an image button through ComfyUI.',
+    body: 'Installed and started on `:3001`, with every chat slot in its model picker. Voice is wired from the start; document search on hal0 embeddings and the ComfyUI image button switch on once embed and img have models.',
   },
   {
     tag: 'agent',
@@ -120,7 +120,7 @@ export const WIRED_TILES: { tag: string; title: string; body: string }[] = [
   {
     tag: 'images',
     title: 'ComfyUI',
-    body: 'Runs in the img slot. `POST /v1/images/generations` renders SDXL, SD 1.5 or Flux. The editor stays on the LAN for workflows the API does not cover.',
+    body: 'Runs in the img slot. `POST /v1/images/generations` renders SDXL, SD 1.5 or Qwen-Image. The editor stays on the LAN for workflows the API does not cover.',
   },
 ];
 
@@ -141,8 +141,9 @@ export type ConsoleShot = {
   alt: string;
   /** The first sentence renders as the bold label. */
   caption: string;
+  /** No usable capture yet: renders only a TODO comment, and stays out of the schema. */
   todo?: true;
-  /** Pixel size of the 1x file, or the frame a pending capture should hold, when not 1440 by 900. */
+  /** Pixel size of the 1x file, when it is not the usual 1440 by 900. */
   size?: [number, number];
 };
 
@@ -158,7 +159,6 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     alt: 'Open WebUI model picker listing agent, coder and brain',
     caption: 'Open WebUI, same box. The picker shows slot names with the model behind each one.',
     todo: true,
-    size: [1440, 520],
   },
   {
     file: 'memory-bank',
@@ -196,6 +196,7 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     file: 'agents-overview',
     alt: 'Agents page with agent cards',
     caption: 'Agents. Hermes and pi with their profiles, tool policy and approvals.',
+    todo: true,
   },
   {
     file: 'approvals-inbox',
@@ -224,7 +225,6 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     alt: 'The dock with its GPU tab open',
     caption: 'Dock. GPU state, slot and service health, downloads and a merged event feed.',
     todo: true,
-    size: [1440, 200],
   },
 ];
 
@@ -345,7 +345,7 @@ export const COMPARE_ROWS: {
   {
     label: 'Licence · telemetry',
     cells: [
-      'Apache-2.0 · none',
+      'Apache-2.0 · none; console checks updates',
       'MIT · none locally',
       'closed · update checks',
       'MIT · none found',
@@ -364,7 +364,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Do I need a Strix Halo machine?',
-    a: 'No. hal0 is built and benchmarked on the Ryzen AI Max+ 395 first, and it runs on other Linux boxes with an AMD GPU, an NVIDIA GPU (experimental) or only a CPU. Linux with systemd and podman is the one hard requirement.',
+    a: 'No. hal0 is built and benchmarked on the Ryzen AI Max+ 395 first, and it runs on other Linux boxes with an AMD GPU, an NVIDIA GPU (experimental) or only a CPU. Linux x86_64 with systemd and podman is the hard requirement.',
   },
   {
     q: 'Is hal0 an Ollama alternative?',

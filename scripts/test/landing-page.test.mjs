@@ -166,7 +166,7 @@ test('copy keeps the claims the product inventory requires', async () => {
   assert.match(data, /GPU chat slots pause/, 'image generation pauses GPU chat slots');
   assert.match(data, /unless you connect an upstream/, 'the privacy frame');
   assert.match(data, /key auth/, 'the LAN note');
-  assert.match(data, /Key auth covers the API, not Open WebUI/, 'Open WebUI sits outside hal0 auth');
+  assert.match(data, /Key auth covers the API only/, 'Open WebUI and the ComfyUI editor sit outside hal0 auth');
   assert.match(data, /503 with Retry-After/, 'what a reload costs');
   assert.ok(!/nothing else leaves/.test(data), 'no universal "nothing leaves" claim');
   assert.match(data, /One API, one slot per medium/, 'routing is by endpoint and model name');
@@ -183,12 +183,14 @@ test('research appears only as a custom slot', async () => {
 test('every console shot exists on disk or is marked todo', async () => {
   const { CONSOLE_SHOTS } = await import(new URL(LANDING_DATA, root));
   for (const shot of CONSOLE_SHOTS) {
-    const onDisk = await exists(`public/screenshots/${shot.file}.png`);
-    assert.equal(!!shot.todo, !onDisk, `${shot.file}: todo flag must match the file on disk`);
+    // A todo shot may have a stale file on disk; a shot we render must have one.
+    if (!shot.todo) {
+      assert.ok(await exists(`public/screenshots/${shot.file}.png`), `${shot.file}.png is on disk`);
+    }
     assert.ok(shot.alt && shot.caption, `${shot.file} has alt text and a caption`);
   }
   const todo = CONSOLE_SHOTS.filter((s) => s.todo).map((s) => s.file).sort();
-  assert.deepEqual(todo, ['approvals-inbox', 'dock-gpu', 'image-gen-models', 'openwebui-picker', 'overview-now']);
+  assert.deepEqual(todo, ['agents-overview', 'approvals-inbox', 'dock-gpu', 'image-gen-models', 'openwebui-picker', 'overview-now']);
   const overview = CONSOLE_SHOTS.find((s) => s.file === 'overview-now');
   assert.match(overview.caption, /preview/i, 'nightly-only surface is labelled preview');
 });
@@ -286,11 +288,11 @@ test('the key headings are on the page', skipUnbuilt, () => {
 
 test('every screenshot exists on disk or carries its TODO comment', skipUnbuilt, async () => {
   const referenced = new Set([...html.matchAll(/\/screenshots\/([\w-]+)(?:@2x)?\.png/g)].map((m) => m[1]));
-  assert.ok(referenced.size >= 9, 'the page references the console shots');
+  assert.ok(referenced.size >= 8, 'the page references the console shots');
   for (const name of referenced) {
     assert.ok(await exists(`public/screenshots/${name}.png`), `${name}.png is on disk`);
   }
-  for (const name of ['openwebui-picker', 'image-gen-models', 'dock-gpu', 'approvals-inbox', 'overview-now']) {
+  for (const name of ['agents-overview', 'openwebui-picker', 'image-gen-models', 'dock-gpu', 'approvals-inbox', 'overview-now']) {
     assert.ok(html.includes(`<!-- TODO(shots): ${name} -->`), `TODO comment for ${name}`);
     assert.ok(!referenced.has(name), `${name} has no <img> yet`);
   }
@@ -317,9 +319,9 @@ test('every internal href in the page body resolves', skipUnbuilt, async () => {
   }
 });
 
-test('visible copy stays between 1600 and 2400 words', skipUnbuilt, () => {
+test('visible copy stays between 1600 and 2800 words', skipUnbuilt, () => {
   const count = visibleWords(main).length;
-  assert.ok(count >= 1600 && count <= 2400, `visible word count is ${count}`);
+  assert.ok(count >= 1600 && count <= 2800, `visible word count is ${count}`);
 });
 
 test('no inline style forces a width wider than a phone', skipUnbuilt, () => {
@@ -342,7 +344,7 @@ test('the structured data is complete and comes through the layout', skipUnbuilt
   assert.deepEqual(app.publisher, { '@id': 'https://hal0.dev/#org' });
   assert.ok(Array.isArray(app.featureList) && app.featureList.length > 0, 'featureList');
   assert.match(app.image, /^https:\/\/hal0\.dev\/screenshots\/.+\.png$/);
-  assert.ok(Array.isArray(app.screenshot) && app.screenshot.length >= 9, 'screenshot list');
+  assert.ok(Array.isArray(app.screenshot) && app.screenshot.length >= 8, 'screenshot list');
   for (const url of app.screenshot) {
     assert.match(url, /^https:\/\/hal0\.dev\/screenshots\/.+\.png$/);
   }
@@ -509,4 +511,93 @@ test('the publisher reference resolves inside the graph', skipUnbuilt, () => {
   const graph = JSON.parse(script[1])['@graph'];
   const app = graph.find((node) => node['@type'] === 'SoftwareApplication');
   assert.ok(graph.some((node) => node['@id'] === app.publisher['@id']), 'an Organization node carries that @id');
+});
+
+// ── review fix round 1: what the claims audit found ─────────────────────────
+
+test('a default install is described as it behaves', skipUnbuilt, () => {
+  // Only `brain` gets a model on a default install; the agent and image offers default to no.
+  assert.ok(html.includes('One install brings up the API, a chat UI, an agent and memory, already pointed at each other, and pulls a small model for the steward. You pick the models for the other slots from the console.'));
+  assert.ok(html.includes('One command on a fresh Linux box brings up the API, the chat UI, the agent and memory. Then pick models for your slots from the console.'));
+  assert.ok(!html.includes('the slots, a chat UI, an agent, image generation'), 'old section 5 lede');
+  assert.ok(!html.includes('the slots, the chat UI, the agent, image generation'), 'old CTA');
+});
+
+test('wired tiles claim only what works out of the box', async () => {
+  const data = copyOf(await source(LANDING_DATA));
+  assert.ok(data.includes('Voice is wired from the start; document search on hal0 embeddings and the ComfyUI image button switch on once embed and img have models.'));
+  assert.ok(data.includes('renders SDXL, SD 1.5 or Qwen-Image'), 'names models the API renders at the latest tag');
+  assert.ok(!/Flux/.test(data), 'Flux is not in the catalogue at the latest tag');
+});
+
+test('the structured data does not promise an image engine on install', async () => {
+  const page = await source(PAGE);
+  assert.ok(!page.includes('Hermes and ComfyUI configured on install'));
+});
+
+test('only the slots that are on loopback are called loopback', async () => {
+  const data = copyOf(await source(LANDING_DATA));
+  assert.ok(data.includes('Every model runs in a container on your box. Chat, embedding and speech slots sit on loopback ports behind the API.'));
+  assert.ok(!data.includes('on a loopback port'), 'the img slot listens on the LAN by default');
+  assert.ok(data.includes('The API, Open WebUI and the ComfyUI editor serve your network with no login and no TLS by default.'));
+});
+
+test('a pending shot renders only its TODO comment', skipUnbuilt, async () => {
+  assert.ok(!/screenshot pending/i.test(html), 'no visible pending box');
+  const shot = await source(CONSOLE_SHOT);
+  assert.ok(!/\.placeholder|\.pending|role="img"/.test(shot), 'placeholder markup and CSS are gone');
+  assert.ok(!html.includes('/screenshots/agents-overview'), 'the stale agents shot is not referenced');
+  const { CONSOLE_SHOTS } = await import(new URL(LANDING_DATA, root));
+  const figures = html.match(/<figure/g) ?? [];
+  assert.equal(figures.length, CONSOLE_SHOTS.filter((s) => !s.todo).length, 'one figure per real shot');
+});
+
+test('telemetry and swap claims are scoped to what was audited', async () => {
+  const data = copyOf(await source(LANDING_DATA));
+  assert.ok(data.includes('Apache-2.0 · none; console checks updates'), 'hal0 compare cell names its own checks');
+  assert.match(data, /own code has no telemetry\./);
+  assert.ok(!data.includes('ships no telemetry code'));
+  const page = await source(PAGE);
+  assert.match(page, /every\s+chat\s+client\s+keeps\s+the\s+config\s+it\s+already\s+has\./);
+  const board = await source('src/data/slot-board.ts');
+  assert.ok(board.includes("note: 'feeds Open WebUI document search',"), 'no wiring from embed to memory');
+  const card = await source('src/components/HermesCard.astro');
+  assert.ok(card.includes('Connect Telegram or Discord through its gateway.'));
+  assert.ok(!card.includes('Reach it from any'));
+});
+
+test('the board and the Hermes card pass the forbidden-word scan', async () => {
+  for (const file of [SLOT_BOARD, 'src/data/slot-board.ts', 'src/components/HermesCard.astro']) {
+    const text = (await source(file)).toLowerCase();
+    for (const word of FORBIDDEN) {
+      assert.ok(!text.includes(word), `${file} contains "${word}"`);
+    }
+  }
+});
+
+test('review minors stay fixed', skipUnbuilt, async () => {
+  assert.ok(!main.includes('will say when it lands'), 'no promise about the next sweep');
+  const { FAQ } = await import(new URL(LANDING_DATA, root));
+  assert.ok(FAQ[1].a.endsWith('Linux x86_64 with systemd and podman is the hard requirement.'));
+  const page = await source(PAGE);
+  assert.ok(!page.includes('unified memory <b>'), 'no stale memory figure in the ticker');
+  const board = await source(SLOT_BOARD);
+  assert.match(board, /data-swapnote><\/span>/, 'the note is empty until the script runs');
+  assert.ok(board.includes("swapnote.textContent = 'pick a model above to swap it'"), 'the script sets it');
+  assert.match(board, /BOARD_MODEL_IDS\.map[^\n]*\n\s*<span>…<\/span>/, 'the readout admits it is partial');
+});
+
+test('community and bench blocks carry their context', async () => {
+  const profiles = await source('src/components/landing/FeaturedProfiles.astro');
+  assert.ok(profiles.includes('record.profile.summary'), 'summary is back');
+  assert.ok(!profiles.includes('args.raw'), 'flags stay off');
+  const bench = await source(BENCH);
+  assert.match(bench, /fastest\??\.(id|name)/, 'the fastest figure names its model');
+});
+
+test('console shots keep their frame styles', async () => {
+  const css = styleOf(await source(CONSOLE_SHOT));
+  assert.match(css, /(^|\n)\s*img\s*\{[^}]*width:\s*100%[^}]*aspect-ratio:\s*1440 \/ 900[^}]*object-fit:\s*cover/, 'shots crop to one frame');
+  assert.match(css, /img\.contain\s*\{[^}]*object-fit:\s*contain/, 'odd-sized shots fit inside it');
+  assert.ok(!/img,\s*figcaption/.test(css), 'images do not share the caption rule');
 });

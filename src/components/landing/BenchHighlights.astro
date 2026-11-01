@@ -11,7 +11,10 @@ import { ROSTER, ROSTER_MEASURED, ROSTER_DATE } from '../../data/model-roster';
 const BENCH_HREF = '/benchmarks';
 
 const measured = ROSTER.filter((r) => r.measured && r.dec != null);
-const fastestDecode = measured.reduce((max, r) => Math.max(max, r.dec ?? 0), 0);
+const fastest = measured.reduce<(typeof measured)[number] | undefined>(
+  (best, r) => ((r.dec ?? 0) > (best?.dec ?? 0) ? r : best),
+  undefined,
+);
 const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
 ---
 
@@ -26,7 +29,7 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
   <a class:list={['benchstrip', 'card-hover']} href={BENCH_HREF} aria-label="View the full model roster benchmark">
     <div class="figs">
       <div class="fig">
-        <div class="n">{fastestDecode.toFixed(1)}</div>
+        <div class="n">{fastest?.dec?.toFixed(1) ?? '—'}<span class="fig-model mono">{fastest?.id}</span></div>
         <div class="label">fastest decode · tok/s</div>
       </div>
       <div class="fig">
@@ -86,6 +89,12 @@ const peakPrefill = measured.reduce((max, r) => Math.max(max, r.pf ?? 0), 0);
     color: var(--accent);
     font-variant-numeric: tabular-nums;
     font-feature-settings: var(--num-features);
+  }
+  .fig-model {
+    margin-left: 8px;
+    font-size: 11px;
+    letter-spacing: 0;
+    color: var(--fg-3);
   }
   .fig .n.plain {
     color: var(--fg);

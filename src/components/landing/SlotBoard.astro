@@ -111,7 +111,8 @@ const footer = (slot: (typeof BOARD_SLOTS)[number]) => {
     <div class="models-out">
       <span>GET /v1/models →</span>
       {BOARD_MODEL_IDS.map((id) => <code>{id}</code>)}
-      <span class="swapnote" aria-live="polite" data-swapnote>pick a model above to swap it</span>
+      <span>…</span>
+      <span class="swapnote" aria-live="polite" data-swapnote></span>
     </div>
   </div>
 </div>
@@ -556,6 +557,8 @@ const footer = (slot: (typeof BOARD_SLOTS)[number]) => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const flash = board.querySelector('[data-flash]');
     const swapnote = board.querySelector('[data-swapnote]');
+    // Set here, not in the markup: without JS the pickers do nothing, so nothing should offer a swap.
+    swapnote.textContent = 'pick a model above to swap it';
     const buttonFor = (id) => board.querySelector(`[data-picker="${id}"]`);
     const listFor = (id) => board.querySelector(`[data-list="${id}"]`);
 

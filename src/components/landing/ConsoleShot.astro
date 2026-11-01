@@ -1,8 +1,8 @@
 ---
 /**
- * ConsoleShot: one framed screenshot with its caption. A shot with no capture yet
- * renders a placeholder frame and a TODO(shots) comment naming the file, which
- * the re-capture lane greps for. Used by the swap, memory and console sections.
+ * ConsoleShot: one framed screenshot with its caption. A shot with no usable capture
+ * renders nothing visible, only a TODO(shots) comment naming the file, which the
+ * re-capture lane greps for. Used by the swap, memory and console sections.
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,15 +22,10 @@ const has2x = existsSync(join(process.cwd(), 'public', 'screenshots', `${shot.fi
 const srcset = has2x ? `${src} 1x, /screenshots/${shot.file}@2x.png 2x` : undefined;
 ---
 
-<figure class:list={['shot', { 'hero-shot': hero }]}>
-  {shot.todo ? (
-    <Fragment>
-      <Fragment set:html={`<!-- TODO(shots): ${shot.file} -->`} />
-      <div class="placeholder" role="img" aria-label={shot.alt} style={`aspect-ratio: ${width} / ${height}`}>
-        <span class="pending">screenshot pending</span>
-      </div>
-    </Fragment>
-  ) : (
+{shot.todo ? (
+  <Fragment set:html={`<!-- TODO(shots): ${shot.file} -->`} />
+) : (
+  <figure class:list={['shot', { 'hero-shot': hero }]}>
     <img
       src={src}
       srcset={srcset}
@@ -41,9 +36,9 @@ const srcset = has2x ? `${src} 1x, /screenshots/${shot.file}@2x.png 2x` : undefi
       decoding="async"
       class:list={{ contain: !!shot.size }}
     />
-  )}
-  <figcaption><b>{label}.</b> {rest.join('. ')}</figcaption>
-</figure>
+    <figcaption><b>{label}.</b> {rest.join('. ')}</figcaption>
+  </figure>
+)}
 
 <style>
   .shot {
@@ -57,35 +52,17 @@ const srcset = has2x ? `${src} 1x, /screenshots/${shot.file}@2x.png 2x` : undefi
   .hero-shot {
     box-shadow: 0 30px 80px -40px var(--hal0-accent-glow);
   }
-  img,
-  .placeholder {
+  img {
     display: block;
     width: 100%;
     height: auto;
     aspect-ratio: 1440 / 900;
-  }
-  img {
     object-fit: cover;
     object-position: top;
   }
   img.contain {
     object-fit: contain;
     object-position: center;
-  }
-  .placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    text-align: center;
-  }
-  .pending {
-    font-family: var(--hal0-font-mono);
-    font-size: 10px;
-    letter-spacing: var(--hal0-ls-label);
-    text-transform: uppercase;
-    color: var(--hal0-fg-dim);
   }
   figcaption {
     padding: 10px 14px;

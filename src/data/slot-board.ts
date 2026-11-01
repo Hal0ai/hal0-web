@@ -70,7 +70,7 @@ export const BOARD_SLOTS: BoardSlot[] = [
       {
         name: 'Qwen3 Embedding 0.6B (Q8_0)',
         gb: 0.6,
-        note: 'feeds Open WebUI document search and memory',
+        note: 'feeds Open WebUI document search',
       },
     ],
   },
@@ -91,5 +91,5 @@ export const BOARD_CLIENTS: { name: string; target: string }[] = [
   { name: 'Hindsight', target: 'hal0/memory' },
 ];
 
-/** What `GET /v1/models` answers on the demo box. It never changes on a swap. */
+/** The chat ids `GET /v1/models` lists on the demo box; the real list also carries embedding and rerank ids. It never changes on a swap. */
 export const BOARD_MODEL_IDS = ['agent', 'coder', 'brain', 'utility'];

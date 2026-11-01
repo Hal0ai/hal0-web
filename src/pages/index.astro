@@ -57,7 +57,6 @@ const version = parseChangelog(rawChangelog, { tags: releaseTags.tags }).latestT
 
 // The ticker agrees with the board below it. Ten is the product's seeded slot count.
 const slotsUp = `${BOARD_SLOTS.length} / 10`;
-const memoryUsed = BOARD_SLOTS.reduce((sum, slot) => sum + slot.models[0].gb, 0).toFixed(1);
 
 const shotByFile = (file: string) => {
   const shot = CONSOLE_SHOTS.find((s) => s.file === file);
@@ -86,7 +85,7 @@ const softwareApplication = {
     'One OpenAI-compatible /v1 API, one slot per medium',
     'Swap the model behind a slot without reconfiguring clients',
     'Reusable inference profiles',
-    'Open WebUI, Hermes and ComfyUI configured on install',
+    'Open WebUI and Hermes configured on install',
     'One Hindsight memory shared by your agents',
     'MCP servers for admin and memory, with human approval for gated calls',
     'Cosign-verified updates with one-flag rollback',
@@ -140,8 +139,6 @@ const faqPage = {
           <span><span class="mdot"></span> hal0-api <b>:8080</b> ready</span>
           <span class="sep">·</span>
           <span>slots <b>{slotsUp}</b> up</span>
-          <span class="sep">·</span>
-          <span>unified memory <b>{memoryUsed} / 116 GB</b></span>
           <span class="sep">·</span>
           <span>probe <b>strix-halo</b></span>
         </div>
@@ -216,7 +213,7 @@ const faqPage = {
         <p class="sec-sub">
           Open WebUI, Hermes, pi and the memory engine are pointed at slot names, not model files.
           When a better model lands, pick it from the slot's dropdown. The slot reloads and every
-          client keeps the config it already has.
+          chat client keeps the config it already has.
         </p>
       </div>
 
@@ -272,9 +269,8 @@ const faqPage = {
           <h2 class="sec-title">The apps come configured.</h2>
         </div>
         <p class="sec-sub">
-          One install brings up the API, the slots, a chat UI, an agent, image generation and
-          memory, already pointed at each other. Add a slot and it appears in Open WebUI and Hermes
-          within seconds; pi sees it after a restart.
+          One install brings up the API, a chat UI, an agent and memory, already pointed at each other, and pulls a small model for the steward. You pick the models for the other slots from the console.
+          Add a slot and it appears in Open WebUI and Hermes within seconds; pi sees it after a restart.
         </p>
       </div>
 
@@ -392,8 +388,7 @@ const faqPage = {
       <section id="benchmarks">
         <BenchHighlights />
         <p class="bench-note">
-          Sweep from {ROSTER_DATE} on hal0 0.5 with the earlier runner. A new sweep on the Standard
-          runner is planned; this page will say when it lands.
+          Sweep from {ROSTER_DATE} on hal0 0.5 with the earlier runner.
         </p>
       </section>
       <section id="releases" class="rel-col">
@@ -433,8 +428,7 @@ const faqPage = {
       <div class="sec-tag">/ get hal0</div>
       <h2>Put the whole stack<br />on <span class="accent">your own box.</span></h2>
       <p class="cta-sub">
-        One command on a fresh Linux box brings up the API, the slots, the chat UI, the agent, image
-        generation and memory.
+        One command on a fresh Linux box brings up the API, the chat UI, the agent and memory. Then pick models for your slots from the console.
       </p>
       <div class="install" id="install-cta">
         <div class="install-head">
