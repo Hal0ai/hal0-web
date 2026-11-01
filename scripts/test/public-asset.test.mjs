@@ -89,8 +89,9 @@ test('no script tag names a /js/ file bare, and every public/js/ script is refer
 	const scripts = (await readdir(path.join(REPO, 'public/js'))).filter((f) => f.endsWith('.js'));
 	assert.ok(scripts.length >= 1, 'public/js/ holds the site scripts');
 	for (const script of scripts) {
-		const ref = new RegExp(`versioned\\(['"]/js/${script.replace(/\./g, '\\.')}['"]\\)`);
-		assert.match(all, ref, `${script} is loaded through versioned()`);
+		// Plain string matches, not a RegExp built from a file name (CodeQL js/incomplete-sanitization).
+		const refs = [`versioned('/js/${script}')`, `versioned("/js/${script}")`];
+		assert.ok(refs.some((ref) => all.includes(ref)), `${script} is loaded through versioned()`);
 	}
 });
 
