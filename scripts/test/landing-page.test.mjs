@@ -609,3 +609,11 @@ test('the built landing serves console shots as pictures', skipUnbuilt, async ()
   assert.equal(pictures.length, CONSOLE_SHOTS.filter((s) => !s.todo).length, 'every real shot is a <picture>');
   assert.match(html, /<source type="image\/avif"[^>]*screenshots\/slots-inference/, 'AVIF is offered');
 });
+
+test('the hero lede and the Hermes alt carry the reviewed wording', async () => {
+  const page = await source(PAGE);
+  assert.match(page, /from a dropdown and\s+your apps keep the name they already use\./);
+  assert.ok(!page.includes('nothing else changes'));
+  const card = await source('src/components/HermesCard.astro');
+  assert.ok(card.includes('alt="Hermes, the bundled hal0 agent"'));
+});
