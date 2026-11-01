@@ -18,7 +18,7 @@
 			]
 		},
 		{
-			"source": "/(screenshots|brand|og|agents)/(.*)",
+			"source": "/(screenshots|brand|og|agents|icons)/(.*)",
 			"headers": [
 				{ "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
 			]

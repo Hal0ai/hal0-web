@@ -19,6 +19,7 @@ import '../styles/site-data.css';
 import profilesSnapshot from '../data/profiles.json';
 import { benchFor, familiesOf, familyOf, renderProfileToml, tintToml } from '../lib/profiles-join.mjs';
 import { ROSTER } from '../data/model-roster.ts';
+import { breadcrumbList } from '../lib/seo.ts';
 
 const CONTRIBUTING_URL = 'https://github.com/Hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md';
 const PROFILES_REPO_RAW = 'https://github.com/Hal0ai/hal0-profiles/blob/main/profiles';
@@ -81,11 +82,17 @@ const laneOptions = [...laneCounts.keys()].sort();
 
 const total = cards.length;
 
+const title = 'llama.cpp Profiles for Strix Halo & Local LLMs | hal0';
 const description =
-  "A profile is the flag string that produced a number, versioned and downloadable. Find the one for your model, copy its flags into a profile of your own, or read the config and steal the parts you want.";
+  "Community-tested llama.cpp flag sets for local LLMs on AMD Strix Halo. Copy a model's context, runner and flags, or submit your own profile.";
 ---
 
-<MarketingLayout title="profiles — hal0" description={description} ogImage="/og/profiles-index.png">
+<MarketingLayout
+  title={title}
+  description={description}
+  ogImage="/og/profiles-index.png"
+  jsonLd={[breadcrumbList('Profiles', '/profiles/')]}
+>
   <div class="wrap wide phead">
     <div class="phead-row">
       <div>

@@ -1,6 +1,8 @@
 # build output
 dist/
 .astro/
+# PNG icon set rasterized from public/favicon.svg by scripts/build-icons.mjs (prebuild)
+/public/icons/
 
 # deps
 node_modules/

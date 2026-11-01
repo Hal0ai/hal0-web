@@ -18,9 +18,11 @@
  *                   that must never rank (thank-you / confirmation pages).
  *                   Such pages are also filtered out of the sitemap in
  *                   astro.config.mjs; keep the two lists in step.
- *   jsonLd?       – schema.org nodes for this page. When non-empty the layout
- *                   emits ONE JSON-LD script in <head> holding
- *                   {"@context":"https://schema.org","@graph":[...]}.
+ *   jsonLd?       – schema.org nodes for this page. The layout always emits
+ *                   ONE JSON-LD script in <head> holding
+ *                   {"@context":"https://schema.org","@graph":[...]}, and the
+ *                   graph always starts with the site-wide Organization and
+ *                   WebSite nodes (src/lib/seo.ts), followed by the page's own.
  *                   Pages pass their nodes here; they never render their own
  *                   JSON-LD script.
  */
@@ -29,6 +31,8 @@ import SiteHeader from '../components/SiteHeader.astro';
 import SubNav from '../components/SubNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import Analytics from '../components/Analytics.astro';
+import nav from '../data/nav.json';
+import { SITE_URL, THEME_COLOR_DARK, THEME_COLOR_LIGHT, organizationSameAs, siteGraph } from '../lib/seo.ts';
 
 // Preload the two latin web fonts that drive above-the-fold rendering —
 // without these, the FOUT swap from system fallback → real font pushes
@@ -55,12 +59,16 @@ const {
   jsonLd = [],
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
+const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE_URL).toString();
 // Social crawlers want an absolute image URL, not a root-relative path.
-const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString();
-// One @graph per page: every schema.org node the page hands us goes in a
-// single script so crawlers see a single, cross-referenceable document.
-const jsonLdGraph = { '@context': 'https://schema.org', '@graph': jsonLd };
+const ogImageUrl = new URL(ogImage, Astro.site ?? SITE_URL).toString();
+// One @graph per page: the site-wide Organization and WebSite nodes first,
+// then every node the page hands us, in a single script so crawlers see one
+// cross-referenceable document.
+const jsonLdGraph = {
+  '@context': 'https://schema.org',
+  '@graph': [...siteGraph(organizationSameAs(nav.social)), ...jsonLd],
+};
 // Every `<` is written as the six characters backslash-u-0-0-3-c so a string
 // value containing "</script>" cannot end the script element early; JSON
 // parsers decode that escape back to `<`.
@@ -72,7 +80,9 @@ const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <!-- Browser chrome colour per scheme: --hal0-bg in dark and light (tokens.css). -->
+    <meta name="theme-color" content={THEME_COLOR_DARK} media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content={THEME_COLOR_LIGHT} media="(prefers-color-scheme: light)" />
 
     <!-- Theme unification (handoff 3.7): marketing pages read the theme
          Starlight's toggle persisted (localStorage 'starlight-theme') so
@@ -100,9 +110,11 @@ const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title="hal0 blog" href="/blog/rss.xml" />
     {noindex && <meta name="robots" content="noindex, follow" />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/brand/logo-halo-dark-favico.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="mask-icon" href="/favicon.svg" color="#feaf00" />
 
     <!-- Preload critical latin web fonts so above-the-fold content
@@ -116,6 +128,7 @@ const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content="hal0" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -127,11 +140,7 @@ const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
          is set at build time (src/lib/analytics.ts). -->
     <Analytics />
 
-    {
-      jsonLd.length > 0 && (
-        <script is:inline type="application/ld+json" set:html={jsonLdText} />
-      )
-    }
+    <script is:inline type="application/ld+json" set:html={jsonLdText} />
   </head>
 
   <body class="site min-h-screen bg-hal0-bg text-hal0-fg antialiased">

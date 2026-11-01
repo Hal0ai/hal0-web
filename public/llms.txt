@@ -1,0 +1,28 @@
+# hal0
+
+> hal0 is an open-source (Apache-2.0), self-hosted AI inference server for Linux, built first for AMD Strix Halo (Ryzen AI Max+ 395).
+> One OpenAI-compatible API (/v1/*) serves chat, embeddings, rerank, speech and image generation from your own hardware.
+> Models run in named slots, several at once as memory allows, and each medium has its own slot behind the one API.
+> Profiles hold the whole tune for a model (runner image, context, flags), so a working configuration can be read, copied and shared.
+> The Hermes agent and Hindsight memory run on the same box, next to Open WebUI and a dashboard for managing slots.
+> Install on Linux with systemd and podman: curl -fsSL https://hal0.dev/install.sh | sudo bash
+
+## Key pages
+
+- [Home](https://hal0.dev/): what hal0 is and how it fits together
+- [Benchmarks](https://hal0.dev/benchmarks): decode and prefill tokens per second, MTP accept rate and memory per model, measured on one Strix Halo machine
+- [Profiles](https://hal0.dev/profiles): community llama.cpp flag sets for local models, with the numbers they produced
+- [Releases](https://hal0.dev/releases): every hal0 release, newest first, with install and upgrade commands
+- [Blog](https://hal0.dev/blog): release write-ups and field notes on running local models at home
+- [Contributing](https://hal0.dev/contributing): how to file issues and open pull requests
+
+## Docs and community
+
+- [Documentation](https://forum.hal0.dev/c/docs/11): getting started, concepts, guides, operations and reference
+- [Knowledge base](https://forum.hal0.dev/c/kb/12): hardware notes and how-tos
+- [Forum](https://forum.hal0.dev): questions, help and discussion with other hal0 users
+
+## Source
+
+- [GitHub](https://github.com/hal0ai/hal0): code, issues and pull requests
+- [Install script](https://hal0.dev/install.sh): the installer served at hal0.dev/install.sh
