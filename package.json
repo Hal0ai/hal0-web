@@ -46,7 +46,6 @@
     "typescript": "^6.0.3"
   },
   "overrides": {
-    "esbuild": "^0.28.1",
     "sharp": "$sharp",
     "@vercel/cli-config": {
       "zod": "^4.6.7"
