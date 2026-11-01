@@ -52,7 +52,8 @@ test('the stylesheet lays out the stage, the side buttons and the caption bar', 
   assert.match(css, /\.hal0-lightbox-cap\s*\{/);
   assert.match(css, /\.hal0-lightbox\[data-single='true'\] \.hal0-lightbox-nav\s*\{\s*display:\s*none/);
   assert.match(css, /\.hal0-lightbox\s*\{[^}]*touch-action:\s*pan-y/, 'horizontal swipes reach the script');
-  assert.match(css, /\.hal0-lightbox\s*\{[^}]*overflow-y:\s*auto/, 'a long caption on a short viewport scrolls');
+  assert.match(css, /\.hal0-lightbox-stage\s*\{[^}]*max-height:\s*100%[^}]*overflow-y:\s*auto/, 'a long caption on a short viewport scrolls inside the stage');
+  assert.match(css, /\.hal0-lightbox-close,\s*\.hal0-lightbox-nav\s*\{[^}]*position:\s*absolute/, 'the buttons sit on the overlay, outside the scrolling stage');
   assert.match(css, /\.hal0-lightbox\s*\{[^}]*visibility:\s*hidden/, 'closed, it is hidden once faded');
   assert.match(css, /\.hal0-lightbox-stage\s*\{[^}]*margin:\s*auto/, 'the stage centres itself without overflowing');
   assert.match(css, /\.hal0-lightbox img\s*\{[^}]*max-height:\s*calc\(100dvh - [\d.]+rem\)/, 'the picture takes the viewport height');
