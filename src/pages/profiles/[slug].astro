@@ -1,0 +1,408 @@
+---
+/**
+ * /profiles/<slug>/: one static page per community profile.
+ *
+ * Built from the same snapshot the gallery reads (src/data/profiles.json,
+ * refreshed on prebuild by scripts/sync-profiles.mjs), so a profile merged in
+ * hal0-profiles gets a page, a sitemap entry and a social card on the next
+ * build with no edit here. The gallery's drawer (/profiles/?p=<slug>) stays
+ * the quick-look view; this page is the one a search result or a shared link
+ * lands on.
+ *
+ * Every field of a record except the slug is treated as optional: a section
+ * with nothing to show is left out rather than rendered with a blank.
+ */
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import '../../styles/site-data.css';
+import profilesSnapshot from '../../data/profiles.json';
+import {
+  SITE,
+  latestHistory,
+  profileCrumbs,
+  profileDescription,
+  profileJsonLd,
+  profileTitle,
+  profileTomlUrl,
+  publishableProfiles,
+} from '../../lib/profile-page.mjs';
+
+// Only the slug is guaranteed; everything else may be absent from a record.
+interface ProfileRecord {
+  profile: {
+    slug: string;
+    title?: string;
+    summary?: string;
+    intent?: string;
+    author?: string;
+    first_party?: boolean;
+  };
+  runner?: { kind?: string; lane?: string; min_build?: string; image?: string };
+  model?: { id?: string; compatible?: string[] };
+  args?: { raw?: string };
+  history?: { v: number; date?: string; note?: string }[];
+}
+
+interface Props {
+  record: ProfileRecord;
+}
+
+// Records whose slug would shadow a static page (submit, submitted) are
+// skipped with a warning rather than failing the build.
+export function getStaticPaths() {
+  return publishableProfiles(profilesSnapshot.profiles).map((record) => ({
+    params: { slug: record.profile.slug },
+    props: { record },
+  }));
+}
+
+const { record } = Astro.props;
+const { profile, runner = {}, model = {}, args = {} } = record;
+const slug = profile.slug;
+const history = record.history ?? [];
+const latest = latestHistory(record);
+const compatible = model.compatible ?? [];
+
+const canonical = `${SITE}/profiles/${slug}/`;
+const title = profileTitle(record);
+const description = profileDescription(record);
+const jsonLd = profileJsonLd(record, canonical);
+const crumbs = profileCrumbs(record, canonical).map((c) => ({ name: c.name, href: new URL(c.item).pathname }));
+
+// build-og.mjs renders public/og/profiles/<slug>.png on prebuild; fall back to
+// the gallery card if a run skipped it so the tag never points at a 404.
+const ogPath = `/og/profiles/${slug}.png`;
+const ogImage = existsSync(resolve(process.cwd(), 'public', ogPath.slice(1))) ? ogPath : '/og/profiles-index.png';
+
+const laneChip = runner.lane?.startsWith('vulkan') ? 'dev-vulkan' : runner.lane === 'rocm' ? 'dev-rocm' : '';
+---
+
+<MarketingLayout title={title} description={description} ogImage={ogImage} jsonLd={jsonLd}>
+  <div class="wrap wide phead">
+    <nav aria-label="Breadcrumb">
+      <ol class="crumbs mono">
+        {crumbs.map((crumb, i) => (
+          <li>
+            {i < crumbs.length - 1 ? (
+              <a href={crumb.href}>{crumb.name}</a>
+            ) : (
+              <span aria-current="page">{crumb.name}</span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+
+    <div class="phead-row">
+      <div class="hero">
+        <span class="eyebrow">
+          profile{latest ? ` · v${latest.v}` : ''}{runner.lane ? ` · ${runner.lane}` : ''}
+        </span>
+        <h1 class="site-h1" style="margin: 10px 0 10px">{profile.title ?? slug}</h1>
+        {profile.summary && <p class="site-body" style="max-width: 62ch">{profile.summary}</p>}
+        <div class="fbar" style="margin-top: 14px">
+          {profile.intent && <span class="chip amber">{profile.intent}</span>}
+          {runner.lane && <span class:list={['chip', laneChip]}>{runner.lane}</span>}
+          {profile.first_party && (
+            <span class="chip amber" title="First-party run on hal0 reference hardware">first-party</span>
+          )}
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <a class="btn ghost" href="/profiles/">all profiles</a>
+        <a class="btn" href="/profiles/submit/">submit a profile</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap wide detail">
+    <div class="main-col">
+      {args.raw && (
+        <section>
+          <div class="sec-head">
+            <h2 class="label">flags</h2>
+            {runner.kind && <span class="mono dim" style="font-size: 11px">{runner.kind}</span>}
+          </div>
+          <pre class="well flags"><code>{args.raw}</code></pre>
+          <p class="site-sm" style="margin-top: 10px">
+            To use these, create a custom profile from one you already have and paste the flags in:
+          </p>
+          <div class="well use-it">
+            <span class="amber">hal0</span> profile create my-{slug} --from &lt;a-profile-you-have&gt; --flags "&lt;copied flags&gt;"
+          </div>
+          <p class="mono dim" style="font-size: 11px; margin-top: 8px">
+            hal0 does not install community .toml files directly. The dashboard's Profiles page does the same thing.
+          </p>
+        </section>
+      )}
+
+      {history.length > 0 && (
+        <section>
+          <div class="sec-head">
+            <h2 class="label">history</h2>
+          </div>
+          <ol class="vhist">
+            {history.map((h) => (
+              <li class="vh">
+                <span class="v">v{h.v}</span>
+                <span>{h.date}</span>
+                <span>{h.note}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+    </div>
+
+    <aside class="side-col">
+      <section class="fact-card">
+        <h2 class="label">model</h2>
+        {model.id && <code class="mono model-id">{model.id}</code>}
+        {compatible.length > 0 && (
+          <>
+            <h3 class="sub">also works with</h3>
+            <ul class="mlist">
+              {compatible.map((m) => (
+                <li><code class="mono">{m}</code></li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+
+      <section class="fact-card">
+        <h2 class="label">runner</h2>
+        <dl class="kv">
+          {runner.lane && (
+            <>
+              <dt>lane</dt>
+              <dd class="mono">{runner.lane}</dd>
+            </>
+          )}
+          {runner.min_build && (
+            <>
+              <dt>min build</dt>
+              <dd class="mono">{runner.min_build}</dd>
+            </>
+          )}
+          {runner.kind && (
+            <>
+              <dt>kind</dt>
+              <dd class="mono">{runner.kind}</dd>
+            </>
+          )}
+          {runner.image && (
+            <>
+              <dt>image</dt>
+              <dd class="mono image">{runner.image}</dd>
+            </>
+          )}
+        </dl>
+      </section>
+
+      {(profile.author || profile.first_party) && (
+        <section class="fact-card">
+          <h2 class="label">author</h2>
+          {profile.first_party ? (
+            <span class="chip amber" title="First-party run on hal0 reference hardware">first-party</span>
+          ) : (
+            <a class="author mono" href={`https://github.com/${profile.author}`} rel="noopener">
+              <img
+                src={`https://github.com/${profile.author}.png?size=32`}
+                loading="lazy"
+                alt=""
+                width="16"
+                height="16"
+              />
+              @{profile.author}
+            </a>
+          )}
+        </section>
+      )}
+
+      <section class="fact-card">
+        <h2 class="label">source</h2>
+        <a class="mono src-link" href={profileTomlUrl(slug)} rel="noopener">{slug}.toml on GitHub →</a>
+      </section>
+    </aside>
+  </div>
+</MarketingLayout>
+
+<style>
+  .crumbs {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--fg-4);
+  }
+  .crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  /* The separator is generated content with an empty alt, so it is not read. */
+  .crumbs li + li::before {
+    content: '›';
+    content: '›' / '';
+    color: var(--fg-5);
+  }
+  .crumbs a {
+    color: var(--fg-3);
+    text-decoration: none;
+  }
+  .crumbs a:hover {
+    color: var(--accent);
+  }
+  .detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 28px;
+    align-items: start;
+    padding-bottom: 64px;
+  }
+  .main-col {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+  }
+  .side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .flags {
+    margin: 0;
+    padding: 14px 16px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 12.5px;
+    color: var(--fg-2);
+  }
+  .use-it {
+    padding: 12px 14px;
+    margin-top: 8px;
+    font-family: var(--jbm);
+    font-size: 12px;
+    overflow-x: auto;
+  }
+  .fact-card {
+    border: 1px solid var(--line);
+    border-radius: var(--rad-lg);
+    background: var(--bg-1);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .fact-card h2 {
+    margin: 0;
+  }
+  .model-id {
+    font-size: 12.5px;
+    color: var(--fg);
+    word-break: break-all;
+  }
+  .sub {
+    margin: 4px 0 0;
+    font-family: var(--jbm);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+    color: var(--fg-4);
+    font-weight: 400;
+  }
+  .mlist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .mlist code {
+    font-size: 11.5px;
+    color: var(--fg-3);
+    word-break: break-all;
+  }
+  .kv {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 14px;
+    margin: 0;
+  }
+  .kv dt {
+    font-family: var(--jbm);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+    color: var(--fg-4);
+    padding-top: 2px;
+  }
+  .kv dd {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--fg-2);
+    word-break: break-all;
+  }
+  .kv dd.image {
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .author,
+  .src-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--fg-2);
+    text-decoration: none;
+    word-break: break-all;
+  }
+  .author img {
+    border-radius: var(--rad-sm);
+  }
+  .author:hover,
+  .src-link:hover {
+    color: var(--accent);
+  }
+  .vhist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .vh {
+    display: grid;
+    grid-template-columns: 34px 84px minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--jbm);
+    font-size: 11.5px;
+    color: var(--fg-3);
+  }
+  .vh .v {
+    color: var(--accent);
+  }
+  @media (max-width: 900px) {
+    .detail {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

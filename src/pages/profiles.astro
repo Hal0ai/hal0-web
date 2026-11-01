@@ -20,6 +20,7 @@ import profilesSnapshot from '../data/profiles.json';
 import { benchFor, familiesOf, familyOf, renderProfileToml, tintToml } from '../lib/profiles-join.mjs';
 import { ROSTER } from '../data/model-roster.ts';
 import { breadcrumbList } from '../lib/seo.ts';
+import { isReservedSlug } from '../lib/profile-page.mjs';
 
 const CONTRIBUTING_URL = 'https://github.com/Hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md';
 const PROFILES_REPO_RAW = 'https://github.com/Hal0ai/hal0-profiles/blob/main/profiles';
@@ -112,6 +113,7 @@ const description =
   </div>
 
   <div class="wrap wide">
+    <h2 class="site-h2 gallery-h2">Community profiles for Strix Halo and local LLMs</h2>
     <div class="filterbar" data-profile-filters>
       <div class="frow">
         <span class="label">model</span>
@@ -165,19 +167,18 @@ const description =
         <article
           class="pcard"
           data-profile-card
-          data-profile-open={profile.slug}
           data-intent={profile.intent}
           data-lane={runner.lane}
           data-families={families.join(' ')}
-          role="button"
-          tabindex="0"
         >
           <div class="pc-top">
             <span class="eyebrow">profile · v{latest.v} · {runner.lane}</span>
             <span class="chip amber">{profile.intent}</span>
           </div>
           <div>
-            <h3 class="pc-title mono">{profile.slug}</h3>
+            <h3 class="pc-title mono">
+              {isReservedSlug(profile.slug) ? profile.slug : <a href={`/profiles/${profile.slug}/`}>{profile.slug}</a>}
+            </h3>
             <p class="pc-desc">{profile.title}</p>
           </div>
 
@@ -227,7 +228,15 @@ const description =
                 <span class="mono" style="font-size:11.5px; color:var(--fg-3)">@{profile.author}</span>
               </span>
             )}
-            <span class="pc-open">config &amp; flags →</span>
+            <button
+              type="button"
+              class="pc-open"
+              data-profile-open={profile.slug}
+              aria-haspopup="dialog"
+              aria-label={`config & flags for ${profile.slug}`}
+            >
+              config &amp; flags →
+            </button>
           </div>
         </article>
       ))}
@@ -374,9 +383,11 @@ const description =
     cursor: pointer;
     transition: border-color var(--dur-fast) var(--ease);
   }
-  .pcard:focus-visible {
+  .pcard-empty:focus-visible,
+  .pc-open:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+    border-radius: var(--rad-sm);
   }
   .pcard::after {
     content: '';
@@ -415,6 +426,19 @@ const description =
     color: var(--fg);
     margin: 0;
     word-break: break-word;
+  }
+  .pc-title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .pc-title a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .gallery-h2 {
+    margin-top: 6px;
+    margin-bottom: 16px;
   }
   .pc-desc {
     font-size: 14px;
@@ -506,6 +530,15 @@ const description =
     padding-top: 13px;
   }
   .pc-open {
+    /* a <button> on the real cards, a <span> on the template card: reset
+     * the button chrome so both read as the same quiet text link. */
+    appearance: none;
+    background: none;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
     font-family: var(--jbm);
     font-size: 11.5px;
     color: var(--fg-3);
@@ -734,12 +767,14 @@ const description =
 
 <script>
   // Detail drawer island — no framework. Every profile's <aside class="drawer-run">
-  // is pre-rendered hidden; a card click (or Enter/Space, since cards are
-  // role="button" tabindex="0") opens its drawer, pushes `?p=<slug>` so the
-  // view is deep-linkable, and locks body scroll. Scrim click / close button
-  // / Escape closes it, walking history back only when we're the ones who
-  // pushed the state (a page load that already carries ?p=<slug> just shows
-  // the drawer without adding a redundant history entry).
+  // is pre-rendered hidden; the card's "config & flags" button (a real
+  // <button>, so Enter/Space/AT work natively) opens its drawer, and so does a
+  // mouse click anywhere else on the card that is not a link or button.
+  // Opening pushes `?p=<slug>` so the view is deep-linkable, and locks body
+  // scroll. Scrim click / close button / Escape closes it, walking history back
+  // only when we're the ones who pushed the state (a page load that already
+  // carries ?p=<slug> just shows the drawer without adding a redundant history
+  // entry).
   (() => {
     const scrim = document.querySelector<HTMLElement>('[data-profile-scrim]');
     const drawers = Array.from(document.querySelectorAll<HTMLElement>('.drawer-run[data-profile]'));
@@ -851,12 +886,16 @@ const description =
       const slug = trigger.dataset.profileOpen;
       if (!slug) continue;
       trigger.addEventListener('click', () => openDrawer(slug));
-      trigger.addEventListener('keydown', (e) => {
-        const key = (e as KeyboardEvent).key;
-        if (key === 'Enter' || key === ' ') {
-          e.preventDefault();
-          openDrawer(slug);
-        }
+    }
+
+    // Whole-card mouse clicks are a convenience on top of the button, which is
+    // the keyboard and screen-reader control. The title link and the button
+    // itself keep their own behaviour, so a click that starts on either is
+    // left alone; anything else on the card presses the button.
+    for (const card of document.querySelectorAll<HTMLElement>('[data-profile-card]')) {
+      card.addEventListener('click', (e) => {
+        if ((e.target as Element | null)?.closest('a, button')) return;
+        card.querySelector<HTMLElement>('[data-profile-open]')?.click();
       });
     }
 

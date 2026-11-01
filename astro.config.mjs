@@ -8,6 +8,7 @@ import icon from 'astro-icon';
 import tailwindcss from '@tailwindcss/vite';
 import vercel from '@astrojs/vercel';
 import { SITE_URL, THEME_COLOR_DARK, THEME_COLOR_LIGHT } from './src/lib/seo.ts';
+import { sitemapFilter } from './src/lib/sitemap-filter.mjs';
 
 const nav = JSON.parse(readFileSync(new URL('./src/data/nav.json', import.meta.url), 'utf8'));
 const socialHref = (id) => nav.social.find((s) => s.id === id).href;
@@ -294,10 +295,9 @@ export default defineConfig({
 			],
 		}),
 		sitemap({
-			// Pages that are noindex (MarketingLayout's `noindex` prop) must not
-			// be advertised to crawlers either — a sitemap entry that resolves
-			// to a noindex page is flagged as a conflict in Search Console.
-			filter: (page) => !page.startsWith(`${SITE_URL}/profiles/submitted`),
+			// Pages that are noindex (MarketingLayout's `noindex` prop) are left
+			// out; the exact-match list lives in src/lib/sitemap-filter.mjs.
+			filter: sitemapFilter,
 		}),
 	],
 
