@@ -404,6 +404,34 @@ test('/profiles/ declares no min-width or grid track minimum wider than a 360px 
 	assert.deepEqual(offenders, [], `wider than ${LIMIT}px minimums overflow a 390px viewport`);
 });
 
+// Social cards. build-og.mjs renders the site-wide fallback at prebuild, and
+// every page without a card of its own must point og:image / twitter:image at
+// it by absolute URL (card scrapers ignore a root-relative path).
+
+const DEFAULT_CARD = 'https://hal0.dev/og/default.png';
+/** The gallery and each profile page ship their own cards (build-og.mjs). */
+const hasOwnCard = (route) => route === '/profiles/' || (/^\/profiles\/[^/]+\/$/.test(route) && route !== '/profiles/submit/' && route !== '/profiles/submitted/');
+
+test('the default social card is rendered into the build', { skip }, async () => {
+	const png = await readFile(path.join(DIST, 'og', 'default.png'));
+	const { width, height, format } = await sharp(png).metadata();
+	assert.deepEqual({ width, height, format }, { width: 1200, height: 630, format: 'png' });
+});
+
+test('pages without a card of their own carry the absolute default og:image and twitter:image', { skip }, () => {
+	const plain = pages.filter((p) => !hasOwnCard(p.route));
+	assert.ok(plain.length >= 8, `found the pages that use the default card (got ${plain.length})`);
+	for (const { route, html } of plain) {
+		assert.equal(metaContent(html, 'property', 'og:image'), DEFAULT_CARD, `${route}: og:image`);
+		assert.equal(metaContent(html, 'name', 'twitter:image'), DEFAULT_CARD, `${route}: twitter:image`);
+	}
+});
+
+test('no built page still points at the legacy /og-default.png card', { skip }, () => {
+	const stale = pages.filter((p) => p.html.includes('/og-default.png')).map((p) => p.route);
+	assert.deepEqual(stale, []);
+});
+
 // Unit checks for src/lib/seo.ts (no build needed).
 
 test('organizationSameAs reduces the GitHub repo link to its organization', () => {

@@ -8,7 +8,7 @@
  * Props:
  *   title         – <title> + og:title
  *   description?  – meta description + og:description
- *   ogImage?      – social card path (defaults to /og-default.png)
+ *   ogImage?      – social card path (defaults to /og/default.png)
  *   navTone?      – "solid" (default) | "transparent" — only the
  *                   landing page wants transparent-on-top, because
  *                   only it has a full-bleed hero. Transparent navs
@@ -53,7 +53,7 @@ interface Props {
 const {
   title,
   description = 'Local AI for your home. Strix Halo native.',
-  ogImage = '/og-default.png',
+  ogImage = '/og/default.png',
   navTone = 'solid',
   noindex = false,
   jsonLd = [],

@@ -249,7 +249,7 @@ export default defineConfig({
 			head: [
 				{
 					tag: 'meta',
-					attrs: { property: 'og:image', content: `${SITE_URL}/og-default.png` },
+					attrs: { property: 'og:image', content: `${SITE_URL}/og/default.png` },
 				},
 				{
 					tag: 'meta',
@@ -257,7 +257,7 @@ export default defineConfig({
 				},
 				{
 					tag: 'meta',
-					attrs: { name: 'twitter:image', content: `${SITE_URL}/og-default.png` },
+					attrs: { name: 'twitter:image', content: `${SITE_URL}/og/default.png` },
 				},
 				// Per-scheme browser chrome colour, same pair as MarketingLayout
 				// (--hal0-bg in dark and light, tokens.css).

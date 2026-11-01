@@ -70,8 +70,8 @@ const description = profileDescription(record);
 const jsonLd = profileJsonLd(record, canonical);
 const crumbs = profileCrumbs(record, canonical).map((c) => ({ name: c.name, href: new URL(c.item).pathname }));
 
-// build-og.mjs renders public/og/profiles/<slug>.png on prebuild; fall back to
-// the gallery card if a run skipped it so the tag never points at a 404.
+// build-og.mjs renders public/og/profiles/<slug>.png on prebuild; if a run
+// skipped it, fall back to the gallery card, which prebuild renders too.
 const ogPath = `/og/profiles/${slug}.png`;
 const ogImage = existsSync(resolve(process.cwd(), 'public', ogPath.slice(1))) ? ogPath : '/og/profiles-index.png';
 

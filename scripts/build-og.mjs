@@ -501,15 +501,10 @@ async function main() {
   await writeFile(galleryDest, galleryPng);
   console.log(`build-og: wrote ${galleryDest.replace(ROOT + '/', '')} (${galleryPng.length} bytes)`);
 
-  // Fallback fill for pages without a card of their own. NOTE: the legacy
-  // ImageMagick-rendered public/og-default.png (built by scripts/build-og.sh)
-  // is left untouched — it's still referenced from astro.config.mjs and
-  // MarketingLayout's default `ogImage` prop, and pixel-replacing a file
-  // every other page depends on is riskier than shipping the new template's
-  // fallback fill under a new path. This new fallback lives at
-  // public/og/default.png, conforming to the fallback fill spec, ready to
-  // be wired in once the rest of the fills (blog/KB) exist and a page can
-  // switch over deliberately.
+  // Fallback fill for pages without a card of their own. This is the site-wide
+  // default og:image/twitter:image (MarketingLayout's `ogImage` default and the
+  // Starlight head defaults in astro.config.mjs), so every page that has no
+  // card of its own points at /og/default.png.
   const fallbackPng = await renderOgCard({
     kind: 'fallback',
     eyebrow: 'Local AI platform',
