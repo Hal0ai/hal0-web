@@ -40,6 +40,7 @@ import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import '../../styles/site-data.css';
 import GithubIcon from '../../components/GithubIcon.astro';
 import profilesSnapshot from '../../data/profiles.json';
+import { breadcrumbList } from '../../lib/seo.ts';
 
 const CONTRIBUTING_URL = 'https://github.com/Hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md';
 const profileCount = profilesSnapshot.profiles.length;
@@ -75,7 +76,12 @@ const description =
   'Share your llama.cpp config for a local LLM. Validate a hal0 profile TOML in your browser, then open it as a pre-filled GitHub pull request.';
 ---
 
-<MarketingLayout title={title} description={description} ogImage="/og-default.png">
+<MarketingLayout
+  title={title}
+  description={description}
+  ogImage="/og-default.png"
+  jsonLd={[breadcrumbList('Submit a profile', '/profiles/submit/')]}
+>
   <div class="wrap wide phead">
     <span class="eyebrow">profiles · submit</span>
     <h1 class="site-h1" style="margin: 10px 0 12px">submit a profile</h1>

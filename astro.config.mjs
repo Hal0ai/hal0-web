@@ -257,9 +257,15 @@ export default defineConfig({
 					tag: 'meta',
 					attrs: { name: 'twitter:image', content: 'https://hal0.dev/og-default.png' },
 				},
+				// Per-scheme browser chrome colour, same pair as MarketingLayout
+				// (--hal0-bg in dark and light, tokens.css).
 				{
 					tag: 'meta',
-					attrs: { name: 'theme-color', content: '#0a0a0a' },
+					attrs: { name: 'theme-color', content: '#0a0a0a', media: '(prefers-color-scheme: dark)' },
+				},
+				{
+					tag: 'meta',
+					attrs: { name: 'theme-color', content: '#fafaf9', media: '(prefers-color-scheme: light)' },
 				},
 				// Screenshot lightbox — binds /screenshots/ images on docs + blog
 				// pages (shared with the marketing layout; styles in global.css).

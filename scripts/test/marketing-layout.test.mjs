@@ -22,6 +22,7 @@ test('MarketingLayout renders exactly one ld+json script', () => {
   assert.equal(matches.length, 1, 'exactly one <script type="application/ld+json">');
 });
 
-test('the ld+json script is gated on a non-empty jsonLd', () => {
-  assert.match(layout, /jsonLd\.length\s*>\s*0/, 'rendered only when jsonLd.length > 0');
+test('the ld+json script is unconditional: the site nodes are always in the graph', () => {
+  assert.ok(!/jsonLd\.length\s*>\s*0/.test(layout), 'no longer gated on the page passing nodes');
+  assert.match(layout, /\[\s*\.\.\.siteGraph\(.*\)\s*,\s*\.\.\.jsonLd\s*\]/, 'siteGraph(...) is spread before the page nodes');
 });

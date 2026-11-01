@@ -11,6 +11,9 @@ import { access, readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+import { ROSTER_DATE } from '../../src/data/model-roster.ts';
+import { breadcrumbList, organizationSameAs } from '../../src/lib/seo.ts';
+
 const DIST = fileURLToPath(new URL('../../dist/client/', import.meta.url));
 const built = await access(path.join(DIST, 'index.html')).then(() => true, () => false);
 const skip = !built && 'run npm run build first';
@@ -66,6 +69,17 @@ function jsonLdOf(html) {
 /** Flattened list of every schema.org node across all ld+json scripts. */
 const nodesOf = (html) => jsonLdOf(html).flatMap((doc) => (Array.isArray(doc['@graph']) ? doc['@graph'] : [doc]));
 
+/** Attribute map of every <link> tag. */
+const linkTags = (html) =>
+	(html.match(/<link\b[^>]*>/g) ?? []).map((tag) => Object.fromEntries([...tag.matchAll(/([a-z-]+)="([^"]*)"/g)].map((m) => [m[1], decode(m[2])])));
+
+/** Content of every <meta name=KEY>, in document order. */
+function metaTags(html, attr, key) {
+	return (html.match(/<meta\b[^>]*>/g) ?? [])
+		.map((tag) => Object.fromEntries([...tag.matchAll(/([a-z:-]+)="([^"]*)"/g)].map((m) => [m[1], decode(m[2])])))
+		.filter((m) => m[attr] === key);
+}
+
 const SITE_DEFAULT_DESCRIPTION = 'Local AI for your home. Strix Halo native.';
 
 // ---------------------------------------------------------------------------
@@ -120,4 +134,137 @@ test('blog index carries its own search title, not the bare nav label', { skip }
 	const index = pages.find((p) => p.route === '/blog/');
 	assert.equal(titleOf(index.html), 'hal0 Blog: Self-Hosted AI, Strix Halo & Releases');
 	assert.equal(metaContent(index.html, 'property', 'og:title'), 'hal0 Blog: Self-Hosted AI, Strix Halo & Releases');
+});
+
+// ---------------------------------------------------------------------------
+// E1.2 — site-wide structured data and head hygiene
+
+// Starlight-rendered pages (blog, tags, authors, 404) get their head from
+// Starlight and starlight-blog; every other page goes through MarketingLayout.
+const isStarlight = (route) => route === '/404' || route.startsWith('/blog/');
+const marketing = pages.filter((p) => !isStarlight(p.route));
+
+const ORG_ID = 'https://hal0.dev/#org';
+const WEBSITE_ID = 'https://hal0.dev/#website';
+
+// Inner pages that must carry Home > Page breadcrumbs. `/changelog/` is the
+// releases lane's page (it becomes `/releases/`); held to the same rule as a
+// todo until that lane has landed.
+const BREADCRUMB_PAGES = ['/benchmarks/', '/profiles/', '/profiles/submit/', '/contributing/'];
+const BREADCRUMB_PENDING = new Set(['/changelog/', '/releases/']);
+
+for (const { route, html } of marketing) {
+	test(`organization and website nodes: ${route}`, { skip }, () => {
+		assert.ok(jsonLdOf(html).length >= 1, 'has an ld+json script');
+		const graph = jsonLdOf(html).find((doc) => Array.isArray(doc['@graph']))['@graph'];
+
+		const [org, site] = graph;
+		assert.equal(org['@type'], 'Organization', 'Organization is first in the graph');
+		assert.equal(org['@id'], ORG_ID);
+		assert.equal(org.url, 'https://hal0.dev/');
+		assert.equal(org.logo, 'https://hal0.dev/brand/logo-halo-dark.png');
+		assert.equal(org.sameAs.length, 3, 'three sameAs profiles');
+		assert.ok(org.sameAs.includes('https://github.com/hal0ai'), 'GitHub org');
+		assert.ok(org.sameAs.includes('https://discord.gg/7M4y6dcUyq'), 'Discord invite');
+		assert.ok(org.sameAs.includes('https://forum.hal0.dev'), 'forum');
+
+		assert.equal(site['@type'], 'WebSite', 'WebSite is second in the graph');
+		assert.equal(site['@id'], WEBSITE_ID);
+		assert.equal(site.url, 'https://hal0.dev/');
+		assert.deepEqual(site.publisher, { '@id': ORG_ID });
+	});
+}
+
+test('the Organization and WebSite nodes are declared once per page', { skip }, () => {
+	for (const { route, html } of marketing) {
+		const nodes = nodesOf(html);
+		assert.equal(nodes.filter((n) => n['@id'] === ORG_ID).length, 1, `${route}: one Organization`);
+		assert.equal(nodes.filter((n) => n['@id'] === WEBSITE_ID).length, 1, `${route}: one WebSite`);
+	}
+});
+
+for (const route of [...BREADCRUMB_PAGES, ...BREADCRUMB_PENDING]) {
+	const page = pages.find((p) => p.route === route);
+	if (!page && BREADCRUMB_PENDING.has(route)) continue; // not built on this branch
+	test(`breadcrumb: ${route}`, { skip: skip || (!page && 'page not built'), todo: BREADCRUMB_PENDING.has(route) }, () => {
+		const crumbs = nodesOf(page.html).filter((n) => n['@type'] === 'BreadcrumbList');
+		assert.equal(crumbs.length, 1, 'exactly one BreadcrumbList');
+		const items = crumbs[0].itemListElement;
+		assert.equal(items.length, 2, 'two items: Home and the page');
+		assert.deepEqual(
+			items.map((i) => [i['@type'], i.position]),
+			[['ListItem', 1], ['ListItem', 2]],
+		);
+		assert.equal(items[0].item, 'https://hal0.dev/');
+		assert.equal(items[1].item, `https://hal0.dev${route}`);
+		assert.ok(items[1].name.length > 0, 'page crumb is named');
+	});
+}
+
+test('the landing page has no breadcrumb', { skip }, () => {
+	const home = pages.find((p) => p.route === '/');
+	assert.equal(nodesOf(home.html).filter((n) => n['@type'] === 'BreadcrumbList').length, 0);
+});
+
+test('/benchmarks declares a Dataset dated to the roster sweep', { skip }, () => {
+	const bench = pages.find((p) => p.route === '/benchmarks/');
+	const datasets = nodesOf(bench.html).filter((n) => n['@type'] === 'Dataset');
+	assert.equal(datasets.length, 1, 'exactly one Dataset');
+	const [ds] = datasets;
+	assert.equal(ds.dateModified, ROSTER_DATE, 'dateModified is the roster date');
+	assert.equal(ds.url, 'https://hal0.dev/benchmarks/');
+	assert.ok(ds.name && ds.description, 'named and described');
+	assert.ok(ds.measurementTechnique, 'says how it was measured');
+	assert.ok(ds.license, 'licensed');
+	assert.deepEqual(ds.publisher, { '@id': ORG_ID });
+	assert.ok(Array.isArray(ds.variableMeasured) && ds.variableMeasured.length >= 4, 'lists the measured variables');
+	for (const v of ds.variableMeasured) assert.ok(v.name && v.unitText, `variable ${JSON.stringify(v)} has name and unit`);
+});
+
+test('every page head links the blog RSS feed', { skip }, () => {
+	for (const { route, html } of pages) {
+		const feeds = linkTags(html).filter((l) => l.rel === 'alternate' && l.type === 'application/rss+xml');
+		assert.ok(
+			feeds.some((l) => new URL(l.href, 'https://hal0.dev').href === 'https://hal0.dev/blog/rss.xml'),
+			`${route} links /blog/rss.xml`,
+		);
+	}
+});
+
+for (const { route, html } of marketing) {
+	test(`og:locale and theme-color per scheme: ${route}`, { skip }, () => {
+		assert.equal(metaContent(html, 'property', 'og:locale'), 'en_US');
+		const colors = metaTags(html, 'name', 'theme-color');
+		const byScheme = Object.fromEntries(colors.map((c) => [c.media, c.content]));
+		assert.equal(colors.length, 2, 'two theme-color tags');
+		assert.equal(byScheme['(prefers-color-scheme: dark)'], '#0a0a0a');
+		assert.equal(byScheme['(prefers-color-scheme: light)'], '#fafaf9');
+	});
+}
+
+test('Starlight pages use the same per-scheme theme-color', { skip }, () => {
+	for (const { route, html } of pages.filter((p) => isStarlight(p.route))) {
+		const byScheme = Object.fromEntries(metaTags(html, 'name', 'theme-color').map((c) => [c.media, c.content]));
+		assert.deepEqual(byScheme, { '(prefers-color-scheme: dark)': '#0a0a0a', '(prefers-color-scheme: light)': '#fafaf9' }, route);
+	}
+});
+
+// Unit checks for src/lib/seo.ts (no build needed).
+
+test('organizationSameAs reduces the GitHub repo link to its organization', () => {
+	const social = [
+		{ id: 'github', href: 'https://github.com/hal0ai/hal0' },
+		{ id: 'discord', href: 'https://discord.gg/abc' },
+	];
+	assert.deepEqual(organizationSameAs(social), ['https://github.com/hal0ai', 'https://discord.gg/abc', 'https://forum.hal0.dev']);
+	assert.throws(() => organizationSameAs([social[0]]), /no "discord" social link/);
+});
+
+test('breadcrumbList is Home then the page, with absolute URLs', () => {
+	const crumb = breadcrumbList('Benchmarks', '/benchmarks/');
+	assert.equal(crumb['@type'], 'BreadcrumbList');
+	assert.deepEqual(crumb.itemListElement, [
+		{ '@type': 'ListItem', position: 1, name: 'hal0', item: 'https://hal0.dev/' },
+		{ '@type': 'ListItem', position: 2, name: 'Benchmarks', item: 'https://hal0.dev/benchmarks/' },
+	]);
 });

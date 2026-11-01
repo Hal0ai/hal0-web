@@ -24,6 +24,7 @@ import RunDrawer from '../components/bench/RunDrawer.astro';
 import { ROSTER, HARDWARE, BINARY, ROSTER_DATE, ROSTER_MEASURED } from '../data/model-roster.ts';
 import BENCH_SNAPSHOT from '../data/bench-snapshot.json';
 import { selectInitialRows, capCounts, DEFAULT_WORKLOAD } from '../lib/bench-view.mjs';
+import { ORG_ID, SITE_URL, breadcrumbList } from '../lib/seo.ts';
 
 // scripts/sync-bench.mjs (a prebuild step) writes src/data/bench-snapshot.json
 // from the live /v1/roster API when it's reachable at build time, falling
@@ -75,9 +76,35 @@ const CAP_COUNTS = capCounts(rows, CAPS);
 // from the roster so a new sweep never leaves a stale number in the SERP.
 const title = `Strix Halo LLM Benchmarks: ${ROSTER_MEASURED} Models, Tokens/sec | hal0`;
 const description = `Tokens per second for ${ROSTER_MEASURED} local LLMs on one AMD Ryzen AI Max+ 395 (Strix Halo, 128 GB): decode, prefill, MTP accept rate and memory use per model.`;
+
+// The roster is real measured data, so it is declared as a schema.org Dataset;
+// `dateModified` follows the sweep date, not the build date. The data lives in
+// the Apache-2.0 hal0-web repository, hence the licence.
+const dataset = {
+  '@type': 'Dataset',
+  '@id': `${SITE_URL}/benchmarks/#dataset`,
+  name: `hal0 model roster benchmark: ${ROSTER_MEASURED} local LLMs on AMD Strix Halo`,
+  description: `Decode and prefill throughput, MTP accept rate and memory footprint for ${ROSTER_MEASURED} models, measured end to end on one AMD Ryzen AI Max+ 395 (Strix Halo, 128 GB) machine.`,
+  url: `${SITE_URL}/benchmarks/`,
+  dateModified: ROSTER_DATE,
+  temporalCoverage: ROSTER_DATE,
+  license: 'https://www.apache.org/licenses/LICENSE-2.0',
+  isAccessibleForFree: true,
+  publisher: { '@id': ORG_ID },
+  keywords: ['Strix Halo', 'Ryzen AI Max+ 395', 'llama.cpp', 'local LLM', 'tokens per second', 'speculative decoding'],
+  measurementTechnique:
+    "End-to-end runs through hal0's llama-server provider (OpenAI-compatible /v1/*), one model loaded at a time (exclusive mode) on a single reference machine.",
+  variableMeasured: [
+    { '@type': 'PropertyValue', name: 'Decode throughput', unitText: 'tokens/s' },
+    { '@type': 'PropertyValue', name: 'Prefill throughput', unitText: 'tokens/s' },
+    { '@type': 'PropertyValue', name: 'MTP accept rate', unitText: '%' },
+    { '@type': 'PropertyValue', name: 'Memory footprint', unitText: 'GB' },
+  ],
+};
+const jsonLd = [dataset, breadcrumbList('Benchmarks', '/benchmarks/')];
 ---
 
-<MarketingLayout title={title} description={description}>
+<MarketingLayout title={title} description={description} jsonLd={jsonLd}>
   <div class="wrap wide phead">
     <div class="phead-row">
       <div>

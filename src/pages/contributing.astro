@@ -8,6 +8,7 @@
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import CTA from '../components/CTA.astro';
+import { breadcrumbList } from '../lib/seo.ts';
 
 const title = 'Contribute to hal0, the Open-Source Local AI Server';
 const description =
@@ -16,7 +17,11 @@ const description =
 const REPO = 'https://github.com/hal0ai/hal0';
 ---
 
-<MarketingLayout title={title} description={description}>
+<MarketingLayout
+  title={title}
+  description={description}
+  jsonLd={[breadcrumbList('Contributing', '/contributing/')]}
+>
   <section class="mx-auto max-w-3xl px-6 pt-16 pb-12">
     <p class="font-mono text-xs uppercase tracking-wider text-hal0-accent">community</p>
     <h1 class="mt-3 text-4xl font-semibold tracking-tight text-hal0-fg md:text-5xl">Contributing</h1>
