@@ -73,13 +73,16 @@ const JBM_ADVANCE = 0.6; // em per glyph cell
 
 /**
  * Greedy word-wrap `text` into at most `maxLines` lines of at most
- * `maxCharsPerLine` monospace characters each. A single "word" (no
- * whitespace) longer than one line is hard-broken across as many lines as
- * it needs, rather than overflowing — this is the backstop for titles that
- * are one long unbroken token (no spaces to wrap on). Once `maxLines` is
- * reached with input still remaining, the last line is truncated to leave
- * room for a trailing ellipsis: the contract is "truncate, never shrink
- * further past the long-title size."
+ * `maxCharsPerLine` monospace characters each. Lines break only at word
+ * boundaries: a word that does not fit after the words already on a line
+ * moves whole to the next line. The one exception is a single "word" (no
+ * whitespace) longer than a full line, which can never fit anywhere; it is
+ * split into hyphenated chunks of exactly `maxCharsPerLine` characters (the
+ * hyphen included), the backstop for titles that are one long unbroken
+ * token. Once `maxLines` is reached with input still remaining, the last
+ * line is cut back to whole words (or, for a lone chunk, to the limit) to
+ * leave room for a trailing ellipsis: the contract is "truncate, never
+ * shrink further past the long-title size."
  *
  * Pure and synchronous so it's unit-testable without a satori render.
  *
@@ -89,56 +92,44 @@ const JBM_ADVANCE = 0.6; // em per glyph cell
  * @returns {{ lines: string[], truncated: boolean }}
  */
 export function wrapMonospace(text, maxCharsPerLine, maxLines) {
-  const words = text.split(/\s+/).filter(Boolean);
+  const width = Math.max(2, maxCharsPerLine); // a hyphenated chunk needs a char plus its hyphen
+
+  // Split over-long words first; every other word is kept whole.
+  const pieces = [];
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    let rest = word;
+    while (rest.length > width) {
+      pieces.push(`${rest.slice(0, width - 1)}-`);
+      rest = rest.slice(width - 1);
+    }
+    pieces.push(rest);
+  }
+
   const lines = [];
   let current = '';
-
-  const pushCurrent = () => {
-    if (current) {
+  for (const piece of pieces) {
+    const joined = current ? `${current} ${piece}` : piece;
+    if (joined.length <= width) {
+      current = joined;
+    } else {
       lines.push(current);
-      current = '';
-    }
-  };
-
-  outer: for (const word of words) {
-    let remaining = word;
-    while (remaining.length > 0) {
-      const freeOnLine = maxCharsPerLine - (current ? current.length + 1 : 0);
-      if (freeOnLine <= 0) {
-        pushCurrent();
-        if (lines.length >= maxLines) break outer;
-        continue;
-      }
-      if (remaining.length <= freeOnLine) {
-        current += (current ? ' ' : '') + remaining;
-        remaining = '';
-      } else {
-        // Hard-break: this single word doesn't fit even on an empty line
-        // budget-worth of space — take as much as fits and continue on
-        // the next line (the long-unbroken-token backstop).
-        const take = current ? freeOnLine : maxCharsPerLine;
-        current += (current ? ' ' : '') + remaining.slice(0, take);
-        remaining = remaining.slice(take);
-        pushCurrent();
-        if (lines.length >= maxLines) break outer;
-      }
+      current = piece;
     }
   }
-  pushCurrent();
+  if (current) lines.push(current);
 
-  const consumedChars = lines.join(' ').replace(/ /g, '').length; // rough progress check
-  const totalChars = words.join('').length;
-  const overflowed = lines.length > maxLines || consumedChars < totalChars;
+  if (lines.length <= maxLines) return { lines, truncated: false };
+
   const clipped = lines.slice(0, maxLines);
+  // Fit "<last line>…" into the box by dropping trailing whole words; only a
+  // line that is a single word (a hyphenated chunk) is cut by characters.
+  let words = clipped[clipped.length - 1].split(' ');
+  while (words.length > 1 && `${words.join(' ')}…`.length > width) words.pop();
+  let last = words.join(' ');
+  if (`${last}…`.length > width) last = last.slice(0, width - 1);
+  clipped[clipped.length - 1] = `${last.replace(/[-\s]+$/, '')}…`;
 
-  if (overflowed) {
-    const last = clipped[clipped.length - 1] ?? '';
-    // Leave room for the ellipsis glyph within the same maxCharsPerLine
-    // budget rather than growing the line past the box width.
-    clipped[clipped.length - 1] = `${last.slice(0, Math.max(0, maxCharsPerLine - 1)).trimEnd()}…`;
-  }
-
-  return { lines: clipped, truncated: overflowed };
+  return { lines: clipped, truncated: true };
 }
 
 /**
