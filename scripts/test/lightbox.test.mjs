@@ -31,7 +31,9 @@ test('the overlay offers previous and next, by button, arrow key and swipe', () 
   assert.match(script, /e\.key === 'ArrowRight'/);
   assert.match(script, /e\.key === 'Escape'/);
   assert.match(script, /'pointerdown'/);
-  assert.match(script, /'pointerup'/);
+  assert.match(script, /'pointermove'/);
+  assert.match(script, /'pointerup', endSwipe/);
+  assert.match(script, /'pointercancel', endSwipe/, 'a cancelled pointer stream still counts as a swipe');
   assert.match(script, /SWIPE_PX = \d+/);
   assert.match(script, /\(i \+ items\.length\) % items\.length/, 'navigation wraps around');
 });
@@ -52,6 +54,7 @@ test('the stylesheet lays out the stage, the side buttons and the caption bar', 
   assert.match(css, /\.hal0-lightbox-cap\s*\{/);
   assert.match(css, /\.hal0-lightbox\[data-single='true'\] \.hal0-lightbox-nav\s*\{\s*display:\s*none/);
   assert.match(css, /\.hal0-lightbox\s*\{[^}]*touch-action:\s*pan-y/, 'horizontal swipes reach the script');
+  assert.match(css, /\.hal0-lightbox-stage\s*\{[^}]*touch-action:\s*pan-y/, 'the scrolling stage does not claim horizontal drags');
   assert.match(css, /\.hal0-lightbox-stage\s*\{[^}]*max-height:\s*100%[^}]*overflow-y:\s*auto/, 'a long caption on a short viewport scrolls inside the stage');
   assert.match(css, /\.hal0-lightbox-close,\s*\.hal0-lightbox-nav\s*\{[^}]*position:\s*absolute/, 'the buttons sit on the overlay, outside the scrolling stage');
   assert.match(css, /\.hal0-lightbox\s*\{[^}]*visibility:\s*hidden/, 'closed, it is hidden once faded');

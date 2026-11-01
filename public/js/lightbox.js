@@ -28,6 +28,7 @@
   let index = -1;
   let lastFocus = null;
   let pointerStart = null;
+  let pointerLast = null;
   let swallowClick = false; // the click that follows a mouse swipe must not close the box
 
   function el(tag, className, attrs) {
@@ -78,21 +79,27 @@
     });
 
     // Swipe: a mostly horizontal drag of SWIPE_PX or more steps left or right.
+    // The stage is a scroll container with touch-action: pan-y, so a horizontal
+    // drag keeps delivering pointer events; should the browser still claim the
+    // gesture (pointercancel), the last position seen decides.
     overlay.addEventListener('pointerdown', (e) => {
-      pointerStart = { x: e.clientX, y: e.clientY };
+      pointerStart = pointerLast = { x: e.clientX, y: e.clientY };
     });
-    overlay.addEventListener('pointerup', (e) => {
+    overlay.addEventListener('pointermove', (e) => {
+      if (pointerStart) pointerLast = { x: e.clientX, y: e.clientY };
+    });
+    const endSwipe = (e) => {
       if (!pointerStart) return;
-      const dx = e.clientX - pointerStart.x;
-      const dy = e.clientY - pointerStart.y;
-      pointerStart = null;
+      const end = e.type === 'pointercancel' ? pointerLast : { x: e.clientX, y: e.clientY };
+      const dx = end.x - pointerStart.x;
+      const dy = end.y - pointerStart.y;
+      pointerStart = pointerLast = null;
       if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) <= Math.abs(dy)) return;
       swallowClick = e.pointerType === 'mouse';
       step(dx < 0 ? 1 : -1);
-    });
-    overlay.addEventListener('pointercancel', () => {
-      pointerStart = null;
-    });
+    };
+    overlay.addEventListener('pointerup', endSwipe);
+    overlay.addEventListener('pointercancel', endSwipe);
   }
 
   /** Every screenshot on the page, in reading order, excluding the overlay's own copy. */
