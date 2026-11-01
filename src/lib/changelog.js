@@ -185,3 +185,94 @@ export function releaseTagUrl(version) {
   const tag = /^v/i.test(version) ? version : `v${version}`;
   return `https://github.com/hal0ai/hal0/releases/tag/${tag}`;
 }
+
+/**
+ * Inner HTML of every top-level `<li>` in a rendered section, in order.
+ * Sections are already HTML (marked), so this walks the `<li>` / `</li>`
+ * tags with a depth counter: a nested list's items stay inside their parent
+ * and are dropped from the excerpt (a preview wants the headline bullet, not
+ * its sub-points). A lone `<p>` wrapper from a loose list is unwrapped so the
+ * result drops straight into an `<li>` or a card without extra block margins.
+ * @param {string} html
+ * @returns {string[]}
+ */
+function topLevelItems(html) {
+  const items = [];
+  const tag = /<(\/?)li(?:\s[^>]*)?>/gi;
+  let depth = 0;
+  let start = 0;
+  let m;
+  while ((m = tag.exec(html))) {
+    if (m[1] === '') {
+      if (depth === 0) start = m.index + m[0].length;
+      depth += 1;
+    } else if (depth > 0) {
+      depth -= 1;
+      if (depth === 0) {
+        let inner = html.slice(start, m.index);
+        // Drop nested lists from the excerpt.
+        inner = inner.replace(/<(ul|ol)[\s\S]*<\/\1>/i, '').trim();
+        const para = inner.match(/^<p>([\s\S]*)<\/p>$/);
+        if (para && !para[1].includes('<p>')) inner = para[1].trim();
+        if (inner) items.push(inner);
+      }
+    }
+  }
+  return items;
+}
+
+/**
+ * Short list of what a release is about, as `<li>` inner-HTML strings.
+ * Prefers the entry's `### Highlights` bullets; entries without one fall back
+ * to the first bullets of its Added, then Changed, then Fixed sections, so
+ * older releases still get a summary. Entries with no bullets at all (an
+ * intro paragraph and nothing else) return `[]`.
+ * @param {ChangelogVersion} version
+ * @param {number} [max]
+ * @returns {string[]}
+ */
+export function releaseHighlights(version, max = 3) {
+  const byTitle = (name) =>
+    (version.sections ?? []).filter((s) => s.title.trim().toLowerCase() === name);
+
+  const highlights = byTitle('highlights').flatMap((s) => topLevelItems(s.html));
+  if (highlights.length) return highlights;
+
+  const picked = [];
+  for (const name of ['added', 'changed', 'fixed']) {
+    for (const s of byTitle(name)) {
+      for (const item of topLevelItems(s.html)) {
+        picked.push(item);
+        if (picked.length >= max) return picked;
+      }
+    }
+  }
+  return picked;
+}
+
+/**
+ * Split the version list into the entries the releases page renders in full
+ * and the ones it only links. `recent` is the first `recent` tagged entries,
+ * plus any untagged entry that sits among them: content the changelog
+ * documents ahead of its git tag (typically the top entry) must stay visible
+ * with its "unreleased" badge, and does not count against the quota. Once
+ * `recent` tagged entries are in, everything after goes to `archive`, so
+ * long-dead untagged history (a heading that never got a GitHub release) is
+ * archived with the rest rather than resurfacing.
+ * @param {ChangelogVersion[]} versions newest first
+ * @param {number} [recent]
+ * @returns {{recent: ChangelogVersion[], archive: ChangelogVersion[]}}
+ */
+export function splitReleases(versions, recent = 8) {
+  const head = [];
+  const archive = [];
+  let tagged = 0;
+  for (const v of versions) {
+    if (tagged >= recent) archive.push(v);
+    else {
+      head.push(v);
+      if (!v.untagged) tagged += 1;
+    }
+  }
+  return { recent: head, archive };
+}
