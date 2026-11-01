@@ -3,61 +3,10 @@
  * ReleaseTeaser: the latest tagged stable release, from the synced changelog.
  * Version, date, up to three highlights, and a link to /releases. An entry with
  * nothing to highlight renders the version, date and link alone.
- *
- * `releaseHighlightsFallback` has the contract of `releaseHighlights` in
- * src/lib/changelog.js, which lands with the releases page. Swap it for the
- * shared helper when that merges.
  */
 import rawChangelog from '../../data/changelog.md?raw';
 import releaseTags from '../../data/release-tags.json';
-import { parseChangelog } from '../../lib/changelog.js';
-
-type Entry = NonNullable<ReturnType<typeof parseChangelog>['latestTagged']>;
-
-/** Inner HTML of a list's top-level items, with nested lists dropped. */
-function topLevelItems(html: string): string[] {
-  const items: string[] = [];
-  const tag = /<(\/?)li(?:\s[^>]*)?>/gi;
-  let depth = 0;
-  let start = 0;
-  let m: RegExpExecArray | null;
-  while ((m = tag.exec(html))) {
-    if (m[1] === '') {
-      if (depth === 0) start = m.index + m[0].length;
-      depth += 1;
-    } else if (depth > 0) {
-      depth -= 1;
-      if (depth === 0) {
-        let inner = html.slice(start, m.index);
-        inner = inner.replace(/<(ul|ol)[\s\S]*<\/\1>/i, '').trim();
-        const para = inner.match(/^<p>([\s\S]*)<\/p>$/);
-        if (para && !para[1].includes('<p>')) inner = para[1].trim();
-        if (inner) items.push(inner);
-      }
-    }
-  }
-  return items;
-}
-
-/** Highlights bullets, else the first added, changed or fixed bullets, else []. */
-function releaseHighlightsFallback(version: Entry, max = 3): string[] {
-  const byTitle = (name: string) =>
-    (version.sections ?? []).filter((s) => s.title.trim().toLowerCase() === name);
-
-  const highlights = byTitle('highlights').flatMap((s) => topLevelItems(s.html));
-  if (highlights.length) return highlights;
-
-  const picked: string[] = [];
-  for (const name of ['added', 'changed', 'fixed']) {
-    for (const s of byTitle(name)) {
-      for (const item of topLevelItems(s.html)) {
-        picked.push(item);
-        if (picked.length >= max) return picked;
-      }
-    }
-  }
-  return picked;
-}
+import { parseChangelog, releaseHighlights } from '../../lib/changelog.js';
 
 const EXCERPT_WORDS = 28;
 
@@ -72,7 +21,7 @@ function excerpt(html: string): string {
 
 const { latestTagged } = parseChangelog(rawChangelog, { tags: releaseTags.tags });
 // The helper returns every Highlights bullet; the teaser shows three.
-const bullets = latestTagged ? releaseHighlightsFallback(latestTagged, 3).slice(0, 3).map(excerpt) : [];
+const bullets = latestTagged ? releaseHighlights(latestTagged, 3).slice(0, 3).map(excerpt) : [];
 ---
 
 <div class="mini-head">

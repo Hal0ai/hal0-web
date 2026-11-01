@@ -92,8 +92,7 @@ const SITE_DEFAULT_DESCRIPTION = 'Local AI for your home. Strix Halo native.';
 // has not landed yet. Each entry is pinned by an expected-failure test below
 // that FAILS the moment the page meets the limits, so the entry cannot
 // outlive the fix: delete it when that happens.
-//   '/'  the landing page (landing lane): title is 71 chars.
-const KNOWN_FAILING = new Set(['/']);
+const KNOWN_FAILING = new Set();
 
 // The confirmation page is noindex and never ranks; its copy is not an SEO surface.
 const EXEMPT = new Set(['/profiles/submitted/']);

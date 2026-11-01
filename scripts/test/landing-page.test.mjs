@@ -488,3 +488,25 @@ test('motion stops under prefers-reduced-motion', async () => {
     assert.match(styleOf(await source(path)), /@media \(prefers-reduced-motion: reduce\)/, path);
   }
 });
+
+// ── after the rebase: shared helpers from the releases and SEO lanes ────────
+
+test('ReleaseTeaser uses the shared highlights helper', async () => {
+  const teaser = await source(RELEASE_TEASER);
+  assert.match(teaser, /import \{[^}]*releaseHighlights[^}]*\} from '..\/..\/lib\/changelog\.js'/);
+  assert.ok(!teaser.includes('releaseHighlightsFallback'), 'the local fallback is gone');
+  assert.ok(!teaser.includes('topLevelItems'), 'list parsing lives in the shared helper');
+});
+
+test('the page takes its site constants from src/lib/seo.ts', async () => {
+  const page = await source(PAGE);
+  assert.match(page, /import \{[^}]*ORG_ID[^}]*SITE_URL[^}]*\} from '..\/lib\/seo/);
+  assert.ok(!page.includes("'https://hal0.dev'"), 'no second copy of the site URL');
+});
+
+test('the publisher reference resolves inside the graph', skipUnbuilt, () => {
+  const script = html.match(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/);
+  const graph = JSON.parse(script[1])['@graph'];
+  const app = graph.find((node) => node['@type'] === 'SoftwareApplication');
+  assert.ok(graph.some((node) => node['@id'] === app.publisher['@id']), 'an Organization node carries that @id');
+});

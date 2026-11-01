@@ -42,9 +42,9 @@ import {
   codeSpans,
 } from '../data/landing';
 import { parseChangelog } from '../lib/changelog.js';
+import { ORG_ID, SITE_URL } from '../lib/seo.ts';
 import '../styles/site-data.css';
 
-const SITE = 'https://hal0.dev';
 const TITLE = 'hal0: Self-Hosted Local AI Server for AMD Strix Halo';
 const DESCRIPTION =
   'Run LLMs, speech and images on your own hardware. Open-source, OpenAI-compatible local AI server for AMD Strix Halo (Ryzen AI Max+ 395) and Linux.';
@@ -70,7 +70,7 @@ const heroShot = shotByFile('slots-inference');
 const offGrid = new Set([...swapShots, memoryShot, heroShot]);
 const gridShots = CONSOLE_SHOTS.filter((s) => !offGrid.has(s));
 
-const shotUrl = (file: string) => `${SITE}/screenshots/${file}.png`;
+const shotUrl = (file: string) => `${SITE_URL}/screenshots/${file}.png`;
 
 const softwareApplication = {
   '@type': 'SoftwareApplication',
@@ -78,7 +78,7 @@ const softwareApplication = {
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Linux',
   description: FAQ[0].a,
-  url: `${SITE}/`,
+  url: `${SITE_URL}/`,
   image: shotUrl(heroShot.file),
   screenshot: CONSOLE_SHOTS.filter((s) => !s.todo).map((s) => shotUrl(s.file)),
   featureList: [
@@ -92,15 +92,15 @@ const softwareApplication = {
     'Cosign-verified updates with one-flag rollback',
   ],
   softwareRequirements: 'Linux x86_64, Python 3.12+, systemd, podman',
-  releaseNotes: `${SITE}/releases/`,
-  installUrl: `${SITE}/install.sh`,
-  downloadUrl: `${SITE}/install.sh`,
+  releaseNotes: `${SITE_URL}/releases/`,
+  installUrl: `${SITE_URL}/install.sh`,
+  downloadUrl: `${SITE_URL}/install.sh`,
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
   softwareVersion: version,
   codeRepository: GITHUB_URL,
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: 'hal0ai', url: 'https://github.com/hal0ai' },
-  publisher: { '@id': `${SITE}/#org` },
+  publisher: { '@id': ORG_ID },
 };
 
 const faqPage = {
