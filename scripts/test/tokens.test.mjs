@@ -280,3 +280,8 @@ test('site-search.js renders the pal-foot key-hint footer', () => {
   assert.ok(siteSearchJs.includes('pal-foot'), 'pal-foot element');
   assert.ok(siteSearchJs.includes('↑↓ navigate · ↵ open · esc close'), 'key-hint text');
 });
+
+test('site-search.js hides the pal-foot key hints from screen readers', () => {
+  // The footer sits next to the role="listbox" results; read aloud it would sound like an option.
+  assert.match(siteSearchJs, /<div class="pal-foot" aria-hidden="true">/, 'pal-foot is aria-hidden');
+});

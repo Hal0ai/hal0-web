@@ -41,7 +41,7 @@
 			'<span class="k">esc</span>' +
 			'</div>' +
 			'<div class="pal-results" role="listbox"></div>' +
-			'<div class="pal-foot">↑↓ navigate · ↵ open · esc close</div>';
+			'<div class="pal-foot" aria-hidden="true">↑↓ navigate · ↵ open · esc close</div>';
 		document.body.appendChild(dialog);
 		input = dialog.querySelector('input');
 		resultsEl = dialog.querySelector('.pal-results');
