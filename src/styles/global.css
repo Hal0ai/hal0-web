@@ -153,7 +153,10 @@ code, pre, kbd, .tabular {
  * The overlay is a stage (picture + caption) with a close button and a
  * previous/next button over each side; a page with one screenshot hides the
  * side buttons (data-single). The picture takes the viewport minus the room
- * for the caption and, from 640px up, the side buttons. */
+ * for the caption and, from 640px up, the side buttons. The stage centres
+ * itself with auto margins and the overlay scrolls, so a long caption on a
+ * short viewport stays reachable; the buttons are fixed and do not scroll.
+ * Closed, the overlay is inert (script) and hidden once it has faded. */
 img[src*="/screenshots/"] {
 	cursor: zoom-in;
 }
@@ -162,26 +165,28 @@ img[src*="/screenshots/"] {
 	inset: 0;
 	z-index: 200;
 	display: flex;
-	align-items: center;
-	justify-content: center;
+	overflow-y: auto;
 	background: rgba(5, 5, 5, 0.92);
 	-webkit-backdrop-filter: blur(4px);
 	backdrop-filter: blur(4px);
 	opacity: 0;
+	visibility: hidden;
 	pointer-events: none;
 	cursor: zoom-out;
 	touch-action: pan-y;
-	transition: opacity 180ms var(--hal0-ease, ease);
+	transition: opacity 180ms var(--hal0-ease, ease), visibility 0s linear 180ms;
 }
 .hal0-lightbox[data-open='true'] {
 	opacity: 1;
+	visibility: visible;
 	pointer-events: auto;
+	transition: opacity 180ms var(--hal0-ease, ease);
 }
 .hal0-lightbox-stage {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin: 0;
+	margin: auto;
 	max-width: 100%;
 	padding: 1rem;
 	cursor: default;
@@ -230,7 +235,7 @@ img[src*="/screenshots/"] {
 }
 .hal0-lightbox-close,
 .hal0-lightbox-nav {
-	position: absolute;
+	position: fixed;
 	display: flex;
 	align-items: center;
 	justify-content: center;

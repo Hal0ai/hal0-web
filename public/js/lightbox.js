@@ -41,6 +41,7 @@
     overlay = el('div', 'hal0-lightbox', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Screenshot preview' });
     overlay.dataset.open = 'false';
     overlay.dataset.single = 'true';
+    overlay.inert = true; // closed: out of the tab order and away from assistive tech
 
     closeBtn = el('button', 'hal0-lightbox-close', { type: 'button', 'aria-label': 'Close preview' });
     closeBtn.textContent = '×';
@@ -146,14 +147,26 @@
     show(index + delta);
   }
 
+  /**
+   * A view transition swaps the body and takes the overlay with it. Forget the
+   * detached overlay (the next click builds a fresh one) and give the page its
+   * scroll back in case it was open at the time.
+   */
+  function reconcile() {
+    if (!overlay || document.body.contains(overlay)) return;
+    overlay = null;
+    document.documentElement.style.overflow = '';
+  }
+
   function openBox(img) {
-    if (overlay && !document.body.contains(overlay)) overlay = null; // a view transition swapped the body
+    reconcile();
     if (!overlay) build();
     collect();
     const i = items.indexOf(img);
     if (i < 0) return;
     lastFocus = document.activeElement;
     show(i);
+    overlay.inert = false;
     overlay.dataset.open = 'true';
     document.documentElement.style.overflow = 'hidden';
     closeBtn.focus();
@@ -162,6 +175,7 @@
   function closeBox() {
     if (!overlay || overlay.dataset.open !== 'true') return;
     overlay.dataset.open = 'false';
+    overlay.inert = true;
     document.documentElement.style.overflow = '';
     if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
   }
@@ -178,8 +192,9 @@
       return step(1);
     }
     if (e.key === 'Tab') {
-      // Keep focus inside the dialog: close, previous, next, and around again.
-      const buttons = [closeBtn, prevBtn, nextBtn].filter((b) => b.offsetParent !== null);
+      // Keep focus inside the dialog: close, previous, next, and around again
+      // (the side buttons are display: none on a page with one screenshot).
+      const buttons = [closeBtn, prevBtn, nextBtn].filter((b) => getComputedStyle(b).display !== 'none');
       const at = buttons.indexOf(document.activeElement);
       const to = at < 0 ? 0 : (at + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
       e.preventDefault();
@@ -205,5 +220,8 @@
   if (document.readyState !== 'loading') bindAll();
   else document.addEventListener('DOMContentLoaded', bindAll);
   // Starlight uses client-side navigation; re-bind after each swap.
-  document.addEventListener('astro:page-load', bindAll);
+  document.addEventListener('astro:page-load', () => {
+    reconcile();
+    bindAll();
+  });
 })();

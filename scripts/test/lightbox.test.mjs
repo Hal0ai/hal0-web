@@ -19,6 +19,9 @@ test('the lightbox binds every /screenshots/ image and survives view transitions
   assert.match(script, /img\[src\*="\/screenshots\/"\]/);
   assert.match(script, /astro:page-load/);
   assert.match(script, /document\.body\.contains\(overlay\)/, 'rebuilds after a body swap');
+  assert.match(script, /function reconcile\(\)[\s\S]*?style\.overflow = ''/, 'a swap while open gives the scroll back');
+  assert.match(script, /overlay\.inert = true/, 'closed, the dialog is inert');
+  assert.match(script, /overlay\.inert = false/, 'open, it is not');
 });
 
 test('the overlay offers previous and next, by button, arrow key and swipe', () => {
@@ -49,6 +52,9 @@ test('the stylesheet lays out the stage, the side buttons and the caption bar', 
   assert.match(css, /\.hal0-lightbox-cap\s*\{/);
   assert.match(css, /\.hal0-lightbox\[data-single='true'\] \.hal0-lightbox-nav\s*\{\s*display:\s*none/);
   assert.match(css, /\.hal0-lightbox\s*\{[^}]*touch-action:\s*pan-y/, 'horizontal swipes reach the script');
+  assert.match(css, /\.hal0-lightbox\s*\{[^}]*overflow-y:\s*auto/, 'a long caption on a short viewport scrolls');
+  assert.match(css, /\.hal0-lightbox\s*\{[^}]*visibility:\s*hidden/, 'closed, it is hidden once faded');
+  assert.match(css, /\.hal0-lightbox-stage\s*\{[^}]*margin:\s*auto/, 'the stage centres itself without overflowing');
   assert.match(css, /\.hal0-lightbox img\s*\{[^}]*max-height:\s*calc\(100dvh - [\d.]+rem\)/, 'the picture takes the viewport height');
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
@@ -59,11 +65,24 @@ test('the stylesheet lays out the stage, the side buttons and the caption bar', 
 const url = process.env.HAL0_LIGHTBOX_URL;
 const skipBrowser = { skip: !url && 'set HAL0_LIGHTBOX_URL to a served build' };
 
+/** A real touch swipe (Chromium's input pipeline, so touch-action and the click that may follow apply). */
+async function swipe(page, { fromX, toX, y }) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: fromX, y }] });
+  const steps = 6;
+  for (let i = 1; i <= steps; i++) {
+    const x = fromX + ((toX - fromX) * i) / steps;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
+}
+
 test('clicking a console shot opens the overlay; arrows, buttons and swipe move through the set', skipBrowser, async () => {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch();
   try {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, hasTouch: true });
     await page.goto(url, { waitUntil: 'networkidle' });
     const shots = page.locator('figure.shot img[src*="/screenshots/"]');
     const total = await shots.count();
@@ -72,6 +91,7 @@ test('clicking a console shot opens the overlay; arrows, buttons and swipe move 
     const overlay = page.locator('.hal0-lightbox');
     const state = async () => ({
       open: await overlay.getAttribute('data-open'),
+      inert: (await overlay.getAttribute('inert')) !== null,
       src: await overlay.locator('img').getAttribute('src'),
       count: await overlay.locator('.hal0-lightbox-count').textContent(),
       text: await overlay.locator('.hal0-lightbox-text').textContent(),
@@ -82,6 +102,7 @@ test('clicking a console shot opens the overlay; arrows, buttons and swipe move 
     await shots.nth(1).click();
     let s = await state();
     assert.equal(s.open, 'true', 'open after a click');
+    assert.equal(s.inert, false, 'open, the dialog is not inert');
     assert.equal(s.src, await shots.nth(1).getAttribute('src'), 'shows the clicked shot');
     assert.equal(s.count, `2 / ${total}`);
     assert.ok(s.text.length > 0, 'caption shown');
@@ -96,6 +117,15 @@ test('clicking a console shot opens the overlay; arrows, buttons and swipe move 
     assert.equal(s.src, await shots.nth(2).getAttribute('src'), 'ArrowRight steps forward');
     assert.equal(s.count, `3 / ${total}`);
 
+    // Tab cycles the dialog's own buttons and never leaves it.
+    const inDialog = () => page.evaluate(() => Boolean(document.activeElement && document.activeElement.closest('.hal0-lightbox')));
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press('Tab');
+      assert.equal(await inDialog(), true, `Tab ${i + 1} stays in the dialog`);
+    }
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await inDialog(), true, 'Shift+Tab stays in the dialog');
+
     await overlay.locator('.hal0-lightbox-prev').click();
     await overlay.locator('.hal0-lightbox-prev').click();
     s = await state();
@@ -106,18 +136,27 @@ test('clicking a console shot opens the overlay; arrows, buttons and swipe move 
     s = await state();
     assert.equal(s.count, `${total} / ${total}`, 'stepping back from the first wraps to the last');
 
-    // A touch swipe to the left goes forward (and wraps to the first).
+    // A real touch swipe to the left goes forward (and wraps to the first);
+    // a swipe to the right goes back. Neither closes the box.
     const box = await overlay.boundingBox();
-    const y = box.y + box.height * 0.8;
-    await page.touchscreen.tap(box.x + box.width * 0.5, y).catch(() => {});
-    await overlay.dispatchEvent('pointerdown', { clientX: 700, clientY: y, pointerType: 'touch' });
-    await overlay.dispatchEvent('pointerup', { clientX: 600, clientY: y + 5, pointerType: 'touch' });
+    const y = box.y + box.height * 0.5;
+    await swipe(page, { fromX: box.x + box.width * 0.6, toX: box.x + box.width * 0.4, y });
     s = await state();
     assert.equal(s.count, `1 / ${total}`, 'a left swipe steps forward and wraps');
+    assert.equal(s.open, 'true', 'a swipe does not close the box');
+    await swipe(page, { fromX: box.x + box.width * 0.4, toX: box.x + box.width * 0.6, y });
+    s = await state();
+    assert.equal(s.count, `${total} / ${total}`, 'a right swipe steps back');
     assert.equal(s.open, 'true');
 
     await page.keyboard.press('Escape');
-    assert.equal((await state()).open, 'false', 'Escape closes');
+    s = await state();
+    assert.equal(s.open, 'false', 'Escape closes');
+    assert.equal(s.inert, true, 'closed, the dialog is inert');
+    await page.waitForTimeout(300); // the fade, then visibility: hidden
+    assert.equal(await overlay.evaluate((o) => o.checkVisibility({ visibilityProperty: true })), false, 'closed, it is hidden once faded');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => Boolean(document.activeElement && document.activeElement.closest('.hal0-lightbox'))), false, 'Tab does not land in the closed dialog');
 
     // The backdrop closes; the picture does not.
     await shots.nth(0).click();
