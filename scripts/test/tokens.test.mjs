@@ -187,3 +187,96 @@ for (const name of CARD_COMPONENTS) {
     );
   });
 }
+
+// ── B3: command palette polish ────────────────────────────────────────
+
+const siteStarlightCss = await read('styles/site-starlight.css');
+const siteSearchJs = await readFile(new URL('../../public/js/site-search.js', import.meta.url), 'utf8');
+
+const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+/**
+ * Declaration bodies (whitespace-normalised) of every rule whose selector
+ * list contains `selector` as one entry. Works through native CSS nesting
+ * and @media wrappers because it only looks at `{ ... }` leaves.
+ */
+function blocksFor(css, selector) {
+  const out = [];
+  for (const m of stripComments(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const head = m[1].split(';').pop();
+    if (head.split(',').some((s) => s.trim() === selector)) out.push(squash(m[2]));
+  }
+  return out;
+}
+
+const AMBER_RING = 'rgba(255,176,0,0.05)'; // squash()-normalised
+const ENTER_FROM = 'translateY(-10px) scale(.985)';
+
+test('site.css: dialog.pal gets the faint amber ring and .pal-foot is styled', () => {
+  assert.ok(siteCss.includes('rgba(255, 176, 0, 0.05)'), 'amber ring literal');
+  assert.ok(
+    blocksFor(siteCss, 'dialog.pal').some((b) => b.includes(AMBER_RING)),
+    'ring is part of the dialog.pal box-shadow',
+  );
+  assert.ok(siteCss.includes('.pal-foot'), '.pal-foot styled');
+  assert.ok(blocksFor(siteCss, '.pal-foot').length > 0, '.pal-foot has a rule');
+});
+
+test('site.css: .pal-row.on stripe is an inset pseudo-element, not a full-height shadow', () => {
+  const stripe = blocksFor(siteCss, '.pal-row.on::before');
+  assert.ok(stripe.some((b) => b.includes('top: 4px') && b.includes('bottom: 4px')), 'top/bottom 4px');
+  assert.ok(stripe.some((b) => b.includes("content: ''")), 'pseudo-element has content');
+  for (const sel of ['.pal-row.on', '.pal-row:hover']) {
+    assert.ok(
+      !blocksFor(siteCss, sel).some((b) => b.includes('inset 2px 0 0')),
+      `${sel} no longer paints the full-height inset shadow`,
+    );
+  }
+});
+
+test('site.css: palette enters with translateY(-10px) scale(.985) over .18s, off under reduced motion', () => {
+  assert.match(siteCss, /@keyframes pal-enter/, '@keyframes pal-enter');
+  assert.ok(siteCss.includes(ENTER_FROM), 'keyframes start transform');
+  assert.ok(
+    blocksFor(siteCss, 'dialog.pal[open]').some((b) => /animation: pal-enter 0?\.18s/.test(b)),
+    'dialog.pal[open] runs pal-enter over .18s',
+  );
+  assert.match(
+    stripComments(siteCss),
+    /@media \(prefers-reduced-motion: reduce\)\s*\{\s*dialog\.pal\[open\]\s*\{\s*animation:\s*none/,
+    'reduced-motion block disables it',
+  );
+});
+
+test('site-starlight.css: Pagefind modal gets the same ring, inset stripe and enter animation', () => {
+  assert.ok(siteStarlightCss.includes('rgba(255, 176, 0, 0.05)'), 'amber ring literal');
+  assert.ok(
+    blocksFor(siteStarlightCss, 'site-search dialog').some((b) => b.includes(AMBER_RING)),
+    'ring is part of the site-search dialog box-shadow',
+  );
+  const stripe = blocksFor(siteStarlightCss, '#starlight__search .pagefind-ui__result:hover::before');
+  assert.ok(stripe.some((b) => b.includes('top: 4px') && b.includes('bottom: 4px')), 'stripe top/bottom 4px');
+  for (const sel of [
+    '#starlight__search .pagefind-ui__result:hover',
+    '#starlight__search .pagefind-ui__result:focus-within',
+  ]) {
+    assert.ok(
+      !blocksFor(siteStarlightCss, sel).some((b) => b.includes('inset 2px 0 0')),
+      `${sel} no longer paints the full-height inset shadow`,
+    );
+  }
+  assert.ok(
+    blocksFor(siteStarlightCss, 'site-search dialog[open]').some((b) => /animation: pal-enter 0?\.18s/.test(b)),
+    'site-search dialog[open] runs pal-enter over .18s',
+  );
+  assert.match(
+    stripComments(siteStarlightCss),
+    /@media \(prefers-reduced-motion: reduce\)\s*\{\s*site-search dialog\[open\]\s*\{\s*animation:\s*none/,
+    'reduced-motion block disables it',
+  );
+});
+
+test('site-search.js renders the pal-foot key-hint footer', () => {
+  assert.ok(siteSearchJs.includes('pal-foot'), 'pal-foot element');
+  assert.ok(siteSearchJs.includes('↑↓ navigate · ↵ open · esc close'), 'key-hint text');
+});

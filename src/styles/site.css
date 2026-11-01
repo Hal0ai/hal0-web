@@ -138,6 +138,14 @@
 	50% { opacity: 0.4; }
 }
 
+/* One-shot entrance for the ⌘K palette (marketing <dialog class="pal"> and
+ * Starlight's Pagefind modal in site-starlight.css). Not a loop, so it does
+ * not break the "pulse is the only loop" rule above. */
+@keyframes pal-enter {
+	from { opacity: 0; transform: translateY(-10px) scale(.985); }
+	to { opacity: 1; transform: none; }
+}
+
 .site {
 	.mono {
 		font-family: var(--jbm);
@@ -410,11 +418,20 @@
 		background: var(--bg-1);
 		border: 1px solid var(--line-strong);
 		border-radius: var(--rad-lg);
-		box-shadow: var(--shadow-menu);
+		/* deep drop shadow + a 1px amber ring at 5% (dashboard R-9) */
+		box-shadow: 0 32px 96px -24px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 176, 0, 0.05);
 		overflow: hidden;
 		padding: 0;
 		margin: 12vh auto auto;
 		color: var(--fg-2);
+	}
+	dialog.pal[open] {
+		animation: pal-enter 0.18s var(--ease);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		dialog.pal[open] {
+			animation: none;
+		}
 	}
 	dialog.pal::backdrop {
 		background: rgba(5, 5, 5, 0.55);
@@ -460,6 +477,7 @@
 		padding: 6px 14px;
 	}
 	.pal-row {
+		position: relative;
 		display: flex;
 		align-items: baseline;
 		gap: 10px;
@@ -475,7 +493,19 @@
 	.pal-row.on,
 	.pal-row:hover {
 		background: var(--accent-soft);
-		box-shadow: inset 2px 0 0 var(--accent);
+	}
+	/* Active stripe: inset 4px top and bottom so it reads as a marker,
+	 * not a full-height border (dashboard R-9). */
+	.pal-row.on::before,
+	.pal-row:hover::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 4px;
+		bottom: 4px;
+		width: 2px;
+		border-radius: 1px;
+		background: var(--accent);
 	}
 	.pal-row.on .t,
 	.pal-row:hover .t {
@@ -499,6 +529,19 @@
 		background: transparent;
 		color: var(--accent);
 		font-weight: 500;
+	}
+	/* Key-hint footer, injected by /js/site-search.js. Sunken bar with a
+	 * hairline, like the dashboard's .cp-foot (R-4). */
+	.pal-foot {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 14px;
+		border-top: 1px solid var(--line-soft);
+		background: var(--bg);
+		font-family: var(--jbm);
+		font-size: 10.5px;
+		color: var(--fg-4);
 	}
 	.hdr-burger {
 		display: none;
