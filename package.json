@@ -21,7 +21,7 @@
     "@astrojs/sitemap": "^3.7.2",
     "@astrojs/starlight": "^0.41.7",
     "@astrojs/starlight-tailwind": "^5.0.0",
-    "@astrojs/vercel": "^11.0.7",
+    "@astrojs/vercel": "^11.0.17",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/geist-sans": "^5.3.0",
@@ -29,12 +29,12 @@
     "@iconify-json/lucide": "^1.2.107",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.0",
-    "astro": "^7.2.0",
-    "astro-icon": "^1.1.5",
+    "astro": "~7.3.8",
+    "astro-icon": "^1.2.0",
     "marked": "^15.0.7",
-    "satori": "^0.29.0",
-    "sharp": "^0.35.3",
-    "smol-toml": "^1.7.1",
+    "satori": "^0.33.5",
+    "sharp": "^0.35.5",
+    "smol-toml": "^1.9.1",
     "starlight-blog": "^0.28.0",
     "tailwindcss": "^4.3.0"
   },
@@ -45,6 +45,15 @@
   },
   "overrides": {
     "esbuild": "^0.28.1",
-    "sharp": "^0.35.3"
+    "sharp": "$sharp",
+    "@vercel/cli-config": {
+      "zod": "^4.6.7"
+    },
+    "@vercel/routing-utils": {
+      "path-to-regexp": "6.3.0"
+    },
+    "satori": {
+      "fflate": "0.7.5"
+    }
   }
 }
