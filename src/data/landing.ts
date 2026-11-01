@@ -143,8 +143,8 @@ export type ConsoleShot = {
   caption: string;
   /** No usable capture yet: renders only a TODO comment, and stays out of the schema. */
   todo?: true;
-  /** Pixel size of the 1x file, when it is not the usual 1440 by 900. */
-  size?: [number, number];
+  /** The capture is not 1440 by 900: fit it inside the frame rather than cropping it. */
+  contain?: true;
 };
 
 export const CONSOLE_SHOTS: ConsoleShot[] = [
@@ -152,7 +152,7 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     file: 'slot-model-picker-open',
     alt: 'Slot card on the hal0 console with the model picker open, showing models with fit chips',
     caption: 'Slot card, picker open. Each option shows size, fit and who else uses it.',
-    size: [421, 382],
+    contain: true,
   },
   {
     file: 'openwebui-picker',
@@ -174,7 +174,7 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     file: 'slot-drawer',
     alt: 'Slot drawer showing the resolved command',
     caption: 'Slot drawer. The resolved command, every flag labelled by owner.',
-    size: [560, 900],
+    contain: true,
   },
   {
     file: 'stacks-tab',

@@ -1,11 +1,12 @@
 ---
 /**
- * ConsoleShot: one framed screenshot with its caption. A shot with no usable capture
- * renders nothing visible, only a TODO(shots) comment naming the file, which the
- * re-capture lane greps for. Used by the swap, memory and console sections.
+ * ConsoleShot: one console screenshot in the landing page's frame, rendered by the
+ * shared Shot component (AVIF, WebP and PNG, sizes read from disk). A shot with no
+ * usable capture renders nothing visible, only a TODO(shots) comment naming the
+ * file, which the re-capture lane greps for. Used by the swap, memory and console
+ * sections.
  */
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import Shot from '../Shot.astro';
 import type { ConsoleShot } from '../../data/landing';
 
 interface Props {
@@ -15,65 +16,36 @@ interface Props {
 
 const { shot, hero = false } = Astro.props;
 const [label, ...rest] = shot.caption.split('. ');
-const [width, height] = shot.size ?? [1440, 900];
-const src = `/screenshots/${shot.file}.png`;
-// Only advertise a 2x candidate that the build will actually serve.
-const has2x = existsSync(join(process.cwd(), 'public', 'screenshots', `${shot.file}@2x.png`));
-const srcset = has2x ? `${src} 1x, /screenshots/${shot.file}@2x.png 2x` : undefined;
 ---
 
 {shot.todo ? (
   <Fragment set:html={`<!-- TODO(shots): ${shot.file} -->`} />
 ) : (
-  <figure class:list={['shot', { 'hero-shot': hero }]}>
-    <img
-      src={src}
-      srcset={srcset}
-      alt={shot.alt}
-      width={width}
-      height={height}
-      loading="lazy"
-      decoding="async"
-      class:list={{ contain: !!shot.size }}
-    />
-    <figcaption><b>{label}.</b> {rest.join('. ')}</figcaption>
-  </figure>
+  <div class:list={['frame', { hero, contain: shot.contain }]}>
+    <Shot name={shot.file} alt={shot.alt}>
+      <Fragment slot="caption"><strong>{label}.</strong> {rest.join('. ')}</Fragment>
+    </Shot>
+  </div>
 )}
 
 <style>
-  .shot {
-    position: relative;
+  /* Shot sizes itself to small captures; on the landing every frame fills its column. */
+  .frame :global(.shot) {
+    width: 100%;
     margin: 0;
-    overflow: hidden;
-    border: 1px solid var(--hal0-border);
     border-radius: var(--hal0-rad-lg);
-    background: var(--hal0-bg-sunken);
   }
-  .hero-shot {
+  .hero :global(.shot) {
     box-shadow: 0 30px 80px -40px var(--hal0-accent-glow);
   }
-  img {
-    display: block;
+  .frame :global(img) {
     width: 100%;
-    height: auto;
     aspect-ratio: 1440 / 900;
     object-fit: cover;
     object-position: top;
   }
-  img.contain {
+  .contain :global(img) {
     object-fit: contain;
     object-position: center;
-  }
-  figcaption {
-    padding: 10px 14px;
-    border-top: 1px solid var(--hal0-border-soft);
-    background: var(--hal0-bg);
-    font-size: 13px;
-    line-height: 1.45;
-    color: var(--hal0-fg-muted);
-  }
-  b {
-    font-weight: 600;
-    color: var(--hal0-fg);
   }
 </style>

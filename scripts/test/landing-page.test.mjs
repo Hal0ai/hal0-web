@@ -210,10 +210,11 @@ test('Faq renders one <details> per item from the shared data', async () => {
   assert.match(faq, /<summary>\{[^}]*q[^}]*\}<\/summary>/);
 });
 
-test('ConsoleShot renders a TODO(shots) comment and only real 2x candidates', async () => {
+test('ConsoleShot renders a TODO(shots) comment or the shared Shot', async () => {
   const shot = await source('src/components/landing/ConsoleShot.astro');
   assert.ok(shot.includes('<!-- TODO(shots): ${shot.file} -->'), 'comment names the file');
-  assert.match(shot, /existsSync/, 'srcset checks the @2x file exists');
+  assert.match(shot, /<Shot\b/, 'real shots go through src/components/Shot.astro');
+  assert.ok(!/<img\b/.test(shot), 'no bare screenshot <img>');
 });
 
 test('the ld+json FAQPage mirrors the visible questions', skipUnbuilt, () => {
@@ -597,7 +598,14 @@ test('community and bench blocks carry their context', async () => {
 
 test('console shots keep their frame styles', async () => {
   const css = styleOf(await source(CONSOLE_SHOT));
-  assert.match(css, /(^|\n)\s*img\s*\{[^}]*width:\s*100%[^}]*aspect-ratio:\s*1440 \/ 900[^}]*object-fit:\s*cover/, 'shots crop to one frame');
-  assert.match(css, /img\.contain\s*\{[^}]*object-fit:\s*contain/, 'odd-sized shots fit inside it');
-  assert.ok(!/img,\s*figcaption/.test(css), 'images do not share the caption rule');
+  assert.match(css, /:global\(\.shot\)\s*\{[^}]*width:\s*100%/, 'frames fill their column');
+  assert.match(css, /:global\(img\)\s*\{[^}]*width:\s*100%[^}]*aspect-ratio:\s*1440 \/ 900[^}]*object-fit:\s*cover/, 'shots crop to one frame');
+  assert.match(css, /\.contain :global\(img\)\s*\{[^}]*object-fit:\s*contain/, 'odd-sized shots fit inside it');
+});
+
+test('the built landing serves console shots as pictures', skipUnbuilt, async () => {
+  const { CONSOLE_SHOTS } = await import(new URL(LANDING_DATA, root));
+  const pictures = html.match(/<figure\b[^>]*\bclass="shot\b[^"]*"[^>]*>\s*<picture\b/g) ?? [];
+  assert.equal(pictures.length, CONSOLE_SHOTS.filter((s) => !s.todo).length, 'every real shot is a <picture>');
+  assert.match(html, /<source type="image\/avif"[^>]*screenshots\/slots-inference/, 'AVIF is offered');
 });
