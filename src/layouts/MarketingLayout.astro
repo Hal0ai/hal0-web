@@ -61,8 +61,9 @@ const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString()
 // One @graph per page: every schema.org node the page hands us goes in a
 // single script so crawlers see a single, cross-referenceable document.
 const jsonLdGraph = { '@context': 'https://schema.org', '@graph': jsonLd };
-// `<` is escaped so a string value containing "</script>" cannot end the
-// script element early; JSON parsers read < back as "<".
+// Every `<` is written as the six characters backslash-u-0-0-3-c so a string
+// value containing "</script>" cannot end the script element early; JSON
+// parsers decode that escape back to `<`.
 const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
 ---
 
