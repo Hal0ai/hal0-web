@@ -594,8 +594,18 @@ site-search dialog {
 	background: var(--hal0-bg-elevated);
 	border: 1px solid var(--hal0-border-strong);
 	border-radius: var(--hal0-rad-lg, 10px);
-	box-shadow: var(--hal0-shadow-menu);
+	/* deep drop shadow + a 1px amber ring at 5% (dashboard R-9), same as
+	 * dialog.pal in site.css */
+	box-shadow: 0 32px 96px -24px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 176, 0, 0.05);
 	color: var(--hal0-fg-muted);
+}
+site-search dialog[open] {
+	animation: pal-enter 0.18s var(--hal0-ease); /* @keyframes live in site.css */
+}
+@media (prefers-reduced-motion: reduce) {
+	site-search dialog[open] {
+		animation: none;
+	}
 }
 @media (min-width: 50rem) {
 	site-search dialog {
@@ -658,6 +668,7 @@ site-search button[data-close-modal] {
 
 /* result rows — comp `.pal-row` */
 #starlight__search .pagefind-ui__result {
+	position: relative;
 	border: 0;
 	padding: 7px 0;
 }
@@ -681,7 +692,19 @@ site-search button[data-close-modal] {
 #starlight__search .pagefind-ui__result:hover,
 #starlight__search .pagefind-ui__result:focus-within {
 	background: var(--hal0-accent-soft);
-	box-shadow: inset 2px 0 0 var(--hal0-accent);
+}
+/* Active stripe inset 4px top and bottom, matching .pal-row.on::before in
+ * site.css (dashboard R-9). */
+#starlight__search .pagefind-ui__result:hover::before,
+#starlight__search .pagefind-ui__result:focus-within::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 4px;
+	bottom: 4px;
+	width: 2px;
+	border-radius: 1px;
+	background: var(--hal0-accent);
 }
 #starlight__search .pagefind-ui__result-excerpt {
 	font-family: var(--hal0-font-body);

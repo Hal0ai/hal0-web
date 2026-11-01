@@ -18,6 +18,11 @@
  *                   that must never rank (thank-you / confirmation pages).
  *                   Such pages are also filtered out of the sitemap in
  *                   astro.config.mjs; keep the two lists in step.
+ *   jsonLd?       – schema.org nodes for this page. When non-empty the layout
+ *                   emits ONE JSON-LD script in <head> holding
+ *                   {"@context":"https://schema.org","@graph":[...]}.
+ *                   Pages pass their nodes here; they never render their own
+ *                   JSON-LD script.
  */
 import '../styles/global.css';
 import SiteHeader from '../components/SiteHeader.astro';
@@ -38,6 +43,7 @@ interface Props {
   ogImage?: string;
   navTone?: 'transparent' | 'solid';
   noindex?: boolean;
+  jsonLd?: Record<string, unknown>[];
 }
 
 const {
@@ -46,11 +52,19 @@ const {
   ogImage = '/og-default.png',
   navTone = 'solid',
   noindex = false,
+  jsonLd = [],
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hal0.dev').toString();
 // Social crawlers want an absolute image URL, not a root-relative path.
 const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString();
+// One @graph per page: every schema.org node the page hands us goes in a
+// single script so crawlers see a single, cross-referenceable document.
+const jsonLdGraph = { '@context': 'https://schema.org', '@graph': jsonLd };
+// Every `<` is written as the six characters backslash-u-0-0-3-c so a string
+// value containing "</script>" cannot end the script element early; JSON
+// parsers decode that escape back to `<`.
+const jsonLdText = JSON.stringify(jsonLdGraph).replace(/</g, '\\u003c');
 ---
 
 <!doctype html>
@@ -112,6 +126,12 @@ const ogImageUrl = new URL(ogImage, Astro.site ?? 'https://hal0.dev').toString()
     <!-- Google Analytics 4 — renders nothing unless PUBLIC_GA_MEASUREMENT_ID
          is set at build time (src/lib/analytics.ts). -->
     <Analytics />
+
+    {
+      jsonLd.length > 0 && (
+        <script is:inline type="application/ld+json" set:html={jsonLdText} />
+      )
+    }
   </head>
 
   <body class="site min-h-screen bg-hal0-bg text-hal0-fg antialiased">
