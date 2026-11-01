@@ -201,8 +201,12 @@ img[src*="/screenshots/"] {
 	cursor: default;
 }
 /* The frame carries the border, radius and shadow (not the img), so the edge
- * line below is clipped to the rounded corners. */
+ * line below is clipped to the rounded corners. flex: none keeps it as tall
+ * as its picture when a long caption overflows the stage: a flex item that
+ * hides overflow would otherwise shrink and clip the picture instead of
+ * letting the stage scroll. */
 .hal0-lightbox-pic {
+	flex: none;
 	position: relative;
 	max-width: 100%;
 	line-height: 0;

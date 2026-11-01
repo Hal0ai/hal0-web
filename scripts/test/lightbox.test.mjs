@@ -33,6 +33,7 @@ test('the overlay offers previous and next, by picture half, arrow key, swipe an
   assert.match(script, /halfNext\.contains\(target\)\) return tap\(halfNext, 1\)/, 'a click on the right half steps forward');
   assert.match(script, /matchMedia\('\(hover: hover\)'\)/, 'without hover, a tap flashes the edge instead');
   assert.match(script, /classList\.add\('is-flash'\)/);
+  assert.match(script, /clearTimeout\(flashTimers\.get\(half\)\)/, 'a second tap restarts the flash instead of being cut short by the first');
   assert.match(script, /e\.key === 'ArrowLeft'/);
   assert.match(script, /e\.key === 'ArrowRight'/);
   assert.match(script, /e\.key === 'Escape'/);
@@ -59,6 +60,7 @@ test('the stylesheet lays out the stage, the edge hint, the keyboard buttons and
   assert.match(css, /\.hal0-lightbox-nav\s*\{/);
   assert.match(css, /\.hal0-lightbox-cap\s*\{/);
   assert.match(css, /\.hal0-lightbox-pic\s*\{[^}]*overflow:\s*hidden[^}]*border-radius/, 'the frame clips the edge line to its rounded corners');
+  assert.match(css, /\.hal0-lightbox-pic\s*\{[^}]*flex:\s*none/, 'and never shrinks below its picture when the stage overflows');
   assert.match(css, /\.hal0-lightbox-half\s*\{[^}]*width:\s*50%/, 'each half covers its side of the picture');
   assert.match(css, /\.hal0-lightbox-half::before\s*\{[^}]*width:\s*2px[^}]*background:\s*var\(--hal0-accent/, 'a 2px accent line along the edge');
   assert.match(css, /\.hal0-lightbox-half::before\s*\{[^}]*box-shadow:[^;]*var\(--hal0-accent/, 'with a glow');
@@ -202,6 +204,35 @@ test('clicking a console shot opens the overlay; halves, arrows and the keyboard
     assert.equal(s.open, 'true', 'and keeps it open');
     await page.mouse.click(box.x + 60, box.y + box.height - 20);
     assert.equal((await state()).open, 'false', 'clicking the backdrop closes');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('a long caption on a short viewport scrolls the stage and never clips the picture', skipBrowser, async () => {
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 360 } });
+    await page.goto(url, { waitUntil: 'networkidle' });
+    const shots = page.locator('figure.shot img[src*="/screenshots/"]');
+    // A caption that wraps past the room the picture leaves under itself.
+    await shots.nth(0).evaluate((img) => {
+      const cap = img.closest('figure').querySelector('figcaption');
+      cap.textContent = 'A caption long enough to wrap well past the room reserved under the picture. '.repeat(6);
+    });
+    await shots.nth(0).scrollIntoViewIfNeeded();
+    await shots.nth(0).click();
+    const overlayImg = page.locator('.hal0-lightbox img');
+    await overlayImg.evaluate((img) => img.complete || new Promise((done) => img.addEventListener('load', done, { once: true })));
+    const m = await page.evaluate(() => {
+      const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+      const stage = document.querySelector('.hal0-lightbox-stage');
+      return { scrolls: stage.scrollHeight > stage.clientHeight, frame: r('.hal0-lightbox-pic'), img: r('.hal0-lightbox img') };
+    });
+    assert.equal(m.scrolls, true, 'the stage scrolls');
+    assert.ok(m.frame.height >= m.img.height, `the frame (${m.frame.height}px) is not shorter than its picture (${m.img.height}px)`);
+    assert.ok(m.img.bottom <= m.frame.bottom + 1, 'the bottom of the picture is inside the frame');
   } finally {
     await browser.close();
   }

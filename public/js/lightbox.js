@@ -29,6 +29,7 @@
   let nextBtn = null;
   let halfPrev = null; // the left half of the picture: steps back
   let halfNext = null; // the right half: steps forward
+  const flashTimers = new WeakMap(); // half → the timer that ends its tap flash
   let items = []; // the page's screenshots in DOM order
   let index = -1;
   let lastFocus = null;
@@ -177,7 +178,8 @@
     step(delta);
     if (matchMedia('(hover: hover)').matches) return;
     half.classList.add('is-flash');
-    setTimeout(() => half.classList.remove('is-flash'), 350);
+    clearTimeout(flashTimers.get(half)); // a second tap restarts the flash
+    flashTimers.set(half, setTimeout(() => half.classList.remove('is-flash'), 350));
   }
 
   /**
