@@ -51,9 +51,9 @@ const FILLS = [
   },
   {
     kind: 'fallback',
-    eyebrow: 'self-hosted ai inference',
-    title: 'Your Strix Halo box, running real /v1/* inference',
-    subtitle: 'One command installs it. Slots, unified memory, an OpenAI-compatible API.',
+    eyebrow: 'hal0.dev',
+    title: 'Own Your Inference',
+    subtitle: 'Self-hosted local AI for AMD Strix Halo. Several models in named slots, one API.',
     meta: 'hal0.dev · Apache-2.0',
   },
 ];
@@ -201,4 +201,11 @@ test('wrapMonospace: truncation drops whole words, never half of one, before the
     lines: ['aaa bbb ccc', 'ddd eee…'],
     truncated: true,
   });
+});
+
+test('the default social card title fits on one line at the short size', () => {
+  const result = titleLayout('Own Your Inference');
+  assert.deepEqual(result.lines, ['Own Your Inference']);
+  assert.equal(result.fontSize, 62);
+  assert.equal(result.truncated, false);
 });

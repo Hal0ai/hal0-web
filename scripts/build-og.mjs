@@ -512,9 +512,9 @@ async function main() {
   // switch over deliberately.
   const fallbackPng = await renderOgCard({
     kind: 'fallback',
-    eyebrow: 'self-hosted ai inference',
-    title: 'Your Strix Halo box, running real /v1/* inference',
-    subtitle: 'Chat, embeddings, speech and images behind one OpenAI-compatible API. One command installs it.',
+    eyebrow: 'hal0.dev',
+    title: 'Own Your Inference',
+    subtitle: 'Self-hosted local AI for AMD Strix Halo. Several models in named slots, one API.',
     meta: 'hal0.dev · Apache-2.0',
   });
   const fallbackDest = resolve(ROOT, 'public/og/default.png');
