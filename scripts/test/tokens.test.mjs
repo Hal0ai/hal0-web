@@ -42,6 +42,8 @@ const NEW_ROOT = {
 const NEW_LIGHT = {
   '--hal0-accent-bg': '#fdf3d7',
   '--hal0-shadow-hover': '0 6px 20px rgba(0,0,0,0.10)',
+  '--hal0-ok-glow': 'rgba(26,127,55,0.30)',
+  '--hal0-warn-glow': 'rgba(138,90,0,0.30)',
 };
 
 for (const [name, value] of Object.entries(NEW_ROOT)) {

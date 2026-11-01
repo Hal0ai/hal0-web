@@ -130,6 +130,10 @@
 	--hal0-warn:      #8a5a00; --hal0-warn-soft: rgba(138, 90, 0, 0.10);   --hal0-warn-line: rgba(138, 90, 0, 0.30);
 	--hal0-err:       #cf222e; --hal0-err-soft:  rgba(207, 34, 46, 0.10);  --hal0-err-line:  rgba(207, 34, 46, 0.30);
 	--hal0-info:      #1f5fbf; --hal0-info-soft: rgba(31, 95, 191, 0.10);  --hal0-info-line: rgba(31, 95, 191, 0.30);
+	/* Live-state dot halos: the dark :root glows are pale and vanish on white, so
+	 * these reuse the light ok/warn hues above at the same 0.30 alpha as their -line tokens. */
+	--hal0-ok-glow:   rgba(26, 127, 55, 0.30);
+	--hal0-warn-glow: rgba(138, 90, 0, 0.30);
 	--hal0-dev-rocm:   #a32e2e;
 	--hal0-dev-vulkan: #1f5fbf;
 	--hal0-dev-npu:    #6b3fbf;
