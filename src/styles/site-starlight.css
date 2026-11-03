@@ -278,32 +278,36 @@
 	border-color: var(--hal0-ok-line);
 }
 
-/* ── tabs — the sub-nav idiom (hal0-site.css `.subnav`): mono lowercase
- * labels on a hairline, current tab underlined in amber with plain fg
- * text (amber stays reserved for the active marker, not the label). ── */
+/* ── tabs — match the WebUI `.slot-tab` (hal0 ui/src/dashboard.css):
+ * resting label --fg-3, hover --fg, active label in the accent over a 2px
+ * accent rule flush along the bottom edge, `color 0.12s ease`. ── */
 
 :is([data-docs], [data-blog], [data-longform]) .tablist-wrapper [role='tablist'] {
 	border-bottom: 1px solid var(--hal0-border);
 }
-/* Starlight draws the tab underline as a 2px box-shadow (`--sl-tab-color-
- * border`), not a border — override the same property, thinned to the
- * comp's 1px. */
+/* Starlight draws the tab underline as a box-shadow (`--sl-tab-color-
+ * border`). The wrapper clips overflow, so an outer shadow can't reach 2px
+ * below the 1px hairline; draw it inset and pull the tab down over the
+ * hairline instead (the `.tabs button` margin-bottom:-1px idiom). */
 :is([data-docs], [data-blog], [data-longform]) .tablist-wrapper [role='tab'] {
+	--sl-tab-color-border: transparent;
 	font-family: var(--hal0-font-mono);
 	font-size: 12px;
 	font-weight: 400;
 	text-transform: lowercase;
 	color: var(--hal0-fg-dim);
-	padding: 4px 14px 6px;
-	box-shadow: 0 1px 0 transparent;
+	padding: 4px 14px 7px;
+	margin-bottom: -1px;
+	box-shadow: inset 0 -2px 0 var(--sl-tab-color-border);
+	transition: color 0.12s ease;
 }
 :is([data-docs], [data-blog], [data-longform]) .tablist-wrapper [role='tab']:hover {
 	color: var(--hal0-fg);
 }
 :is([data-docs], [data-blog], [data-longform]) .tablist-wrapper [role='tab'][aria-selected='true'] {
-	color: var(--hal0-fg);
+	--sl-tab-color-border: var(--hal0-accent);
+	color: var(--hal0-accent);
 	font-weight: 400;
-	box-shadow: 0 1px 0 var(--hal0-accent);
 }
 
 /* ── Expressive Code frame vars ──
