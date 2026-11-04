@@ -436,9 +436,13 @@ const jsonLd = [dataset, breadcrumbList('Benchmarks', '/benchmarks/')];
     font-size: 12.5px;
     color: var(--fg-3);
     cursor: pointer;
+    transition: color 0.12s ease;
+  }
+  .tabs button:hover {
+    color: var(--fg);
   }
   .tabs button.on {
-    color: var(--fg);
+    color: var(--accent);
     border-bottom-color: var(--accent);
   }
 
