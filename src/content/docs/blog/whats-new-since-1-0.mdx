@@ -1,11 +1,11 @@
 ---
 title: "What Changed in hal0 Since 1.0: Runners & Profiles"
-description: "One name per runner, profiles that hold the whole tune, a 27B vision model as the default brain, and memory that never drops writes: hal0 since 1.0."
+description: "One name per runner, profiles that hold the whole tune, a 27B vision model as the default agent, and memory that never drops writes: hal0 since 1.0."
 date: 2026-10-15T12:00:00
 authors: hal0
 excerpt: >-
   One name per runner, config where the model holds facts and the profile holds
-  the tune, a 27B vision model as the default agent brain, memory that no longer
+  the tune, a 27B vision model as the default agent, memory that no longer
   drops writes, and updates that converge the whole system. A look at what hal0
   does now compared with the 1.0 GA.
 tags:
@@ -54,7 +54,7 @@ automatically.
 This is the biggest change to how you configure hal0. A model row records only
 facts about its file: path, architecture, native context, chat template,
 projector, whether it has MTP heads. A profile holds every tune: flags, context
-size, thinking, vision and MTP. A slot holds placement: device, layers,
+size, thinking, vision and speculation. A slot holds placement: device, layers,
 threads, port, runner, and which model and profile it runs.
 
 The practical result is that one model can run several ways. Put the same GGUF
@@ -69,17 +69,19 @@ cannot place safely is marked blocked, with the reason and the fix on its card.
 
 <Shot name="slot-card" alt="A slot card with a model picker, a profile picker and a context size chip" />
 
-<Shot name="profile-edit-drawer" alt="The profile editor: name, intent, runtime, context, thinking, vision, MTP and flags on one form" />
+<Shot name="profile-edit-drawer" alt="The profile editor: name, intent, runtime, context, thinking, vision, speculation and flags on one form" />
 
 ## A bigger default brain
 
-A fresh install on a box with a 32 GB or larger memory pool now seeds Qwen3.8
-27B (UD-Q4_K_XL, with vision) as the primary chat and agent model, at a 96K
-default context. Smaller boxes keep a 9B or 4B seed. hal0's own always-on
-steward model, the brain, is LFM2.5 2.6B, small enough to leave running next to
-whatever else you load.
+A fresh install on a box with a GPU lane and about 25 GB of spare memory pool
+now offers Qwen3.8 27B (UD-Q4_K_XL, with vision) as the agent model, and the
+seeded `agent` profile runs it at a 64K context — just above the bundled
+agent's 64,000-token floor. A box with less to spare is offered nothing;
+`HAL0_AGENT_MODEL` forces the build when you want it anyway. hal0's own
+always-on steward model, the brain, is LFM2.5 2.6B, small enough to leave
+running next to whatever else you load.
 
-The bundled Hermes agent moves to 0.19 with smart command approvals. When it
+The bundled Hermes agent runs v0.22.4 with smart command approvals. When it
 wants to run a flagged shell command, your own local agent model looks at it
 first. If that model does not clearly approve, Hermes falls back to asking you.
 You can switch between smart and manual in Settings, or with
@@ -87,7 +89,7 @@ You can switch between smart and manual in Settings, or with
 
 ## Memory you can trust
 
-The bundled Hindsight engine is on 1.0. More important is what changed around
+The bundled Hindsight engine is on 1.2. More important is what changed around
 it. Extraction used to run with defaults meant for a hosted API, 32 concurrent
 calls and 64000 tokens each, against a slot that serves one request at a time.
 On a slow box a write could return success and store nothing.
@@ -150,8 +152,8 @@ components and restarts slots whose runner image changed. Backups of anything
 it rewrites go to `/var/lib/hal0/backups/`, and `hal0 update --rollback` returns
 to the previous tree.
 
-<Aside type="caution" title="Upgrade floor: 1.3.0">
-Boxes older than 1.3.0 cannot jump straight to this release. Step through 1.3.0
+<Aside type="caution" title="Upgrade floor: 1.5.0">
+Boxes older than 1.5.0 cannot jump straight to this release. Step through 1.5.0
 first, or reinstall.
 </Aside>
 
