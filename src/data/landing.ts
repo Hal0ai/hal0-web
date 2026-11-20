@@ -390,6 +390,6 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Which GPUs and NPUs work?',
-    a: 'AMD Strix Halo iGPU on ROCm or Vulkan, plus the XDNA NPU through FastFlowLM. AMD Radeon RX 7000 on the same runner. NVIDIA through an opt-in CUDA runner, experimental. CPU-only for small models.',
+    a: 'AMD Strix Halo iGPU on ROCm or Vulkan, plus the XDNA NPU through FastFlowLM and, on the nightlies, through ggml-xdna, which runs any GGUF on the NPU. AMD Radeon RX 7000 on the same runner. NVIDIA through an opt-in CUDA runner, experimental. CPU-only for small models.',
   },
 ];
