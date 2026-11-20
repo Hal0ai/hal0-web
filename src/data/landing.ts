@@ -86,7 +86,7 @@ export const PRIVACY_FACTS: { title: string; body: string }[] = [
   },
   {
     title: 'No telemetry',
-    body: 'hal0\'s own code has no telemetry. Crash reporting exists, is off, and needs a key you supply. Benchmark bundles and diagnostics never upload on their own.',
+    body: 'hal0\'s own code has no telemetry. Crash reporting does not ship: there is nothing to switch on and no key to supply. Benchmark bundles and diagnostics never upload on their own.',
   },
   {
     title: 'No account',
