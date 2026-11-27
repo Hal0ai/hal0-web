@@ -85,14 +85,23 @@ test('the patch removed duplicate forum redirect route entries', { skip }, () =>
 	//   /docs                   -> the Docs category
 	//   /docs/<section>/ x5     -> each docs section's category
 	//   /first-run-guide        -> the Getting started category
+	//   /docs/operate/sentry    -> the Sentry topic (see below)
 	//
 	// (Troubleshooting has no hal0.dev ancestor to redirect from — it was
 	// created on the forum, so nothing ever linked /docs/troubleshooting/.)
-	const LANDING_REDIRECTS = 8;
+	//
+	// /docs/operate/sentry is the one that is not a category landing: the
+	// page was removed from the product repo (hal0 #3783), so the docs sync
+	// resolves no topic for it and the generated docs-redirects.json carries
+	// no entry. Its forum topic is still live, so the old path is kept as a
+	// hand-written redirect in astro.config.mjs — the same place
+	// /first-run-guide lives — and it still points at the forum, so it is
+	// counted with the rest.
+	const HAND_WRITTEN_FORUM_REDIRECTS = 9;
 	assert.equal(
 		forumRoutes.length,
-		Object.keys(redirects).length + Object.keys(kbRedirects).length + LANDING_REDIRECTS,
-		'expected one route per docs + kb article, plus the category landings',
+		Object.keys(redirects).length + Object.keys(kbRedirects).length + HAND_WRITTEN_FORUM_REDIRECTS,
+		'expected one route per docs + kb article, plus the hand-written forum redirects',
 	);
 });
 
