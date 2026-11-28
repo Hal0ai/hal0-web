@@ -1,0 +1,91 @@
+---
+/**
+ * DeviceShot: one dashboard capture, in the version that fits the screen.
+ *
+ * A capture of the dashboard at 1440px is unreadable in a 358px column, even
+ * opened in the lightbox. The synced set also has the same pages captured at
+ * tablet (834px) and phone (390px) width, so where one exists this shows it:
+ *
+ *   wider than 1100px   the desktop capture
+ *   601 to 1100px       the tablet capture, if there is one
+ *   600px and under     the phone capture, else the tablet one, else desktop
+ *
+ * Every variant is a real <Shot> with its own alt text, because the three
+ * pictures are not the same picture. CSS shows one and gives the rest
+ * `display: none`, which also keeps a lazy image from loading and keeps it out
+ * of the accessibility tree. public/js/lightbox.js reads `data-shot-variant`
+ * and leaves the hidden ones out of its gallery.
+ */
+import Shot from '../Shot.astro';
+
+interface Variant {
+  name: string;
+  alt: string;
+}
+interface Props {
+  desktop: Variant;
+  tablet?: Variant;
+  phone?: Variant;
+  caption?: string;
+}
+
+const { desktop, tablet, phone, caption } = Astro.props;
+---
+
+<div class:list={['dshot', { 'has-tablet': tablet, 'has-phone': phone }]}>
+  <div class="v v-desktop" data-shot-variant="desktop">
+    <Shot name={desktop.name} alt={desktop.alt} caption={caption} />
+  </div>
+  {tablet && (
+    <div class="v v-tablet" data-shot-variant="tablet">
+      <Shot name={tablet.name} alt={tablet.alt} caption={caption} />
+    </div>
+  )}
+  {phone && (
+    <div class="v v-phone" data-shot-variant="phone">
+      <Shot name={phone.name} alt={phone.alt} caption={caption} />
+    </div>
+  )}
+</div>
+
+<style>
+  .v-tablet,
+  .v-phone {
+    display: none;
+  }
+  .v :global(.shot) {
+    width: 100%;
+    margin: 0;
+  }
+  .v :global(img) {
+    width: 100%;
+    height: auto;
+  }
+  /* A portrait capture keeps a device's proportions: it is not stretched to the column. */
+  .v-tablet :global(.shot) {
+    max-width: 560px;
+    margin-inline: auto;
+  }
+  .v-phone :global(.shot) {
+    max-width: 320px;
+    margin-inline: auto;
+  }
+
+  @media (max-width: 1100px) {
+    .has-tablet .v-desktop {
+      display: none;
+    }
+    .has-tablet .v-tablet {
+      display: block;
+    }
+  }
+  @media (max-width: 600px) {
+    .has-phone .v-desktop,
+    .has-phone .v-tablet {
+      display: none;
+    }
+    .has-phone .v-phone {
+      display: block;
+    }
+  }
+</style>

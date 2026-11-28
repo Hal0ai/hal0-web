@@ -27,10 +27,10 @@ const LANDING_DATA = 'src/data/landing.ts';
 const TEAM_BOARD = 'src/components/landing/TeamBoard.astro';
 const SLOT_VERSUS = 'src/components/landing/SlotVersus.astro';
 const TOUR = 'src/components/landing/DashboardTour.astro';
+const DEVICE_SHOT = 'src/components/landing/DeviceShot.astro';
 const COMPARE_TABLE = 'src/components/landing/CompareTable.astro';
 const FAQ_COMPONENT = 'src/components/landing/Faq.astro';
 const RELEASE_TEASER = 'src/components/landing/ReleaseTeaser.astro';
-const BENCH = 'src/components/landing/BenchHighlights.astro';
 const HERMES_CARD = 'src/components/HermesCard.astro';
 const COPY_FILES = [PAGE, LANDING_DATA, TEAM_BOARD, SLOT_VERSUS, TOUR, COMPARE_TABLE, FAQ_COMPONENT, RELEASE_TEASER];
 
@@ -103,7 +103,7 @@ test('the first three sections stay free of product jargon', skipUnbuilt, () => 
 
 test('the technical layer is still on the page, lower down', skipUnbuilt, () => {
   const details = section('details');
-  for (const term of ['OpenAI-compatible', 'MCP', 'Benchmarks', 'llama.cpp']) {
+  for (const term of ['OpenAI-compatible', 'MCP', 'llama.cpp']) {
     assert.ok(details.includes(term), `the details band names ${term}`);
   }
   // The named comparison is behind a disclosure, closed by default.
@@ -114,7 +114,7 @@ test('the technical layer is still on the page, lower down', skipUnbuilt, () => 
 });
 
 test('sections run in story order, and old anchors still land somewhere', skipUnbuilt, () => {
-  const order = ['uses', 'slots', 'connected', 'agent', 'memory', 'privacy', 'models', 'tour', 'hardware', 'start', 'details', 'compare', 'benchmarks', 'releases', 'faq'];
+  const order = ['uses', 'slots', 'connected', 'agent', 'memory', 'privacy', 'models', 'tour', 'hardware', 'start', 'details', 'compare', 'releases', 'faq'];
   const at = order.map((id) => {
     const i = html.search(new RegExp(`<section[^>]*\\sid="${id}"`));
     assert.ok(i >= 0, `section #${id} is present`);
@@ -122,7 +122,7 @@ test('sections run in story order, and old anchors still land somewhere', skipUn
   });
   assert.deepEqual(at, [...at].sort((a, b) => a - b), 'section ids are in order');
   // Links published before this rewrite (README, forum, blog) keep working.
-  for (const id of ['idea', 'swap', 'wired', 'console', 'get', 'install', 'whats-new', 'roadmap', 'privacy', 'memory', 'hardware', 'compare', 'faq']) {
+  for (const id of ['idea', 'swap', 'wired', 'console', 'get', 'install', 'benchmarks', 'whats-new', 'roadmap', 'privacy', 'memory', 'hardware', 'compare', 'faq']) {
     assert.match(html, new RegExp(`\\sid="${id}"`), `#${id} still exists`);
   }
   const ids = [...main.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
@@ -176,12 +176,15 @@ test('site copy avoids the forbidden words, version numbers and em-dash asides',
   }
 });
 
-test('nothing from an untagged release is announced', async () => {
+test('nothing from an untagged release is announced', skipUnbuilt, () => {
   // The phone and tablet dashboard and the Origin check belong to the release after
-  // the latest tag. They may appear once that release is tagged, not before.
-  const copy = (await Promise.all(COPY_FILES.map(source))).map(copyOf).join('\n');
-  for (const term of [/works on a phone/i, /\bphone\b/i, /\btablet\b/i, /\bOrigin\b/, /bottom tab bar/i]) {
-    assert.doesNotMatch(copy, term, `copy mentions ${term}`);
+  // the latest tag. The page's words may not announce them before that release is tagged.
+  // This reads the rendered text, so alt text is not part of it: a capture taken at phone
+  // width has to be described as one, and the page shows those captures only because the
+  // whole capture set is of that release, which is why the page waits for its tag.
+  const text = visibleWords(main).join(' ');
+  for (const term of [/works on a phone/i, /\bphones?\b/i, /\btablets?\b/i, /\bOrigin\b/, /bottom tab bar/i]) {
+    assert.doesNotMatch(text, term, `the page's text mentions ${term}`);
   }
 });
 
@@ -292,9 +295,22 @@ test('the comparisons say what the research could and could not confirm', () => 
 
 // ── captures ────────────────────────────────────────────────────────────────
 
-test('every capture on the page is on disk and described', async () => {
+/** Every capture the page can show: each placed shot and its tablet and phone variants. */
+function allShots() {
   const { SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS, TOUR: stops } = data;
-  const shots = [SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS, ...stops.map((s) => ({ name: s.shot, alt: s.alt }))];
+  const placed = [
+    ...[SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS].map((s) => ({ ...s, where: 'beside the copy' })),
+    ...stops.map((s) => ({ name: s.shot, alt: s.alt, tablet: s.tablet, phone: s.phone, where: 'tour' })),
+  ];
+  return placed.flatMap((s) => [
+    { name: s.name, alt: s.alt, where: s.where, device: 'desktop' },
+    ...(s.tablet ? [{ ...s.tablet, where: s.where, device: 'tablet' }] : []),
+    ...(s.phone ? [{ ...s.phone, where: s.where, device: 'phone' }] : []),
+  ]);
+}
+
+test('every capture on the page is on disk and described', async () => {
+  const shots = allShots();
   for (const shot of shots) {
     assert.ok(await exists(`public/screenshots/${shot.name}.png`), `${shot.name}.png is on disk`);
     assert.ok(shot.alt.length >= 60, `${shot.name} has alt text that describes the picture`);
@@ -303,26 +319,52 @@ test('every capture on the page is on disk and described', async () => {
   assert.equal(new Set(shots.map((s) => s.name)).size, shots.length, 'no capture is shown twice');
 });
 
+test('a tablet or phone variant is a capture at that width, and says so', () => {
+  const widthOf = (name) => captureSet.images.find((i) => i.file === `${name}.png`).viewport;
+  const variants = allShots().filter((s) => s.device !== 'desktop');
+  assert.ok(variants.length >= 6, `the page has ${variants.length} device variants`);
+  for (const v of variants) {
+    assert.equal(widthOf(v.name), v.device === 'phone' ? '390×844' : '834×1112', `${v.name} is a ${v.device} capture`);
+    assert.match(v.alt, new RegExp(`on a ${v.device}\\b`), `${v.name}: the alt text says it is a ${v.device} capture`);
+    // The manifest marks two captures for docs use only, because the dashboard clips text in them.
+    const use = captureSet.images.find((i) => i.file === `${v.name}.png`).use;
+    assert.doesNotMatch(use, /^docs step \(/, `${v.name} is not one the manifest keeps out of promotion`);
+  }
+});
+
 test('captures with invented readings stay out of the hero and away from the claims', async () => {
-  const { SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS, TOUR: stops, TOUR_NOTE } = data;
-  // Beside the copy: no performance figures at all.
-  for (const shot of [SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS]) {
+  const { SHOT_CONNECTED, TOUR_NOTE } = data;
+  // Beside the copy: no performance figures at all, on any device.
+  for (const shot of allShots().filter((s) => s.where === 'beside the copy')) {
     assert.equal(figuresOf(shot.name), 'none', `${shot.name} sits beside a claim`);
   }
   // The hero is an illustration, not a capture.
   const page = await source(PAGE);
   const hero = page.slice(page.indexOf('<!-- 1. HERO -->'), page.indexOf('<!-- 2.'));
-  assert.ok(!hero.includes('<Shot'), 'no capture in the hero');
+  assert.ok(!hero.includes('<Shot') && !hero.includes('<DeviceShot'), 'no capture in the hero');
   assert.ok(hero.includes('<TeamBoard'), 'the hero picture is the labelled illustration');
   assert.match(await source(TEAM_BOARD), />illustration</, 'and it says it is one');
   // The tour may show them, because the point there is the page layout, and it says so.
-  if (stops.some((s) => figuresOf(s.shot) !== 'none')) {
+  if (allShots().some((s) => s.where === 'tour' && figuresOf(s.name) !== 'none')) {
     assert.match(TOUR_NOTE, /sample data/);
     assert.match(TOUR_NOTE, /not measurements/);
     assert.match(await source(TOUR), /\{TOUR_NOTE\}/, 'the note is rendered under the tour');
   }
   // The structured data's lead image carries no figures either.
   assert.match(page, /image: shotUrl\(SHOT_CONNECTED\.name\)/);
+  assert.equal(figuresOf(SHOT_CONNECTED.name), 'none');
+});
+
+test('one device variant shows at a time, and the lightbox leaves the others out', async () => {
+  const css = (await source(DEVICE_SHOT)).match(/<style>[\s\S]*<\/style>/)[0];
+  assert.match(css, /\.v-tablet,\s*\.v-phone \{\s*display: none;/, 'only the desktop capture shows by default');
+  assert.match(css, /@media \(max-width: 1100px\) \{\s*\.has-tablet \.v-desktop \{\s*display: none;/);
+  assert.match(css, /@media \(max-width: 600px\) \{\s*\.has-phone \.v-desktop,\s*\.has-phone \.v-tablet \{\s*display: none;/);
+  // A hidden variant must not be reachable by stepping through the lightbox.
+  const lightbox = await source('public/js/lightbox.js');
+  assert.match(lightbox, /closest\('\[data-shot-variant\]'\)/);
+  assert.match(lightbox, /getComputedStyle\(variant\)\.display !== 'none'/);
+  assert.match(await source(DEVICE_SHOT), /data-shot-variant="phone"/);
 });
 
 test('the tour is tabs with the right roles, and works without its script', async () => {
@@ -331,7 +373,8 @@ test('the tour is tabs with the right roles, and works without its script', asyn
   assert.match(tour, /role="tab"/);
   assert.match(tour, /role="tabpanel"/);
   assert.match(tour, /aria-controls=\{`tour-panel-\$\{stop\.key\}`\}/);
-  assert.match(tour, /<Shot\b/, 'captures go through src/components/Shot.astro');
+  assert.match(tour, /<DeviceShot\b/, 'captures go through DeviceShot, and through it src/components/Shot.astro');
+  assert.match(await source(DEVICE_SHOT), /<Shot\b/);
   assert.ok(!/<img\b/.test(tour), 'no bare screenshot <img>');
   // No panel is hidden in the markup: the script hides all but the first.
   assert.ok(!/<div class="stop"[^>]*\shidden/.test(tour), 'panels are visible until the script runs');
@@ -343,7 +386,8 @@ test('the tour is tabs with the right roles, and works without its script', asyn
 test('the built tour renders one panel and one picture per stop', skipUnbuilt, () => {
   const tour = section('tour');
   assert.equal((tour.match(/role="tabpanel"/g) ?? []).length, data.TOUR.length);
-  assert.equal((tour.match(/<picture\b/g) ?? []).length, data.TOUR.length);
+  const variants = data.TOUR.reduce((n, stop) => n + (stop.tablet ? 1 : 0) + (stop.phone ? 1 : 0), 0);
+  assert.equal((tour.match(/<picture\b/g) ?? []).length, data.TOUR.length + variants, 'one picture per stop and per device variant');
   assert.ok(tour.includes(data.TOUR_NOTE));
 });
 
@@ -479,15 +523,20 @@ test('shared blocks keep their context', async () => {
   const profiles = await source('src/components/landing/FeaturedProfiles.astro');
   assert.ok(profiles.includes('record.profile.summary'), 'summary is back');
   assert.ok(!profiles.includes('args.raw'), 'flags stay off');
-  assert.match(await source(BENCH), /fastest\??\.(id|name)/, 'the fastest figure names its model');
-  // The benchmark figures are from a dated sweep on an older build, and the page says so beside them.
+});
+
+test('benchmarks are off the page while that system is reworked', async () => {
   const page = await source(PAGE);
-  assert.match(page, /Sweep from \{ROSTER_DATE\} on hal0 0\.5 with the earlier runner\./);
+  assert.ok(!page.includes('BenchHighlights'), 'no benchmark highlights');
+  assert.ok(!/href="\/benchmarks/.test(page), 'no link to the benchmarks page');
+  const text = copyOf(await source(LANDING_DATA));
+  assert.ok(!text.includes('/benchmarks'), 'and none from the details band');
+  assert.doesNotMatch(text, /tok\/s|tokens per second/i, 'no speed figure anywhere in the copy');
 });
 
 // ── responsive and motion ───────────────────────────────────────────────────
 
-const CSS_FILES = [PAGE, TEAM_BOARD, SLOT_VERSUS, TOUR, COMPARE_TABLE, FAQ_COMPONENT];
+const CSS_FILES = [PAGE, TEAM_BOARD, SLOT_VERSUS, TOUR, DEVICE_SHOT, COMPARE_TABLE, FAQ_COMPONENT];
 
 /** `{ selector, body }` for each rule in a stylesheet, with media blocks flattened into `narrow`. */
 function rulesOf(text) {

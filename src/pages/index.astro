@@ -24,16 +24,15 @@ import HermesCard from '../components/HermesCard.astro';
 import TeamBoard from '../components/landing/TeamBoard.astro';
 import SlotVersus from '../components/landing/SlotVersus.astro';
 import DashboardTour from '../components/landing/DashboardTour.astro';
+import DeviceShot from '../components/landing/DeviceShot.astro';
 import CompareTable from '../components/landing/CompareTable.astro';
 import Faq from '../components/landing/Faq.astro';
 import ReleaseTeaser from '../components/landing/ReleaseTeaser.astro';
 import ForumTopics from '../components/landing/ForumTopics.astro';
 import FeaturedProfiles from '../components/landing/FeaturedProfiles.astro';
 import LatestWriting from '../components/landing/LatestWriting.astro';
-import BenchHighlights from '../components/landing/BenchHighlights.astro';
 import rawChangelog from '../data/changelog.md?raw';
 import releaseTags from '../data/release-tags.json';
-import { ROSTER_DATE } from '../data/model-roster';
 import {
   AGENT_NOTE,
   AGENT_POINTS,
@@ -248,7 +247,7 @@ const faqPage = {
     <section class="sec alt" id="memory">
       <div class="lp-wrap split flip">
         <div class="frame">
-          <Shot name={SHOT_MEMORY.name} alt={SHOT_MEMORY.alt} caption={SHOT_MEMORY.caption} />
+          <DeviceShot desktop={SHOT_MEMORY} tablet={SHOT_MEMORY.tablet} phone={SHOT_MEMORY.phone} caption={SHOT_MEMORY.caption} />
         </div>
         <div>
           <p class="tag">Built-in memory</p>
@@ -321,7 +320,7 @@ const faqPage = {
             ))}
           </ul>
           <div class="frame crop-top">
-            <Shot name={SHOT_MODELS.name} alt={SHOT_MODELS.alt} caption={SHOT_MODELS.caption} />
+            <DeviceShot desktop={SHOT_MODELS} tablet={SHOT_MODELS.tablet} phone={SHOT_MODELS.phone} caption={SHOT_MODELS.caption} />
           </div>
         </div>
       </div>
@@ -464,23 +463,16 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 14. BENCHMARKS + RELEASES -->
-    <div class="two-up-wrap">
-      <div class="lp-wrap two-up">
-        <section id="benchmarks">
-          <BenchHighlights />
-          <p class="bench-note">
-            Sweep from {ROSTER_DATE} on hal0 0.5 with the earlier runner.
-          </p>
-        </section>
-        <section id="releases" class="rel-col">
-          <!-- Old links to /#whats-new and /#roadmap land on the release that replaced them. -->
-          <span id="whats-new"></span>
-          <span id="roadmap"></span>
-          <ReleaseTeaser />
-        </section>
+    <!-- 14. RELEASES. Benchmarks are hidden site-wide while that system is reworked;
+         old links to /#benchmarks, /#whats-new and /#roadmap land here. -->
+    <section class="sec" id="releases">
+      <span id="benchmarks"></span>
+      <span id="whats-new"></span>
+      <span id="roadmap"></span>
+      <div class="lp-wrap narrow">
+        <ReleaseTeaser />
       </div>
-    </div>
+    </section>
 
     <!-- 15. FAQ -->
     <section class="sec alt" id="faq">
@@ -690,8 +682,7 @@ const faqPage = {
   .sec {
     padding-block: 104px;
   }
-  .sec[id],
-  .two-up section[id] {
+  .sec[id] {
     scroll-margin-top: 64px;
   }
   .sec > span[id] {
@@ -821,8 +812,8 @@ const faqPage = {
     max-width: none;
     margin: -10.4% 0 0 -21.5%;
   }
-  /* A tall close-up: show its top. */
-  .frame.crop-top :global(img) {
+  /* A tall close-up: show its top. Only the desktop capture: the tablet and phone ones keep their shape. */
+  .frame.crop-top :global(.v-desktop img) {
     aspect-ratio: 1596 / 1300;
     object-fit: cover;
     object-position: top;
@@ -1082,7 +1073,7 @@ const faqPage = {
   /* 12. Details */
   .details {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
   }
   .details a {
@@ -1195,28 +1186,6 @@ const faqPage = {
     color: var(--hal0-fg-dim);
   }
 
-  /* 14. Benchmarks and releases. BenchHighlights brings 52px of its own top
-   * padding, so the wrapper gives less and the release column matches it. */
-  .two-up-wrap {
-    padding-block: 44px 96px;
-    border-top: 1px solid var(--hal0-border);
-  }
-  .two-up {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 32px;
-    align-items: start;
-  }
-  .rel-col {
-    padding-top: 52px;
-  }
-  .bench-note {
-    margin: 10px 0 0;
-    font-family: var(--hal0-font-mono);
-    font-size: 11px;
-    color: var(--hal0-fg-dim);
-  }
-
   /* 16. Community. The sections only pad their tops. */
   .community {
     padding-bottom: 96px;
@@ -1261,24 +1230,17 @@ const faqPage = {
       padding-block: 72px;
     }
     .uses,
-    .facts,
-    .details {
+    .facts {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .wins,
     .hw,
     .steps,
-    .two-up {
+    .details {
       grid-template-columns: minmax(0, 1fr);
     }
     .swipe-hint {
       display: block;
-    }
-    .two-up-wrap {
-      padding-block: 12px 64px;
-    }
-    .rel-col {
-      padding-top: 20px;
     }
     .community {
       padding-bottom: 64px;

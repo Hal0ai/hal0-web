@@ -186,8 +186,16 @@ export const MODEL_KINDS: { title: string; body: string; examples: string }[] = 
   },
 ];
 
-/** A dashboard capture placed in a section. `name` is the file stem in public/screenshots/. */
-export type LandingShot = { name: string; alt: string; caption: string };
+/** One capture: `name` is the file stem in public/screenshots/. */
+export type ShotVariant = { name: string; alt: string };
+
+/**
+ * A dashboard capture placed in a section, with the same page captured at tablet
+ * and phone width where the set has one (see DeviceShot.astro for which width
+ * shows which). A variant shows the same page as the desktop capture, never a
+ * different one, so the copy beside it stays true on every screen.
+ */
+export type LandingShot = ShotVariant & { caption: string; tablet?: ShotVariant; phone?: ShotVariant };
 
 /**
  * The captures beside the copy. Each must carry no performance figures
@@ -203,12 +211,24 @@ export const SHOT_MEMORY: LandingShot = {
   name: 'closeup-memory-health',
   alt: 'The Memory page of the hal0 dashboard on its Health tab, reading "Nothing needs attention", with the memory engine and its two banks listed below',
   caption: 'The Memory page tells you in a sentence whether anything needs you.',
+  phone: {
+    name: 'phone-memory-health',
+    alt: 'The Memory page of the hal0 dashboard on a phone, on its Health tab, reading "Nothing needs attention" with the four things it watches marked clear',
+  },
 };
 
 export const SHOT_MODELS: LandingShot = {
   name: 'closeup-model-catalog-rows',
   alt: 'The model catalogue in the hal0 dashboard: chat, coding, embedding and speech models listed with their sizes and the slot each one is loaded in, with search and filters above',
   caption: 'The model catalogue: what is in use, what is installed and what you can add.',
+  tablet: {
+    name: 'tablet-models',
+    alt: 'The model catalogue in the hal0 dashboard on a tablet: models listed with their sizes and the slot each one is loaded in, with search and filters above',
+  },
+  phone: {
+    name: 'phone-models',
+    alt: 'The model catalogue in the hal0 dashboard on a phone: models listed one under another with their sizes and the slot each one is loaded in',
+  },
 };
 
 export type TourStop = {
@@ -220,6 +240,9 @@ export type TourStop = {
   link: { label: string; href: string };
   shot: string;
   alt: string;
+  /** The same page at tablet and phone width, where the set has it. */
+  tablet?: ShotVariant;
+  phone?: ShotVariant;
 };
 
 /**
@@ -241,6 +264,14 @@ export const TOUR: TourStop[] = [
     link: { label: 'Tour the dashboard', href: '/docs/guides/dashboard-and-settings/' },
     shot: 'dashboard-overview',
     alt: 'The Overview page of the hal0 dashboard: a memory bar split by model, an approval waiting in the Needs-you inbox, a chart and table of what each slot is serving, and the Agents card with delegated tasks',
+    tablet: {
+      name: 'tablet-overview',
+      alt: 'The Overview page of the hal0 dashboard on a tablet: a memory bar split by model, an approval waiting in the Needs-you inbox, and a chart and table of what each slot is serving',
+    },
+    phone: {
+      name: 'phone-overview',
+      alt: 'The Overview page of the hal0 dashboard on a phone: the memory bar, an approval waiting under Needs you, the start of the Serving-now chart, and the tab bar along the bottom',
+    },
   },
   {
     key: 'slots',
@@ -255,6 +286,11 @@ export const TOUR: TourStop[] = [
     link: { label: 'Manage slots', href: '/docs/guides/manage-slots/' },
     shot: 'slots-inference',
     alt: 'The Slots page of the hal0 dashboard: gauges across the top, a memory bar, slot cards each with a model menu, and a rail listing every slot by device',
+    // No phone variant: the set's phone capture of this page is marked for docs use only.
+    tablet: {
+      name: 'tablet-slots',
+      alt: 'The Slots page of the hal0 dashboard on a tablet: gauges, a memory bar, and slot cards each with a model menu',
+    },
   },
   {
     key: 'agents',
@@ -311,6 +347,10 @@ export const TOUR: TourStop[] = [
     link: { label: 'About stacks', href: '/docs/concepts/stacks/' },
     shot: 'stacks-tab',
     alt: 'The Stacks tab of the hal0 dashboard showing the active "Daily driver" stack with its chat, coding, embedding and image slots and the model in each',
+    phone: {
+      name: 'phone-slots-stacks',
+      alt: 'The Stacks tab of the hal0 dashboard on a phone: the active "Daily driver" stack with its slots listed one under another',
+    },
   },
 ];
 
@@ -365,13 +405,6 @@ export const DETAILS: { icon: string; title: string; body: string; link: string;
     body: 'hal0’s agent, memory and admin tools are MCP servers, so Claude Code, Codex and other MCP clients can connect with a key you can revoke. You can install extra MCP servers too; the built-in agents cannot call those yet.',
     link: 'Connect over MCP',
     href: '/docs/guides/connect-mcp/',
-  },
-  {
-    icon: 'lucide:gauge',
-    title: 'Benchmarks',
-    body: 'Decode and prefill speeds per model, measured on the reference machine, with the date and build of the sweep.',
-    link: 'See the leaderboard',
-    href: '/benchmarks/',
   },
   {
     icon: 'lucide:boxes',

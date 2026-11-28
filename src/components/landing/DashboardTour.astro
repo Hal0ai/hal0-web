@@ -3,7 +3,8 @@
  * DashboardTour: the dashboard, one tab per page, with a real capture in each.
  *
  * Stops come from TOUR in src/data/landing.ts and every capture goes through
- * <Shot>, so it gets AVIF and WebP, the right size, and the lightbox. Several
+ * <DeviceShot>, which shows the tablet or phone capture of the same page where
+ * the set has one, and through it <Shot> (AVIF, WebP, the right size, the lightbox). Several
  * captures carry sample readings; TOUR_NOTE under the panels says so, and the
  * tour is kept away from the benchmark figures.
  *
@@ -12,7 +13,7 @@
  * hidden by the script, not in the markup.
  */
 import { Icon } from 'astro-icon/components';
-import Shot from '../Shot.astro';
+import DeviceShot from './DeviceShot.astro';
 import { TOUR, TOUR_NOTE } from '../../data/landing';
 ---
 
@@ -44,7 +45,7 @@ import { TOUR, TOUR_NOTE } from '../../data/landing';
         <a class="stop-link" href={stop.link.href}>{stop.link.label} →</a>
       </div>
       <div class="stop-shot">
-        <Shot name={stop.shot} alt={stop.alt} />
+        <DeviceShot desktop={{ name: stop.shot, alt: stop.alt }} tablet={stop.tablet} phone={stop.phone} />
       </div>
     </div>
   ))}
@@ -186,14 +187,8 @@ import { TOUR, TOUR_NOTE } from '../../data/landing';
     text-decoration: underline;
   }
   .stop-shot :global(.shot) {
-    width: 100%;
-    margin: 0;
     border-radius: 12px;
     box-shadow: 0 30px 80px -40px var(--hal0-accent-glow);
-  }
-  .stop-shot :global(img) {
-    width: 100%;
-    height: auto;
   }
   .tour-note {
     margin: 22px 0 0;
