@@ -38,15 +38,28 @@ const data = await import(new URL(LANDING_DATA, root));
 const captureSet = JSON.parse(await source('src/data/screenshots.json'));
 const figuresOf = (name) => captureSet.images.find((i) => i.file === `${name}.png`)?.figures;
 
+// Remove every match, and again until the text stops changing, so that taking one
+// block out cannot leave a new one behind (`<scr<script></script>ipt>`).
+function removeAll(text, pattern) {
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(pattern, '');
+  } while (text !== previous);
+  return text;
+}
+
 // What a reader can see: drop CSS (line-height: 1.5 is not a version), scripts
-// and comments (a doc path is not a claim).
-const copyOf = (text) =>
-  text
-    .replace(/<style[\s\S]*?<\/style>/g, '')
-    .replace(/<script[\s\S]*?<\/script>/g, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '');
+// and comments (a doc path is not a claim). The tag patterns take any letter case
+// and a closing tag written with a space or an attribute.
+const NOT_COPY = [
+  /<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi,
+  /<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi,
+  /<!--[\s\S]*?--!?>/g,
+  /\/\*[\s\S]*?\*\//g,
+  /^\s*\/\/.*$/gm,
+];
+const copyOf = (text) => NOT_COPY.reduce(removeAll, text);
 
 function visibleWords(fragment) {
   return copyOf(fragment)
@@ -431,8 +444,8 @@ test('the install command is the one from the docs, shown once with a copy butto
   const command = 'curl -fsSL https://hal0.dev/install.sh | sudo bash';
   assert.ok((await source(PAGE)).includes(`const INSTALL_COMMAND = '${command}';`));
   const start = section('start');
-  assert.ok(start.includes(command.replace('|', '|')), 'the command is in the start section');
-  assert.match(start, new RegExp(`data-copy="${command.replace(/[|.]/g, '\\$&')}"`));
+  assert.ok(start.includes(command), 'the command is in the start section');
+  assert.ok(start.includes(`data-copy="${command}"`), 'and it is what the copy button copies');
   assert.match(start, /href="\/docs\/getting-started\/install\/"/, 'with the install guide beside it');
   assert.match(start, /href="\/docs\/getting-started\/beginners-guide\/"/, 'and the beginner’s guide');
 });
