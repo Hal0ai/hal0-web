@@ -10,6 +10,9 @@
 ## Key pages
 
 - [Home](https://hal0.dev/): what hal0 is and how it fits together
+- [How slots work](https://hal0.dev/slots): a named seat for each model, several loaded at once, and what happens when you swap one
+- [How memory works](https://hal0.dev/memory): how conversations become facts kept on your own box, and who can use them
+- [How to run agents](https://hal0.dev/agents): the Hermes agent, approvals, the task board and handing it work from another machine
 - [Profiles](https://hal0.dev/profiles): community llama.cpp flag sets for local models, with the numbers they produced
 - [Releases](https://hal0.dev/releases): every hal0 release, newest first, with install and upgrade commands
 - [Blog](https://hal0.dev/blog): release write-ups and field notes on running local models at home

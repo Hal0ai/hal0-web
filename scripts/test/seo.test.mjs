@@ -122,7 +122,7 @@ function headProblems(html) {
 
 test('the build contains the pages this suite expects to cover', { skip }, () => {
 	const routes = new Set(pages.map((p) => p.route));
-	for (const r of ['/', '/404', '/profiles/', '/profiles/submit/', '/contributing/', '/releases/', '/blog/', '/blog/whats-new-since-1-0/']) {
+	for (const r of ['/', '/404', '/slots/', '/memory/', '/agents/', '/profiles/', '/profiles/submit/', '/contributing/', '/releases/', '/blog/', '/blog/whats-new-since-1-0/']) {
 		assert.ok(routes.has(r), `${r} was built`);
 	}
 	assert.equal(routes.has('/benchmarks/'), !BENCHMARKS_HIDDEN, 'the benchmarks route follows src/pages/benchmarks.astro');
@@ -181,7 +181,7 @@ const ORG_ID = 'https://hal0.dev/#org';
 const WEBSITE_ID = 'https://hal0.dev/#website';
 
 // Inner pages that must carry a Home > Page breadcrumb.
-const BREADCRUMB_PAGES = [...(BENCHMARKS_HIDDEN ? [] : ['/benchmarks/']), '/profiles/', '/profiles/submit/', '/contributing/', '/releases/'];
+const BREADCRUMB_PAGES = [...(BENCHMARKS_HIDDEN ? [] : ['/benchmarks/']), '/slots/', '/memory/', '/agents/', '/profiles/', '/profiles/submit/', '/contributing/', '/releases/'];
 
 for (const { route, html } of marketing) {
 	test(`organization and website nodes: ${route}`, { skip }, () => {

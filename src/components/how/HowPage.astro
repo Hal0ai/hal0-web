@@ -1,0 +1,102 @@
+---
+/**
+ * The shared frame of the three "how it works" pages (/slots/, /memory/,
+ * /agents/): a page header with a picture, the article with a sticky list of
+ * its sections, and cards to the other two pages and to the install step.
+ *
+ * Each page explains how one thing works in plain words, shows the dashboard,
+ * states the limits, gives the first commands and then hands over to the docs.
+ *
+ * Slots: `hero` (the picture beside the title) and the default slot (the
+ * article's <section class="how-sec" id="..."> blocks). Every id in `toc` must
+ * be the id of one of those sections; scripts/test/how-pages.test.mjs checks it.
+ */
+import { Icon } from 'astro-icon/components';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import { HOW_CAPTURE_NOTE, HOW_KEYS, HOW_META, HOW_PAGES, type HowKey } from '../../data/how-pages.ts';
+import { breadcrumbList } from '../../lib/seo.ts';
+import '../../styles/site-data.css';
+import '../../styles/site-how.css';
+
+interface Props {
+  page: HowKey;
+  /** <title> and og:title. 60 characters at most. */
+  title: string;
+  /** Meta description. 50 to 155 characters. */
+  description: string;
+  /** The paragraph under the h1. */
+  lede: string;
+  /** The article's sections, for the list on the right: [id, label]. */
+  toc: [string, string][];
+}
+
+const { page, title, description, lede, toc } = Astro.props;
+const self = HOW_PAGES[page];
+const others = HOW_KEYS.filter((key) => key !== page).map((key) => HOW_PAGES[key]);
+---
+
+<MarketingLayout title={title} description={description} jsonLd={[breadcrumbList(self.heading, self.href)]}>
+  <div class="how" data-how={page}>
+    <header class="how-hero">
+      <div class="how-wrap how-hero-grid">
+        <div>
+          <p class="how-crumb"><a href="/">hal0</a><span>/</span><span>how it works</span><span>/</span><b>{page}</b></p>
+          <h1>{self.heading}</h1>
+          <p class="how-lede">{lede}</p>
+          <p class="how-meta">
+            {HOW_META.map((item) => <span><Icon name="lucide:check" />{item}</span>)}
+          </p>
+        </div>
+        <div><slot name="hero" /></div>
+      </div>
+    </header>
+
+    <div class="how-wrap how-body">
+      <article>
+        <slot />
+        <p class="how-fine">{HOW_CAPTURE_NOTE}</p>
+      </article>
+      <aside class="how-toc" aria-label="On this page">
+        <p class="how-toc-h">On this page</p>
+        <ul>
+          {toc.map(([id, label]) => <li><a href={`#${id}`}>{label}</a></li>)}
+        </ul>
+      </aside>
+    </div>
+
+    <nav class="how-next" aria-label="More on how hal0 works">
+      <div class="how-wrap">
+        <h2>Keep going</h2>
+        <div class="how-next-grid">
+          {others.map((other) => (
+            <a href={other.href}>
+              <span class="ic"><Icon name={other.icon} /></span>
+              <span class="t">{other.heading}</span>
+              <span class="d">{other.teaser}</span>
+              <span class="go">Read →</span>
+            </a>
+          ))}
+          <a href="/#start">
+            <span class="ic"><Icon name="lucide:download" /></span>
+            <span class="t">Install hal0</span>
+            <span class="d">One command on a Linux machine. The chat app, the agent and the memory come with it.</span>
+            <span class="go">Get started →</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+  </div>
+
+  <script is:inline>
+    (() => {
+      document.querySelectorAll('.how button[data-copy]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(btn.getAttribute('data-copy') || ''); } catch {}
+          const original = btn.textContent;
+          btn.textContent = 'copied';
+          setTimeout(() => { btn.textContent = original; }, 1400);
+        });
+      });
+    })();
+  </script>
+</MarketingLayout>
