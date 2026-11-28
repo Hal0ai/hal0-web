@@ -2,8 +2,8 @@
   "source": {
     "repo": "Hal0ai/hal0",
     "path": "docs/screenshots",
-    "ref": "docs/website-screenshots",
-    "commit": "ff40390333375403d279f97404082cfe1ea1aeee"
+    "ref": "main",
+    "commit": "9e9edade295ead35b3f8617ef04725b851f1c3d3"
   },
   "deviceScaleFactor": 2,
   "images": [
