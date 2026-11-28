@@ -89,6 +89,18 @@ export const DENIED_FLAGS = {
 };
 
 /**
+ * Splits a flag string on whitespace the way a shell would, keeping a
+ * single- or double-quoted value in one token. A token that opens with a
+ * quote is a value, so text inside it is never read as a flag.
+ *
+ * @param {string} raw
+ * @returns {string[]}
+ */
+export function flagTokens(raw) {
+  return typeof raw === 'string' ? (raw.match(/'[^']*'|"[^"]*"|\S+/g) ?? []) : [];
+}
+
+/**
  * The flags in a llama-server flag string that hal0 refuses in a profile.
  * A token is a flag when it starts with `-` and is not a negative number;
  * `--flag=value` and `_` for `-` are read the way llama.cpp reads them.
@@ -99,7 +111,7 @@ export const DENIED_FLAGS = {
 export function deniedFlags(raw) {
   if (typeof raw !== 'string') return [];
   const found = [];
-  for (const tok of raw.trim().split(/\s+/)) {
+  for (const tok of flagTokens(raw)) {
     if (!tok.startsWith('-') || /^-\d/.test(tok)) continue;
     const name = tok.split('=')[0].replace(/_/g, '-');
     if (Object.hasOwn(DENIED_FLAGS, name)) found.push({ flag: tok, reason: DENIED_FLAGS[name] });
@@ -134,9 +146,7 @@ export const GITHUB_URL_WARN_LENGTH = 8000;
  */
 export function countFlags(raw) {
   if (typeof raw !== 'string' || raw.trim() === '') return 0;
-  return raw
-    .trim()
-    .split(/\s+/)
+  return flagTokens(raw)
     .filter((tok) => tok.startsWith('-') && tok !== '-' && !/^-\d/.test(tok)).length;
 }
 
@@ -212,7 +222,8 @@ const HISTORY_ITEM_KEYS = ['v', 'date', 'note'];
 export function collectSchemaIssues(parsed) {
   const issues = [];
   const add = (path, kind, message) => issues.push({ path, kind, message });
-  const isTable = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
+  // A TOML date parses to a Date, which is an object but not a table.
+  const isTable = (v) => v != null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date);
 
   const addUnknownKeys = (obj, allowed, prefix) => {
     if (!isTable(obj)) return;
@@ -315,7 +326,10 @@ export function collectSchemaIssues(parsed) {
   addUnknownKeys(runtime, RUNTIME_KEYS, 'runtime');
   if (runtime.family === undefined) add('runtime.family', 'missing', 'runtime.family: required');
   requireOneOf(runtime, 'family', 'runtime.family', RUNTIME_FAMILIES);
-  if (runtime.min_hal0 !== undefined && !MIN_HAL0_PATTERN.test(String(runtime.min_hal0))) {
+  if (
+    runtime.min_hal0 !== undefined &&
+    (typeof runtime.min_hal0 !== 'string' || !MIN_HAL0_PATTERN.test(runtime.min_hal0))
+  ) {
     add(
       'runtime.min_hal0',
       'invalid',
@@ -353,7 +367,13 @@ export function collectSchemaIssues(parsed) {
   }
 
   if (isTable(parsed.tune) && profile.seed !== true) {
-    const settings = Object.keys(tune).filter((k) => TUNE_KEYS.includes(k) && !TUNE_LABEL_KEYS.includes(k));
+    // A blank flags string sets nothing, so it does not count.
+    const settings = Object.keys(tune).filter(
+      (k) =>
+        TUNE_KEYS.includes(k) &&
+        !TUNE_LABEL_KEYS.includes(k) &&
+        !(k === 'flags' && typeof tune.flags === 'string' && tune.flags.trim() === '')
+    );
     if (settings.length === 0) {
       add('tune', 'missing', 'tune: set at least one of flags, ctx_size, enable_thinking, vision, speculation, runner');
     }

@@ -263,7 +263,7 @@ const description =
         <p class="site-body" style="font-size:14px">{profile.summary}</p>
 
         <div class="dr-actions">
-          {!seed && (
+          {!seed && !isReservedSlug(profile.slug) && (
             <a class="btn" href={envelopePath(profile.slug)} download={`${profile.slug}.hal0profile.json`}>
               download .hal0profile.json
             </a>

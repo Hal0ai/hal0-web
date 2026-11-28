@@ -97,6 +97,10 @@ if (root) {
     if (override) {
       if (/^\s*flags\s*=/m.test(text)) {
         text = text.replace(/^(\s*flags\s*=\s*).*$/m, (_m, p1) => `${p1}${JSON.stringify(override)}`);
+      } else if (/^\s*\[tune\]\s*$/m.test(text)) {
+        // A tune with only typed settings has no flags line to replace, so
+        // the override becomes the first key of the table.
+        text = text.replace(/^(\s*\[tune\]\s*)$/m, (_m, p1) => `${p1}\nflags = ${JSON.stringify(override)}`);
       }
     }
     return text;

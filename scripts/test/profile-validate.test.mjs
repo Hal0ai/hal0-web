@@ -383,3 +383,30 @@ test('githubSubmitUrl builds a pre-filled new-file URL and flags overlength', ()
   assert.match(huge.fallbackUrl, /^https:\/\/github\.com\/Hal0ai\/hal0-profiles\/new\/main\?filename=/);
   assert.doesNotMatch(huge.fallbackUrl, /value=/);
 });
+
+test('a flag name inside a quoted value is a value, not a flag', () => {
+  const flags = `-fa auto --chat-template-kwargs '{"note": "use -ngl 99"}' --grammar "root ::= -t"`;
+  assert.deepEqual(deniedFlags(flags), []);
+  assert.equal(countFlags(flags), 3);
+  assert.equal(deniedFlags(`${flags} -ngl 99`).length, 1);
+});
+
+test('a date or a list where a table or a string belongs is refused, not thrown on', () => {
+  const dateTune = VALID_TOML.replace(/\[tune\][\s\S]*?\n\n/, '').replace('schema = 2\n', 'schema = 2\ntune = 2026-11-28\n');
+  const r1 = validateProfileToml(dateTune);
+  assert.equal(r1.state, 'schema-error');
+  assert.ok(r1.issues.some((i) => i.path === 'tune'));
+
+  for (const bad of ['min_hal0 = ["1.8.3"]', 'min_hal0 = { version = "1.8.3" }']) {
+    const result = validateProfileToml(withField(VALID_TOML, 'min_hal0 = "1.8.3"', bad));
+    assert.equal(result.state, 'schema-error', bad);
+    assert.equal(result.primary.path, 'runtime.min_hal0', bad);
+  }
+});
+
+test('a blank flags string is not a setting', () => {
+  const blank = VALID_TOML.replace(FLAGS_LINE, 'flags = "   "\n').replace('ctx_size = 65536\n', '').replace('vision = "off"\n', '');
+  const result = validateProfileToml(blank);
+  assert.equal(result.state, 'missing-fields');
+  assert.deepEqual(result.missing.map((m) => m.key), ['tune']);
+});
