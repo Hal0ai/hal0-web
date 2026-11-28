@@ -4,8 +4,9 @@
 //
 // They sit between the landing page and the docs on the forum. Four things are
 // pinned here:
-//   1. the wiring: the landing page links to each one, each links to the other
-//      two and to the install step, and all three are indexable;
+//   1. the wiring: the landing page and the footer link to each one, each
+//      links to the other two and to the install step, and all three are
+//      indexable;
 //   2. the mechanics: one h1, a contents list that matches the sections, docs
 //      links that resolve, pictures with alt text;
 //   3. the commands: every command a reader can copy is on a list here, beside
@@ -105,6 +106,35 @@ test('each page is indexable, with its own canonical URL, and is in the sitemap'
     titles.add(html.match(/<title>([^<]*)<\/title>/)?.[1]);
   }
   assert.equal(titles.size, HOW_KEYS.length, 'three different titles');
+});
+
+test('the footer has a "how it works" group with the three pages, in the manifest order', async () => {
+  const nav = JSON.parse(await source('src/data/nav.json'));
+  const group = nav.footerColumns.find((col) => col.heading === 'how it works');
+  assert.ok(group, 'nav.json has a "how it works" footer column');
+  assert.deepEqual(group.links.map((l) => l.href), HOW_KEYS.map((key) => HOW_PAGES[key].href));
+  assert.deepEqual(group.links.map((l) => l.label), HOW_KEYS, 'each link is named after its page');
+  assert.ok(group.links.every((l) => !l.hidden && !l.external), 'the links are shown and stay on the site');
+});
+
+test('the footer grid has a track for every group in nav.json', async () => {
+  // The grid used to say "3". A fourth group then wrapped under the brand.
+  const footer = await source('src/components/SiteFooter.astro');
+  assert.match(footer, /class="ftr-cols" style=\{`--ftr-n: \$\{footerColumns\.length\}`\}/);
+  const css = await source('src/styles/site.css');
+  assert.match(css, /grid-template-columns:\s*1\.4fr repeat\(var\(--ftr-n, \d\), minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(css, /\.ftr-cols\s*\{[^}]*repeat\(\d/, 'no hard-coded column count');
+});
+
+test('the footer of a built page links to all three', skipUnbuilt, async () => {
+  for (const path of ['dist/client/index.html', builtPathOf('slots')]) {
+    const footer = (await source(path)).match(/<footer[^>]*data-site-footer[^>]*>[\s\S]*?<\/footer>/)?.[0] ?? '';
+    const hrefs = hrefsOf(footer);
+    for (const key of HOW_KEYS) {
+      assert.ok(hrefs.includes(HOW_PAGES[key].href), `${path}: the footer links to ${HOW_PAGES[key].href}`);
+    }
+    assert.match(footer, /style="--ftr-n: ?4;?"/, `${path}: four link groups`);
+  }
 });
 
 test('llms.txt lists the three pages', async () => {
