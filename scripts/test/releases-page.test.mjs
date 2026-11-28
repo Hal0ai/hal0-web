@@ -220,12 +220,20 @@ test('Highlights, Breaking, Migrations and Security render whole in every entry'
     const slug = chunk.match(/id="([^"]+)"/)?.[1];
     const v = parsed.versions.find((x) => x.slug === slug);
     const body = chunk.slice(0, chunk.indexOf('</details>'));
+    // An entry can carry the same heading twice (the changelog has had two
+    // "### Migrations" under one release). The page renders each under its own
+    // heading, so the Nth section of a name is checked against the Nth heading
+    // of that name, not against the first one every time.
+    const seen = new Map();
     for (const section of v.sections) {
       const title = section.title.trim().toLowerCase();
       if (!['highlights', 'breaking', 'migrations', 'security'].includes(title)) continue;
       const expected = topLevelCount(section.html);
       if (expected === 0) continue;
-      const at = body.search(new RegExp(`<h4[^>]*>${section.title.trim()}</h4>`));
+      const nth = seen.get(title) ?? 0;
+      seen.set(title, nth + 1);
+      const headings = [...body.matchAll(new RegExp(`<h4[^>]*>${section.title.trim()}</h4>`, 'g'))];
+      const at = headings[nth]?.index ?? -1;
       if (at === -1) continue; // the newest entry's Highlights live in the card above
       const list = body.slice(at, body.indexOf('</ul>', at));
       assert.ok(!list.includes('rel-more'), `${v.version} ${section.title} has no "+N more" cut`);
