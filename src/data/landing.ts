@@ -164,18 +164,18 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
   },
   {
     file: 'memory-bank',
-    alt: 'hal0 memory bank workspace with a facts list and graph',
-    caption: 'Memory bank. Facts, the graph, directives and mental models in one workspace.',
+    alt: 'The Memory page of the hal0 console on its Facts tab: a bank with its source documents, a filterable list of facts, an activity timeline and a tag map',
+    caption: 'Memory, Facts tab. A bank with its sources and facts, filters, a timeline and a tag map.',
   },
   {
     file: 'slots-inference',
-    alt: 'hal0 console slots page with slot cards, throughput and the memory ruler',
-    caption: 'Slots. Each card carries a model picker, a profile picker, context and live memory.',
+    alt: 'The Slots page of the hal0 console on its Inference tab: throughput and hardware gauges, the shared memory band, slot cards with model pickers, and a rail listing every slot by device',
+    caption: 'Slots. Each card carries a model picker and its live figures; the rail beside them lists every slot by device.',
   },
   {
     file: 'slot-edit-drawer',
     alt: 'Slot drawer open over the slots page: model, profile and the tune block for the agent slot',
-    caption: 'Slot drawer. Model, profile and the tune: context, thinking, effort, budget, vision and speculation, each marked profile or override. Per-slot tune is on nightly today.',
+    caption: 'Slot drawer. Model, profile and the tune: context, thinking, effort, budget, vision and speculation, each marked profile or override.',
   },
   {
     file: 'model-edit-drawer',
@@ -184,8 +184,8 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
   },
   {
     file: 'dashboard-overview',
-    alt: 'hal0 overview page with the memory pool, the slots serving now, agents and delegated runs',
-    caption: 'Overview (preview). What each slot is serving, the memory pool, agents and delegated runs on one page. Nightly channel today.',
+    alt: 'The Overview page of the hal0 console: the GPU memory band, an approval waiting in the Needs-you inbox, the Serving-now chart with its per-slot table, and the Agents card with delegated runs',
+    caption: 'Overview. What the box is serving, what needs you, who is working and how it performed, on one page.',
   },
   {
     file: 'image-gen-generate',
@@ -194,14 +194,13 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
     contain: true,
   },
   {
-    file: 'image-gen-models',
-    alt: 'Image model catalogue with a fit meter',
+    file: 'models-image',
+    alt: 'The image model catalogue in the hal0 console: installed and available image models with their sizes, and a meter showing how the selected one fits this box',
     caption: 'Image models. A fit meter shows what fits before you install.',
-    todo: true,
   },
   {
     file: 'agents-overview',
-    alt: 'Agents page with cards for Hermes, pi and a runtime on the roadmap',
+    alt: 'The Agents page of the hal0 console: cards for Hermes and Pi with their version, model and status, and a placeholder card for a runtime that is not available yet',
     caption: 'Agents. Every agent in the runtime as a card: version, model, persona, approvals and health.',
   },
   {
@@ -211,9 +210,8 @@ export const CONSOLE_SHOTS: ConsoleShot[] = [
   },
   {
     file: 'mcp-tab',
-    alt: 'MCP page listing the bundled hal0 servers with their tool counts and the bridge clients that call them',
-    caption: 'MCP. The bundled servers with their tool counts, and the bridge clients that call them. The bridge is on nightly today.',
-    contain: true,
+    alt: 'The Agents page of the hal0 console on its MCP tab: the bundled hal0-admin, hal0-memory and hal0-agents servers with their tools and connected clients, and the bridge clients below them',
+    caption: 'MCP. The bundled servers with their tools, and the bridge clients that call them.',
   },
   {
     file: 'memory-graph',

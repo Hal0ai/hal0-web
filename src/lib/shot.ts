@@ -4,7 +4,16 @@
 // build time: which AVIF/WebP derivatives exist (scripts/build-images.mjs
 // writes them), whether there is a @2x capture, and the PNG's intrinsic size.
 // Shared by src/components/Shot.astro and src/components/HermesCard.astro.
-import { closeSync, existsSync, openSync, readSync } from 'node:fs';
+//
+// Two kinds of capture live in public/screenshots/:
+//   - a live capture (scripts/capture-screenshots.mjs): <name>.png at 1x with
+//     a <name>@2x.png beside it;
+//   - a capture from the synced dashboard set (scripts/sync-screenshots.mjs,
+//     listed in src/data/screenshots.json): one <name>.png taken at a device
+//     scale factor above 1. It is shown at its pixel size divided by that
+//     factor, it is its own high-density source, and a <name>@2x.png left
+//     over from an older capture of the same name is not used.
+import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
 import path from 'node:path';
 
 export interface PictureSource {
@@ -37,6 +46,38 @@ const NAME = /^[a-z0-9][a-z0-9-]*$/;
 const CAPTURE_SIZE = { width: 1440, height: 900 };
 
 const defaultPublicDir = () => path.join(process.cwd(), 'public');
+const defaultCaptureSetFile = () => path.join(process.cwd(), 'src/data/screenshots.json');
+
+interface CaptureSet {
+	deviceScaleFactor: number;
+	/** Pixel size per file name (`slot-detail.png`), as the set's manifest states it. */
+	sizes: Map<string, { width: number; height: number }>;
+}
+
+const NO_SET: CaptureSet = { deviceScaleFactor: 1, sizes: new Map() };
+const captureSets = new Map<string, CaptureSet>();
+
+/** The synced set's manifest, read once per file. A missing or unreadable file is an empty set. */
+function captureSet(file: string): CaptureSet {
+	let set = captureSets.get(file);
+	if (!set) {
+		set = NO_SET;
+		try {
+			const data = JSON.parse(readFileSync(file, 'utf8'));
+			const scale = Number(data.deviceScaleFactor);
+			if (scale > 1 && Array.isArray(data.images)) {
+				set = {
+					deviceScaleFactor: scale,
+					sizes: new Map(data.images.map((i: { file: string; width: number; height: number }) => [i.file, { width: i.width, height: i.height }])),
+				};
+			}
+		} catch {
+			// No manifest: every screenshot follows the 1x + @2x convention.
+		}
+		captureSets.set(file, set);
+	}
+	return set;
+}
 
 const descriptors = (urls: string[]) => (urls.length === 1 ? urls[0] : urls.map((u, i) => `${u} ${i + 1}x`).join(', '));
 
@@ -97,10 +138,16 @@ function sizeFor(natural: { width: number; height: number }, width?: number, hei
  * capture viewport; a malformed name still throws.
  *
  * width/height default to the PNG's own size; giving one scales the other to match.
+ *
+ * A capture from the synced dashboard set defaults to its pixel size divided by the set's device
+ * scale factor (2880x1800 is shown as 1440x900) and never pairs with a `@2x` sibling. The PNG on
+ * disk has to be the size the set's manifest states: a file of that name re-captured some other
+ * way is treated as an ordinary screenshot. `captureSetFile` is the manifest, by default
+ * src/data/screenshots.json.
  */
 export function resolveShot(
 	name: string,
-	opts: { publicDir?: string; width?: number; height?: number; placeholder?: boolean } = {},
+	opts: { publicDir?: string; captureSetFile?: string; width?: number; height?: number; placeholder?: boolean } = {},
 ): ResolvedShot {
 	if (!NAME.test(name)) {
 		throw new Error(
@@ -116,9 +163,17 @@ export function resolveShot(
 		return { src: `${base}.png`, sources: [], missing: true, ...sizeFor(CAPTURE_SIZE, opts.width, opts.height) };
 	}
 
-	const bases = existsSync(path.join(publicDir, `${base}@2x.png`)) ? [base, `${base}@2x`] : [base];
+	const pixels = pngSize(png);
+	const set = captureSet(opts.captureSetFile ?? defaultCaptureSetFile());
+	const stated = set.sizes.get(`${name}.png`);
+	const fromSet = Boolean(pixels && stated && stated.width === pixels.width && stated.height === pixels.height);
+
+	const bases = !fromSet && existsSync(path.join(publicDir, `${base}@2x.png`)) ? [base, `${base}@2x`] : [base];
 	const { sources, srcset } = pictureSources(bases, publicDir);
-	const natural = pngSize(png);
+	const natural =
+		pixels && fromSet
+			? { width: Math.round(pixels.width / set.deviceScaleFactor), height: Math.round(pixels.height / set.deviceScaleFactor) }
+			: pixels;
 	const size = natural ? sizeFor(natural, opts.width, opts.height) : { width: opts.width, height: opts.height };
 	return { src: `${base}.png`, srcset, sources, missing: false, ...size };
 }

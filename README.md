@@ -97,10 +97,39 @@ dirties the tree on every build). `npm run build:og` runs it alone.
 
 ## Screenshots
 
-`public/screenshots/` is captured from a live hal0 dashboard with
-`npm run capture:screenshots`, which runs inside the Playwright container.
-The header comment of `scripts/capture-screenshots.mjs` has the usage and
-environment variables. `scripts/audit-screens.mjs` is a related audit helper.
+`public/screenshots/` holds two kinds of dashboard capture.
+
+**The synced set.** The product repo keeps a reproducible set of dashboard
+captures, made from its own mock data, in `docs/screenshots/` with a manifest
+that has one row per image. `npm run sync:screenshots` copies that set here
+byte for byte and writes the manifest to `src/data/screenshots.json` together
+with the hal0 commit it came from:
+
+```sh
+npm run sync:screenshots                      # hal0 main
+npm run sync:screenshots -- --ref <ref>       # a branch, tag or commit
+npm run sync:screenshots -- --from <dir>      # a local docs/screenshots/
+npm run sync:screenshots -- --dry-run         # report only
+```
+
+It is not part of `prebuild`: the PNGs are committed, and a new set needs a
+person to check where each image is used. Three things to know:
+
+- The captures are taken at device scale factor 2. `<Shot>` shows one at half
+  its pixel size and does not look for an `@2x` file beside it
+  (`src/lib/shot.ts`).
+- Each image has a **Figures** value in the manifest: `none`, `historical`
+  (published measurements from the dated benchmark sweep), `illustrative`
+  (invented readings) or both. An illustrative image does not belong in a hero
+  or beside a performance claim.
+- The script never deletes or renames a file, because the published docs link
+  screenshots by name. It lists the files the set no longer covers.
+
+**Live captures.** `npm run capture:screenshots` takes captures from a running
+hal0 box, inside the Playwright container, as `<name>.png` at 1x with a
+`<name>@2x.png` beside it. The header comment of
+`scripts/capture-screenshots.mjs` has the usage and environment variables.
+`scripts/audit-screens.mjs` is a related audit helper.
 
 ## Design system
 

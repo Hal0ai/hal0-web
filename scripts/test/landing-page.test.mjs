@@ -190,11 +190,11 @@ test('every console shot exists on disk or is marked todo', async () => {
     assert.ok(shot.alt && shot.caption, `${shot.file} has alt text and a caption`);
   }
   const todo = CONSOLE_SHOTS.filter((s) => s.todo).map((s) => s.file).sort();
-  assert.deepEqual(todo, ['approvals-inbox', 'image-gen-models', 'openwebui-picker']);
-  const overview = CONSOLE_SHOTS.find((s) => s.file === 'dashboard-overview');
-  assert.match(overview.caption, /preview/i, 'nightly-only surface is labelled preview');
-  for (const file of ['slot-edit-drawer', 'mcp-tab']) {
-    assert.match(CONSOLE_SHOTS.find((s) => s.file === file).caption, /nightly/i, `${file} names the channel`);
+  assert.deepEqual(todo, ['approvals-inbox', 'openwebui-picker']);
+  // The Overview page, the agent bridge and per-slot tune all shipped in 1.8.0:
+  // no caption may still call a released surface a preview or nightly-only.
+  for (const shot of CONSOLE_SHOTS) {
+    assert.doesNotMatch(shot.caption, /preview|nightly/i, `${shot.file} is not labelled as unreleased`);
   }
 });
 
@@ -299,7 +299,7 @@ test('every screenshot exists on disk or carries its TODO comment', skipUnbuilt,
   for (const name of referenced) {
     assert.ok(await exists(`public/screenshots/${name}.png`), `${name}.png is on disk`);
   }
-  for (const name of ['openwebui-picker', 'image-gen-models', 'approvals-inbox']) {
+  for (const name of ['openwebui-picker', 'approvals-inbox']) {
     assert.ok(html.includes(`<!-- TODO(shots): ${name} -->`), `TODO comment for ${name}`);
     assert.ok(!referenced.has(name), `${name} has no <img> yet`);
   }

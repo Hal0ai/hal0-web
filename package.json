@@ -13,6 +13,7 @@
     "sync:changelog": "node scripts/sync-changelog.mjs",
     "sync:bench": "node scripts/sync-bench.mjs",
     "sync:profiles": "node scripts/sync-profiles.mjs",
+    "sync:screenshots": "node scripts/sync-screenshots.mjs",
     "build:og": "node scripts/build-og.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "build:images": "node scripts/build-images.mjs",
