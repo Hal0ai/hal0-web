@@ -645,6 +645,33 @@ const breadcrumbs = {
       margin-left: 0;
     }
   }
+
+  /* Phone: labels that are 10 to 11px on a desktop are too small to read here.
+   * Below 640px they get a floor of about 12px; wider screens keep the dense scale. */
+  @media (max-width: 640px) {
+    .rel-channels,
+    .rel-lcard-b h3,
+    .rel-hl-more,
+    .rel-cmd-h,
+    .rel-entry summary .d,
+    .rel-sec,
+    .rel-body li.rel-more,
+    .rel-foot,
+    .rel-archive a span:last-child {
+      font-size: 12px;
+    }
+    .rel-brk b {
+      font-size: 11.5px;
+    }
+    /* Code is 0.86em of its paragraph, which is 11.2px in the 13px side notes. */
+    .rel-hl code,
+    .rel-brk code,
+    .rel-body code,
+    .rel-intro code,
+    .rel-side code {
+      font-size: max(0.86em, 11.5px);
+    }
+  }
 </style>
 
 <script>

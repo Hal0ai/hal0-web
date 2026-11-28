@@ -149,4 +149,12 @@ function authorNames(authors: unknown): string[] {
       grid-template-columns: 1fr;
     }
   }
+
+  /* Phone: labels that are 10 to 11px on a desktop are too small to read here.
+   * Below 640px they get a floor of about 12px; wider screens keep the dense scale. */
+  @media (max-width: 640px) {
+    .blead-byline {
+      font-size: 12px;
+    }
+  }
 </style>

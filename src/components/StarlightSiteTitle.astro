@@ -107,4 +107,12 @@ const links: NavLink[] = visibleHeader.flatMap((l) =>
       color: var(--sl-color-text-accent, var(--hal0-accent, #ffb000));
     }
   }
+
+  /* Touch: the logo is a 20px-tall link; give it a 40px row. */
+  @media (pointer: coarse) {
+    .site-title {
+      min-height: 40px;
+      align-items: center;
+    }
+  }
 </style>

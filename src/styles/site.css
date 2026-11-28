@@ -697,6 +697,65 @@
 			gap: 32px;
 		}
 	}
+
+	/* ── phone: a floor for small text ───────────────────────────── */
+	/* Labels that are 10 to 11px on a desktop are too small to read on a
+	 * phone. Below 640px they get a floor of about 12px (11.5px for the
+	 * uppercase, letter-spaced ones, which run wide). Wider screens keep the
+	 * dense scale the site shares with the dashboard. Page-specific labels
+	 * have the same block in their own stylesheet. */
+	@media (max-width: 640px) {
+		.eyebrow {
+			font-size: 11.5px;
+		}
+		.label,
+		.ftr-base {
+			font-size: 12px;
+		}
+	}
+
+	/* ── touch: room for a finger ────────────────────────────────── */
+	/* Only where the pointer is coarse, so a mouse-driven screen is unchanged.
+	 * Nothing here changes a text size. 40px is the dashboard's own touch
+	 * target. */
+	@media (pointer: coarse) {
+		/* Stacked footer links were 17px lines 9px apart: give each a 40px row. */
+		.ftr-col ul {
+			gap: 0;
+		}
+		.ftr-col a {
+			display: inline-flex;
+			align-items: center;
+			min-height: 40px;
+		}
+		.hdr-brand {
+			min-height: 40px;
+		}
+		/* The header's icon buttons, the menu button among them, were 30px. */
+		.iconbtn {
+			width: 40px;
+			height: 40px;
+		}
+		/* A link that stands alone in its line. Padding grows the tap area and
+		 * an equal negative margin gives the space back, so nothing moves: for
+		 * an inline link vertical padding never moved the line anyway, and for
+		 * a block or flex item the margin cancels it. */
+		.ftr-base a,
+		.crumbs a,
+		.sec-link,
+		.mini-head a,
+		.rel-foot a,
+		.rel-more a,
+		.rel-brk a,
+		.rel-hl-more a,
+		.pc-open,
+		.src-link,
+		.fact-card .author,
+		.forum-discuss a {
+			padding-block: 12px;
+			margin-block: -12px;
+		}
+	}
 }
 
 /* ── light theme overrides (exception to the nesting rule above: these

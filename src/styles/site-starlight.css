@@ -762,3 +762,23 @@ site-search button[data-close-modal] {
 	padding: 1px 5px;
 	color: var(--hal0-fg);
 }
+
+/* ── touch: room for a finger on the header's two controls ──
+ * The search button is 30px tall and the menu button is a 32px circle. Both
+ * are drawn (a border, a round fill), so a larger box would change how they
+ * look. A transparent box around each takes the tap instead, and only where
+ * the pointer is coarse. */
+@media (pointer: coarse) {
+	site-search button[data-open-modal] {
+		position: relative;
+	}
+	site-search button[data-open-modal]::after,
+	starlight-menu-button button::after {
+		content: '';
+		position: absolute;
+		inset: -5px 0;
+	}
+	starlight-menu-button button::after {
+		inset: -4px;
+	}
+}

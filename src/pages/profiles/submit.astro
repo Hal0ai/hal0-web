@@ -569,4 +569,30 @@ const description =
       grid-template-columns: 1fr !important;
     }
   }
+
+  /* Phone: labels that are 10 to 11px on a desktop are too small to read here.
+   * Below 640px they get a floor of about 12px; wider screens keep the dense scale. */
+  @media (max-width: 640px) {
+    .rail button,
+    .field .lbl,
+    .lbl,
+    .hint,
+    .drop .sm,
+    .tabs2 button,
+    .vrow,
+    .codeline,
+    .fixlist li,
+    .note {
+      font-size: 12px;
+    }
+    .rail .n {
+      font-size: 11.5px;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .tabs2 button {
+      min-height: 40px;
+    }
+  }
 </style>
