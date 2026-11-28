@@ -1,0 +1,290 @@
+---
+/**
+ * SlotVersus: the slot idea as a before and after.
+ *
+ * Left, the usual way: one model in memory, swapped out when a different job
+ * arrives, with the other jobs waiting. Right, hal0: a slot per job, each with
+ * its model loaded, several answering at once.
+ *
+ * "The usual way" is deliberately not named. Tools differ (the named table
+ * further down the page has each one's defaults), and the picture is about the
+ * pattern, not a product. Purely CSS; reduced motion freezes both panels.
+ */
+import { Icon } from 'astro-icon/components';
+
+const LANES = ['Chat', 'Code', 'Agent', 'Documents', 'Voice'];
+---
+
+<div class="versus">
+  <figure class="vs old">
+    <figcaption>
+      <span class="vs-k">The usual way</span>
+      <span class="vs-t">One model at a time</span>
+    </figcaption>
+    <div class="stage">
+      <div class="solo">
+        <span class="solo-l">the only seat</span>
+        <span class="solo-cycle" aria-hidden="true">
+          <span>chat model · answering</span>
+          <span>chat model · unloading…</span>
+          <span>coding model · loading…</span>
+          <span>coding model · answering</span>
+        </span>
+        <span class="solo-bar" aria-hidden="true"><i></i></span>
+      </div>
+      <ul class="queue">
+        <li><Icon name="lucide:message-circle" />Chat question</li>
+        <li class="wait"><Icon name="lucide:hourglass" />Code review <em>waiting for a reload</em></li>
+        <li class="wait"><Icon name="lucide:hourglass" />Agent task <em>waiting its turn</em></li>
+      </ul>
+    </div>
+    <p class="vs-note">Ask for something different and you wait while one model unloads and the next one loads.</p>
+  </figure>
+
+  <figure class="vs new">
+    <figcaption>
+      <span class="vs-k">The hal0 way</span>
+      <span class="vs-t">A slot for every job</span>
+    </figcaption>
+    <div class="stage">
+      <ul class="lanes">
+        {LANES.map((job, i) => (
+          <li class={`lane l${i}`}>
+            <span class="pip" aria-hidden="true"></span>
+            <span class="lane-job">{job}</span>
+            <span class="lane-st"><i></i>ready</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+    <p class="vs-note">Each job has its own model, already loaded. Your chat, your editor and your agent can all ask at once.</p>
+  </figure>
+</div>
+
+<style>
+  .versus {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .vs {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 24px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 16px;
+    background: var(--hal0-bg-elevated);
+  }
+  .vs.new {
+    border-color: var(--hal0-accent-line);
+    box-shadow: 0 30px 80px -50px var(--hal0-accent-glow);
+  }
+  figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .vs-k {
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
+  }
+  .new .vs-k {
+    color: var(--hal0-accent);
+  }
+  .vs-t {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--hal0-fg);
+  }
+  .stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 268px;
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--hal0-bg);
+  }
+  .vs-note {
+    margin: 18px 0 0;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--hal0-fg-muted);
+  }
+  ul {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  :global(svg[data-icon]) {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+  }
+
+  .solo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border: 1px dashed var(--hal0-border-strong);
+    border-radius: 10px;
+  }
+  .solo-l {
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
+  }
+  /* Four labels stacked in one place; each is up for a quarter of the loop. */
+  .solo-cycle {
+    position: relative;
+    height: 24px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+  .solo-cycle span {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    animation: versus-cycle 12s infinite;
+  }
+  .solo-cycle span:nth-child(1) { animation-delay: 0s; }
+  .solo-cycle span:nth-child(2) { animation-delay: 3s; color: var(--hal0-fg-dim); }
+  .solo-cycle span:nth-child(3) { animation-delay: 6s; color: var(--hal0-warn); }
+  .solo-cycle span:nth-child(4) { animation-delay: 9s; }
+  @keyframes versus-cycle {
+    0%, 23% { opacity: 1; }
+    25%, 100% { opacity: 0; }
+  }
+  .solo-bar {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--hal0-bg-3);
+  }
+  .solo-bar i {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--hal0-warn);
+    transform-origin: left;
+    animation: versus-load 12s infinite linear;
+  }
+  /* Full while answering, draining while it unloads, filling while the next one loads. */
+  @keyframes versus-load {
+    0%, 25% { transform: scaleX(1); background: var(--hal0-ok); }
+    26% { transform: scaleX(1); background: var(--hal0-fg-faint); }
+    50% { transform: scaleX(0); background: var(--hal0-fg-faint); }
+    51% { transform: scaleX(0); background: var(--hal0-warn); }
+    75% { transform: scaleX(1); background: var(--hal0-warn); }
+    76%, 100% { transform: scaleX(1); background: var(--hal0-ok); }
+  }
+  .queue li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--hal0-border-soft);
+    border-radius: 8px;
+    font-size: 14.5px;
+    color: var(--hal0-fg);
+  }
+  .queue .wait {
+    color: var(--hal0-fg-dim);
+  }
+  .queue em {
+    margin-left: auto;
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
+    font-style: normal;
+    color: var(--hal0-warn);
+  }
+
+  .lane {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px 10px 28px;
+    overflow: hidden;
+    border: 1px solid var(--hal0-border-soft);
+    border-left: 2px solid var(--hal0-ok);
+    border-radius: 8px;
+    font-size: 14.5px;
+    color: var(--hal0-fg);
+  }
+  .lane-st {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
+    color: var(--hal0-ok);
+  }
+  .lane-st i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--hal0-ok);
+  }
+  /* A request arriving. Several lanes get one at overlapping times. */
+  .pip {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: var(--hal0-accent);
+    opacity: 0;
+    animation: versus-pip 6s infinite var(--hal0-ease);
+  }
+  .l0 .pip { animation-delay: 0s; }
+  .l1 .pip { animation-delay: 0.6s; }
+  .l2 .pip { animation-delay: 1.4s; }
+  .l3 .pip { animation-delay: 3.2s; }
+  .l4 .pip { animation-delay: 3.9s; }
+  @keyframes versus-pip {
+    0% { opacity: 0; transform: translateX(-14px); }
+    8% { opacity: 1; transform: translateX(0); }
+    30% { opacity: 1; transform: translateX(0); box-shadow: 0 0 0 5px var(--hal0-accent-soft); }
+    42%, 100% { opacity: 0; transform: translateX(0); }
+  }
+
+  @media (max-width: 1000px) {
+    .versus {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .solo-cycle span,
+    .solo-bar i,
+    .pip {
+      animation: none;
+    }
+    /* Freeze on the wait: the loading label and a half-filled bar. */
+    .solo-cycle span:nth-child(3) {
+      opacity: 1;
+    }
+    .solo-bar i {
+      transform: scaleX(0.5);
+    }
+  }
+</style>

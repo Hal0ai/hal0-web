@@ -1,0 +1,219 @@
+---
+/**
+ * TeamBoard: the hero's picture. Five jobs, each with its own slot and a model
+ * that stays loaded; which of them is answering changes, the slots never do.
+ *
+ * An illustration, labelled as one: it shows no model names, sizes or speeds,
+ * because nothing on a static page is measuring anything. Image generation is
+ * left out on purpose: a render takes the graphics chip and the chat models on
+ * it step aside, so a row for it "answering" beside them would be untrue.
+ *
+ * Rows come from HERO_TEAM in src/data/landing.ts. The script only toggles a
+ * class; without it, or with reduced motion, the first frame stays up.
+ */
+import { Icon } from 'astro-icon/components';
+import { HERO_TEAM } from '../../data/landing';
+
+/** Which rows are answering in each frame. Two or three at a time, never none. */
+const FRAMES = [[0, 2], [0, 1, 3], [1, 2], [0, 4], [1, 3, 4]];
+---
+
+<div class="team" data-team data-frames={JSON.stringify(FRAMES)}>
+  <div class="team-h">
+    <span>your hal0 box</span>
+    <span class="pill-note">illustration</span>
+  </div>
+  <ul class="team-rows">
+    {HERO_TEAM.map((t, i) => (
+      <li class:list={['seat', { busy: FRAMES[0].includes(i) }]} data-seat>
+        <span class="seat-ic"><Icon name={t.icon} /></span>
+        <span class="seat-main">
+          <span class="seat-job">{t.job}</span>
+          <span class="seat-what">{t.what}</span>
+        </span>
+        <span class="seat-state">
+          <span class="st st-ready"><i></i>ready</span>
+          <span class="st st-busy"><i></i>answering {t.by}</span>
+        </span>
+      </li>
+    ))}
+  </ul>
+  <div class="team-f">
+    <span>{HERO_TEAM.length} models loaded</span>
+    <span class="sep">·</span>
+    <span><b data-team-count>{FRAMES[0].length}</b> answering right now</span>
+    <span class="sep">·</span>
+    <span>nothing reloaded</span>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    const board = document.querySelector('[data-team]');
+    if (!board || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const frames = JSON.parse(board.dataset.frames);
+    const seats = [...board.querySelectorAll('[data-seat]')];
+    const count = board.querySelector('[data-team-count]');
+    let f = 0;
+    setInterval(() => {
+      f = (f + 1) % frames.length;
+      seats.forEach((seat, i) => seat.classList.toggle('busy', frames[f].includes(i)));
+      count.textContent = String(frames[f].length);
+    }, 2600);
+  })();
+</script>
+
+<style>
+  .team {
+    border: 1px solid var(--hal0-border);
+    border-radius: 16px;
+    background: var(--hal0-bg-elevated);
+    box-shadow: 0 40px 100px -50px var(--hal0-accent-glow);
+  }
+  .team-h,
+  .team-f {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 18px;
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
+    color: var(--hal0-fg-dim);
+  }
+  .team-h {
+    justify-content: space-between;
+    border-bottom: 1px solid var(--hal0-border-soft);
+  }
+  .team-f {
+    border-top: 1px solid var(--hal0-border-soft);
+  }
+  .team-f b {
+    font-weight: 500;
+    color: var(--hal0-ok);
+  }
+  .sep {
+    color: var(--hal0-border-strong);
+  }
+  .pill-note {
+    padding: 2px 8px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 999px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .team-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 14px;
+    list-style: none;
+  }
+  .seat {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--hal0-border-soft);
+    border-left: 2px solid var(--hal0-accent-line);
+    border-radius: 10px;
+    background: var(--hal0-bg);
+    transition: border-color 0.4s var(--hal0-ease), background 0.4s var(--hal0-ease);
+  }
+  .seat.busy {
+    border-left-color: var(--hal0-ok);
+    background: color-mix(in srgb, var(--hal0-ok) 5%, var(--hal0-bg));
+  }
+  .seat-ic {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--hal0-accent-soft);
+    font-size: 19px;
+    color: var(--hal0-accent);
+  }
+  .seat-ic :global(svg) {
+    width: 1em;
+    height: 1em;
+  }
+  .seat-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .seat-job {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+  .seat-what {
+    font-size: 13px;
+    color: var(--hal0-fg-dim);
+  }
+  /* Both states sit in one grid cell, so the row never changes width. */
+  .seat-state {
+    display: grid;
+    justify-items: end;
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
+  }
+  .st {
+    grid-area: 1 / 1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    transition: opacity 0.35s var(--hal0-ease);
+  }
+  .st i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  /* The dashboard's semantics: ready is amber, serving is green with a halo. */
+  .st-ready {
+    color: var(--hal0-fg-dim);
+  }
+  .st-ready i {
+    background: var(--hal0-accent);
+  }
+  .st-busy {
+    opacity: 0;
+    color: var(--hal0-ok);
+  }
+  .st-busy i {
+    background: var(--hal0-ok);
+    box-shadow: 0 0 0 4px var(--hal0-ok-glow);
+  }
+  .seat.busy .st-ready {
+    opacity: 0;
+  }
+  .seat.busy .st-busy {
+    opacity: 1;
+  }
+
+  @media (max-width: 560px) {
+    .seat {
+      grid-template-columns: 34px minmax(0, 1fr);
+    }
+    .seat-ic {
+      width: 34px;
+      height: 34px;
+    }
+    .seat-state {
+      grid-column: 2;
+      justify-items: start;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .seat,
+    .st {
+      transition: none;
+    }
+  }
+</style>
