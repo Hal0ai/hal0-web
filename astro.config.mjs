@@ -56,6 +56,11 @@ export default defineConfig({
 	// redirect match `/changelog/` as well as `/changelog`.
 	redirects: {
 		'/changelog': '/releases',
+		// The benchmarks page is hidden while the benchmark system is reworked
+		// (src/pages/_benchmarks.astro). Temporary, so 302: links from the product
+		// README, the docs and search results land on the home page, not a 404,
+		// and search engines keep the URL. Remove this entry when the page returns.
+		'/benchmarks': { status: 302, destination: '/' },
 		// The first-run guide moved to the forum's Getting started category.
 		'/first-run-guide': 'https://forum.hal0.dev/c/docs/docs-getting-started/19',
 		// The Sentry guide was removed from the product repo (hal0 #3783 —

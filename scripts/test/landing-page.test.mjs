@@ -270,7 +270,10 @@ test('title and description come from the SEO audit', skipUnbuilt, () => {
 });
 
 test('sections run in the spec order', skipUnbuilt, () => {
-  const order = ['idea', 'swap', 'privacy', 'wired', 'memory', 'console', 'hardware', 'compare', 'benchmarks', 'releases', 'faq', 'get'];
+  // No 'benchmarks' section: the highlights are hidden with the /benchmarks page, and
+  // the id survives as an anchor inside the releases section for old links.
+  const order = ['idea', 'swap', 'privacy', 'wired', 'memory', 'console', 'hardware', 'compare', 'releases', 'faq', 'get'];
+  assert.match(html, /<span[^>]*\sid="benchmarks"/, '/#benchmarks still lands somewhere');
   const at = order.map((id) => {
     const i = html.search(new RegExp(`<section[^>]*\\sid="${id}"`));
     assert.ok(i >= 0, `section #${id} is present`);

@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { access, readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 import sharp from 'sharp';
 
 import { ROSTER_DATE } from '../../src/data/model-roster.ts';
@@ -18,6 +19,9 @@ import { ICONS, renderIcon } from '../build-icons.mjs';
 import { sourceToRouteSrc } from '../patch-vercel-headers.mjs';
 
 const DIST = fileURLToPath(new URL('../../dist/client/', import.meta.url));
+// The benchmarks page can be hidden by renaming its file to _benchmarks.astro; the route, its
+// breadcrumb, its Dataset node and its llms.txt line then go with it.
+const BENCHMARKS_HIDDEN = !existsSync(new URL('../../src/pages/benchmarks.astro', import.meta.url));
 const built = await access(path.join(DIST, 'index.html')).then(() => true, () => false);
 const skip = !built && 'run npm run build first';
 
@@ -118,9 +122,10 @@ function headProblems(html) {
 
 test('the build contains the pages this suite expects to cover', { skip }, () => {
 	const routes = new Set(pages.map((p) => p.route));
-	for (const r of ['/', '/404', '/benchmarks/', '/profiles/', '/profiles/submit/', '/contributing/', '/releases/', '/blog/', '/blog/whats-new-since-1-0/']) {
+	for (const r of ['/', '/404', '/profiles/', '/profiles/submit/', '/contributing/', '/releases/', '/blog/', '/blog/whats-new-since-1-0/']) {
 		assert.ok(routes.has(r), `${r} was built`);
 	}
+	assert.equal(routes.has('/benchmarks/'), !BENCHMARKS_HIDDEN, 'the benchmarks route follows src/pages/benchmarks.astro');
 	for (const r of KNOWN_FAILING) assert.ok(routes.has(r), `KNOWN_FAILING entry ${r} was built, delete a stale entry`);
 });
 
@@ -176,7 +181,7 @@ const ORG_ID = 'https://hal0.dev/#org';
 const WEBSITE_ID = 'https://hal0.dev/#website';
 
 // Inner pages that must carry a Home > Page breadcrumb.
-const BREADCRUMB_PAGES = ['/benchmarks/', '/profiles/', '/profiles/submit/', '/contributing/', '/releases/'];
+const BREADCRUMB_PAGES = [...(BENCHMARKS_HIDDEN ? [] : ['/benchmarks/']), '/profiles/', '/profiles/submit/', '/contributing/', '/releases/'];
 
 for (const { route, html } of marketing) {
 	test(`organization and website nodes: ${route}`, { skip }, () => {
@@ -232,7 +237,7 @@ test('the landing page has no breadcrumb', { skip }, () => {
 	assert.equal(nodesOf(home.html).filter((n) => n['@type'] === 'BreadcrumbList').length, 0);
 });
 
-test('/benchmarks declares a Dataset dated to the roster sweep', { skip }, () => {
+test('/benchmarks declares a Dataset dated to the roster sweep', { skip: skip || (BENCHMARKS_HIDDEN && 'the benchmarks page is hidden') }, () => {
 	const bench = pages.find((p) => p.route === '/benchmarks/');
 	const datasets = nodesOf(bench.html).filter((n) => n['@type'] === 'Dataset');
 	assert.equal(datasets.length, 1, 'exactly one Dataset');
@@ -357,9 +362,10 @@ test('every page head points at the 180px apple-touch-icon and the manifest', { 
 test('llms.txt summarises the product and lists the key URLs', { skip }, async () => {
 	const txt = await readFile(path.join(DIST, 'llms.txt'), 'utf8');
 	assert.match(txt, /^# hal0\n/, 'starts with an H1 naming the product');
-	for (const needle of ['hal0.dev/releases', 'forum.hal0.dev', '/benchmarks', '/profiles', '/blog', '/contributing', 'github.com/hal0ai/hal0', 'install.sh']) {
+	for (const needle of ['hal0.dev/releases', 'forum.hal0.dev', '/profiles', '/blog', '/contributing', 'github.com/hal0ai/hal0', 'install.sh']) {
 		assert.ok(txt.includes(needle), `mentions ${needle}`);
 	}
+	assert.equal(txt.includes('/benchmarks'), !BENCHMARKS_HIDDEN, 'lists the benchmarks page only while it exists');
 	// install.sh has no root check, so the documented command pipes into sudo.
 	const INSTALL = 'curl -fsSL https://hal0.dev/install.sh | sudo bash';
 	assert.ok(txt.includes(INSTALL), `llms.txt gives the install command: ${INSTALL}`);
@@ -380,7 +386,7 @@ test('the generated icons get the same cache header as the other static assets',
 });
 
 test('benchmarks.astro takes the model count from the roster, never a literal', async () => {
-	const source = await readFile(new URL('../../src/pages/benchmarks.astro', import.meta.url), 'utf8');
+	const source = await readFile(new URL(`../../src/pages/${BENCHMARKS_HIDDEN ? '_' : ''}benchmarks.astro`, import.meta.url), 'utf8');
 	assert.deepEqual(source.match(/\b\d+ models\b/g) ?? [], [], 'no "<number> models" literal');
 });
 

@@ -53,8 +53,9 @@ const FORUM_PREFIX = 'https://forum.hal0.dev/';
 // compiling -- so the tolerance is added here, where it already is for the
 // forum routes. `/changelog` (now a redirect to the /releases page) is the
 // same case: it used to be a page, so `/changelog/` is the form crawlers and
-// bookmarks hold.
-const LOCAL_SRCS_NEEDING_SLASH_TOLERANCE = new Set(['^/kb$', '^/changelog$']);
+// bookmarks hold. `/benchmarks` is a redirect only while that page is hidden
+// (src/pages/_benchmarks.astro); the site's own links used `/benchmarks/`.
+const LOCAL_SRCS_NEEDING_SLASH_TOLERANCE = new Set(['^/kb$', '^/changelog$', '^/benchmarks$']);
 
 async function main() {
 	let raw;
@@ -78,7 +79,8 @@ async function main() {
 		const location = route.headers?.Location;
 		const isForumRedirect =
 			route.status === 301 && typeof location === 'string' && location.startsWith(FORUM_PREFIX) && route.src?.endsWith('$');
-		const isLocalRedirect = route.status === 301 && LOCAL_SRCS_NEEDING_SLASH_TOLERANCE.has(route.src);
+		// 301 or 302: /benchmarks is a temporary redirect while its page is hidden.
+		const isLocalRedirect = (route.status === 301 || route.status === 302) && LOCAL_SRCS_NEEDING_SLASH_TOLERANCE.has(route.src);
 		const needsSlashTolerance = isForumRedirect || isLocalRedirect;
 
 		if (needsSlashTolerance && !route.src.endsWith('/?$')) {

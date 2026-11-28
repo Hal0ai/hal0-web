@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
 const nav = JSON.parse(await readFile(new URL('../../src/data/nav.json', import.meta.url), 'utf8'));
 
@@ -49,7 +50,11 @@ test('labels are lowercase everywhere, including sub and footer column links', (
   }
 });
 
-test('the header is the same six entries, in order, with nothing hidden', () => {
+// The benchmarks page can be hidden as a whole: its file is renamed to
+// _benchmarks.astro and its nav entries carry `hidden`. Both move together.
+const benchmarksHidden = !existsSync(new URL('../../src/pages/benchmarks.astro', import.meta.url));
+
+test('the header is the same six entries, in order; only a hidden page may be hidden', () => {
   // The unified chrome: hal0.dev and forum.hal0.dev carry this exact list.
   // `forum` used to be hidden here (the site linked it only from the footer);
   // it is a first-class header entry now, and the Discourse theme drops it
@@ -59,8 +64,11 @@ test('the header is the same six entries, in order, with nothing hidden', () => 
     ['home', 'docs', 'benchmarks', 'profiles', 'releases', 'forum'],
   );
   for (const link of nav.header) {
-    assert.ok(!link.hidden, `${link.label} must not be hidden`);
+    const expectHidden = link.label === 'benchmarks' && benchmarksHidden;
+    assert.equal(Boolean(link.hidden), expectHidden, `${link.label} hidden: ${expectHidden}`);
   }
+  const footerBench = nav.footerColumns.flatMap((c) => c.links).find((l) => l.label === 'benchmarks');
+  assert.equal(Boolean(footerBench.hidden), benchmarksHidden, 'the footer link follows the page');
 });
 
 test('social entries carry known ids', () => {
@@ -186,9 +194,9 @@ test('subFor: /blog resolves to null (blog left the header)', () => {
   assert.equal(subForJs('/blog/some-post/'), null);
 });
 
-test('subFor: /benchmarks/ resolves to benchmarks\' sub list', () => {
+test('subFor: /benchmarks/ resolves to benchmarks\' sub list, or to nothing while the page is hidden', () => {
   const bench = nav.header.find((l) => l.label === 'benchmarks');
-  assert.deepEqual(subForJs('/benchmarks/'), bench.sub);
+  assert.deepEqual(subForJs('/benchmarks/'), benchmarksHidden ? null : bench.sub);
 });
 
 test('subFor: /profiles resolves to null (profiles has no sub-nav)', () => {

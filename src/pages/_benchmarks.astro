@@ -1,5 +1,13 @@
 ---
 /**
+ * HIDDEN. The leading underscore keeps Astro from building this page, and
+ * astro.config.mjs sends /benchmarks to the home page meanwhile. The
+ * benchmark system is being reworked; the only data here is the 2026-06-19
+ * sweep on an early build. To bring the page back: rename this file to
+ * benchmarks.astro, remove the /benchmarks redirect from astro.config.mjs,
+ * and drop `"hidden": true` from the two benchmarks entries in
+ * src/data/nav.json. The tests follow the file name.
+ *
  * /benchmarks — model roster leaderboard, server-rendered from the
  * build-time snapshot (src/data/model-roster.ts). This is the static
  * shell (Task 4 of the benchmarks/profiles plan): header, context cards,
