@@ -176,15 +176,32 @@ test('site copy avoids the forbidden words, version numbers and em-dash asides',
   }
 });
 
-test('nothing from an untagged release is announced', skipUnbuilt, () => {
-  // The phone and tablet dashboard and the Origin check belong to the release after
-  // the latest tag. The page's words may not announce them before that release is tagged.
-  // This reads the rendered text, so alt text is not part of it: a capture taken at phone
-  // width has to be described as one, and the page shows those captures only because the
-  // whole capture set is of that release, which is why the page waits for its tag.
-  const text = visibleWords(main).join(' ');
-  for (const term of [/works on a phone/i, /\bphones?\b/i, /\btablets?\b/i, /\bOrigin\b/, /bottom tab bar/i]) {
-    assert.doesNotMatch(text, term, `the page's text mentions ${term}`);
+test('nothing from an untagged release is announced', skipUnbuilt, async () => {
+  // The changelog can describe a release before it is tagged. Until the tag exists the
+  // page may not repeat any of it: no highlight of an entry that sits above the latest
+  // tagged release may appear in the page's words. The same search has to find the first
+  // highlight of the latest tagged release, which the page does show, or it proves nothing.
+  // The snapshot and the release list on disk are the ones the build read.
+  const { parseChangelog, releaseHighlights } = await import(new URL('src/lib/changelog.js', root));
+  const { tags } = JSON.parse(await source('src/data/release-tags.json'));
+  const { versions, latestTagged } = parseChangelog(await source('src/data/changelog.md'), { tags });
+  assert.ok(latestTagged, 'the changelog has a tagged release');
+
+  const words = (fragment) =>
+    visibleWords(fragment).join(' ').replaceAll('&#39;', "'").replaceAll('&quot;', '"').replaceAll('&amp;', '&').toLowerCase();
+  const lead = (item) => words(item).split(' ').slice(0, 6).join(' ');
+  const text = words(main);
+
+  const shipped = releaseHighlights(latestTagged, 3);
+  if (shipped.length) {
+    assert.ok(text.includes(lead(shipped[0])), `the page carries the first highlight of ${latestTagged.version}: "${lead(shipped[0])}"`);
+  }
+
+  const ahead = versions.slice(0, versions.indexOf(latestTagged)).filter((version) => version.untagged);
+  for (const version of ahead) {
+    for (const item of releaseHighlights(version, 99)) {
+      assert.ok(!text.includes(lead(item)), `the page repeats a highlight of ${version.version}, which has no tag: "${lead(item)}"`);
+    }
   }
 });
 
