@@ -1,41 +1,48 @@
 ---
 /**
- * FeaturedProfiles — homepage community layer, section (c): featured
- * profiles.
+ * FeaturedProfiles — homepage section (c): featured profiles.
  *
- * Top 3 profiles by headline decode tok/s, joined against ROSTER the same
- * way /profiles does (src/lib/profiles-join.mjs). A profile with no
- * measured run in the roster has no headline number to rank or show, so
- * it's excluded here rather than shown with a borrowed or missing metric
- * — the full, unranked gallery lives at /profiles.
+ * Three profiles a visitor can import. A profile with a measured run in the
+ * roster (joined the same way /profiles does, src/lib/profiles-join.mjs) comes
+ * first, ranked by headline decode tok/s, and shows that number. The
+ * remaining places go to importable profiles in registry order, which show
+ * the first setting they make instead: a card never carries a borrowed or
+ * missing metric. Built-in profiles are left out, since they are already on
+ * every box. The full gallery lives at /profiles.
  *
  * Cards link to /profiles?p=<slug>, the deep-link convention the profile
  * detail drawer already listens for.
  */
 import profilesSnapshot from '../../data/profiles.json';
 import { benchFor } from '../../lib/profiles-join.mjs';
+import { isSeed, tuneFacts } from '../../lib/profile-envelope.mjs';
 import { ROSTER } from '../../data/model-roster';
 
 const FEATURED_COUNT = 3;
 
-const featured = profilesSnapshot.profiles
-  .map((record) => ({ record, bench: benchFor(record, ROSTER) }))
+const candidates = profilesSnapshot.profiles
+  .filter((record) => !isSeed(record))
+  .map((record) => ({ record, bench: benchFor(record, ROSTER), fact: tuneFacts(record)[0] }));
+
+const benched = candidates
   .filter((c) => c.bench.headline)
-  .sort((a, b) => (b.bench.headline?.dec ?? 0) - (a.bench.headline?.dec ?? 0))
-  .slice(0, FEATURED_COUNT);
+  .sort((a, b) => (b.bench.headline?.dec ?? 0) - (a.bench.headline?.dec ?? 0));
+const unbenched = candidates.filter((c) => !c.bench.headline);
+
+const featured = [...benched, ...unbenched].slice(0, FEATURED_COUNT);
 ---
 
 {featured.length > 0 && (
   <section class="sec">
     <div class="sec-h">
       <div>
-        <span class="eyebrow">community profiles</span>
-        <h2 class="site-h2">optimized model &amp; hardware recipes from the community</h2>
+        <span class="eyebrow">profiles</span>
+        <h2 class="site-h2">tuned settings you can import in one step</h2>
       </div>
       <a href="/profiles" class="mono sec-link">all profiles →</a>
     </div>
     <div class="cards3">
-      {featured.map(({ record, bench }) => (
+      {featured.map(({ record, bench, fact }) => (
         <a class:list={['pmini', 'card-hover']} href={`/profiles?p=${record.profile.slug}`}>
           <div class="pmini-top">
             <span class="slug mono">{record.profile.slug}</span>
@@ -43,7 +50,11 @@ const featured = profilesSnapshot.profiles
           </div>
           <p class="site-sm pmini-desc">{record.profile.summary}</p>
           <div class="pmini-foot">
-            <span class="mono pmini-dec">{bench.headline?.dec.toFixed(1)}<u>tok/s</u></span>
+            {bench.headline ? (
+              <span class="mono pmini-dec">{bench.headline.dec.toFixed(1)}<u>tok/s</u></span>
+            ) : (
+              <span class="mono pmini-dec">{fact ? <>{fact.value}<u>{fact.label}</u></> : record.runtime?.family}</span>
+            )}
             {record.profile.first_party ? (
               <span class="chip amber">first-party</span>
             ) : (

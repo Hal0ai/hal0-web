@@ -14,6 +14,9 @@ import { SITE_URL } from './seo.ts';
 
 export const SITE = SITE_URL;
 export const TITLE_SUFFIX = ' · llama.cpp profile | hal0';
+// A profile for another engine (FastFlowLM, Kokoro, ComfyUI, ...) is not a
+// llama.cpp profile, so its title does not say it is one.
+export const TITLE_SUFFIX_OTHER = ' · hal0 profile | hal0';
 export const TITLE_MAX = 60;
 export const DESCRIPTION_MAX = 155;
 export const PROFILES_REPO = 'https://github.com/Hal0ai/hal0-profiles';
@@ -76,6 +79,22 @@ function nameOf(record) {
   return text(record?.profile?.title) || text(record?.profile?.slug) || 'profile';
 }
 
+/** The engine a record's settings are for ('' when the record does not say). */
+function familyOf(record) {
+  return text(record?.runtime?.family);
+}
+
+/** True unless the record names an engine other than llama-server. */
+function isLlamaCpp(record) {
+  const family = familyOf(record);
+  return family === '' || family === 'llama-server';
+}
+
+/** The `<title>` suffix for a record: llama.cpp for llama-server, hal0 otherwise. */
+export function titleSuffix(record) {
+  return isLlamaCpp(record) ? TITLE_SUFFIX : TITLE_SUFFIX_OTHER;
+}
+
 /**
  * `<title>`: "<profile title> · llama.cpp profile | hal0", at most 60
  * characters. The suffix is the part worth keeping in a SERP, so it is the
@@ -85,19 +104,20 @@ function nameOf(record) {
  * @returns {string}
  */
 export function profileTitle(record) {
-  return `${clip(nameOf(record), TITLE_MAX - TITLE_SUFFIX.length)}${TITLE_SUFFIX}`;
+  const suffix = titleSuffix(record);
+  return `${clip(nameOf(record), TITLE_MAX - suffix.length)}${suffix}`;
 }
 
 /** One sentence built from whatever the record does have. */
 function generatedSentence(record) {
   const intent = text(record?.profile?.intent);
   const model = text(record?.model?.id);
-  const lane = text(record?.runner?.lane);
-  let s = `${nameOf(record)} is a community llama.cpp profile`;
+  const family = familyOf(record);
+  let s = `${nameOf(record)} is a ${isLlamaCpp(record) ? 'llama.cpp' : 'hal0'} profile`;
   if (intent) s += ` for ${intent}`;
   if (model) s += ` on ${model}`;
-  if (lane) s += ` (${lane} lane)`;
-  return `${s}. Exact flags and config, ready to copy.`;
+  if (family && !isLlamaCpp(record)) s += ` (${family})`;
+  return `${s}. Exact settings, ready to copy.`;
 }
 
 /**
@@ -168,7 +188,7 @@ function authorNode(record) {
  */
 export function profileJsonLd(record, url) {
   const author = authorNode(record);
-  const runtime = text(record?.runner?.kind);
+  const runtime = familyOf(record);
   const latest = latestHistory(record);
 
   const code = {

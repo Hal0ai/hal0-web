@@ -46,6 +46,28 @@ function stringifyDates(value) {
   return value;
 }
 
+// The registry schema this site renders. Schema 2 mirrors hal0's current
+// profile body ([tune]: flags, ctx_size, enable_thinking, vision, speculation,
+// runner). Schema 1 was the pre-1.0 shape ([runner] lane/image, [args] raw);
+// the pages cannot render it and hal0 no longer reads it.
+export const SUPPORTED_SCHEMA = 2;
+
+/**
+ * The records this build can render. A record in another schema is dropped
+ * with a warning instead of reaching a page that would not know its fields.
+ * Exported for tests.
+ */
+export function supportedProfiles(records, warn = console.warn) {
+  return records.filter((record) => {
+    if (record?.schema === SUPPORTED_SCHEMA) return true;
+    warn(
+      `[sync-profiles] skipping "${record?.profile?.slug ?? '?'}": schema ${JSON.stringify(record?.schema)} ` +
+        `is not schema ${SUPPORTED_SCHEMA}`,
+    );
+    return false;
+  });
+}
+
 /**
  * Parse a single profile TOML source into a ProfileRecord. Exported for
  * tests. Throws (with the filename in the message) on malformed TOML.
@@ -72,7 +94,7 @@ async function main() {
       throw new Error('no .toml files found in profiles/');
     }
 
-    const profiles = await Promise.all(
+    const fetched = await Promise.all(
       tomlEntries.map(async (entry) => {
         const fileRes = await fetch(entry.download_url, {
           signal: AbortSignal.timeout(10_000),
@@ -82,6 +104,11 @@ async function main() {
         return parseProfileToml(source, entry.name);
       }),
     );
+
+    const profiles = supportedProfiles(fetched);
+    if (profiles.length === 0) {
+      throw new Error(`no schema-${SUPPORTED_SCHEMA} profiles in the registry`);
+    }
 
     profiles.sort((a, b) => a.profile.slug.localeCompare(b.profile.slug));
 

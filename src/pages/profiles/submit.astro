@@ -32,7 +32,7 @@
  *
  * All four wireframe validation states are implemented: pass, schema
  * error (line-railed, blocking), missing required fields (intent,
- * model.id, args.raw — blocking), and unknown model (a warning, not an
+ * runtime.family, a non-empty [tune] — blocking), and unknown model (a warning, not an
  * error — continue with an "unverified" chip). The duplicate-slug edge
  * state offers "submit as v<next>" before "rename mine", per the comp.
  */
@@ -45,35 +45,33 @@ import { breadcrumbList } from '../../lib/seo.ts';
 const CONTRIBUTING_URL = 'https://github.com/Hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md';
 const profileCount = profilesSnapshot.profiles.length;
 
-const SAMPLE_TOML = `schema = 1
+const SAMPLE_TOML = `schema = 2
 
 [profile]
 slug = "your-slug-here"
 title = "Short title"
-summary = "One sentence: what this config is tuned for and why."
+summary = "One sentence: what this profile is tuned for and why."
 intent = "chat"
 author = "your-github-handle"
 
-[runner]
-kind = "llama-server"
-lane = "rocm"
-min_build = "b11596"
+[runtime]
+family = "llama-server"
+min_hal0 = "1.8.3"
 
-[model]
-id = "the-roster-model-id"
-
-[args]
-raw = "-ngl 99 -c 16384 -fa 1 -ctk q4_0 -ctv q4_0 --parallel 1 -b 512"
+[tune]
+flags = "-fa auto -b 2048 -ub 512 --parallel 1"
+ctx_size = 32768
+vision = "off"
 
 [[history]]
 v = 1
-date = "2026-10-15"
+date = "2026-11-28"
 note = "initial"
 `;
 
 const title = 'Submit a hal0 Profile | llama.cpp Config Sharing';
 const description =
-  'Share your llama.cpp config for a local LLM. Validate a hal0 profile TOML in your browser, then open it as a pre-filled GitHub pull request.';
+  'Share your llama.cpp settings for a local LLM. Validate a hal0 profile TOML in your browser, then open it as a pre-filled GitHub pull request.';
 ---
 
 <MarketingLayout
@@ -132,13 +130,15 @@ const description =
             spellcheck="false"
             data-toml-input>{SAMPLE_TOML}</textarea
           >
-          <span class="hint">Paste the file the CLI wrote, or edit this starting template directly.</span>
+          <span class="hint">
+            Edit this template. <span class="mono">[tune]</span> takes the same keys as a hal0 profile: <span class="mono">hal0 profile show &lt;name&gt;</span> prints yours, ready to copy across. Leave out <span class="mono">-ngl</span>, <span class="mono">--device</span>, <span class="mono">--threads</span> and <span class="mono">--ctx-size</span>: the slot and hal0 set those.
+          </span>
         </div>
 
         <div class="field">
-          <label class="lbl" for="profile-flag-override">flag string — optional, overrides args.raw</label>
-          <input id="profile-flag-override" class="input mono" type="text" data-flag-override placeholder="-ngl 99 -c 16384 -fa 1 …" />
-          <span class="hint">Paste what you actually ran. Leave blank to use args.raw from the file as-is.</span>
+          <label class="lbl" for="profile-flag-override">flag string — optional, overrides tune.flags</label>
+          <input id="profile-flag-override" class="input mono" type="text" data-flag-override placeholder="-fa auto -b 2048 -ub 512 …" />
+          <span class="hint">Paste what you actually ran. Leave blank to use tune.flags from the file as-is.</span>
         </div>
 
         <div class="fbar">
@@ -157,9 +157,10 @@ const description =
             <dl style="margin:0">
               <div class="vrow"><dt>slug</dt><dd data-v-slug></dd></div>
               <div class="vrow"><dt>intent</dt><dd data-v-intent></dd></div>
-              <div class="vrow"><dt>model</dt><dd><span data-v-model></span> <span class="chip ok" data-v-model-chip style="margin-left:8px">in roster</span></dd></div>
-              <div class="vrow"><dt>lane · min build</dt><dd data-v-lane></dd></div>
+              <div class="vrow"><dt>runtime · min hal0</dt><dd data-v-runtime></dd></div>
+              <div class="vrow"><dt>context</dt><dd data-v-context></dd></div>
               <div class="vrow"><dt>flags</dt><dd><span data-v-flags></span> flags</dd></div>
+              <div class="vrow" data-v-model-row><dt>model</dt><dd><span data-v-model></span> <span class="chip ok" data-v-model-chip style="margin-left:8px">in roster</span></dd></div>
               <div class="vrow"><dt>linked runs</dt><dd><span data-v-runs></span> benchmark run(s) already carry this slug</dd></div>
             </dl>
           </div>

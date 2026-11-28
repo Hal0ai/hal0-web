@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { parse as parseToml } from 'smol-toml';
 import {
   countFlags,
+  deniedFlags,
   locateLine,
   collectSchemaIssues,
   validateProfileToml,
@@ -15,32 +16,35 @@ import {
   GITHUB_URL_WARN_LENGTH,
 } from '../../src/lib/profile-validate.mjs';
 
-const VALID_TOML = `schema = 1
+const VALID_TOML = `schema = 2
 
 [profile]
 slug = "qwen3-9b-longctx"
 title = "Long-context chat slot"
-summary = "16k context, q4_0 KV cache."
+summary = "64K context, q8 KV cache."
 intent = "chat"
 author = "lemond"
 
-[runner]
-kind = "llama-server"
-lane = "rocm"
-min_build = "b9219"
+[runtime]
+family = "llama-server"
+min_hal0 = "1.8.3"
+
+[tune]
+flags = "-fa auto -ctk q8_0 -ctv q8_0 -b 2048 -ub 512 --parallel 1 --reasoning-budget -1"
+ctx_size = 65536
+vision = "off"
 
 [model]
 id = "qwen3.5-9b-q4kxl"
-quant = "q4_k_xl"
-
-[args]
-raw = "-ngl 99 -c 16384 -fa 1 -ctk q4_0 -ctv q4_0 --parallel 1 -b 512"
 
 [[history]]
 v = 1
 date = "2026-08-01"
 note = "initial"
 `;
+
+const FLAGS_LINE = 'flags = "-fa auto -ctk q8_0 -ctv q8_0 -b 2048 -ub 512 --parallel 1 --reasoning-budget -1"\n';
+const MODEL_TABLE = '[model]\nid = "qwen3.5-9b-q4kxl"\n\n';
 
 const ROSTER = [{ id: 'qwen3.5-9b-q4kxl', measured: true, dec: 42.1, pf: 900, gb: 6 }];
 
@@ -50,20 +54,21 @@ function withField(toml, find, replace) {
 }
 
 test('countFlags counts flag tokens, not their values', () => {
-  assert.equal(countFlags('-ngl 99 -c 16384 -fa 1 --parallel 1 -b 512'), 5);
+  assert.equal(countFlags('-fa auto -b 2048 -ub 512 --parallel 1 --temp 0'), 5);
+  assert.equal(countFlags('--reasoning-budget -1 --seed 123'), 2, 'a negative number is a value');
   assert.equal(countFlags(''), 0);
   assert.equal(countFlags(undefined), 0);
   assert.equal(countFlags('-'), 0);
 });
 
 test('locateLine finds a key inside its table', () => {
-  const loc = locateLine(VALID_TOML, 'runner.lane');
+  const loc = locateLine(VALID_TOML, 'runtime.family');
   assert.ok(loc);
-  assert.equal(loc.text.trim(), 'lane = "rocm"');
+  assert.equal(loc.text.trim(), 'family = "llama-server"');
 });
 
 test('locateLine returns null for a key it cannot find', () => {
-  assert.equal(locateLine(VALID_TOML, 'runner.nope'), null);
+  assert.equal(locateLine(VALID_TOML, 'runtime.nope'), null);
 });
 
 test('collectSchemaIssues finds nothing wrong with a valid profile', () => {
@@ -79,13 +84,24 @@ test('validateProfileToml: pass state — full summary, in-roster chip, linked r
   assert.equal(result.summary.intent, 'chat');
   assert.equal(result.summary.modelId, 'qwen3.5-9b-q4kxl');
   assert.equal(result.summary.modelKnown, true);
-  assert.equal(result.summary.lane, 'rocm');
+  assert.equal(result.summary.family, 'llama-server');
+  assert.equal(result.summary.minHal0, '1.8.3');
+  assert.equal(result.summary.contextSize, 65536);
   assert.equal(result.summary.flagCount, 7);
   assert.equal(result.summary.linkedRuns, 1);
 });
 
+test('validateProfileToml: a profile that names no model passes, with nothing to look up', () => {
+  const noModel = withField(VALID_TOML, MODEL_TABLE, '');
+  const result = validateProfileToml(noModel, { rosterRows: ROSTER, existingProfiles: [] });
+  assert.equal(result.state, 'pass');
+  assert.equal(result.summary.modelId, null);
+  assert.equal(result.summary.modelKnown, true);
+  assert.equal(result.summary.linkedRuns, 0);
+});
+
 test('validateProfileToml: schema-error state on malformed TOML syntax, with a line number', () => {
-  const broken = 'schema = 1\n[profile\nslug = "x"\n';
+  const broken = 'schema = 2\n[profile\nslug = "x"\n';
   const result = validateProfileToml(broken);
   assert.equal(result.state, 'schema-error');
   assert.equal(result.blocking, true);
@@ -94,24 +110,26 @@ test('validateProfileToml: schema-error state on malformed TOML syntax, with a l
 });
 
 test('validateProfileToml: schema-error state on an invalid enum value, railed to its line', () => {
-  const bad = withField(VALID_TOML, 'lane = "rocm"', 'lane = "rocm-6.4"');
+  const bad = withField(VALID_TOML, 'family = "llama-server"', 'family = "llama.cpp"');
   const result = validateProfileToml(bad);
   assert.equal(result.state, 'schema-error');
   assert.equal(result.blocking, true);
-  assert.equal(result.primary.path, 'runner.lane');
-  assert.match(result.primary.message, /must be one of rocm/);
-  assert.equal(result.line, 12);
+  assert.equal(result.primary.path, 'runtime.family');
+  assert.match(result.primary.message, /must be one of llama-server/);
+  assert.equal(result.line, 11);
 });
 
-test('validateProfileToml: missing-fields state scoped to intent, model.id, args.raw', () => {
+test('validateProfileToml: missing-fields state scoped to intent, runtime.family and the tune', () => {
   const missing = VALID_TOML.replace('intent = "chat"\n', '')
-    .replace('id = "qwen3.5-9b-q4kxl"\n', '')
-    .replace('raw = "-ngl 99 -c 16384 -fa 1 -ctk q4_0 -ctv q4_0 --parallel 1 -b 512"\n', '');
+    .replace('family = "llama-server"\n', '')
+    .replace(FLAGS_LINE, '')
+    .replace('ctx_size = 65536\n', '')
+    .replace('vision = "off"\n', '');
   const result = validateProfileToml(missing);
   assert.equal(result.state, 'missing-fields');
   assert.equal(result.blocking, true);
   const keys = result.missing.map((m) => m.key).sort();
-  assert.deepEqual(keys, ['args.raw', 'model.id', 'profile.intent']);
+  assert.deepEqual(keys, ['profile.intent', 'runtime.family', 'tune']);
   for (const m of result.missing) {
     assert.ok(m.why.length > 0, `${m.key} should carry a why-it-matters string`);
   }
@@ -217,25 +235,140 @@ test('collectSchemaIssues rejects a non-integer history[i].v', () => {
   assert.ok(result.issues.some((i) => i.path === 'history[0].v' && /integer/.test(i.message)));
 });
 
-test('collectSchemaIssues rejects bad requires.gtt_gb / requires.exclusive types', () => {
-  const badGtt = `${VALID_TOML}\n[requires]\ngtt_gb = "lots"\n`;
-  const r1 = validateProfileToml(badGtt);
+test('schema 1, the pre-1.0 shape, is refused whole with a message that says why', () => {
+  const v1 = `schema = 1
+
+[profile]
+slug = "old-shape"
+title = "t"
+summary = "s"
+intent = "chat"
+author = "a"
+
+[runner]
+kind = "llama-server"
+lane = "rocm"
+
+[model]
+id = "m"
+
+[args]
+raw = "-ngl 99 -c 2048"
+
+[[history]]
+v = 1
+date = "2026-06-01"
+note = "initial"
+`;
+  const result = validateProfileToml(v1);
+  assert.equal(result.state, 'schema-error');
+  assert.equal(result.issues.length, 1, 'one message, not one per old key');
+  assert.equal(result.primary.path, 'schema');
+  assert.match(result.primary.message, /pre-1\.0/);
+  assert.match(result.primary.message, /\[tune\]/);
+});
+
+test('deniedFlags finds the flags hal0 refuses in a profile, in every spelling', () => {
+  const flagsOf = (raw) => deniedFlags(raw).map((d) => d.flag);
+  assert.deepEqual(flagsOf('-fa auto -ngl 99 --device Vulkan0 -t 8'), ['-ngl', '--device', '-t']);
+  assert.deepEqual(flagsOf('--ctx-size=8192 --ctx_size 4096 -c 2048'), ['--ctx-size=8192', '--ctx_size', '-c']);
+  assert.deepEqual(flagsOf('--jinja --mmproj mmproj-f16.gguf --no-mmproj --spec-type draft'), [
+    '--jinja',
+    '--mmproj',
+    '--no-mmproj',
+    '--spec-type',
+  ]);
+  assert.match(deniedFlags('-c 2048')[0].reason, /tune\.ctx_size/);
+  assert.match(deniedFlags('--mmproj x')[0].reason, /tune\.vision/);
+  assert.match(deniedFlags('--spec-type x')[0].reason, /tune\.speculation/);
+});
+
+test('deniedFlags leaves the flags a profile may carry alone', () => {
+  const allowed =
+    '-fa auto -ctk q8_0 -ctv q8_0 -b 2048 -ub 512 --parallel 1 --threads-batch 8 --cache-ram 1024 ' +
+    "--reasoning-budget -1 --temp 0 --chat-template-kwargs '{\"enable_thinking\":false}'";
+  assert.deepEqual(deniedFlags(allowed), []);
+  assert.deepEqual(deniedFlags(''), []);
+  assert.deepEqual(deniedFlags(undefined), []);
+});
+
+test('a refused flag in tune.flags is a blocking schema error on a llama-server profile', () => {
+  const bad = withField(VALID_TOML, '-fa auto', '-fa auto -ngl 99');
+  const result = validateProfileToml(bad);
+  assert.equal(result.state, 'schema-error');
+  assert.equal(result.primary.path, 'tune.flags');
+  assert.match(result.primary.message, /-ngl/);
+  assert.match(result.primary.message, /slot/);
+  assert.equal(result.line, 15, 'railed to the flags line');
+});
+
+test('the flag screen is for llama-server: another engine keeps its own tokens', () => {
+  const halogen = VALID_TOML.replace('family = "llama-server"', 'family = "halogen"')
+    .replace(FLAGS_LINE, 'flags = "HALOGEN_KV_SLOTS=2 --device 0"\nrunner = "halogen"\n')
+    .replace(MODEL_TABLE, '');
+  assert.equal(validateProfileToml(halogen).state, 'pass');
+});
+
+test('the halogen runner and the halogen runtime family go together', () => {
+  const runnerOnly = withField(VALID_TOML, 'vision = "off"', 'vision = "off"\nrunner = "halogen"');
+  const r1 = validateProfileToml(runnerOnly);
   assert.equal(r1.state, 'schema-error');
-  assert.ok(r1.issues.some((i) => i.path === 'requires.gtt_gb'));
+  assert.ok(r1.issues.some((i) => /go together/.test(i.message)));
 
-  const negativeGtt = `${VALID_TOML}\n[requires]\ngtt_gb = -1\n`;
-  const r2 = validateProfileToml(negativeGtt);
+  const familyOnly = withField(VALID_TOML, 'family = "llama-server"', 'family = "halogen"');
+  const r2 = validateProfileToml(familyOnly);
   assert.equal(r2.state, 'schema-error');
-  assert.ok(r2.issues.some((i) => i.path === 'requires.gtt_gb'));
+  assert.ok(r2.issues.some((i) => i.path === 'tune.runner'));
+});
 
-  const badExclusive = `${VALID_TOML}\n[requires]\nexclusive = "yes"\n`;
-  const r3 = validateProfileToml(badExclusive);
-  assert.equal(r3.state, 'schema-error');
-  assert.ok(r3.issues.some((i) => i.path === 'requires.exclusive'));
+test('collectSchemaIssues holds [tune] to the types and ranges hal0 does', () => {
+  const cases = [
+    ['ctx_size = 65536', 'ctx_size = 64', 'tune.ctx_size'],
+    ['ctx_size = 65536', 'ctx_size = "64K"', 'tune.ctx_size'],
+    ['vision = "off"', 'vision = "on"', 'tune.vision'],
+    ['vision = "off"', 'vision = "off"\nspeculation = "mtp"', 'tune.speculation'],
+    ['vision = "off"', 'vision = "off"\nenable_thinking = "yes"', 'tune.enable_thinking'],
+    ['vision = "off"', 'vision = "off"\nreasoning_effort = "extreme"', 'tune.reasoning_effort'],
+    ['vision = "off"', 'vision = "off"\nreasoning_budget = -2', 'tune.reasoning_budget'],
+    ['vision = "off"', 'vision = "off"\nrunner = "ghcr.io/hal0ai/runner:latest"', 'tune.runner'],
+    ['vision = "off"', 'vision = "off"\nmtp = "auto"', 'tune.mtp'],
+  ];
+  for (const [find, replace, path] of cases) {
+    const result = validateProfileToml(withField(VALID_TOML, find, replace));
+    assert.equal(result.state, 'schema-error', `${replace} is refused`);
+    assert.ok(result.issues.some((i) => i.path === path), `${replace}: issue at ${path}`);
+  }
+});
 
-  const validRequires = `${VALID_TOML}\n[requires]\ngtt_gb = 24\nexclusive = true\n`;
-  const r4 = validateProfileToml(validRequires, { rosterRows: ROSTER, existingProfiles: [] });
-  assert.equal(r4.state, 'pass');
+test('a built-in profile may have an empty tune, and must be first-party', () => {
+  const seed = VALID_TOML.replace('author = "lemond"\n', 'author = "hal0"\nfirst_party = true\nseed = true\n')
+    .replace(FLAGS_LINE, '')
+    .replace('ctx_size = 65536\n', '')
+    .replace('vision = "off"\n', '')
+    .replace(MODEL_TABLE, '');
+  assert.equal(validateProfileToml(seed).state, 'pass');
+
+  const notFirstParty = seed.replace('first_party = true\n', '');
+  const result = validateProfileToml(notFirstParty);
+  assert.equal(result.state, 'schema-error');
+  assert.equal(result.primary.path, 'profile.seed');
+});
+
+test('a tune that only labels itself is still missing its settings', () => {
+  const labelsOnly = VALID_TOML.replace(FLAGS_LINE, 'intent = "My tune"\ncloned_from = "chat"\n')
+    .replace('ctx_size = 65536\n', '')
+    .replace('vision = "off"\n', '');
+  const result = validateProfileToml(labelsOnly);
+  assert.equal(result.state, 'missing-fields');
+  assert.deepEqual(result.missing.map((m) => m.key), ['tune']);
+});
+
+test('every profile in the committed snapshot validates', async () => {
+  const { default: snapshot } = await import('../../src/data/profiles.json', { with: { type: 'json' } });
+  assert.ok(snapshot.profiles.length > 0);
+  for (const record of snapshot.profiles) {
+    assert.deepEqual(collectSchemaIssues(record), [], `${record.profile.slug} is a valid schema-2 record`);
+  }
 });
 
 test('githubSubmitUrl builds a pre-filled new-file URL and flags overlength', () => {

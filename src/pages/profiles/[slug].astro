@@ -1,6 +1,6 @@
 ---
 /**
- * /profiles/<slug>/: one static page per community profile.
+ * /profiles/<slug>/: one static page per profile.
  *
  * Built from the same snapshot the gallery reads (src/data/profiles.json,
  * refreshed on prebuild by scripts/sync-profiles.mjs), so a profile merged in
@@ -8,6 +8,10 @@
  * build with no edit here. The gallery's drawer (/profiles/?p=<slug>) stays
  * the quick-look view; this page is the one a search result or a shared link
  * lands on.
+ *
+ * A built-in profile (profile.seed) is already on every box, so its page says
+ * how to clone it. Every other profile links the `.hal0profile.json` envelope
+ * from [slug].hal0profile.json.ts, which the dashboard imports.
  *
  * Every field of a record except the slug is treated as optional: a section
  * with nothing to show is left out rather than rendered with a blank.
@@ -27,6 +31,7 @@ import {
   profileTomlUrl,
   publishableProfiles,
 } from '../../lib/profile-page.mjs';
+import { envelopePath, hal0ProfileToml, isSeed, tuneFacts, tuneOf } from '../../lib/profile-envelope.mjs';
 
 // Only the slug is guaranteed; everything else may be absent from a record.
 interface ProfileRecord {
@@ -37,10 +42,11 @@ interface ProfileRecord {
     intent?: string;
     author?: string;
     first_party?: boolean;
+    seed?: boolean;
   };
-  runner?: { kind?: string; lane?: string; min_build?: string; image?: string };
+  runtime?: { family?: string; min_hal0?: string };
+  tune?: Record<string, string | number | boolean>;
   model?: { id?: string; compatible?: string[] };
-  args?: { raw?: string };
   history?: { v: number; date?: string; note?: string }[];
 }
 
@@ -58,7 +64,13 @@ export function getStaticPaths() {
 }
 
 const { record } = Astro.props;
-const { profile, runner = {}, model = {}, args = {} } = record;
+const { profile, runtime = {}, model = {} } = record;
+const seed = isSeed(record);
+const tune = tuneOf(record);
+const flags = typeof tune.flags === 'string' ? tune.flags : '';
+const facts = tuneFacts(record);
+const hal0Toml = hal0ProfileToml(record);
+const kind = seed ? 'built in' : 'import';
 const slug = profile.slug;
 const history = record.history ?? [];
 const latest = latestHistory(record);
@@ -75,7 +87,6 @@ const crumbs = profileCrumbs(record, canonical).map((c) => ({ name: c.name, href
 const ogPath = `/og/profiles/${slug}.png`;
 const ogImage = existsSync(resolve(process.cwd(), 'public', ogPath.slice(1))) ? ogPath : '/og/profiles-index.png';
 
-const laneChip = runner.lane?.startsWith('vulkan') ? 'dev-vulkan' : runner.lane === 'rocm' ? 'dev-rocm' : '';
 ---
 
 <MarketingLayout title={title} description={description} ogImage={ogImage} jsonLd={jsonLd}>
@@ -97,15 +108,16 @@ const laneChip = runner.lane?.startsWith('vulkan') ? 'dev-vulkan' : runner.lane 
     <div class="phead-row">
       <div class="hero">
         <span class="eyebrow">
-          profile{latest ? ` · v${latest.v}` : ''}{runner.lane ? ` · ${runner.lane}` : ''}
+          {kind}{latest ? ` · v${latest.v}` : ''}{runtime.family ? ` · ${runtime.family}` : ''}
         </span>
         <h1 class="site-h1" style="margin: 10px 0 10px">{profile.title ?? slug}</h1>
         {profile.summary && <p class="site-body" style="max-width: 62ch">{profile.summary}</p>}
         <div class="fbar" style="margin-top: 14px">
           {profile.intent && <span class="chip amber">{profile.intent}</span>}
-          {runner.lane && <span class:list={['chip', laneChip]}>{runner.lane}</span>}
+          {runtime.family && <span class="chip">{runtime.family}</span>}
+          <span class="chip">{kind}</span>
           {profile.first_party && (
-            <span class="chip amber" title="First-party run on hal0 reference hardware">first-party</span>
+            <span class="chip amber" title="Published by the hal0 project">first-party</span>
           )}
         </div>
       </div>
@@ -118,22 +130,64 @@ const laneChip = runner.lane?.startsWith('vulkan') ? 'dev-vulkan' : runner.lane 
 
   <div class="wrap wide detail">
     <div class="main-col">
-      {args.raw && (
+      <section>
+        <div class="sec-head">
+          <h2 class="label">use it</h2>
+        </div>
+        {seed ? (
+          <>
+            <p class="site-sm">
+              Built in. Every hal0 box already has <span class="mono">{slug}</span>: pick it in a slot's profile
+              picker. A built-in profile cannot be edited, so to change it, clone it:
+            </p>
+            <div class="well use-it">
+              <span class="amber">hal0</span> profile create my-{slug} --from {slug}
+            </div>
+          </>
+        ) : (
+          <>
+            <p class="site-sm">
+              Download the file, then in the dashboard open <b>Profiles → Import</b> and upload it. Then point a
+              slot at the profile and restart the slot:
+            </p>
+            <div class="well use-it">
+              <div><span class="amber">hal0</span> slot edit &lt;slot&gt; --profile {slug}</div>
+              <div><span class="amber">hal0</span> slot restart &lt;slot&gt;</div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px">
+              <a class="btn" href={envelopePath(slug)} download={`${slug}.hal0profile.json`}>
+                download .hal0profile.json
+              </a>
+            </div>
+            {runtime.min_hal0 && (
+              <p class="mono dim fine" style="margin-top: 8px">Needs hal0 {runtime.min_hal0} or newer.</p>
+            )}
+          </>
+        )}
+      </section>
+
+      {flags && (
         <section>
           <div class="sec-head">
             <h2 class="label">flags</h2>
-            {runner.kind && <span class="mono dim fine">{runner.kind}</span>}
+            {runtime.family && <span class="mono dim fine">{runtime.family}</span>}
           </div>
-          <pre class="well flags"><code>{args.raw}</code></pre>
-          <p class="site-sm" style="margin-top: 10px">
-            To use these, create a custom profile from one you already have and paste the flags in:
-          </p>
-          <div class="well use-it">
-            <span class="amber">hal0</span> profile create my-{slug} --from &lt;a-profile-you-have&gt; --flags "&lt;copied flags&gt;"
+          <pre class="well flags"><code>{flags}</code></pre>
+        </section>
+      )}
+
+      {Object.keys(tune).length > 0 && (
+        <section>
+          <div class="sec-head">
+            <h2 class="label">as a hal0 profile</h2>
+            <span class="mono dim fine">/etc/hal0/profiles.toml</span>
           </div>
-          <p class="mono dim fine" style="margin-top: 8px">
-            hal0 does not install community .toml files directly. The dashboard's Profiles page does the same thing.
-          </p>
+          <pre class="well flags"><code>{hal0Toml}</code></pre>
+          {seed && (
+            <p class="mono dim fine" style="margin-top: 8px">
+              Shown for reference. hal0 reads its built-in profiles from code and ignores a table with this name in the file.
+            </p>
+          )}
         </section>
       )}
 
@@ -156,56 +210,62 @@ const laneChip = runner.lane?.startsWith('vulkan') ? 'dev-vulkan' : runner.lane 
     </div>
 
     <aside class="side-col">
-      <section class="fact-card">
-        <h2 class="label">model</h2>
-        {model.id && <code class="mono model-id">{model.id}</code>}
-        {compatible.length > 0 && (
-          <>
-            <h3 class="sub">also works with</h3>
-            <ul class="mlist">
-              {compatible.map((m) => (
-                <li><code class="mono">{m}</code></li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+      {facts.length > 0 && (
+        <section class="fact-card">
+          <h2 class="label">settings</h2>
+          <dl class="kv">
+            {facts.map((f) => (
+              <>
+                <dt>{f.label}</dt>
+                <dd class="mono">{f.value}</dd>
+              </>
+            ))}
+          </dl>
+        </section>
+      )}
 
-      <section class="fact-card">
-        <h2 class="label">runner</h2>
-        <dl class="kv">
-          {runner.lane && (
+      {(runtime.family || runtime.min_hal0) && (
+        <section class="fact-card">
+          <h2 class="label">runtime</h2>
+          <dl class="kv">
+            {runtime.family && (
+              <>
+                <dt>engine</dt>
+                <dd class="mono">{runtime.family}</dd>
+              </>
+            )}
+            {runtime.min_hal0 && (
+              <>
+                <dt>min hal0</dt>
+                <dd class="mono">{runtime.min_hal0}</dd>
+              </>
+            )}
+          </dl>
+        </section>
+      )}
+
+      {model.id && (
+        <section class="fact-card">
+          <h2 class="label">tuned for</h2>
+          <code class="mono model-id">{model.id}</code>
+          {compatible.length > 0 && (
             <>
-              <dt>lane</dt>
-              <dd class="mono">{runner.lane}</dd>
+              <h3 class="sub">also works with</h3>
+              <ul class="mlist">
+                {compatible.map((m) => (
+                  <li><code class="mono">{m}</code></li>
+                ))}
+              </ul>
             </>
           )}
-          {runner.min_build && (
-            <>
-              <dt>min build</dt>
-              <dd class="mono">{runner.min_build}</dd>
-            </>
-          )}
-          {runner.kind && (
-            <>
-              <dt>kind</dt>
-              <dd class="mono">{runner.kind}</dd>
-            </>
-          )}
-          {runner.image && (
-            <>
-              <dt>image</dt>
-              <dd class="mono image">{runner.image}</dd>
-            </>
-          )}
-        </dl>
-      </section>
+        </section>
+      )}
 
       {(profile.author || profile.first_party) && (
         <section class="fact-card">
           <h2 class="label">author</h2>
           {profile.first_party ? (
-            <span class="chip amber" title="First-party run on hal0 reference hardware">first-party</span>
+            <span class="chip amber" style="width: fit-content" title="Published by the hal0 project">first-party</span>
           ) : (
             <a class="author mono" href={`https://github.com/${profile.author}`} rel="noopener">
               <img
