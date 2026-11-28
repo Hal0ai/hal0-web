@@ -43,14 +43,25 @@ const decode = (text) =>
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&');
 
+/**
+ * Remove every match, and again until the text stops changing, so that taking one
+ * block out cannot leave a new one behind (`<scr<script></script>ipt>`).
+ */
+function removeAll(text, pattern) {
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(pattern, '');
+  } while (text !== previous);
+  return text;
+}
+
+// Style and script blocks, in any letter case, with a closing tag that may carry a space or an attribute.
+const NOT_TEXT = [/<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, /<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi];
+
 /** What a reader can see in a built fragment, as one line of text. */
 const visibleText = (fragment) =>
-  decode(
-    fragment
-      .replace(/<style[\s\S]*?<\/style>/g, '')
-      .replace(/<script[\s\S]*?<\/script>/g, '')
-      .replace(/<[^>]+>/g, ' '),
-  )
+  decode(NOT_TEXT.reduce(removeAll, fragment).replace(/<[^>]+>/g, ' '))
     .replace(/\s+/g, ' ')
     .trim();
 
