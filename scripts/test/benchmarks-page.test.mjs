@@ -14,18 +14,26 @@ import { readFile, access } from 'node:fs/promises';
 const pageUrl = new URL('../../dist/client/benchmarks/index.html', import.meta.url);
 const built = await access(pageUrl).then(() => true, () => false);
 
+// The page can be hidden as a whole: its file is renamed to _benchmarks.astro (Astro does
+// not build a page whose name starts with an underscore), /benchmarks redirects home, and
+// its nav entries are marked `hidden`. Everything below follows the file name, so bringing
+// the page back needs no change here.
+const exists = (rel) => access(new URL(`../../${rel}`, import.meta.url)).then(() => true, () => false);
+const hidden = !(await exists('src/pages/benchmarks.astro'));
+const skipPage = hidden ? 'the benchmarks page is hidden (src/pages/_benchmarks.astro)' : !built && 'run npm run build first';
+
 async function loadPage() {
   return readFile(pageUrl, 'utf8');
 }
 
-test('benchmarks page has the shared header and footer chrome', { skip: !built && 'run npm run build first' }, async () => {
+test('benchmarks page has the shared header and footer chrome', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(html, /<header[\s\S]*?<\/header>/, 'page has a <header>');
   const footerMatch = html.match(/<footer[^>]*data-site-footer[^>]*>[\s\S]*?<\/footer>/);
   assert.ok(footerMatch, 'page contains the shared SiteFooter (data-site-footer)');
 });
 
-test('leaderboard table renders all 26 roster rows', { skip: !built && 'run npm run build first' }, async () => {
+test('leaderboard table renders all 26 roster rows', { skip: skipPage }, async () => {
   const html = await loadPage();
   const tableMatch = html.match(/<table class="dtable[^"]*"[^>]*>[\s\S]*?<tbody[^>]*>([\s\S]*?)<\/tbody>/);
   assert.ok(tableMatch, 'a <table class="dtable"> with a <tbody> is present');
@@ -33,17 +41,17 @@ test('leaderboard table renders all 26 roster rows', { skip: !built && 'run npm 
   assert.equal(rowCount, 26, 'leaderboard renders one row per roster model (defaultView over 26 snapshot rows)');
 });
 
-test('a known roster model id renders in the table', { skip: !built && 'run npm run build first' }, async () => {
+test('a known roster model id renders in the table', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(html, /qwen3\.5-0\.8b/, 'known model id "qwen3.5-0.8b" from model-roster.ts is present');
 });
 
-test('freshness badge renders the server-known snapshot state', { skip: !built && 'run npm run build first' }, async () => {
+test('freshness badge renders the server-known snapshot state', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(html, /snapshot from 2026-06-19/, 'freshness badge names the ROSTER_DATE snapshot');
 });
 
-test("capability glyph SVG paths match ModelRoster.astro's ICONS verbatim", { skip: !built && 'run npm run build first' }, async () => {
+test("capability glyph SVG paths match ModelRoster.astro's ICONS verbatim", { skip: skipPage }, async () => {
   const html = await loadPage();
   // mtp glyph path — lifted verbatim from src/components/ModelRoster.astro ICONS.
   assert.ok(
@@ -52,7 +60,7 @@ test("capability glyph SVG paths match ModelRoster.astro's ICONS verbatim", { sk
   );
 });
 
-test('"share your results" links to the model-roster-benchmark topic', { skip: !built && 'run npm run build first' }, async () => {
+test('"share your results" links to the model-roster-benchmark topic', { skip: skipPage }, async () => {
   const html = await loadPage();
   // The docs live on the forum, so this points at the topic. The
   // #sharing-results fragment is gone with the Starlight page: a Discourse
@@ -64,7 +72,7 @@ test('"share your results" links to the model-roster-benchmark topic', { skip: !
   );
 });
 
-test('methodology links to the model-roster-benchmark topic', { skip: !built && 'run npm run build first' }, async () => {
+test('methodology links to the model-roster-benchmark topic', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(
     html,
@@ -75,7 +83,7 @@ test('methodology links to the model-roster-benchmark topic', { skip: !built && 
 
 // --- Task 5: interactivity island -----------------------------------------
 
-test('bench-island module script ships on the built page', { skip: !built && 'run npm run build first' }, async () => {
+test('bench-island module script ships on the built page', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(
     html,
@@ -84,7 +92,7 @@ test('bench-island module script ships on the built page', { skip: !built && 'ru
   );
 });
 
-test('bench-island module script ships and the server table has the full roster row count', { skip: !built && 'run npm run build first' }, async () => {
+test('bench-island module script ships and the server table has the full roster row count', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(
     html,
@@ -97,14 +105,14 @@ test('bench-island module script ships and the server table has the full roster 
   assert.equal(rowCount, 26, 'server-rendered table still has one row per roster model');
 });
 
-test('sortable table headers carry data-sort-key hooks for the island', { skip: !built && 'run npm run build first' }, async () => {
+test('sortable table headers carry data-sort-key hooks for the island', { skip: skipPage }, async () => {
   const html = await loadPage();
   for (const key of ['id', 'params', 'lane', 'dec', 'pf', 'ttftP50', 'ttftP95', 'acc', 'gb']) {
     assert.match(html, new RegExp(`data-sort-key="${key}"`), `header for ${key} is wired for client-side sort`);
   }
 });
 
-test('filter bar controls carry the data hooks the island wires up', { skip: !built && 'run npm run build first' }, async () => {
+test('filter bar controls carry the data hooks the island wires up', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(html, /id="bench-filters"/, 'filter bar root has an id');
   assert.match(html, /id="bench-search"/, 'text filter input has an id');
@@ -116,7 +124,7 @@ test('filter bar controls carry the data hooks the island wires up', { skip: !bu
 
 // --- Task 6: run drawer + deep link ----------------------------------------
 
-test('run drawer ships hidden with dialog semantics (aria-modal, aria-labelledby)', { skip: !built && 'run npm run build first' }, async () => {
+test('run drawer ships hidden with dialog semantics (aria-modal, aria-labelledby)', { skip: skipPage }, async () => {
   const html = await loadPage();
   const scrimMatch = html.match(/<div class="scrim" id="run-drawer-scrim"[^>]*>/);
   assert.ok(scrimMatch, 'scrim element is present');
@@ -131,9 +139,56 @@ test('run drawer ships hidden with dialog semantics (aria-modal, aria-labelledby
   assert.match(drawerTag, /aria-labelledby="run-drawer-title"/, 'drawer is labelled by its title element');
 });
 
-test('run drawer has an empty title + body ready for the island to populate, and a labelled close control', { skip: !built && 'run npm run build first' }, async () => {
+test('run drawer has an empty title + body ready for the island to populate, and a labelled close control', { skip: skipPage }, async () => {
   const html = await loadPage();
   assert.match(html, /<div class="mono dr-title" id="run-drawer-title"><\/div>/, 'drawer title node starts empty');
   assert.match(html, /<div class="dr-body" id="run-drawer-body"><\/div>/, 'drawer body node starts empty');
   assert.match(html, /id="run-drawer-close"[^>]*aria-label="Close"/, 'close button is labelled for a11y');
+});
+
+// ── hidden state ─────────────────────────────────────────────────────────────
+
+const read = (rel) => readFile(new URL(`../../${rel}`, import.meta.url), 'utf8');
+
+test('the page file, the redirect and the nav entries move together', async () => {
+  assert.notEqual(await exists('src/pages/benchmarks.astro'), await exists('src/pages/_benchmarks.astro'), 'exactly one of the two files exists');
+  const nav = JSON.parse(await read('src/data/nav.json'));
+  const entries = [
+    nav.header.find((l) => l.label === 'benchmarks'),
+    nav.footerColumns.flatMap((c) => c.links).find((l) => l.label === 'benchmarks'),
+  ];
+  for (const entry of entries) {
+    assert.ok(entry, 'the entry stays in the manifest either way');
+    assert.equal(Boolean(entry.hidden), hidden, `${entry.href} is hidden exactly while the page is`);
+  }
+  const config = await read('astro.config.mjs');
+  assert.equal(/'\/benchmarks':\s*\{\s*status:\s*302,\s*destination:\s*'\/'\s*\}/.test(config), hidden, 'a temporary redirect stands in for a hidden page');
+  assert.equal((await read('public/llms.txt')).includes('/benchmarks'), !hidden, 'llms.txt lists the page only while it exists');
+});
+
+test('while hidden, no surface shows benchmark figures or links the page', { skip: !hidden && 'the benchmarks page is visible' }, async () => {
+  const landing = await read('src/pages/index.astro');
+  assert.ok(!landing.includes('BenchHighlights'), 'the landing page has no benchmark highlights');
+  assert.ok(!/href="\/benchmarks/.test(landing), 'and no link to the page');
+  assert.match(landing, /id="benchmarks"/, 'old /#benchmarks links still land on the page');
+  assert.ok(!(await read('src/content/docs/404.md')).includes('benchmarks'), 'the 404 page does not send people there');
+});
+
+const homeUrl = new URL('../../dist/client/index.html', import.meta.url);
+const siteBuilt = await access(homeUrl).then(() => true, () => false);
+
+test('while hidden, the build has no page, a 302 to the home page, and no link left', { skip: !hidden ? 'the benchmarks page is visible' : !siteBuilt && 'run npm run build first' }, async () => {
+  assert.equal(built, false, 'dist has no /benchmarks page');
+  const routes = JSON.parse(await read('.vercel/output/config.json')).routes;
+  const redirect = routes.find((r) => typeof r.src === 'string' && r.src.includes('benchmarks') && r.headers?.Location);
+  assert.ok(redirect, 'the deploy config has a /benchmarks redirect');
+  assert.equal(redirect.status, 302, 'temporary, so search engines keep the URL');
+  assert.equal(redirect.headers.Location, '/');
+  assert.ok(new RegExp(redirect.src).test('/benchmarks') && new RegExp(redirect.src).test('/benchmarks/'), 'with and without the trailing slash');
+  for (const page of ['index.html', 'releases/index.html', 'profiles/index.html', 'contributing/index.html', 'blog/index.html', '404.html']) {
+    const html = await read(`dist/client/${page}`);
+    assert.ok(!/href="\/benchmarks/.test(html), `${page} does not link /benchmarks`);
+  }
+  const sitemap = await read('dist/client/sitemap-0.xml');
+  assert.ok(!sitemap.includes('/benchmarks'), 'the sitemap does not list it');
 });

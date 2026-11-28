@@ -28,7 +28,8 @@
           "href": "https://forum.hal0.dev/t/model-roster-benchmarks-reference/55",
           "external": true
         }
-      ]
+      ],
+      "hidden": true
     },
     {
       "label": "profiles",
@@ -103,7 +104,8 @@
       "links": [
         {
           "label": "benchmarks",
-          "href": "/benchmarks/"
+          "href": "/benchmarks/",
+          "hidden": true
         },
         {
           "label": "profiles",

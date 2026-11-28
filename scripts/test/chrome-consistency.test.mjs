@@ -19,6 +19,10 @@ const pages = {
 };
 
 const built = await access(pages.marketing).then(() => true, () => false);
+// The benchmarks page can be hidden (src/pages/_benchmarks.astro, nav entries
+// marked `hidden`). Its own chrome checks then have nothing to read.
+const benchmarksBuilt = await access(pages.benchmarks).then(() => true, () => false);
+const skipBenchmarks = (!built && 'run npm run build first') || (!benchmarksBuilt && 'the benchmarks page is hidden');
 
 const DOCS_CATEGORY = 'https://forum.hal0.dev/c/docs/11';
 
@@ -31,7 +35,7 @@ function siteFooter(html) {
   return m[0];
 }
 
-const footerLinks = nav.footerColumns.flatMap((col) => col.links);
+const footerLinks = nav.footerColumns.flatMap((col) => col.links).filter((l) => !l.hidden);
 const visibleHeader = nav.header.filter((l) => !l.hidden);
 const footerExtras = nav.footerBase.map((l) => l.href);
 
@@ -112,20 +116,22 @@ test('every header carries the same five entries, forum included', { skip: !buil
     const links = hrefs(markup);
     // docs is a forum category now, like the KB before it, so the header
     // carries its absolute URL rather than a local path.
-    for (const href of ['/', DOCS_CATEGORY, '/benchmarks/', '/profiles', 'https://forum.hal0.dev']) {
+    for (const href of ['/', DOCS_CATEGORY, '/profiles', 'https://forum.hal0.dev']) {
       assert.ok(links.has(href), `${where} missing ${href}`);
     }
+    // A hidden page is linked from nowhere in the chrome; a visible one from everywhere.
+    assert.equal(links.has('/benchmarks/'), benchmarksBuilt, `${where}: the benchmarks link follows the page`);
   }
 });
 
-test('benchmarks carries the shared SiteFooter with the full manifest link set', { skip: !built && 'run npm run build first' }, async () => {
+test('benchmarks carries the shared SiteFooter with the full manifest link set', { skip: skipBenchmarks }, async () => {
   const html = await readFile(pages.benchmarks, 'utf8');
   const footer = hrefs(siteFooter(html));
   const marketingFooter = hrefs(siteFooter(await readFile(pages.marketing, 'utf8')));
   assert.deepEqual([...footer].sort(), [...marketingFooter].sort(), 'benchmarks footer href set must match marketing');
 });
 
-test('benchmarks carries the shared header with visible manifest links', { skip: !built && 'run npm run build first' }, async () => {
+test('benchmarks carries the shared header with visible manifest links', { skip: skipBenchmarks }, async () => {
   const html = await readFile(pages.benchmarks, 'utf8');
   const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
   assert.ok(header, 'benchmarks page has a <header>');
@@ -134,7 +140,7 @@ test('benchmarks carries the shared header with visible manifest links', { skip:
   }
 });
 
-test('benchmarks carries the same header as every other page', { skip: !built && 'run npm run build first' }, async () => {
+test('benchmarks carries the same header as every other page', { skip: skipBenchmarks }, async () => {
   const html = await readFile(pages.benchmarks, 'utf8');
   const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
   const links = hrefs(header);
@@ -142,7 +148,7 @@ test('benchmarks carries the same header as every other page', { skip: !built &&
   assert.ok(links.has(DOCS_CATEGORY), 'benchmarks header missing the docs category');
 });
 
-test('benchmarks renders a real <title> and meta description', { skip: !built && 'run npm run build first' }, async () => {
+test('benchmarks renders a real <title> and meta description', { skip: skipBenchmarks }, async () => {
   const html = await readFile(pages.benchmarks, 'utf8');
   const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
   assert.match(title, /Benchmarks/i, `benchmarks <title> should mention "benchmarks", got "${title}"`);

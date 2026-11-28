@@ -18,10 +18,8 @@ import HermesCard from '../components/HermesCard.astro';
 import ForumTopics from '../components/landing/ForumTopics.astro';
 import FeaturedProfiles from '../components/landing/FeaturedProfiles.astro';
 import LatestWriting from '../components/landing/LatestWriting.astro';
-import BenchHighlights from '../components/landing/BenchHighlights.astro';
 import rawChangelog from '../data/changelog.md?raw';
 import releaseTags from '../data/release-tags.json';
-import { ROSTER_DATE } from '../data/model-roster';
 import { BOARD_SLOTS } from '../data/slot-board';
 import {
   CLIENT_DEFAULTS,
@@ -382,16 +380,12 @@ const faqPage = {
     </div>
   </section>
 
-  <!-- 10 + 11. BENCHMARKS + RELEASES -->
+  <!-- 11. RELEASES. The benchmark highlights that sat beside this are hidden with the
+       /benchmarks page (src/pages/_benchmarks.astro); old links to /#benchmarks land here. -->
   <div class="two-up-wrap">
-    <div class="shell-wide two-up">
-      <section id="benchmarks">
-        <BenchHighlights />
-        <p class="bench-note">
-          Sweep from {ROSTER_DATE} on hal0 0.5 with the earlier runner.
-        </p>
-      </section>
+    <div class="shell-wide">
       <section id="releases" class="rel-col">
+        <span id="benchmarks"></span>
         <!-- Old links to /#whats-new and /#roadmap land on the release that replaced them. -->
         <span id="whats-new"></span>
         <span id="roadmap"></span>
@@ -490,7 +484,7 @@ const faqPage = {
 
   /* Sections */
   .section { padding-block: 96px; }
-  .section[id], .cta[id], .two-up section[id] { scroll-margin-top: 72px; }
+  .section[id], .cta[id], .two-up-wrap section[id] { scroll-margin-top: 72px; }
   .section.rule { border-top: 1px solid var(--hal0-border); }
   .sec-head {
     display: grid;
@@ -787,12 +781,10 @@ const faqPage = {
   .tier .s { font-size: 12px; line-height: 1.45; color: var(--hal0-fg-dim); }
   .hw-note { margin: 14px 0 0; font-family: var(--hal0-font-mono); font-size: 11.5px; color: var(--hal0-fg-dim); }
 
-  /* 10 + 11. Benchmarks and releases. BenchHighlights brings 52px of its own top
-   * padding, so the wrapper gives less and the release column matches it. */
+  /* 11. Releases. It shared a row with the benchmark highlights; alone, it keeps
+   * the width it had there so the teaser does not stretch across the page. */
   .two-up-wrap { padding-block: 44px 96px; border-top: 1px solid var(--hal0-border); }
-  .two-up { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; align-items: start; }
-  .rel-col { padding-top: 52px; }
-  .bench-note { margin: 10px 0 0; font-family: var(--hal0-font-mono); font-size: 11px; color: var(--hal0-fg-dim); }
+  .rel-col { max-width: 780px; padding-top: 52px; }
 
   /* 13. Community. The sections only pad their tops. */
   .community { padding-bottom: 96px; }
@@ -835,7 +827,6 @@ const faqPage = {
     .console-grid > :last-child:nth-child(3n + 1) { grid-column: auto; }
     .tier-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .two-up-wrap { padding-block: 12px 64px; }
-    .two-up { grid-template-columns: minmax(0, 1fr); }
     .rel-col { padding-top: 20px; }
     .community { padding-bottom: 64px; }
     .cta { padding-block: 64px 56px; }

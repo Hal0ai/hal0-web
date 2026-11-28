@@ -10,7 +10,6 @@
 ## Key pages
 
 - [Home](https://hal0.dev/): what hal0 is and how it fits together
-- [Benchmarks](https://hal0.dev/benchmarks): decode and prefill tokens per second, MTP accept rate and memory per model, measured on one Strix Halo machine
 - [Profiles](https://hal0.dev/profiles): community llama.cpp flag sets for local models, with the numbers they produced
 - [Releases](https://hal0.dev/releases): every hal0 release, newest first, with install and upgrade commands
 - [Blog](https://hal0.dev/blog): release write-ups and field notes on running local models at home

@@ -23,7 +23,11 @@ export interface FooterColumn {
 }
 
 export const header = nav.header as NavLink[];
-export const footerColumns = nav.footerColumns as FooterColumn[];
+/** Footer columns without their hidden links (the same switch the header uses). */
+export const footerColumns = (nav.footerColumns as FooterColumn[]).map((col) => ({
+  ...col,
+  links: col.links.filter((l) => !l.hidden),
+}));
 export const social = nav.social as SocialLink[];
 export const footerBase = nav.footerBase as NavLink[];
 

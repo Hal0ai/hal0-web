@@ -30,7 +30,7 @@ Licensed **Apache-2.0** (matches the upstream hal0 product repo).
 | -------------------- | ---------------------------------------------------------------------- |
 | `/`                  | `src/pages/index.astro` (landing page)                                 |
 | `/releases`          | `src/pages/releases.astro`, rendered from the synced product `CHANGELOG.md` |
-| `/benchmarks`        | `src/pages/benchmarks.astro`, model roster leaderboard                 |
+| `/benchmarks`        | hidden: `src/pages/_benchmarks.astro` (see below); redirects to `/`     |
 | `/profiles`          | `src/pages/profiles.astro`, community profile gallery                  |
 | `/profiles/submit`   | `src/pages/profiles/submit.astro`, in-browser validated submission     |
 | `/profiles/submitted`| `src/pages/profiles/submitted.astro`                                   |
@@ -42,6 +42,22 @@ SSO and forum-notification endpoints. `workers/bench-api` is the separate
 benchmark API worker (its own README).
 
 Marketing pages render through `src/layouts/MarketingLayout.astro`.
+
+### The benchmarks page is hidden
+
+The benchmark system is being reworked, so `/benchmarks` is switched off for
+now. Three things hold it off, and the tests check that they move together:
+
+- the page file is `src/pages/_benchmarks.astro` (Astro does not build a page
+  whose name starts with an underscore);
+- `astro.config.mjs` redirects `/benchmarks` to `/` with a 302;
+- the two `benchmarks` entries in `src/data/nav.json` carry `"hidden": true`.
+
+To bring it back, undo those three, restore the `Benchmarks` line in
+`public/llms.txt`, and put `<BenchHighlights />` back on the landing page if
+you want the teaser. The bench components, `src/lib/bench-view.mjs`,
+`src/scripts/bench-island.ts`, the roster data and `scripts/sync-bench.mjs`
+are untouched.
 
 ## Redirects
 
