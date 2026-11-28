@@ -58,6 +58,15 @@ export default defineConfig({
 		'/changelog': '/releases',
 		// The first-run guide moved to the forum's Getting started category.
 		'/first-run-guide': 'https://forum.hal0.dev/c/docs/docs-getting-started/19',
+		// The Sentry guide was removed from the product repo (hal0 #3783 —
+		// optional Sentry error reporting is gone), so the docs sync no
+		// longer emits a redirect for it and src/data/docs-redirects.json
+		// carries no entry. Its forum topic is still live, so the old path
+		// is kept here as a hand-written legacy redirect rather than 404ing.
+		// A forum.hal0.dev Location is what
+		// scripts/patch-vercel-docs-redirects.mjs keys off, so this route
+		// gets the same trailing-slash tolerance as the generated ones.
+		'/docs/operate/sentry': 'https://forum.hal0.dev/t/report-errors-to-sentry/44',
 		// Old deep link; the section is now what's-new.
 		'/roadmap': '/#whats-new',
 		// The KB landing was folded into the /docs hub (its six category
