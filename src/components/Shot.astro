@@ -12,6 +12,9 @@
  * `name` is the file stem. The @2x capture, the AVIF/WebP derivatives
  * (scripts/build-images.mjs, run by `prebuild`) and the intrinsic width/height
  * are all found on disk, so the markup never names a file that does not exist.
+ * A capture from the synced dashboard set (src/data/screenshots.json) was taken
+ * at device scale factor 2: it gets half its pixel size as width/height and no
+ * @2x sibling (src/lib/shot.ts).
  * The <img> keeps the PNG src: public/js/lightbox.js binds on /screenshots/.
  * Pass `loading="eager"` for the one shot above the fold.
  *

@@ -203,6 +203,49 @@ test('resolveShot: avif, webp, then png, with 1x/2x descriptors only when the @2
 	});
 });
 
+test('resolveShot: a capture from the synced set is shown at its size divided by the scale factor, without a @2x sibling', async () => {
+	await withTmp(async (root) => {
+		const publicDir = path.join(root, 'public');
+		const captureSetFile = path.join(root, 'screenshots.json');
+		await makePng(path.join(publicDir, 'screenshots/overview.png'), 960, 600);
+		// The retina file of an older capture that had the same name.
+		await makePng(path.join(publicDir, 'screenshots/overview@2x.png'), 960, 600);
+		// Named in the set, but re-captured at 1x with a @2x sibling: its pixels no longer match the manifest.
+		await makePng(path.join(publicDir, 'screenshots/recaptured.png'), 480, 300);
+		await makePng(path.join(publicDir, 'screenshots/recaptured@2x.png'), 960, 600);
+		await writeFile(
+			captureSetFile,
+			JSON.stringify({
+				deviceScaleFactor: 2,
+				images: [
+					{ file: 'overview.png', width: 960, height: 600 },
+					{ file: 'recaptured.png', width: 960, height: 600 },
+				],
+			}),
+		);
+		await buildImages({ root, log: quiet });
+
+		const shot = resolveShot('overview', { publicDir, captureSetFile });
+		assert.deepEqual([shot.width, shot.height], [480, 300], 'half the pixel size at scale factor 2');
+		assert.equal(shot.src, '/screenshots/overview.png');
+		assert.equal(shot.srcset, undefined, 'the stale @2x png is not offered');
+		assert.deepEqual(shot.sources, [
+			{ type: 'image/avif', srcset: '/screenshots/overview.avif' },
+			{ type: 'image/webp', srcset: '/screenshots/overview.webp' },
+		]);
+		const narrow = resolveShot('overview', { publicDir, captureSetFile, width: 240 });
+		assert.deepEqual([narrow.width, narrow.height], [240, 150], 'an explicit width still scales the height');
+
+		const recaptured = resolveShot('recaptured', { publicDir, captureSetFile });
+		assert.deepEqual([recaptured.width, recaptured.height], [480, 300], 'pixels that differ from the manifest: an ordinary screenshot');
+		assert.equal(recaptured.srcset, '/screenshots/recaptured.png 1x, /screenshots/recaptured@2x.png 2x');
+
+		const noManifest = resolveShot('overview', { publicDir, captureSetFile: path.join(root, 'absent.json') });
+		assert.deepEqual([noManifest.width, noManifest.height], [960, 600], 'without a manifest nothing is in the set');
+		assert.equal(noManifest.srcset, '/screenshots/overview.png 1x, /screenshots/overview@2x.png 2x');
+	});
+});
+
 test('resolveShot: a format without its derivatives is left out instead of 404ing', async () => {
 	await withTmp(async (root) => {
 		await seedRoot(root);
@@ -494,6 +537,10 @@ function splitPictures(html) {
 
 const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
 
+/** The synced dashboard set (scripts/sync-screenshots.mjs): captures taken at a device scale factor above 1. */
+const CAPTURE_SET = JSON.parse(await readFile(path.join(REPO, 'src/data/screenshots.json'), 'utf8'));
+const SET_SIZES = new Map(CAPTURE_SET.images.map((i) => [i.file, i]));
+
 /** Assert one <picture> body is avif source, webp source, png <img>, with sizes and the retina rule. */
 async function assertPictureSemantics(body, where) {
 	const sources = body.match(/<source\b[^>]*>/g) ?? [];
@@ -508,13 +555,21 @@ async function assertPictureSemantics(body, where) {
 	const h = Number(attr(img, 'height'));
 	assert.ok(w > 0 && h > 0, `${where}: img has width and height`);
 	const meta = await sharp(path.join(PUBLIC, src)).metadata();
-	assert.deepEqual([w, h], [meta.width, meta.height], `${where}: width/height are the png's intrinsic size`);
+	const stated = SET_SIZES.get(path.basename(src));
+	const fromSet = Boolean(stated) && stated.width === meta.width && stated.height === meta.height;
+	const scale = fromSet ? CAPTURE_SET.deviceScaleFactor : 1;
+	assert.deepEqual(
+		[w, h],
+		[Math.round(meta.width / scale), Math.round(meta.height / scale)],
+		`${where}: width/height are the png's size, divided by the scale factor for a capture from the synced set`,
+	);
 	assert.ok(['lazy', 'eager'].includes(attr(img, 'loading')), `${where}: loading is set`);
 	assert.equal(attr(img, 'decoding'), 'async', `${where}: decoding is async`);
 	assert.ok(attr(img, 'alt')?.length > 0, `${where}: alt text`);
 
 	const base = src.replace(/\.png$/, '');
-	const hasRetina = await exists(path.join(PUBLIC, `${base}@2x.png`));
+	// A capture from the synced set is its own high-density source: a @2x png left beside it is not used.
+	const hasRetina = !fromSet && (await exists(path.join(PUBLIC, `${base}@2x.png`)));
 	for (const [s, ext] of [[sources[0], 'avif'], [sources[1], 'webp']]) {
 		const srcset = attr(s, 'srcset');
 		assert.equal(
