@@ -377,6 +377,20 @@ test('llms.txt summarises the product and lists the key URLs', { skip }, async (
 	}
 });
 
+// hal0's SECURITY.md says to treat the bundled agent as root-equivalent on its
+// box: it runs as the same user as the API and can read that process's
+// credentials. The landing page and llms.txt already refuse the word; a blog
+// post must not bring it back.
+test('no blog post calls the agent sandboxed', async () => {
+	const dir = new URL('../../src/content/docs/blog/', import.meta.url);
+	const posts = (await readdir(dir)).filter((name) => /\.mdx?$/.test(name));
+	assert.ok(posts.length > 0, 'the blog has posts');
+	for (const name of posts) {
+		const text = await readFile(new URL(name, dir), 'utf8');
+		assert.ok(!/\bsandbox(ed|ing)?\b/i.test(text), `${name} does not describe anything as sandboxed`);
+	}
+});
+
 test('the generated icons get the same cache header as the other static assets', async () => {
 	const vercel = JSON.parse(await readFile(new URL('../../vercel.json', import.meta.url), 'utf8'));
 	const rule = vercel.headers.find((h) => new RegExp(sourceToRouteSrc(h.source)).test('/icons/icon-192.png') && h.source !== '/(.*)');
