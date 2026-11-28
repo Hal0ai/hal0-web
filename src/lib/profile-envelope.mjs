@@ -119,7 +119,66 @@ export function profileEnvelope(record) {
 
 /** Where the site serves a record's envelope. */
 export function envelopePath(slug) {
-  return `/profiles/${slug}.hal0profile.json`;
+  return `/profiles/${envelopeFile(slug)}`;
+}
+
+/** The envelope's file name, relative to /profiles/. */
+export function envelopeFile(slug) {
+  return `${slug}.hal0profile.json`;
+}
+
+export const ADDON_INDEX_KIND = 'hal0.addon-index';
+export const ADDON_INDEX_SCHEMA_VERSION = 1;
+// Envelope schema 2 is read from hal0 1.5.0; a record that names no floor of
+// its own gets this one.
+export const ADDON_MIN_HAL0 = '1.5.0';
+
+/** The newest history entry's version number, or undefined. */
+function latestVersion(record) {
+  const history = Array.isArray(record?.history) ? record.history : [];
+  const versions = history.map((h) => h?.v).filter((v) => Number.isInteger(v));
+  return versions.length ? Math.max(...versions) : undefined;
+}
+
+/**
+ * The `hal0.addon-index` hal0's dashboard reads to list importable profiles
+ * (contract: hal0 docs/reference/profile-addons.mdx). One row per importable
+ * record, sorted by name; a built-in profile has no envelope and no row.
+ *
+ * `checksum` is the envelope's own, so the two files always agree. The keys
+ * after `min_hal0_version` are optional extras the dashboard shows when
+ * present; `category` is the gallery's intent tag.
+ *
+ * @param {object[]} records - profiles.json `profiles`, already filtered to
+ *   the ones that get a page
+ * @returns {object}
+ */
+export function addonIndex(records) {
+  const addons = records
+    .filter((record) => !isSeed(record) && typeof record?.profile?.slug === 'string')
+    .map((record) => {
+      const { profile, runtime = {} } = record;
+      const envelope = profileEnvelope(record);
+      const row = {
+        name: profile.slug,
+        title: profile.title || profile.slug,
+        description: envelope.profile.intent || profile.summary || profile.title || profile.slug,
+        runtime_family: runtime.family || 'llama-server',
+        runner: envelope.profile.runner ?? null,
+        checksum: envelope.checksum,
+        file: envelopeFile(profile.slug),
+        min_hal0_version: runtime.min_hal0 || ADDON_MIN_HAL0,
+      };
+      if (typeof profile.intent === 'string' && profile.intent) row.category = profile.intent;
+      if (typeof profile.summary === 'string' && profile.summary) row.summary = profile.summary;
+      if (typeof profile.author === 'string' && profile.author) row.author = profile.author;
+      if (typeof profile.first_party === 'boolean') row.first_party = profile.first_party;
+      const version = latestVersion(record);
+      if (version !== undefined) row.version = version;
+      return row;
+    })
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  return { kind: ADDON_INDEX_KIND, schema_version: ADDON_INDEX_SCHEMA_VERSION, addons };
 }
 
 /**
