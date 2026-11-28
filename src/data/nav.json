@@ -49,6 +49,23 @@
   ],
   "footerColumns": [
     {
+      "heading": "how it works",
+      "links": [
+        {
+          "label": "slots",
+          "href": "/slots/"
+        },
+        {
+          "label": "memory",
+          "href": "/memory/"
+        },
+        {
+          "label": "agents",
+          "href": "/agents/"
+        }
+      ]
+    },
+    {
       "heading": "learn",
       "links": [
         {

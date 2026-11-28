@@ -1,0 +1,526 @@
+---
+/**
+ * /slots/ — "How slots work". One of the three pages the landing page links to
+ * for the fuller story (see src/data/how-pages.ts).
+ *
+ * Every statement is from the hal0 docs at the v1.8.1 tag:
+ * docs/concepts/slots.mdx, docs/guides/manage-slots.mdx,
+ * docs/guides/manage-slots-dashboard.mdx, docs/reference/slot-lifecycle.mdx,
+ * docs/getting-started/beginners-guide.mdx and README.md ("What's in the box").
+ * The commands are copied from those pages; scripts/test/how-pages.test.mjs
+ * holds the list, so a command cannot be added here without adding its source
+ * there. Check the page against the docs again when a release changes slots.
+ */
+import { Icon } from 'astro-icon/components';
+import HowPage from '../components/how/HowPage.astro';
+import Shot from '../components/Shot.astro';
+
+const TOC: [string, string][] = [
+  ['short', 'The short version'],
+  ['anatomy', 'What a slot is made of'],
+  ['day-one', 'What you get on day one'],
+  ['life', 'The life of a slot'],
+  ['swap', 'Changing the model'],
+  ['together', 'Several at once'],
+  ['images', 'Images and the graphics chip'],
+  ['try', 'Try it'],
+  ['deeper', 'Go deeper'],
+];
+
+/** The ten slots a fresh install creates. Only `brain` starts with a model. */
+const SEEDED = [
+  { name: 'agent', job: 'Your main chat model. Agents use this one.' },
+  { name: 'brain', job: 'The small helper behind the dashboard’s own chat.', filled: true },
+  { name: 'coder', job: 'A model for your editor or coding assistant.' },
+  { name: 'memory', job: 'Picks the facts out of conversations for the memory.' },
+  { name: 'embed', job: 'Turns text into numbers so documents can be searched.' },
+  { name: 'rerank', job: 'Puts search results in a better order.' },
+  { name: 'img', job: 'Image generation.' },
+  { name: 'tts', job: 'Text to speech.' },
+  { name: 'qwen3tts', job: 'A second speech engine, for the graphics chip.' },
+  { name: 'flm', job: 'Small models on the low-power AI chip, where there is one.' },
+];
+
+const STATES = [
+  { s: 'offline', d: 'Not running.' },
+  { s: 'starting', d: 'Its container is coming up.' },
+  { s: 'warming', d: 'The model is loading into memory.' },
+  { s: 'ready', d: 'Loaded and checked. It can answer.', ok: true },
+  { s: 'serving', d: 'Answering a request right now.', ok: true },
+  { s: 'idle', d: 'Loaded, and quiet for a while.', ok: true },
+];
+---
+
+<HowPage
+  page="slots"
+  title="How Slots Work in hal0: One Model per Named Seat"
+  description="A slot is a named seat for one model. See how hal0 keeps several models loaded at once, how you swap one, and what happens when memory runs short."
+  lede="A slot is a named seat for one model. Your apps talk to the seat, and you decide which model sits in it."
+  toc={TOC}
+>
+  <!-- Hero picture: one slot, labelled -->
+  <div slot="hero" class="anatomy" aria-label="A slot, with its four parts labelled">
+    <div class="a-card">
+      <div class="a-head"><span class="a-dot"></span><span class="a-name">coder</span><span class="a-state">ready</span></div>
+      <div class="a-row"><span class="a-l">model</span><span class="a-v">a coding model you picked</span></div>
+      <div class="a-row"><span class="a-l">settings</span><span class="a-v">the “coding” profile</span></div>
+      <div class="a-row"><span class="a-l">runs on</span><span class="a-v">the graphics chip</span></div>
+    </div>
+    <ol class="a-calls">
+      <li><b>The name</b> is what your apps ask for.</li>
+      <li><b>The model</b> is the file that does the work.</li>
+      <li><b>The settings</b> say how it runs.</li>
+      <li><b>The chip</b> is where it runs.</li>
+    </ol>
+  </div>
+
+  <section class="how-sec" id="short">
+    <p class="how-k">The short version</p>
+    <h2>Three things to remember.</h2>
+    <ul class="how-cards">
+      <li><span class="n">1</span><h3>One slot, one model, one job</h3><p>Chat has a slot. Code has a slot. Speech has a slot. Each keeps its own model loaded.</p></li>
+      <li><span class="n">2</span><h3>Apps ask for the slot by name</h3><p>Your chat app asks for <code>agent</code>, not for a particular model file.</p></li>
+      <li><span class="n">3</span><h3>Change the model, keep the name</h3><p>Put a different model in the slot and every app carries on, because the name did not change.</p></li>
+    </ul>
+  </section>
+
+  <section class="how-sec" id="anatomy">
+    <p class="how-k">The idea</p>
+    <h2>What a slot is made of.</h2>
+    <p>
+      hal0 keeps three things apart that other tools tend to mix together. That separation is what lets you swap
+      one without disturbing the other two.
+    </p>
+    <ul class="how-defs">
+      <li><span class="t">The model<small>the file</small></span><span>A large file you download once. hal0 records only the facts about it: how big it is and what it can do.</span></li>
+      <li><span class="t">The profile<small>the settings</small></span><span>How a model should run: how much text it can keep in view, whether it thinks before answering, whether it can look at images. hal0 ships ready-made profiles, and you rarely need to touch them at first.</span></li>
+      <li><span class="t">The slot<small>the seat</small></span><span>A name, the chip it runs on, the model it holds and the profile it uses. This is the part your apps know about.</span></li>
+    </ul>
+    <p>
+      So you can run one model two ways with two profiles, or keep the settings and try a newer model, without
+      rebuilding anything.
+    </p>
+  </section>
+
+  <section class="how-sec" id="day-one">
+    <p class="how-k">After you install</p>
+    <h2>What you get on day one.</h2>
+    <p>
+      The installer creates ten slots. One of them, <code>brain</code>, comes with a small model so the dashboard’s
+      chat works straight away. The rest are empty seats: nothing is downloaded for them until you choose a model.
+    </p>
+    <ul class="seeded">
+      {SEEDED.map((slot) => (
+        <li class:list={{ filled: slot.filled }}>
+          <code>{slot.name}</code>
+          <span>{slot.job}</span>
+          {slot.filled && <em>has a model</em>}
+        </li>
+      ))}
+    </ul>
+    <p>
+      Start with <code>agent</code>. Give it a chat model and the chat app and the Hermes agent both start using it.
+      Leave the others empty until you want what they do. You can also add slots of your own.
+    </p>
+  </section>
+
+  <section class="how-sec" id="life">
+    <p class="how-k">Under the hood, gently</p>
+    <h2>The life of a slot.</h2>
+    <p>
+      Each slot runs its model in a container of its own, so one slot stopping or crashing does not take the others
+      with it. The dashboard shows the state a slot is in, and the state is real: it changes as the slot does.
+    </p>
+    <ol class="states">
+      {STATES.map((state) => (
+        <li class:list={{ ok: state.ok }}>
+          <code>{state.s}</code>
+          <span>{state.d}</span>
+        </li>
+      ))}
+    </ol>
+    <p>
+      A request can be sent to a slot that is <code>ready</code>, <code>serving</code> or <code>idle</code>. Before a
+      slot is called ready, hal0 asks it a question with a known answer, so a model that loads but produces nonsense
+      is caught. There are a few more states than these six, for downloading a model, shutting down and errors;
+      the reference at the end of this page lists them all.
+    </p>
+    <div class="how-split wide-fig">
+      <div class="how-prose">
+        <h3>The slot editor</h3>
+        <p>
+          Click a slot to open its editor: the model, the profile, and a handful of settings you can change for this
+          slot alone, such as how much text it keeps in view. Everything else comes from the profile.
+        </p>
+      </div>
+      <div class="how-fig crop-top">
+        <Shot
+          name="slot-detail"
+          alt="The slot editor in the hal0 dashboard: a drawer with the slot's model, its profile, and a row of settings that can be changed for this slot only"
+          caption="The slot editor. Model on top, profile below it, then the settings this slot overrides."
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="how-sec" id="swap">
+    <p class="how-k">The part people like</p>
+    <h2>Changing the model.</h2>
+    <p>
+      Open the slot’s model menu and pick another one. Each entry is marked <strong>fits</strong>, <strong>tight</strong> or <strong>won’t fit</strong>{' '}
+      for your machine. The slot restarts with the new model, and your apps are none the wiser.
+    </p>
+    <div class="swap" aria-label="What happens when you change a slot's model">
+      <div class="sw-step">
+        <span class="sw-k">before</span>
+        <span class="sw-slot"><code>agent</code> holds model A</span>
+        <span class="sw-app">chat app asks for <code>agent</code></span>
+      </div>
+      <span class="sw-arrow" aria-hidden="true">→</span>
+      <div class="sw-step mid">
+        <span class="sw-k">for a moment</span>
+        <span class="sw-slot"><code>agent</code> is reloading</span>
+        <span class="sw-app">chat app is told “try again shortly”</span>
+      </div>
+      <span class="sw-arrow" aria-hidden="true">→</span>
+      <div class="sw-step done">
+        <span class="sw-k">after</span>
+        <span class="sw-slot"><code>agent</code> holds model B</span>
+        <span class="sw-app">chat app still asks for <code>agent</code></span>
+      </div>
+    </div>
+    <p>
+      The reload is a real restart, so it is not instant. While it happens, a request to that slot gets a polite
+      “not ready yet, retry” answer in place of a broken connection. Other slots are not affected.
+    </p>
+    <p>
+      Not sure about a new model? You can try one in a slot without making it the slot’s saved choice.
+    </p>
+  </section>
+
+  <section class="how-sec" id="together">
+    <p class="how-k">Sharing the machine</p>
+    <h2>Several at once, and what happens when memory runs short.</h2>
+    <p>
+      Different slots answer at the same time. Your editor can be using <code>coder</code> while the chat app uses <code>agent</code>{' '}
+      and the memory quietly uses its own slot.
+    </p>
+    <ul class="how-ticks">
+      <li><Icon name="lucide:check" /><span><strong>hal0 checks before it loads.</strong> If a model will not fit in the memory that is left, the load is refused and nothing else is disturbed.</span></li>
+      <li><Icon name="lucide:check" /><span><strong>You decide what gives way.</strong> Every slot has a priority. When room is needed, the lowest priority slot that is not busy is unloaded first.</span></li>
+      <li><Icon name="lucide:check" /><span><strong>A slot that is answering is never unloaded.</strong> And a slot you pin is left alone entirely.</span></li>
+    </ul>
+    <p class="how-note">
+      <Icon name="lucide:info" />
+      <span>
+        <b>One request at a time, for two of them.</b> The <code>agent</code> slot and the dashboard helper’s{' '}
+        <code>brain</code> slot answer one request at a time and queue the rest. That is a setting on their profile,
+        chosen so one long task is not cut short by sharing the model’s working space with others.
+      </span>
+    </p>
+  </section>
+
+  <section class="how-sec" id="images">
+    <p class="how-k">An honest exception</p>
+    <h2>Images and the graphics chip.</h2>
+    <div class="how-split">
+      <div class="how-prose">
+        <p>
+          Image generation needs most of the graphics chip to itself. So while a picture is being made, the chat
+          models on that chip step aside, and they come back about ten seconds after the last image.
+        </p>
+        <p>
+          A chat message sent during that time waits its turn. Slots on the low-power AI chip or on the processor
+          are not affected. The dashboard tells you what will pause before you press Generate.
+        </p>
+      </div>
+      <div class="how-fig">
+        <Shot
+          name="closeup-image-gen-pane"
+          alt="The image generation pane in the hal0 dashboard: a prompt box, a model menu, size choices and a Generate button, with a line underneath naming the chat slots that will pause and saying they reload about ten seconds after the last image"
+          caption="The line under Generate names the slots that will pause, and for how long."
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="how-sec" id="try">
+    <p class="how-k">Hands on</p>
+    <h2>Try it.</h2>
+    <p>Each step works from the dashboard. The command underneath does the same thing from a terminal on the box.</p>
+    <ol class="how-steps">
+      <li>
+        <h3>Download a model</h3>
+        <p>Open <strong>Models</strong>, choose <strong>Add model</strong>, search Hugging Face and pull the one you want. This example is a general chat model of about 6 GB.</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 model pull qwen3.5-9b</code><button type="button" class="btn ghost sm" data-copy="hal0 model pull qwen3.5-9b">copy</button></div>
+      </li>
+      <li>
+        <h3>Put it in the agent slot</h3>
+        <p>Open <strong>Slots</strong>, find the card named <code>agent</code>, and pick your model from its menu.</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 slot load agent --model qwen3.5-9b</code><button type="button" class="btn ghost sm" data-copy="hal0 slot load agent --model qwen3.5-9b">copy</button></div>
+      </li>
+      <li>
+        <h3>See it answer</h3>
+        <p>Open the chat app from the sidebar and pick <code>agent</code>. From a terminal, the first command lists your slots and the second one starts a chat.</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 slot list</code><button type="button" class="btn ghost sm" data-copy="hal0 slot list">copy</button></div>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 chat</code><button type="button" class="btn ghost sm" data-copy="hal0 chat">copy</button></div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="how-sec" id="deeper">
+    <p class="how-k">The full story</p>
+    <h2>Go deeper.</h2>
+    <p>The documentation has every state, flag and error code.</p>
+    <div class="how-deeper">
+      <a href="/docs/concepts/slots/"><span class="kind">concept</span><span class="name">Slots</span><span class="what">The whole model: containers, states, who owns which setting.</span></a>
+      <a href="/docs/guides/manage-slots/"><span class="kind">guide</span><span class="name">Manage slots</span><span class="what">Create, load, swap, restart and delete, from the dashboard or the terminal.</span></a>
+      <a href="/docs/concepts/capabilities-and-profiles/"><span class="kind">concept</span><span class="name">Profiles</span><span class="what">What a profile holds and how to make your own.</span></a>
+      <a href="/docs/reference/slot-lifecycle/"><span class="kind">reference</span><span class="name">Slot lifecycle</span><span class="what">Every state, the checks before “ready”, and how eviction picks.</span></a>
+      <a href="/docs/concepts/stacks/"><span class="kind">concept</span><span class="name">Stacks</span><span class="what">Save a whole set of slots and switch between sets.</span></a>
+      <a href="https://forum.hal0.dev"><span class="kind">community</span><span class="name">Ask on the forum</span><span class="what">Questions, setups and help from other people running hal0.</span></a>
+    </div>
+  </section>
+</HowPage>
+
+<style>
+  /* Hero picture */
+  .anatomy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+    gap: 22px;
+    align-items: center;
+  }
+  .a-card {
+    border: 1px solid var(--hal0-accent-line);
+    border-left: 3px solid var(--hal0-accent);
+    border-radius: 14px;
+    background: var(--hal0-bg-elevated);
+    box-shadow: 0 30px 80px -40px var(--hal0-accent-glow);
+  }
+  .a-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--hal0-border-soft);
+  }
+  .a-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--hal0-accent);
+  }
+  .a-name {
+    font-family: var(--hal0-font-mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+  .a-state {
+    margin-left: auto;
+    font-family: var(--hal0-font-mono);
+    font-size: 11.5px;
+    color: var(--hal0-fg-dim);
+  }
+  .a-row {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 16px;
+    font-size: 14.5px;
+  }
+  .a-row + .a-row {
+    border-top: 1px solid var(--hal0-border-soft);
+  }
+  .a-l {
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
+  }
+  .a-v {
+    color: var(--hal0-fg);
+  }
+  .a-calls {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    counter-reset: call;
+  }
+  .a-calls li {
+    position: relative;
+    padding-left: 30px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+    counter-increment: call;
+  }
+  .a-calls li::before {
+    content: counter(call);
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--hal0-accent-line);
+    border-radius: 50%;
+    font-family: var(--hal0-font-mono);
+    font-size: 10.5px;
+    color: var(--hal0-accent);
+  }
+  .a-calls b {
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+
+  /* The ten seeded slots */
+  .seeded {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .seeded li {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 4px 12px;
+    align-items: baseline;
+    padding: 12px 14px;
+    border: 1px dashed var(--hal0-border-strong);
+    border-radius: 10px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+  }
+  .seeded li.filled {
+    border-style: solid;
+    border-color: var(--hal0-ok-line);
+    background: var(--hal0-ok-soft);
+  }
+  .seeded code {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .seeded em {
+    grid-column: 2;
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    font-style: normal;
+    color: var(--hal0-ok);
+  }
+
+  /* States */
+  .states {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .states li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid var(--hal0-border);
+    border-top: 2px solid var(--hal0-border-strong);
+    border-radius: 10px;
+    background: var(--hal0-bg-elevated);
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--hal0-fg-muted);
+  }
+  .states li.ok {
+    border-top-color: var(--hal0-ok);
+  }
+  .states code {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .states li.ok code {
+    color: var(--hal0-ok);
+  }
+
+  /* Swap */
+  .swap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+    margin-top: 26px;
+  }
+  .sw-step {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 12px;
+    background: var(--hal0-bg-elevated);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .sw-step.mid {
+    border-color: var(--hal0-warn-line);
+    background: var(--hal0-warn-soft);
+  }
+  .sw-step.done {
+    border-color: var(--hal0-ok-line);
+  }
+  .sw-k {
+    font-family: var(--hal0-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--hal0-fg-dim);
+  }
+  .sw-slot {
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+  .sw-app {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--hal0-border-soft);
+    color: var(--hal0-fg-muted);
+  }
+  .sw-arrow {
+    align-self: center;
+    font-size: 20px;
+    color: var(--hal0-fg-faint);
+  }
+
+  @media (max-width: 1000px) {
+    .states {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .swap {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sw-arrow {
+      justify-self: center;
+      transform: rotate(90deg);
+    }
+  }
+  /* Phone: the site's floor for small labels (see site.css). */
+  @media (max-width: 640px) {
+    .a-l,
+    .seeded em,
+    .sw-k {
+      font-size: 11.5px;
+    }
+  }
+  @media (max-width: 560px) {
+    .anatomy,
+    .seeded {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .states {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -649,9 +649,11 @@
 		background: var(--bg-sunken);
 		margin-top: 64px;
 	}
+	/* The brand, then one column per group in nav.json. SiteFooter sets
+	 * --ftr-n to the number of groups, so a new group needs no change here. */
 	.ftr-cols {
 		display: grid;
-		grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+		grid-template-columns: 1.4fr repeat(var(--ftr-n, 4), minmax(0, 1fr));
 		gap: 40px;
 		padding: 48px 0 40px;
 	}
@@ -691,10 +693,22 @@
 	.ftr-base a {
 		color: var(--fg-4);
 	}
+	/* Five tracks get too narrow for "knowledge base" on a small laptop or a
+	 * tablet held sideways: the brand takes a row of its own and the link
+	 * groups share the next one. On a tablet held upright and on a phone the
+	 * groups go two by two. */
+	@media (max-width: 1000px) {
+		.ftr-cols {
+			grid-template-columns: repeat(var(--ftr-n, 4), minmax(0, 1fr));
+			gap: 32px;
+		}
+		.ftr-brand {
+			grid-column: 1 / -1;
+		}
+	}
 	@media (max-width: 820px) {
 		.ftr-cols {
 			grid-template-columns: 1fr 1fr;
-			gap: 32px;
 		}
 	}
 

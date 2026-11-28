@@ -1,0 +1,335 @@
+---
+/**
+ * /agents/ — "How to run agents". One of the three pages the landing page links
+ * to for the fuller story (see src/data/how-pages.ts).
+ *
+ * Every statement is from hal0 at the v1.8.1 tag:
+ * docs/getting-started/beginners-guide.mdx (stage 5), docs/concepts/agents.mdx,
+ * docs/guides/run-agents.mdx, docs/guides/delegate-to-agents.mdx,
+ * docs/guides/connect-mcp.mdx, SECURITY.md and CHANGELOG.md (1.8.0, 1.8.1). The
+ * commands are copied from those pages; scripts/test/how-pages.test.mjs holds
+ * the list.
+ *
+ * Two limits must stay on this page while they are true of the product. The
+ * agent is not confined: SECURITY.md says to treat it as root-equivalent on its
+ * box, so the approvals section says approvals are not a wall. And the built-in
+ * agents cannot call an MCP server the user installed themselves.
+ */
+import { Icon } from 'astro-icon/components';
+import HowPage from '../components/how/HowPage.astro';
+import HermesCard from '../components/HermesCard.astro';
+import Shot from '../components/Shot.astro';
+
+const TOC: [string, string][] = [
+  ['short', 'The short version'],
+  ['three', 'The three agents'],
+  ['hermes', 'Talking to Hermes'],
+  ['approvals', 'It asks first'],
+  ['board', 'Giving it work'],
+  ['bridge', 'From your laptop'],
+  ['tools', 'What it can use'],
+  ['try', 'Try it'],
+  ['deeper', 'Go deeper'],
+];
+
+const AGENTS = [
+  {
+    icon: 'lucide:sparkles',
+    name: 'The dashboard helper',
+    tech: 'hal0-brain',
+    state: 'built in',
+    body: 'Lives in the dashboard’s Agent Chat. It knows about this box: what is loaded, what is failing, what a setting does.',
+  },
+  {
+    icon: 'lucide:bot',
+    name: 'Hermes',
+    tech: 'general-purpose agent',
+    state: 'installed by default',
+    body: 'Runs in the background, uses the model in your agent slot, and can take on longer jobs with tools.',
+    main: true,
+  },
+  {
+    icon: 'lucide:terminal',
+    name: 'Pi',
+    tech: 'coding agent',
+    state: 'off until you add it',
+    body: 'A coding agent you run in a terminal. One command installs it and points it at your slots and memory.',
+  },
+];
+---
+
+<HowPage
+  page="agents"
+  title="How to Run AI Agents on hal0 with Hermes"
+  description="hal0 installs the Hermes agent and connects it to your models and memory. See how to talk to it, approve what it asks, and hand it tasks from your laptop."
+  lede="A chat model answers. An agent can also use tools and work through a job in steps. hal0 comes with one installed and connects it to your models and your memory."
+  toc={TOC}
+>
+  <div slot="hero" class="hero-card">
+    <HermesCard />
+  </div>
+
+  <section class="how-sec" id="short">
+    <p class="how-k">The short version</p>
+    <h2>Three things to remember.</h2>
+    <ul class="how-cards">
+      <li><span class="n">1</span><h3>It is already there</h3><p>Hermes is installed with hal0 and wired to your models and memory. Give the agent slot a model and it is ready.</p></li>
+      <li><span class="n">2</span><h3>It asks before risky steps</h3><p>Actions marked as risky wait in the dashboard until you approve or deny them.</p></li>
+      <li><span class="n">3</span><h3>It takes work from anywhere</h3><p>From the chat app, from its task board, or from a coding tool on your own computer.</p></li>
+    </ul>
+  </section>
+
+  <section class="how-sec" id="three">
+    <p class="how-k">Who is who</p>
+    <h2>The three agents.</h2>
+    <p>An agent is a model plus tools: it can look things up, take actions and work through a task step by step. hal0 has three.</p>
+    <ul class="agents">
+      {AGENTS.map((agent) => (
+        <li class:list={{ main: agent.main }}>
+          <span class="ag-ic"><Icon name={agent.icon} /></span>
+          <span class="ag-state">{agent.state}</span>
+          <h3>{agent.name}</h3>
+          <span class="ag-tech">{agent.tech}</span>
+          <p>{agent.body}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="how-sec" id="hermes">
+    <p class="how-k">Getting started</p>
+    <h2>Talking to Hermes.</h2>
+    <p>
+      Hermes needs a model in the <code>agent</code> slot, so give that slot a model first. After that there is
+      nothing to configure: Hermes uses whichever model the slot holds, and follows along when you change it.
+    </p>
+    <div class="how-split">
+      <ul class="how-ticks">
+        <li><Icon name="lucide:check" /><span><strong>In the chat app.</strong> Open the chat app and pick <code>hermes-agent</code> in the model menu. It sits beside your slots.</span></li>
+        <li><Icon name="lucide:check" /><span><strong>In the dashboard.</strong> The <strong>Agents</strong> page shows a card for each agent with its version, the model it is using and whether it is healthy.</span></li>
+        <li><Icon name="lucide:check" /><span><strong>With memory.</strong> Hermes recalls from the shared memory before it answers and saves what is worth keeping.</span></li>
+      </ul>
+      <div class="how-fig natural">
+        <Shot
+          name="closeup-overview-agents"
+          alt="The Agents card on the hal0 dashboard's Overview page: Hermes shown as serving with its version and profile, Pi shown as installed, and below them a list of tasks that other tools have handed to Hermes, one running and two done"
+          caption="The Agents card on the Overview page: who is installed, who is working, and the tasks handed to them."
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="how-sec" id="approvals">
+    <p class="how-k">Staying in control</p>
+    <h2>It asks first.</h2>
+    <div class="how-split">
+      <div class="how-prose">
+        <p>
+          Some actions are gated: downloading a model, deleting a slot, changing a setting. When an agent wants to do
+          one of these, the request waits in the dashboard and you approve or deny it.
+        </p>
+        <p>
+          The agent’s terminal tool, which would let it run commands on the box, is off unless you switch it on when
+          you install.
+        </p>
+      </div>
+      <div class="how-fig natural">
+        <Shot
+          name="closeup-notifications"
+          alt="The notifications panel in the hal0 dashboard showing one item that needs attention: Hermes wants the terminal tool, approval pending, with a Review button"
+          caption="A request waiting for you, with a Review button."
+        />
+      </div>
+    </div>
+    <p class="how-note">
+      <Icon name="lucide:info" />
+      <span>
+        <b>Approvals raise the bar. They are not a wall.</b> The agent runs with the same access as hal0 itself, so
+        treat it like someone you have given the keys to the box, and be careful what you ask it to read from the
+        internet. The security notes spell out what it can reach.{' '}
+        <a href="/docs/concepts/security/">Security notes →</a>
+      </span>
+    </p>
+  </section>
+
+  <section class="how-sec" id="board">
+    <p class="how-k">Longer jobs</p>
+    <h2>Giving it work.</h2>
+    <p>
+      For anything bigger than a chat message there is the <strong>Operator Board</strong>, a task board for Hermes.
+      Add a task, and it moves across the columns as Hermes picks it up, works on it and finishes. A task that is
+      blocked or waiting on you is flagged at the top.
+    </p>
+    <div class="how-fig full">
+      <Shot
+        name="operator-board"
+        alt="The Operator Board in the hal0 dashboard: a kanban with Triage, To-do, Scheduled and Ready columns holding task cards for the Hermes agent, and a banner saying two tasks need attention"
+        caption="The Operator Board. Tasks move left to right; the banner calls out the ones that need you."
+      />
+    </div>
+  </section>
+
+  <section class="how-sec" id="bridge">
+    <p class="how-k">The agent bridge</p>
+    <h2>Handing it tasks from your laptop.</h2>
+    <p>
+      A coding assistant on your own computer, such as Claude Code, can hand a task to Hermes on the hal0 box and
+      wait for the result. It works over MCP, a standard way for AI tools to connect to outside tools.
+    </p>
+    <ol class="how-steps">
+      <li>
+        <h3>On the hal0 box, create a key</h3>
+        <p>The name is yours to choose. hal0 prints the key once, followed by a ready-made command for each connection the key opens.</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 bridge add my-laptop</code><button type="button" class="btn ghost sm" data-copy="hal0 bridge add my-laptop">copy</button></div>
+      </li>
+      <li>
+        <h3>On your own computer, paste those commands</h3>
+        <p>They tell your assistant where the box is and give it the key.</p>
+      </li>
+      <li>
+        <h3>Ask your assistant to delegate</h3>
+        <p>It now has a tool that starts a task on Hermes and reports back. It can use the shared memory too.</p>
+      </li>
+    </ol>
+    <p>
+      Unless you ask for more, a key opens the agents and the memory and nothing else. You can take it away again
+      at any time:
+    </p>
+    <div class="how-cmd solo"><span class="prompt">$</span><code>hal0 bridge revoke my-laptop</code><button type="button" class="btn ghost sm" data-copy="hal0 bridge revoke my-laptop">copy</button></div>
+  </section>
+
+  <section class="how-sec" id="tools">
+    <p class="how-k">Tools</p>
+    <h2>What an agent can use.</h2>
+    <ul class="how-defs">
+      <li><span class="t">Your models</span><span>Whatever sits in the agent slot. Change the model there and the agent uses the new one.</span></li>
+      <li><span class="t">Your memory</span><span>The shared bank, plus a private one of its own.</span></li>
+      <li><span class="t">hal0 itself</span><span>It can look at slots, models and logs, and ask to change them. The changes that matter wait for your approval.</span></li>
+      <li><span class="t">Extra tool servers<small>MCP</small></span><span>You can install more MCP servers and test them. For now the built-in agents cannot call a server you installed yourself; hal0 says so if you try.</span></li>
+    </ul>
+    <div class="how-fig full">
+      <Shot
+        name="mcp-tab"
+        alt="The MCP tab of the Agents page in the hal0 dashboard: the three built-in tool servers, for admin, memory and agents, each with its tools and the clients connected to it, and a list of bridge clients below"
+        caption="The MCP tab: hal0’s three built-in tool servers, and the outside tools connected through the bridge."
+      />
+    </div>
+  </section>
+
+  <section class="how-sec" id="try">
+    <p class="how-k">Hands on</p>
+    <h2>Try it.</h2>
+    <ol class="how-steps">
+      <li>
+        <h3>See which agents are installed</h3>
+        <p>In the dashboard: the <strong>Agents</strong> page. From a terminal:</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 agent list</code><button type="button" class="btn ghost sm" data-copy="hal0 agent list">copy</button></div>
+      </li>
+      <li>
+        <h3>Talk to Hermes</h3>
+        <p>Make sure the <code>agent</code> slot has a model, then open the chat app and pick <code>hermes-agent</code>.</p>
+      </li>
+      <li>
+        <h3>Add the coding agent, if you want it</h3>
+        <p>Pi is not installed unless you ask for it. This adds it, and the same command with <code>hermes</code> puts Hermes back if you skipped it.</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>sudo hal0 agent install pi</code><button type="button" class="btn ghost sm" data-copy="sudo hal0 agent install pi">copy</button></div>
+      </li>
+    </ol>
+    <p class="how-note">
+      <Icon name="lucide:info" />
+      <span>
+        <b>If <code>hermes-agent</code> is missing or silent,</b> check that the <code>agent</code> slot is ready,
+        then run <code>hal0 doctor all</code> and read the Hermes rows.
+      </span>
+    </p>
+  </section>
+
+  <section class="how-sec" id="deeper">
+    <p class="how-k">The full story</p>
+    <h2>Go deeper.</h2>
+    <p>The documentation covers profiles, personas, every tool and the security model.</p>
+    <div class="how-deeper">
+      <a href="/docs/concepts/agents/"><span class="kind">concept</span><span class="name">Agents</span><span class="what">How the three agents are built and wired.</span></a>
+      <a href="/docs/guides/run-agents/"><span class="kind">guide</span><span class="name">Run agents</span><span class="what">Profiles, approvals and the terminal tool.</span></a>
+      <a href="/docs/guides/delegate-to-agents/"><span class="kind">guide</span><span class="name">Delegate work to Hermes</span><span class="what">The bridge, step by step, for each coding tool.</span></a>
+      <a href="/docs/guides/operator-board/"><span class="kind">guide</span><span class="name">The Operator Board</span><span class="what">Columns, cards and how a task moves.</span></a>
+      <a href="/docs/guides/connect-mcp/"><span class="kind">guide</span><span class="name">Connect MCP servers</span><span class="what">The built-in servers, and installing more.</span></a>
+      <a href="/docs/concepts/security/"><span class="kind">concept</span><span class="name">Security</span><span class="what">What an agent can reach, and how to narrow it.</span></a>
+    </div>
+  </section>
+</HowPage>
+
+<style>
+  .hero-card {
+    display: flex;
+    justify-content: center;
+  }
+
+  .agents {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 26px;
+  }
+  .agents li {
+    display: flex;
+    flex-direction: column;
+    padding: 22px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 14px;
+    background: var(--hal0-bg-elevated);
+  }
+  .agents li.main {
+    border-color: var(--hal0-accent-line);
+    background: linear-gradient(160deg, var(--hal0-accent-soft), transparent 60%), var(--hal0-bg-elevated);
+  }
+  .ag-ic {
+    font-size: 24px;
+    color: var(--hal0-accent);
+  }
+  .ag-state {
+    align-self: flex-start;
+    margin-top: 14px;
+    padding: 2px 8px;
+    border: 1px solid var(--hal0-border-strong);
+    border-radius: 999px;
+    font-family: var(--hal0-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--hal0-fg-dim);
+  }
+  .main .ag-state {
+    border-color: var(--hal0-ok-line);
+    color: var(--hal0-ok);
+  }
+  .agents h3 {
+    margin-top: 12px;
+    font-size: 20px;
+  }
+  .ag-tech {
+    font-family: var(--hal0-font-mono);
+    font-size: 12px;
+    color: var(--hal0-fg-dim);
+  }
+  .agents p {
+    margin-top: 10px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--hal0-fg-muted);
+  }
+  .how-cmd.solo {
+    max-width: 520px;
+  }
+
+  @media (max-width: 1000px) {
+    .agents {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  /* Phone: the site's floor for small labels (see site.css). */
+  @media (max-width: 640px) {
+    .ag-state {
+      font-size: 11.5px;
+    }
+  }
+</style>

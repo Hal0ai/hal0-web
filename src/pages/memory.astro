@@ -1,0 +1,389 @@
+---
+/**
+ * /memory/ — "How memory works". One of the three pages the landing page links
+ * to for the fuller story (see src/data/how-pages.ts).
+ *
+ * Every statement is from the hal0 docs at the v1.8.1 tag:
+ * docs/concepts/memory.mdx, docs/concepts/memory-banks.mdx,
+ * docs/guides/memory-workspace.mdx, docs/guides/enable-memory.mdx,
+ * docs/getting-started/beginners-guide.mdx (stage 6) and CHANGELOG.md (1.8.0,
+ * 1.8.1). The commands are copied from those pages; scripts/test/how-pages.test.mjs
+ * holds the list. Check the page against the docs again when a release changes
+ * memory.
+ */
+import { Icon } from 'astro-icon/components';
+import HowPage from '../components/how/HowPage.astro';
+import Shot from '../components/Shot.astro';
+
+const TOC: [string, string][] = [
+  ['short', 'The short version'],
+  ['flow', 'From conversation to fact'],
+  ['banks', 'Two banks'],
+  ['who', 'Who uses it'],
+  ['more', 'More than facts'],
+  ['yours', 'You are in charge'],
+  ['know', 'Good to know'],
+  ['try', 'Try it'],
+  ['deeper', 'Go deeper'],
+];
+
+const FLOW = [
+  { icon: 'lucide:message-circle', t: 'You talk', d: 'To the chat app, or to an agent doing a job for you.' },
+  { icon: 'lucide:sparkles', t: 'Facts are picked out', d: 'One of your own chat models reads what was saved and pulls out what is worth keeping.' },
+  { icon: 'lucide:archive', t: 'They are kept in a bank', d: 'On your box, with where each fact came from and when.' },
+  { icon: 'lucide:corner-down-left', t: 'They come back', d: 'Next time it matters, the closest facts are found and handed to the model.' },
+];
+
+const WHO = [
+  { who: 'Hermes, the agent', how: 'Connected when it is installed. It recalls before it answers and saves what it learns to the shared bank.' },
+  { who: 'The dashboard’s helper', how: 'Connected. It writes what it learns about your box to the shared bank.' },
+  { who: 'The chat app', how: 'Every chat can search and add to memory through tools that are connected for you. A filter that quietly adds remembered facts to each chat is there too, switched off until you turn it on.' },
+  { who: 'Pi, the coding agent', how: 'Connected if you install Pi.' },
+  { who: 'Coding tools on your laptop', how: 'Not connected until you create a key for them. Then tools such as Claude Code share the same memory.' },
+];
+
+const TABS = [
+  { t: 'Health', d: 'One sentence on whether anything needs you, and what to do if it does.' },
+  { t: 'Facts', d: 'Browse and search what is remembered. Add a fact yourself.' },
+  { t: 'Knowledge', d: 'The longer write-ups memory builds from its facts.' },
+  { t: 'Operations', d: 'What is waiting to be processed, and anything that failed.' },
+  { t: 'Agents', d: 'Who reads and writes memory, and how to connect another tool.' },
+];
+---
+
+<HowPage
+  page="memory"
+  title="How Memory Works in hal0: Shared, Local and Yours"
+  description="hal0 keeps the useful facts from your conversations on your own box and hands them back to your chat app and agents. See how it works and who controls it."
+  lede="hal0 keeps the useful facts from your conversations on your own box, and hands them back to your chat app and your agents when they matter."
+  toc={TOC}
+>
+  <!-- Hero picture: the loop -->
+  <ol slot="hero" class="loop" aria-label="How a conversation becomes a memory">
+    {FLOW.map((step, i) => (
+      <li>
+        <span class="loop-ic"><Icon name={step.icon} /></span>
+        <span class="loop-n">{i + 1}</span>
+        <span class="loop-t">{step.t}</span>
+      </li>
+    ))}
+  </ol>
+
+  <section class="how-sec" id="short">
+    <p class="how-k">The short version</p>
+    <h2>Three things to remember.</h2>
+    <ul class="how-cards">
+      <li><span class="n">1</span><h3>It keeps facts</h3><p>Conversations are turned into short facts that can be looked up later, so a new chat does not start from nothing.</p></li>
+      <li><span class="n">2</span><h3>It is shared</h3><p>The chat app and the agents use one memory. What one of them learns, the others can use.</p></li>
+      <li><span class="n">3</span><h3>It is yours</h3><p>It lives on your box. You can read every fact, correct it or remove it.</p></li>
+    </ul>
+  </section>
+
+  <section class="how-sec" id="flow">
+    <p class="how-k">The mechanism</p>
+    <h2>From conversation to fact.</h2>
+    <p>
+      The engine behind memory is called <strong>Hindsight</strong>. It runs on your box as its own small service,
+      and hal0 installs and connects it for you.
+    </p>
+    <ol class="flow">
+      {FLOW.map((step) => (
+        <li>
+          <span class="flow-ic"><Icon name={step.icon} /></span>
+          <h3>{step.t}</h3>
+          <p>{step.d}</p>
+        </li>
+      ))}
+    </ol>
+    <p>
+      Finding the right facts later is done by meaning, not by matching words, using a small search model built
+      into the engine. A second pass then puts the best matches first.
+    </p>
+    <p class="how-note">
+      <Icon name="lucide:info" />
+      <span>
+        <b>Memory needs a chat model to do its reading.</b> It uses the model in the <code>memory</code> slot, or
+        the one in <code>agent</code> when <code>memory</code> is empty. With neither, what was saved waits and is
+        tried again later. It is also not instant: an empty memory on day one is normal.
+      </span>
+    </p>
+  </section>
+
+  <section class="how-sec" id="banks">
+    <p class="how-k">Where facts live</p>
+    <h2>Two banks.</h2>
+    <p>Memory is kept in banks, which work like separate notebooks. A new install has two.</p>
+    <div class="banks">
+      <div class="bank shared">
+        <span class="bank-ic"><Icon name="lucide:users" /></span>
+        <code>hal0:shared</code>
+        <h3>The shared notebook</h3>
+        <p>Every agent can read it and add to it. This is where writes go unless an agent chooses otherwise.</p>
+      </div>
+      <div class="bank private">
+        <span class="bank-ic"><Icon name="lucide:lock" /></span>
+        <code>hal0:private</code>
+        <h3>A private notebook each</h3>
+        <p>Each agent’s own notes, kept apart. No agent reads another agent’s private notes.</p>
+      </div>
+    </div>
+    <div class="how-fig full">
+      <Shot
+        name="closeup-memory-health"
+        alt="The Memory page of the hal0 dashboard on its Health tab: the verdict 'Nothing needs attention', four checks marked clear, the engine and its models, and the two banks hal0:shared and hal0:private with their fact counts"
+        caption="The Health tab: a verdict, the four things it watches, and the two banks with what is in them."
+      />
+    </div>
+  </section>
+
+  <section class="how-sec" id="who">
+    <p class="how-k">Connected for you</p>
+    <h2>Who uses it.</h2>
+    <p>Most of the wiring is done by the installer. Here is who can reach memory, and what you have to do, if anything.</p>
+    <ul class="how-defs">
+      {WHO.map((row) => (
+        <li><span class="t">{row.who}</span><span>{row.how}</span></li>
+      ))}
+    </ul>
+    <div class="how-fig full">
+      <Shot
+        name="memory-agents"
+        alt="The Memory page of the hal0 dashboard on its Agents tab: a table of the agents that use memory, what each one reads and what each one writes"
+        caption="The Agents tab lists who reads and writes memory, in the same words as this page."
+      />
+    </div>
+  </section>
+
+  <section class="how-sec" id="more">
+    <p class="how-k">Built on top of the facts</p>
+    <h2>More than a list of facts.</h2>
+    <p>Three things are built from what memory holds. You can ignore all of them at first.</p>
+    <ul class="how-defs">
+      <li><span class="t">Knowledge pages</span><span>Longer write-ups that memory puts together from its facts and keeps up to date as the facts change.</span></li>
+      <li><span class="t">Standing questions<small>mental models</small></span><span>A question you care about, such as what you prefer for a certain task, whose answer is kept fresh.</span></li>
+      <li><span class="t">Standing instructions<small>directives</small></span><span>Something every agent using the bank should always follow. They are given to the agent on every turn.</span></li>
+    </ul>
+    <div class="how-fig full">
+      <Shot
+        name="memory-knowledge"
+        alt="The Memory page of the hal0 dashboard on its Knowledge tab: counts of knowledge pages, mental models and directives, a list of pages and the setting for how often they refresh"
+        caption="The Knowledge tab: pages, standing questions, and how often they are refreshed."
+      />
+    </div>
+  </section>
+
+  <section class="how-sec" id="yours">
+    <p class="how-k">The Memory page</p>
+    <h2>You are in charge.</h2>
+    <p>Everything memory holds is on one page of the dashboard, with five tabs.</p>
+    <ul class="tabs5">
+      {TABS.map((tab) => (
+        <li><b>{tab.t}</b><span>{tab.d}</span></li>
+      ))}
+    </ul>
+    <ul class="how-ticks">
+      <li><Icon name="lucide:check" /><span><strong>Fix a wrong fact.</strong> Edit it, or mark it as no longer true. Marking is reversible.</span></li>
+      <li><Icon name="lucide:check" /><span><strong>Remove what should not be there.</strong> When an agent asks to delete in bulk, the request waits for your approval.</span></li>
+      <li><Icon name="lucide:check" /><span><strong>Turn it off.</strong> Memory is one switch in Settings, and it takes effect when hal0 restarts. Off means off: nothing is collected.</span></li>
+    </ul>
+  </section>
+
+  <section class="how-sec" id="know">
+    <p class="how-k">Before you rely on it</p>
+    <h2>Good to know.</h2>
+    <ul class="how-ticks">
+      <li><Icon name="lucide:info" /><span><strong>It starts empty and fills slowly.</strong> Facts appear after conversations have been read, which happens in the background.</span></li>
+      <li><Icon name="lucide:info" /><span><strong>A failed save is tried again.</strong> If no chat model was loaded when something was saved, hal0 retries it later on its own.</span></li>
+      <li><Icon name="lucide:info" /><span><strong>If the engine is down when the box starts,</strong> hal0 keeps memory answering from a temporary store until the engine is back. Anything saved in that gap is not kept.</span></li>
+    </ul>
+  </section>
+
+  <section class="how-sec" id="try">
+    <p class="how-k">Hands on</p>
+    <h2>Try it.</h2>
+    <p>Memory is on after a default install. These check it from a terminal on the box; the dashboard’s Memory page shows the same things.</p>
+    <ol class="how-steps">
+      <li>
+        <h3>See whether memory is on</h3>
+        <p>In the dashboard: <strong>Settings</strong>, then <strong>Memory</strong>. From a terminal:</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 memory status</code><button type="button" class="btn ghost sm" data-copy="hal0 memory status">copy</button></div>
+      </li>
+      <li>
+        <h3>List your banks</h3>
+        <p>You should see <code>hal0:shared</code> and <code>hal0:private</code>.</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 memory bank list</code><button type="button" class="btn ghost sm" data-copy="hal0 memory bank list">copy</button></div>
+      </li>
+      <li>
+        <h3>Ask it something</h3>
+        <p>Once an agent has saved something, this finds it.</p>
+        <div class="how-cmd"><span class="prompt">$</span><code>hal0 memory recall "a question"</code><button type="button" class="btn ghost sm" data-copy='hal0 memory recall "a question"'>copy</button></div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="how-sec" id="deeper">
+    <p class="how-k">The full story</p>
+    <h2>Go deeper.</h2>
+    <p>The documentation covers the engine, every setting and every tool.</p>
+    <div class="how-deeper">
+      <a href="/docs/concepts/memory/"><span class="kind">concept</span><span class="name">Memory</span><span class="what">The engine, the kinds of fact and how recall ranks them.</span></a>
+      <a href="/docs/concepts/memory-banks/"><span class="kind">concept</span><span class="name">Memory banks</span><span class="what">Shared and private, and who may read what.</span></a>
+      <a href="/docs/guides/memory-workspace/"><span class="kind">guide</span><span class="name">The Memory page</span><span class="what">A tour of the five tabs, and connecting a coding tool.</span></a>
+      <a href="/docs/guides/enable-memory/"><span class="kind">guide</span><span class="name">Enable memory</span><span class="what">Turning it on or off, and checking that it works.</span></a>
+      <a href="/docs/reference/mcp-tools-memory/"><span class="kind">reference</span><span class="name">Memory tools</span><span class="what">Every tool an agent can call on memory.</span></a>
+      <a href="https://forum.hal0.dev"><span class="kind">community</span><span class="name">Ask on the forum</span><span class="what">Questions, setups and help from other people running hal0.</span></a>
+    </div>
+  </section>
+</HowPage>
+
+<style>
+  /* Hero picture: four steps in a loop */
+  .loop {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .loop li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 14px;
+    background: var(--hal0-bg-elevated);
+  }
+  .loop li:last-child {
+    border-color: var(--hal0-accent-line);
+    box-shadow: 0 30px 80px -40px var(--hal0-accent-glow);
+  }
+  .loop-ic {
+    font-size: 26px;
+    color: var(--hal0-accent);
+  }
+  .loop-n {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    font-family: var(--hal0-font-mono);
+    font-size: 12px;
+    color: var(--hal0-fg-dim);
+  }
+  .loop-t {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+
+  /* The four steps, spelled out */
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 26px;
+    counter-reset: flow;
+  }
+  .flow li {
+    padding: 18px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 12px;
+    background: var(--hal0-bg-elevated);
+  }
+  .flow-ic {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 14px;
+    border-radius: 10px;
+    background: var(--hal0-accent-soft);
+    font-size: 18px;
+    color: var(--hal0-accent);
+  }
+  .flow h3 {
+    font-size: 16.5px;
+  }
+  .flow p {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--hal0-fg-muted);
+  }
+
+  /* Banks */
+  .banks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .bank {
+    padding: 24px;
+    border: 1px solid var(--hal0-border);
+    border-radius: 14px;
+    background: var(--hal0-bg-elevated);
+  }
+  .bank.shared {
+    border-color: var(--hal0-accent-line);
+  }
+  .bank-ic {
+    display: block;
+    margin-bottom: 14px;
+    font-size: 24px;
+    color: var(--hal0-accent);
+  }
+  .bank code {
+    font-size: 13px;
+    color: var(--hal0-fg-dim);
+  }
+  .bank h3 {
+    margin-top: 6px;
+    font-size: 20px;
+  }
+  .bank p {
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--hal0-fg-muted);
+  }
+
+  /* The five tabs */
+  .tabs5 {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .tabs5 li {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid var(--hal0-border);
+    border-bottom: 2px solid var(--hal0-accent);
+    border-radius: 10px;
+    background: var(--hal0-bg-elevated);
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--hal0-fg-muted);
+  }
+  .tabs5 b {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--hal0-fg);
+  }
+
+  @media (max-width: 1000px) {
+    .flow,
+    .tabs5 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 560px) {
+    .banks,
+    .flow,
+    .tabs5 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

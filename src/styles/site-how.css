@@ -1,0 +1,583 @@
+/* Shared styles for the three "how it works" pages (src/pages/slots.astro,
+ * memory.astro, agents.astro) and their frame, src/components/how/HowPage.astro.
+ * Everything is namespaced under .how so it cannot leak into the rest of the
+ * site. Headings use the body face, as on the landing page these pages are
+ * linked from. */
+
+.how {
+	font-size: 16px;
+	color: var(--hal0-fg);
+}
+.how svg[data-icon] {
+	width: 1em;
+	height: 1em;
+	flex-shrink: 0;
+}
+/* The resets below are wrapped in :where() so they carry no class weight.
+ * Written as `.how p` they outranked every single-class rule in this file
+ * (`.how-k`, `.how-lede`, `.how-cards`) and flattened its margins. */
+:where(.how) :is(h1, h2, h3) {
+	margin: 0;
+	font-family: var(--hal0-font-body);
+	color: var(--hal0-fg);
+	text-wrap: balance;
+}
+:where(.how) p {
+	margin: 0;
+}
+:where(.how) :is(ul, ol) {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.how a:not(.btn) {
+	color: var(--hal0-accent);
+	text-decoration: none;
+}
+.how a:not(.btn):hover {
+	text-decoration: underline;
+}
+:where(.how) code {
+	font-family: var(--hal0-font-mono);
+	font-size: 0.88em;
+	color: var(--hal0-fg);
+}
+.how-wrap {
+	width: 100%;
+	max-width: 1180px;
+	margin-inline: auto;
+	padding-inline: 24px;
+}
+
+/* ── page header ─────────────────────────────────────────────── */
+.how-hero {
+	padding-block: 64px 56px;
+	border-bottom: 1px solid var(--hal0-border);
+	background: radial-gradient(ellipse 60% 70% at 85% 0%, var(--hal0-accent-glow), transparent 70%);
+}
+.how-hero-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+	gap: 56px;
+	align-items: center;
+}
+.how-crumb {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 20px;
+	font-family: var(--hal0-font-mono);
+	font-size: 12px;
+	letter-spacing: 0.04em;
+	color: var(--hal0-fg-dim);
+}
+.how-crumb a {
+	color: var(--hal0-fg-dim) !important;
+}
+.how-crumb b {
+	font-weight: 500;
+	color: var(--hal0-accent);
+}
+.how h1 {
+	font-size: clamp(36px, 4.6vw, 60px);
+	font-weight: 650;
+	line-height: 1.04;
+	letter-spacing: -0.035em;
+}
+.how-lede {
+	max-width: 560px;
+	margin-top: 20px;
+	font-size: 19px;
+	line-height: 1.55;
+	color: var(--hal0-fg-muted);
+	text-wrap: pretty;
+}
+.how-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 18px;
+	margin-top: 24px;
+	font-size: 13.5px;
+	color: var(--hal0-fg-dim);
+}
+.how-meta span {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.how-meta svg {
+	color: var(--hal0-accent);
+}
+
+/* ── body: article + sticky contents ─────────────────────────── */
+.how-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 210px;
+	gap: 64px;
+	align-items: start;
+	padding-block: 64px 96px;
+}
+.how-toc {
+	position: sticky;
+	top: 88px;
+	padding-left: 18px;
+	border-left: 1px solid var(--hal0-border);
+	font-size: 13.5px;
+}
+.how-toc-h {
+	margin-bottom: 12px;
+	font-family: var(--hal0-font-mono);
+	font-size: 11px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--hal0-fg-dim);
+}
+.how-toc li + li {
+	margin-top: 9px;
+}
+.how-toc a {
+	color: var(--hal0-fg-muted) !important;
+	line-height: 1.35;
+}
+.how-toc a:hover {
+	color: var(--hal0-accent) !important;
+	text-decoration: none !important;
+}
+
+.how-sec {
+	scroll-margin-top: 80px;
+}
+.how-sec + .how-sec {
+	margin-top: 76px;
+}
+.how-k {
+	margin-bottom: 12px;
+	font-family: var(--hal0-font-mono);
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--hal0-accent);
+}
+.how-sec h2 {
+	font-size: clamp(26px, 2.8vw, 34px);
+	font-weight: 620;
+	line-height: 1.12;
+	letter-spacing: -0.025em;
+}
+.how-sec h3 {
+	font-size: 18px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+/* Running text. No class weight, so a paragraph with a class of its own
+ * (.how-k, .how-note, .how-fine) keeps its own size and spacing. */
+:where(.how-sec) > p,
+:where(.how-prose) p {
+	max-width: 68ch;
+	margin-top: 16px;
+	font-size: 17px;
+	line-height: 1.65;
+	color: var(--hal0-fg-muted);
+	text-wrap: pretty;
+}
+.how-sec p strong,
+.how-sec li strong {
+	font-weight: 600;
+	color: var(--hal0-fg);
+}
+
+/* three takeaways */
+.how-cards {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+	margin-top: 26px;
+}
+.how-cards li {
+	padding: 22px;
+	border: 1px solid var(--hal0-border);
+	border-radius: 14px;
+	background: var(--hal0-bg-elevated);
+}
+.how-cards .n {
+	display: grid;
+	place-items: center;
+	width: 30px;
+	height: 30px;
+	margin-bottom: 14px;
+	border-radius: 50%;
+	background: var(--hal0-accent-soft);
+	font-family: var(--hal0-font-mono);
+	font-size: 13px;
+	color: var(--hal0-accent);
+}
+.how-cards p {
+	margin-top: 8px;
+	font-size: 15px;
+	line-height: 1.55;
+	color: var(--hal0-fg-muted);
+}
+
+/* text beside a picture */
+.how-split {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 40px;
+	align-items: center;
+	margin-top: 28px;
+}
+.how-split.wide-fig {
+	grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+}
+.how-fig .shot {
+	width: 100%;
+	margin: 0;
+	border-radius: 12px;
+	box-shadow: 0 30px 80px -50px #000;
+}
+.how-fig img {
+	width: 100%;
+	height: auto;
+}
+.how-fig.full {
+	margin-top: 28px;
+}
+/* A small close-up keeps its own size: stretching it to the column blurs it. */
+.how-fig.natural .shot {
+	width: fit-content;
+	max-width: 100%;
+	margin-inline: auto;
+}
+.how-fig.natural img {
+	width: auto;
+	max-width: 100%;
+}
+/* A tall close-up: show its top. */
+.how-fig.crop-top img {
+	aspect-ratio: 4 / 3;
+	object-fit: cover;
+	object-position: top;
+}
+
+/* definition rows: a term and what it means */
+.how-defs {
+	margin-top: 24px;
+	border: 1px solid var(--hal0-border);
+	border-radius: 14px;
+	overflow: hidden;
+}
+.how-defs li {
+	display: grid;
+	grid-template-columns: 190px minmax(0, 1fr);
+	gap: 20px;
+	padding: 16px 20px;
+	background: var(--hal0-bg-elevated);
+	font-size: 15.5px;
+	line-height: 1.55;
+	color: var(--hal0-fg-muted);
+}
+.how-defs li + li {
+	border-top: 1px solid var(--hal0-border-soft);
+}
+.how-defs .t {
+	font-weight: 600;
+	color: var(--hal0-fg);
+}
+.how-defs .t small {
+	display: block;
+	margin-top: 2px;
+	font-family: var(--hal0-font-mono);
+	font-size: 11.5px;
+	font-weight: 400;
+	color: var(--hal0-fg-dim);
+}
+
+/* tick list */
+.how-ticks {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 20px;
+}
+.how-ticks li {
+	display: grid;
+	grid-template-columns: 20px minmax(0, 1fr);
+	gap: 12px;
+	max-width: 68ch;
+	font-size: 16px;
+	line-height: 1.55;
+	color: var(--hal0-fg-muted);
+}
+.how-ticks svg {
+	margin-top: 4px;
+	color: var(--hal0-ok);
+}
+
+/* an honest limit */
+.how-note {
+	display: grid;
+	grid-template-columns: 20px minmax(0, 1fr);
+	gap: 12px;
+	max-width: 760px;
+	margin-top: 24px;
+	padding: 16px 18px;
+	border: 1px solid var(--hal0-warn-line);
+	border-radius: 12px;
+	background: var(--hal0-warn-soft);
+	font-size: 15px;
+	line-height: 1.55;
+	color: var(--hal0-fg-muted);
+}
+.how-note svg {
+	margin-top: 3px;
+	font-size: 17px;
+	color: var(--hal0-warn);
+}
+.how-note b {
+	font-weight: 600;
+	color: var(--hal0-fg);
+}
+
+/* steps: dashboard first, then the command */
+.how-steps {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin-top: 26px;
+	counter-reset: step;
+}
+.how-steps > li {
+	position: relative;
+	padding: 20px 22px 20px 66px;
+	border: 1px solid var(--hal0-border);
+	border-radius: 14px;
+	background: var(--hal0-bg-elevated);
+	counter-increment: step;
+}
+.how-steps > li::before {
+	content: counter(step);
+	position: absolute;
+	left: 20px;
+	top: 20px;
+	display: grid;
+	place-items: center;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: var(--hal0-accent);
+	font-family: var(--hal0-font-mono);
+	font-size: 14px;
+	font-weight: 600;
+	color: #0a0a0a;
+}
+.how-steps p {
+	margin-top: 6px;
+	font-size: 15.5px;
+	line-height: 1.55;
+	color: var(--hal0-fg-muted);
+}
+.how-cmd {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 12px;
+	padding: 11px 12px 11px 16px;
+	border: 1px solid var(--hal0-border);
+	border-radius: 8px;
+	background: var(--hal0-bg);
+	font-family: var(--hal0-font-mono);
+	font-size: 13.5px;
+}
+.how-cmd .prompt {
+	color: var(--hal0-accent);
+	user-select: none;
+}
+.how-cmd code {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+	font-size: 13.5px;
+}
+
+/* go deeper */
+.how-deeper {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+	margin-top: 26px;
+}
+.how-deeper a {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	height: 100%;
+	padding: 18px 20px;
+	border: 1px solid var(--hal0-border);
+	border-radius: 12px;
+	background: var(--hal0-bg-elevated);
+	color: inherit !important;
+	transition: border-color var(--hal0-dur) var(--hal0-ease), transform var(--hal0-dur) var(--hal0-ease);
+}
+.how-deeper a:hover {
+	border-color: var(--hal0-accent-line);
+	text-decoration: none !important;
+	transform: translateY(-2px);
+}
+.how-deeper .kind {
+	font-family: var(--hal0-font-mono);
+	font-size: 10.5px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--hal0-fg-dim);
+}
+.how-deeper .name {
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--hal0-fg);
+}
+.how-deeper .what {
+	font-size: 13.5px;
+	line-height: 1.5;
+	color: var(--hal0-fg-muted);
+}
+
+/* next pages */
+.how-next {
+	padding-block: 64px 96px;
+	border-top: 1px solid var(--hal0-border);
+	background: var(--hal0-bg-elevated);
+}
+.how-next h2 {
+	font-size: 26px;
+	font-weight: 620;
+	letter-spacing: -0.02em;
+}
+.how-next-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+	margin-top: 24px;
+}
+.how-next-grid a {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	height: 100%;
+	padding: 22px;
+	border: 1px solid var(--hal0-border);
+	border-radius: 14px;
+	background: var(--hal0-bg);
+	color: inherit !important;
+	transition: border-color var(--hal0-dur) var(--hal0-ease);
+}
+.how-next-grid a:hover {
+	border-color: var(--hal0-accent-line);
+	text-decoration: none !important;
+}
+.how-next-grid .ic {
+	font-size: 22px;
+	color: var(--hal0-accent);
+}
+.how-next-grid .t {
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--hal0-fg);
+}
+.how-next-grid .d {
+	font-size: 14.5px;
+	line-height: 1.5;
+	color: var(--hal0-fg-muted);
+}
+.how-next-grid .go {
+	margin-top: auto;
+	padding-top: 8px;
+	font-size: 14px;
+	color: var(--hal0-accent);
+}
+
+/* the note that the pictures show sample data */
+.how-fine {
+	max-width: 68ch;
+	margin-top: 56px;
+	padding-top: 18px;
+	border-top: 1px solid var(--hal0-border-soft);
+	font-size: 13.5px;
+	line-height: 1.5;
+	color: var(--hal0-fg-dim);
+}
+
+/* ── responsive ──────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+	.how-hero {
+		padding-block: 44px 40px;
+	}
+	.how-hero-grid,
+	.how-split,
+	.how-split.wide-fig {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 28px;
+	}
+	.how-body {
+		grid-template-columns: minmax(0, 1fr);
+		padding-block: 44px 64px;
+	}
+	.how-toc {
+		display: none;
+	}
+	.how-cards,
+	.how-deeper,
+	.how-next-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.how-sec + .how-sec {
+		margin-top: 56px;
+	}
+}
+@media (max-width: 560px) {
+	.how-wrap {
+		padding-inline: 16px;
+	}
+	.how-defs li {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 4px;
+	}
+	.how-steps > li {
+		padding: 60px 16px 18px;
+	}
+	.how-steps > li::before {
+		left: 16px;
+		top: 16px;
+	}
+	.how-lede,
+	:where(.how-sec) > p,
+	:where(.how-prose) p {
+		font-size: 16px;
+	}
+}
+
+/* Phone: the site's floor for small labels (see site.css). The contents list
+ * is hidden at this width, so its 11px heading needs no rule. */
+@media (max-width: 640px) {
+	.how-deeper .kind {
+		font-size: 11.5px;
+	}
+	:where(.how) code {
+		font-size: max(0.88em, 11.5px);
+	}
+}
+
+/* Touch: the breadcrumb's one link is a 15px row. Padding grows the tap area
+ * and an equal negative margin gives the space back. The contents links get
+ * the same on a touch screen wide enough to show them. */
+@media (pointer: coarse) {
+	.how-crumb a,
+	.how-toc a {
+		display: inline-block;
+		padding-block: 12px;
+		margin-block: -12px;
+	}
+	.how-toc li + li {
+		margin-top: 18px;
+	}
+}
