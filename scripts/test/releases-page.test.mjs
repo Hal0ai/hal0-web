@@ -81,7 +81,9 @@ test('one latest-release card names the latest tagged stable version', { skip },
   assert.ok(card.includes('latest stable'), 'card carries the "latest stable" chip');
   assert.ok(card.includes(`href="${releaseTagUrl(parsed.latestTagged.version)}"`), 'card links the GitHub release');
   assert.ok(card.includes('curl -fsSL https://hal0.dev/install.sh | sudo bash'), 'card has the install one-liner');
-  assert.ok(card.includes('sudo hal0 update'), 'card has the upgrade command');
+  // The form the docs give (guides/update-and-rollback): no sudo, the updater asks for what it needs.
+  assert.ok(card.includes('<code>hal0 update</code>'), 'card has the upgrade command');
+  assert.ok(!card.includes('sudo hal0 update'), 'and not a retyped variant of it');
   // The callout is for a section titled Breaking; "Supported upgrades" and
   // "Upgrade notes" classify as breaking-kind but are not breaking changes.
   const hasBreaking = parsed.latestTagged.sections.some(
