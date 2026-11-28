@@ -1,249 +1,427 @@
 /**
  * Copy and structured data for the landing page's sections.
  *
- * Every sentence traces to docs/superpowers/research/2026-11-01/product-inventory.md
- * through section 4 of the redesign spec. Standing limits on what may be said:
- * no content-aware router, third-party MCP servers do not reach agents, pi needs
- * a restart to see new slots, image generation pauses GPU chat slots, the box is
- * open on the LAN by default, and a swap reloads the slot.
+ * The page is written for someone setting up a first local AI server: plain
+ * words first, product vocabulary only where a term is introduced, and the
+ * technical layer left to the docs, the forum and the "Want the details?" band.
  *
- * Text in backticks renders as code through `codeSpans`. The FAQ stays plain text
- * because its strings also feed the FAQPage schema.
+ * Every sentence traces to the hal0 repository at its latest tagged release
+ * (CHANGELOG.md, README.md, docs/getting-started/beginners-guide.mdx and the
+ * pages it links). Standing limits on what may be said:
+ *   - a fresh install seeds its slots empty apart from one small helper model;
+ *   - how many models stay loaded depends on memory, and a slot reloads when
+ *     its model changes;
+ *   - a render takes the graphics chip, so chat models on it step aside;
+ *   - the bundled agents cannot call an MCP server the user installed;
+ *   - the dashboard, the chat app and the image editor have no sign-in by
+ *     default;
+ *   - nothing is claimed that is not in a tagged release.
+ *
+ * FAQ answers stay plain text because the same strings feed the FAQPage schema.
  */
 
-/** Turns `code` spans into markup. Input is first-party constants from this file. */
-export const codeSpans = (text: string) => text.replace(/`([^`]+)`/g, '<code>$1</code>');
+/** The hero picture: five jobs, each with its own slot. `by` is who is asking. */
+export const HERO_TEAM: { icon: string; job: string; what: string; by: string }[] = [
+  { icon: 'lucide:message-circle', job: 'Chat', what: 'your everyday assistant', by: 'Open WebUI' },
+  { icon: 'lucide:code', job: 'Code', what: 'help inside your editor', by: 'your editor' },
+  { icon: 'lucide:brain', job: 'Memory', what: 'remembers between chats', by: 'Hermes' },
+  { icon: 'lucide:file-search', job: 'Documents', what: 'searches your files', by: 'Open WebUI' },
+  { icon: 'lucide:mic', job: 'Voice', what: 'listens and speaks', by: 'Open WebUI' },
+];
 
-export const IDEA_COLUMNS: { key: string; title: string; body: string; examples: string }[] = [
+export const USES: { icon: string; title: string; body: string }[] = [
   {
-    key: 'slot = placement',
-    title: 'A name, a device, a port',
-    body: 'One model in its own container behind the API, with a type (chat, embedding, rerank, speech, image), a device (ROCm, Vulkan, NPU, CPU), a priority and a name your apps use. Custom slots are one command.',
-    examples: 'agent · coder · brain · embed · rerank · stt · tts · img · custom: research',
+    icon: 'lucide:message-circle',
+    title: 'Chat',
+    body: 'A full chat app opens in your browser, on any device on your home network.',
   },
   {
-    key: 'profile = tune',
-    title: 'The whole tune, reusable',
-    body: 'Context length, thinking, vision, speculation, runner and flags live in a named profile. Clone a seed, change it, point any slot at it. The slot drawer shows the resolved command with every flag labelled by owner.',
-    examples: 'chat · agent · coding · embedding · brain · flm · comfyui',
+    icon: 'lucide:code',
+    title: 'Code',
+    body: 'Point your editor or coding assistant at your own box instead of a cloud service.',
   },
   {
-    key: 'model = facts',
-    title: 'The file and nothing else',
-    body: 'What is true about the file: size, quantisation, context ceiling, what it can do. Pull from Hugging Face with a fit check, keep several quants, and let update checks tell you when the repo changed.',
-    examples: 'GGUF · drafters for speculation · HF update checks',
+    icon: 'lucide:bot',
+    title: 'Agents',
+    body: 'Hand a task to an agent that can use tools and work in steps. Risky actions wait for your OK.',
+  },
+  {
+    icon: 'lucide:image',
+    title: 'Images',
+    body: 'Describe a picture and it is generated at home, on a supported AMD graphics chip.',
+  },
+  {
+    icon: 'lucide:mic',
+    title: 'Voice',
+    body: 'Speech to text and text to speech, without sending audio anywhere.',
   },
 ];
 
-export const ENDPOINT_MAP: { path: string; slot: string }[] = [
-  { path: '/v1/chat/completions', slot: 'agent, coder, brain' },
-  { path: '/v1/embeddings · /v1/rerank', slot: 'embed, rerank' },
-  { path: '/v1/audio/transcriptions', slot: 'stt (NPU or CPU)' },
-  { path: '/v1/audio/speech', slot: 'tts' },
-  { path: '/v1/images/generations', slot: 'img (ComfyUI)' },
-];
-
-export const ROUTING_NOTE =
-  'One API, one slot per medium. hal0 routes by endpoint and model name, and it never reads a prompt to choose a slot.';
-
-export const PARALLEL_NOTE =
-  'Slots run in parallel as far as the memory pool allows; hal0 checks fit before loading and evicts by priority under pressure. Image generation borrows the GPU while it renders, so GPU chat slots pause until it finishes.';
-
-export const CLIENT_DEFAULTS: { client: string; detail: string }[] = [
+export const SLOT_WINS: { title: string; body: string }[] = [
   {
-    client: 'Open WebUI',
-    detail: 'model picker lists every chat slot as `agent · Qwen3.8 27B`, updated within seconds of a change',
-  },
-  { client: 'Hermes', detail: 'defaults to `hal0/agent` and discovers every other slot' },
-  { client: 'pi', detail: 'defaults to `agent`; sees new slots after a restart' },
-  {
-    client: 'Hindsight',
-    detail: 'extracts memory through `hal0/memory`, which resolves to the slot you choose',
+    title: 'Nothing to juggle',
+    body: 'Give each slot a model once. It stays loaded, so you never unload one thing to use another.',
   },
   {
-    client: 'your code',
-    detail: 'any OpenAI client with `model: "coder"` and `base_url: http://halo:8080/v1`',
+    title: 'The right model for each job',
+    body: 'A small quick one for everyday questions, a bigger one for hard problems, a specialist for code. Each has its own settings.',
+  },
+  {
+    title: 'Upgrade without rewiring',
+    body: 'A better model came out? Pick it from the slot’s menu. Your apps talk to the slot, so they carry on as before.',
   },
 ];
 
-export const SWAP_STEPS: string[] = [
-  '`GET /v1/models` returns one entry per chat slot, named after the slot.',
-  '`model: "agent"` is rewritten to whatever the slot holds right now.',
-  'Swap from the card, the CLI or MCP. A fit check runs first; a bad id leaves the slot untouched. Requests during the reload get a 503 with Retry-After.',
-];
+export const SLOT_NOTE =
+  'How many models fit at once depends on your machine’s memory. hal0 checks before it loads anything, and a slot reloads for a moment when you change its model.';
 
-export const PRIVACY_LEDE = {
-  before: 'Chats, files, embeddings, voice, and ',
-  aside: 'the million-dollar idea you brainstormed at 2 a.m.',
-  after:
-    ' are processed on hardware you own, and they stay there unless you connect an upstream. hal0 sends no telemetry and needs no account.',
-};
-
-export const PRIVACY_FACTS: { title: string; body: string }[] = [
+export const WIRED: { icon: string; name: string; product: string; body: string }[] = [
   {
-    title: 'Local inference',
-    body: 'Every model runs in a container on your box. Chat, embedding and speech slots sit on loopback ports behind the API. Realtime voice chains local speech-to-text, chat and text-to-speech with no cloud hop.',
+    icon: 'lucide:message-circle',
+    name: 'The chat app',
+    product: 'Open WebUI',
+    body: 'Shows your chat slots and your agent in its model menu. Voice, document search and image generation connect as soon as those slots have a model.',
   },
   {
-    title: 'No telemetry',
-    body: 'hal0\'s own code has no telemetry. Crash reporting does not ship: there is nothing to switch on and no key to supply. Benchmark bundles and diagnostics never upload on their own.',
+    icon: 'lucide:bot',
+    name: 'The agent',
+    product: 'Hermes',
+    body: 'Uses whichever model sits in your agent slot, shares the same memory, and asks before it does anything risky.',
   },
   {
-    title: 'No account',
-    body: 'No sign-up and no licence server. Apache-2.0, with the source on GitHub.',
+    icon: 'lucide:brain',
+    name: 'The memory',
+    product: 'Hindsight',
+    body: 'One memory for the chat app and the agents. What one of them learns, the others can use.',
   },
   {
-    title: 'Updates you trigger',
-    body: 'Cosign-verified releases with one-flag rollback. While the console is open it checks for new releases and model updates; those checks carry no prompts or files.',
-  },
-];
-
-export const LAN_NOTE =
-  'The API, Open WebUI and the ComfyUI editor serve your network with no login and no TLS by default. Keep the box on your LAN, or turn on key auth and put a reverse proxy in front before you share it. Key auth covers the API only.';
-
-export const WIRED_TILES: { tag: string; title: string; body: string }[] = [
-  {
-    tag: 'chat',
-    title: 'Open WebUI',
-    body: 'Installed and started on `:3001`, with every chat slot in its model picker. Voice is wired from the start; document search on hal0 embeddings and the ComfyUI image button switch on once embed and img have models.',
-  },
-  {
-    tag: 'agent',
-    title: 'Hermes',
-    body: 'A third-party agent, pinned to a reviewed release and installed by default. Defaults to the agent slot and gets hal0\'s admin and memory tools. Risky tool calls wait for your approval.',
-  },
-  {
-    tag: 'coding',
-    title: 'pi',
-    body: 'A third-party terminal coding agent, one command to add. Points at the agent slot with the same admin and memory tools.',
-  },
-  {
-    tag: 'images',
-    title: 'ComfyUI',
-    body: 'Runs in the img slot. `POST /v1/images/generations` renders SDXL, SD 1.5 or Qwen-Image. The editor stays on the LAN for workflows the API does not cover.',
+    icon: 'lucide:plug',
+    name: 'Your own tools',
+    product: 'anything that speaks the OpenAI API',
+    body: 'One address for everything. Use a slot’s name where an app asks for a model.',
   },
 ];
 
-export const WIRED_NOTE =
-  'Bring your own MCP client: `/mcp/admin` and `/mcp/memory` are plain Streamable HTTP. Claude Code, Codex and Cursor connect by pasting one line. Destructive admin calls wait until a person says yes.';
+export const AGENT_POINTS: { term: string; text: string }[] = [
+  {
+    term: 'It uses the model you choose.',
+    text: 'Hermes runs on whichever model you put in the agent slot. Change the model and the agent uses the new one.',
+  },
+  {
+    term: 'It asks first.',
+    text: 'Actions marked as risky wait in the dashboard until you approve or deny them.',
+  },
+  {
+    term: 'It has a task board.',
+    text: 'Queue work on the Operator Board, watch it move, and step in when it asks.',
+  },
+  {
+    term: 'It takes work from your other tools.',
+    text: 'A coding assistant on your laptop, such as Claude Code, can hand Hermes a task and get the result back, using a key you create and can revoke.',
+  },
+];
+
+export const AGENT_NOTE =
+  'Treat the agent like someone you have given the keys to the box. Its terminal tool is off unless you turn it on, and the security notes say what it can reach.';
 
 export const MEMORY_POINTS: { term: string; text: string }[] = [
-  { term: 'Directives', text: 'are standing instructions an agent sees every turn.' },
-  { term: 'Mental models', text: 'are standing questions whose answers stay fresh as facts change.' },
   {
-    term: 'The bank workspace',
-    text: 'shows every fact, a graph of how they connect, and lets you curate or delete with an audit row.',
+    term: 'Shared where it helps.',
+    text: 'Your chat app and your agents use one memory, with a private notebook for each agent.',
+  },
+  {
+    term: 'Yours to read and edit.',
+    text: 'Every remembered fact is on a page you can search, correct or delete.',
+  },
+  {
+    term: 'Stored at home.',
+    text: 'The memory lives on your box, beside the models that use it.',
   },
 ];
 
-export type ConsoleShot = {
-  file: string;
-  alt: string;
-  /** The first sentence renders as the bold label. */
-  caption: string;
-  /** No usable capture yet: renders only a TODO comment, and stays out of the schema. */
-  todo?: true;
-  /** The capture is not 1440 by 900: fit it inside the frame rather than cropping it. */
-  contain?: true;
-  /** The capture is a strip (the dock): the frame takes the image's own shape instead of 1440 by 900. */
-  natural?: true;
+export const MEMORY_NOTE =
+  'Memory uses one of your chat models to pick out the facts, so it starts working once a chat slot has a model.';
+
+export const PRIVACY_FACTS: { icon: string; title: string; body: string }[] = [
+  {
+    icon: 'lucide:house',
+    title: 'It runs at home',
+    body: 'The models run on your machine. Your chats, files and voice are processed there.',
+  },
+  {
+    icon: 'lucide:user-x',
+    title: 'No account',
+    body: 'Nothing to sign up for and no licence to buy. hal0 is free and open source.',
+  },
+  {
+    icon: 'lucide:eye-off',
+    title: 'No tracking',
+    body: 'hal0 sends no usage data and no crash reports.',
+  },
+  {
+    icon: 'lucide:cloud-off',
+    title: 'Online only when you choose',
+    body: 'It downloads models and updates when you ask, and looks for new releases while the dashboard is open. A cloud model is used only if you add one yourself.',
+  },
+];
+
+export const PRIVACY_NOTE =
+  'Out of the box the dashboard, the chat app and the image editor have no password, so anyone on your home network can open them. Keep the box off the public internet. You can add a sign-in for the dashboard and the API; the guide also covers the other two.';
+
+export const MODEL_KINDS: { title: string; body: string; examples: string }[] = [
+  {
+    title: 'Chat and coding models',
+    body: 'Search Hugging Face from the dashboard and download what you like. hal0 marks each model fits, tight or won’t fit for your machine.',
+    examples: 'Qwen · Gemma · other models published as GGUF',
+  },
+  {
+    title: 'Images and speech',
+    body: 'An image catalogue with a recommended starter for your hardware, plus speech-to-text and text-to-speech models.',
+    examples: 'SDXL · Stable Diffusion 1.5 · Qwen-Image · Whisper · Kokoro',
+  },
+  {
+    title: 'A cloud model, if you want one',
+    body: 'Add a provider and tick the models you allow. They appear beside your local ones, at the same address.',
+    examples: 'OpenRouter · OpenAI · Anthropic · any OpenAI-compatible service',
+  },
+];
+
+/** One capture: `name` is the file stem in public/screenshots/. */
+export type ShotVariant = { name: string; alt: string };
+
+/**
+ * A dashboard capture placed in a section, with the same page captured at tablet
+ * and phone width where the set has one (see DeviceShot.astro for which width
+ * shows which). A variant shows the same page as the desktop capture, never a
+ * different one, so the copy beside it stays true on every screen.
+ */
+export type LandingShot = ShotVariant & { caption: string; tablet?: ShotVariant; phone?: ShotVariant };
+
+/**
+ * The captures beside the copy. Each must carry no performance figures
+ * ("none" in src/data/screenshots.json): they sit next to claims, not in the tour.
+ */
+export const SHOT_CONNECTED: LandingShot = {
+  name: 'services-page',
+  alt: 'The Services page of the hal0 dashboard: Open WebUI, ComfyUI, Hermes and Hindsight each shown as running, with Open WebUI’s chat, voice, documents, images, agents and MCP connections marked on',
+  caption: 'The Services page on a running box: chat app, image engine, agent and memory, all up and already connected.',
 };
 
-export const CONSOLE_SHOTS: ConsoleShot[] = [
+export const SHOT_MEMORY: LandingShot = {
+  name: 'closeup-memory-health',
+  alt: 'The Memory page of the hal0 dashboard on its Health tab, reading "Nothing needs attention", with the memory engine and its two banks listed below',
+  caption: 'The Memory page tells you in a sentence whether anything needs you.',
+  phone: {
+    name: 'phone-memory-health',
+    alt: 'The Memory page of the hal0 dashboard on a phone, on its Health tab, reading "Nothing needs attention" with the four things it watches marked clear',
+  },
+};
+
+export const SHOT_MODELS: LandingShot = {
+  name: 'closeup-model-catalog-rows',
+  alt: 'The model catalogue in the hal0 dashboard: chat, coding, embedding and speech models listed with their sizes and the slot each one is loaded in, with search and filters above',
+  caption: 'The model catalogue: what is in use, what is installed and what you can add.',
+  tablet: {
+    name: 'tablet-models',
+    alt: 'The model catalogue in the hal0 dashboard on a tablet: models listed with their sizes and the slot each one is loaded in, with search and filters above',
+  },
+  phone: {
+    name: 'phone-models',
+    alt: 'The model catalogue in the hal0 dashboard on a phone: models listed one under another with their sizes and the slot each one is loaded in',
+  },
+};
+
+export type TourStop = {
+  key: string;
+  label: string;
+  title: string;
+  body: string;
+  points: string[];
+  link: { label: string; href: string };
+  shot: string;
+  alt: string;
+  /** The same page at tablet and phone width, where the set has it. */
+  tablet?: ShotVariant;
+  phone?: ShotVariant;
+};
+
+/**
+ * The dashboard tour. Several of these captures carry sample readings
+ * ("illustrative" in the manifest), which is why the tour sits away from the
+ * benchmark figures and ends with TOUR_NOTE.
+ */
+export const TOUR: TourStop[] = [
   {
-    file: 'slot-model-picker-open',
-    alt: 'Slot card on the hal0 console with the model picker open, showing models with fit chips',
-    caption: 'Slot card, picker open. Each option shows size, fit and who else uses it.',
-    contain: true,
+    key: 'overview',
+    label: 'Overview',
+    title: 'One page that tells you how the box is doing',
+    body: 'The dashboard opens on a briefing: what is running, what needs you, and who is working.',
+    points: [
+      'A memory bar shows which model is using what',
+      'Anything waiting for your approval is at the top',
+      'Agents and the tasks handed to them are listed beside it',
+    ],
+    link: { label: 'Tour the dashboard', href: '/docs/guides/dashboard-and-settings/' },
+    shot: 'dashboard-overview',
+    alt: 'The Overview page of the hal0 dashboard: a memory bar split by model, an approval waiting in the Needs-you inbox, a chart and table of what each slot is serving, and the Agents card with delegated tasks',
+    tablet: {
+      name: 'tablet-overview',
+      alt: 'The Overview page of the hal0 dashboard on a tablet: a memory bar split by model, an approval waiting in the Needs-you inbox, and a chart and table of what each slot is serving',
+    },
+    phone: {
+      name: 'phone-overview',
+      alt: 'The Overview page of the hal0 dashboard on a phone: the memory bar, an approval waiting under Needs you, the start of the Serving-now chart, and the tab bar along the bottom',
+    },
   },
   {
-    file: 'openwebui-picker',
-    alt: 'Open WebUI model picker listing agent, coder and brain',
-    caption: 'Open WebUI, same box. The picker shows slot names with the model behind each one.',
-    todo: true,
+    key: 'slots',
+    label: 'Slots',
+    title: 'Every slot, with its model on a menu',
+    body: 'Each slot is a card. Pick its model from the menu, start or stop it, and see at a glance which ones are answering.',
+    points: [
+      'Change a slot’s model without touching your apps',
+      'Each entry in the menu says whether it fits this machine',
+      'A rail down the side lists every slot by the chip it runs on',
+    ],
+    link: { label: 'Manage slots', href: '/docs/guides/manage-slots/' },
+    shot: 'slots-inference',
+    alt: 'The Slots page of the hal0 dashboard: gauges across the top, a memory bar, slot cards each with a model menu, and a rail listing every slot by device',
+    // No phone variant: the set's phone capture of this page is marked for docs use only.
+    tablet: {
+      name: 'tablet-slots',
+      alt: 'The Slots page of the hal0 dashboard on a tablet: gauges, a memory bar, and slot cards each with a model menu',
+    },
   },
   {
-    file: 'memory-bank',
-    alt: 'The Memory page of the hal0 console on its Facts tab: a bank with its source documents, a filterable list of facts, an activity timeline and a tag map',
-    caption: 'Memory, Facts tab. A bank with its sources and facts, filters, a timeline and a tag map.',
+    key: 'agents',
+    label: 'Agents',
+    title: 'A task board for your agent',
+    body: 'The Operator Board is where work for Hermes is queued, picked up and finished, with a clear flag when a task is waiting on you.',
+    points: [
+      'Queue tasks and watch them move across the board',
+      'Blocked tasks are called out at the top',
+      'Pi, a coding agent for the terminal, is one command to add',
+    ],
+    link: { label: 'The Operator Board', href: '/docs/guides/operator-board/' },
+    shot: 'operator-board',
+    alt: 'The Operator Board in the hal0 dashboard: a kanban with Triage, To-do, Scheduled and Ready columns holding task cards for the Hermes agent',
   },
   {
-    file: 'slots-inference',
-    alt: 'The Slots page of the hal0 console on its Inference tab: throughput and hardware gauges, the shared memory band, slot cards with model pickers, and a rail listing every slot by device',
-    caption: 'Slots. Each card carries a model picker and its live figures; the rail beside them lists every slot by device.',
+    key: 'memory',
+    label: 'Memory',
+    title: 'Read what it remembers',
+    body: 'The Memory page lists the facts hal0 has kept, where each came from, and when. Search them, add your own, or remove what should not be there.',
+    points: [
+      'Filter by kind, by date or by tag',
+      'Ask a question across everything it knows',
+      'A health tab says whether anything needs attention',
+    ],
+    link: { label: 'The Memory page', href: '/docs/guides/memory-workspace/' },
+    shot: 'memory-bank',
+    alt: 'The Memory page of the hal0 dashboard on its Facts tab: a memory bank with its source documents, a filterable list of facts, an activity timeline and a tag map',
   },
   {
-    file: 'slot-edit-drawer',
-    alt: 'Slot drawer open over the slots page: model, profile and the tune block for the agent slot',
-    caption: 'Slot drawer. Model, profile and the tune: context, thinking, effort, budget, vision and speculation, each marked profile or override.',
+    key: 'images',
+    label: 'Images',
+    title: 'Pick an image model that fits',
+    body: 'The image catalogue lists what you can install, with a meter that shows how each model fits your machine before you download it.',
+    points: [
+      'A recommended starter for your hardware',
+      'Generate from the dashboard or from the chat app',
+      'The full ComfyUI editor is there for custom workflows',
+    ],
+    link: { label: 'Generate images', href: '/docs/guides/generate-images/' },
+    shot: 'models-image',
+    alt: 'The image model catalogue in the hal0 dashboard: installed and available image models with their sizes, and a meter showing how the selected one fits this machine’s memory',
   },
   {
-    file: 'model-edit-drawer',
-    alt: 'Model drawer open over the slots page: file facts, runner compatibility and source paths for a GGUF',
-    caption: 'Model drawer. The file and nothing else: quant, size, architecture, drafter, chat template, native context, where it runs.',
-  },
-  {
-    file: 'dashboard-overview',
-    alt: 'The Overview page of the hal0 console: the GPU memory band, an approval waiting in the Needs-you inbox, the Serving-now chart with its per-slot table, and the Agents card with delegated runs',
-    caption: 'Overview. What the box is serving, what needs you, who is working and how it performed, on one page.',
-  },
-  {
-    file: 'image-gen-generate',
-    alt: 'Image generation pane on the hal0 console with a prompt, size presets, a fit check and a finished render',
-    caption: 'Image gen. Prompt, size, steps and a fit check before the render; results land beside it.',
-    contain: true,
-  },
-  {
-    file: 'models-image',
-    alt: 'The image model catalogue in the hal0 console: installed and available image models with their sizes, and a meter showing how the selected one fits this box',
-    caption: 'Image models. A fit meter shows what fits before you install.',
-  },
-  {
-    file: 'agents-overview',
-    alt: 'The Agents page of the hal0 console: cards for Hermes and Pi with their version, model and status, and a placeholder card for a runtime that is not available yet',
-    caption: 'Agents. Every agent in the runtime as a card: version, model, persona, approvals and health.',
-  },
-  {
-    file: 'agent-card-console',
-    alt: 'The Hermes agent card flipped to its console with restart, logs, persona and approval controls',
-    caption: 'Card console. Flip a card for restart, logs, tool activity, persona and command approvals.',
-  },
-  {
-    file: 'mcp-tab',
-    alt: 'The Agents page of the hal0 console on its MCP tab: the bundled hal0-admin, hal0-memory and hal0-agents servers with their tools and connected clients, and the bridge clients below them',
-    caption: 'MCP. The bundled servers with their tools, and the bridge clients that call them.',
-  },
-  {
-    file: 'memory-graph',
-    alt: 'Memory bank in its web view: facts as a force-directed graph linked by meaning, time and shared entity, with a tag map beside it',
-    caption: 'Memory graph. A bank as a web: related meaning, near in time, shared entity, with the tag map beside it.',
-  },
-  {
-    file: 'approvals-inbox',
-    alt: 'Approvals inbox with one pending tool call',
-    caption: 'Approvals. Gated tool calls wait here until a person says yes.',
-    todo: true,
-  },
-  {
-    file: 'dock-gpu',
-    alt: 'The dock with its GPU tab open',
-    caption: 'Dock. GPU state, slot and service health, downloads and a merged event feed.',
-    natural: true,
+    key: 'stacks',
+    label: 'Stacks',
+    title: 'Save the whole setup as a stack',
+    body: 'A stack bundles a set of slots with their settings and models. Apply one and the box switches to that setup in a single step.',
+    points: [
+      'Keep one setup for everyday use and another for a project',
+      'Export a stack to move it to another machine',
+      'See which models a stack still needs',
+    ],
+    link: { label: 'About stacks', href: '/docs/concepts/stacks/' },
+    shot: 'stacks-tab',
+    alt: 'The Stacks tab of the hal0 dashboard showing the active "Daily driver" stack with its chat, coding, embedding and image slots and the model in each',
+    phone: {
+      name: 'phone-slots-stacks',
+      alt: 'The Stacks tab of the hal0 dashboard on a phone: the active "Daily driver" stack with its slots listed one under another',
+    },
   },
 ];
 
-export const HARDWARE_TIERS: { tier: string; name: string; note: string; reference?: true }[] = [
+export const TOUR_NOTE =
+  'These captures show the dashboard on sample data. The readings in them are not measurements.';
+
+export const HARDWARE: { tier: string; name: string; body: string; best?: true }[] = [
   {
-    tier: 'reference',
-    name: 'Ryzen AI Max+ 395',
-    note: '128 GB unified · iGPU + NPU · all published numbers',
-    reference: true,
+    tier: 'Built for',
+    name: 'AMD Strix Halo',
+    body: 'Ryzen AI Max+ 395 mini PCs with up to 128 GB of shared memory: room for several large models at once, plus a low-power AI chip for small ones.',
+    best: true,
   },
-  { tier: 'first-class', name: 'Ryzen AI Max 385 / 390', note: '64 GB unified · same install path' },
-  { tier: 'supported', name: 'Radeon RX 7000', note: '16 to 24 GB · ROCm or Vulkan' },
-  { tier: 'experimental', name: 'NVIDIA RTX', note: 'opt-in CUDA runner · not in the release gate' },
-  { tier: 'fallback', name: 'CPU only', note: 'small models, speech, smoke tests' },
-  { tier: 'supported', name: 'Proxmox LXC', note: 'one script · GPU + NPU passthrough' },
+  {
+    tier: 'Also supported',
+    name: 'Other AMD machines',
+    body: 'Ryzen AI Max 385 and 390 with 64 GB, and Radeon RX 7000 graphics cards with 16 to 24 GB.',
+  },
+  {
+    tier: 'Works too',
+    name: 'NVIDIA or no GPU',
+    body: 'NVIDIA RTX cards are experimental. With no graphics chip it runs small models on the processor.',
+  },
+];
+
+export const STEPS: { title: string; body: string }[] = [
+  {
+    title: 'Run the installer',
+    body: 'One line in a terminal. It checks your machine and sets everything up. A first install takes several minutes, mostly downloads.',
+  },
+  {
+    title: 'Open the dashboard',
+    body: 'From any device on your network. A small model is already loaded, so you can say hello straight away.',
+  },
+  {
+    title: 'Choose your models',
+    body: 'Give each slot a model. hal0 shows what fits your machine, and the chat app and agent start using them.',
+  },
+];
+
+export const DETAILS: { icon: string; title: string; body: string; link: string; href: string }[] = [
+  {
+    icon: 'lucide:terminal',
+    title: 'One API',
+    body: 'OpenAI-compatible endpoints for chat, embeddings, rerank, speech, transcription and images on a single address.',
+    link: 'API reference',
+    href: '/docs/reference/api/openai-compat/',
+  },
+  {
+    icon: 'lucide:cable',
+    title: 'MCP built in',
+    body: 'hal0’s agent, memory and admin tools are MCP servers, so Claude Code, Codex and other MCP clients can connect with a key you can revoke. You can install extra MCP servers too; the built-in agents cannot call those yet.',
+    link: 'Connect over MCP',
+    href: '/docs/guides/connect-mcp/',
+  },
+  {
+    icon: 'lucide:boxes',
+    title: 'How it is built',
+    body: 'One container per slot, llama.cpp, FastFlowLM and ComfyUI underneath, and an arbiter that keeps jobs on the graphics chip from colliding.',
+    link: 'Architecture',
+    href: '/docs/concepts/architecture/',
+  },
+];
+
+/** The plain comparison: [what, a typical local AI app, hal0]. The named table sits behind a disclosure below it. */
+export const PLAIN_COMPARE: [string, string, string][] = [
+  ['Models ready at once', 'Usually one, loaded when you ask', 'Several, each in its own slot'],
+  ['Switching between jobs', 'Wait while one unloads and the next loads', 'Already loaded'],
+  ['A chat app', 'Install and connect it yourself', 'Included and connected'],
+  ['An agent with memory', 'Separate projects to wire together', 'Included, sharing one memory'],
+  ['Trying a new model', 'Change the setting in every app', 'Pick it from the slot’s menu'],
 ];
 
 export const COMPARE_COLUMNS = ['hal0', 'Ollama', 'LM Studio', 'llama-swap', 'Lemonade'];
@@ -364,23 +542,35 @@ export const COMPARE_NOTE =
 export const FAQ: { q: string; a: string }[] = [
   {
     q: 'What is hal0?',
-    a: 'An open-source, self-hosted AI inference platform for Linux. It runs chat, embedding, rerank, speech and image models in named slots behind one OpenAI-compatible API, with a web console, a chat UI, agents, MCP servers and a memory engine. Apache-2.0.',
+    a: 'hal0 is free, open-source software that turns a Linux computer into a private AI server for your home. It runs chat, coding, speech and image models side by side in named slots, and it comes with a chat app, an agent and a memory that are already connected. Other apps reach it through an OpenAI-compatible API.',
+  },
+  {
+    q: 'Do I need to be technical?',
+    a: 'You need to be comfortable pasting one command into a terminal on a Linux machine. After that everything is in the dashboard, and the beginner’s guide explains each term as it comes up.',
   },
   {
     q: 'Do I need a Strix Halo machine?',
-    a: 'No. hal0 is built and benchmarked on the Ryzen AI Max+ 395 first, and it runs on other Linux boxes with an AMD GPU, an NVIDIA GPU (experimental) or only a CPU. Linux x86_64 with systemd and podman is the hard requirement.',
-  },
-  {
-    q: 'Is hal0 an Ollama alternative?',
-    a: 'Partly. Both serve local models over an OpenAI-style API. hal0 adds slots that clients address by name, reusable profiles, a console, agents, MCP servers and memory. If you want one binary, or you run macOS or Windows, Ollama is the simpler choice.',
+    a: 'No. hal0 is built for Strix Halo first, and it also runs on other AMD graphics hardware, on NVIDIA cards (experimental) and on a plain processor for small models. It needs a 64-bit Intel or AMD computer running Linux.',
   },
   {
     q: 'Can I run several models at once?',
-    a: 'Yes. Each slot is its own container, and how many stay resident depends on your memory pool. hal0 checks fit before loading and evicts by priority under pressure. Image generation borrows the GPU while it renders, pausing GPU chat slots.',
+    a: 'Yes, that is what slots are for. Each slot keeps its own model loaded, and how many fit depends on your machine’s memory. hal0 checks the fit before it loads anything. One exception: while an image is being generated, the chat models on the graphics chip step aside and come back a few seconds after it finishes.',
   },
   {
-    q: 'Does my data leave the machine?',
-    a: 'Inference, chat history, uploaded documents and memory stay on the box unless you connect an upstream. No telemetry, no account. hal0 pulls models and runner images when you ask and checks for updates while the console is open.',
+    q: 'Is it really private?',
+    a: 'The models run on your machine, and hal0 needs no account and sends no usage data. It goes online to download models and updates when you ask, and it sends a request to a cloud service only if you add a provider yourself.',
+  },
+  {
+    q: 'What does it cost?',
+    a: 'Nothing. hal0 is open source under the Apache-2.0 licence. You pay for the hardware and the electricity, and there is no bill per message.',
+  },
+  {
+    q: 'Is hal0 an Ollama alternative?',
+    a: 'Partly. Both run local models behind an OpenAI-style API. hal0 adds named slots that apps address, a dashboard, a chat app, an agent and a shared memory, all connected when you install it. If you want a single small program, or you use macOS or Windows, Ollama is the simpler choice.',
+  },
+  {
+    q: 'Can I still use a cloud model sometimes?',
+    a: 'Yes. Add a provider such as OpenRouter or OpenAI, choose which of its models to allow, and your apps reach them through the same address as your local models.',
   },
   {
     q: 'Is the API OpenAI-compatible?',
@@ -388,6 +578,10 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Which GPUs and NPUs work?',
-    a: 'AMD Strix Halo iGPU on ROCm or Vulkan, plus the XDNA NPU through FastFlowLM and, on the nightlies, through ggml-xdna, which runs any GGUF on the NPU. AMD Radeon RX 7000 on the same runner. NVIDIA through an opt-in CUDA runner, experimental. CPU-only for small models.',
+    a: 'AMD Strix Halo graphics on ROCm or Vulkan, and its NPU through FastFlowLM or the optional xdna runner. AMD Radeon RX 7000 cards on the same runners. NVIDIA RTX cards through an opt-in CUDA runner, which is experimental. With no GPU, small models run on the processor.',
+  },
+  {
+    q: 'What if I get stuck?',
+    a: 'Ask on the forum. The documentation lives there too, starting with a beginner’s guide that goes from an empty machine to a working setup.',
   },
 ];

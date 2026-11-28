@@ -117,9 +117,18 @@
     overlay.addEventListener('pointercancel', endSwipe);
   }
 
+  /**
+   * A capture can come in per-device variants (DeviceShot.astro), of which CSS shows one.
+   * The others are not on this screen, so they do not belong in the gallery either.
+   */
+  function shownVariant(img) {
+    const variant = img.closest('[data-shot-variant]');
+    return !variant || getComputedStyle(variant).display !== 'none';
+  }
+
   /** Every screenshot on the page, in reading order, excluding the overlay's own copy. */
   function collect() {
-    items = Array.from(document.querySelectorAll(SELECTOR)).filter((img) => !img.closest('.hal0-lightbox'));
+    items = Array.from(document.querySelectorAll(SELECTOR)).filter((img) => !img.closest('.hal0-lightbox') && shownVariant(img));
   }
 
   /** The figure's caption when it has one, else the alt text. */
