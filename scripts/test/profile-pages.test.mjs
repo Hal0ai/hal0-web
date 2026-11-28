@@ -30,12 +30,16 @@ const helpers = () => import('../../src/lib/profile-page.mjs');
 
 // A valid-by-schema-but-sparse record: no summary, no author, no history.
 const sparse = {
-  schema: 1,
+  schema: 2,
   profile: { slug: 'bare-bones', title: 'Bare bones', intent: 'chat' },
-  runner: { kind: 'llama-server', lane: 'rocm', min_build: 'b9219' },
+  runtime: { family: 'llama-server' },
+  tune: { flags: '-fa auto -b 2048', ctx_size: 8192 },
   model: { id: 'qwen3-8b-q4' },
-  args: { raw: '-ngl 99 -c 8192' },
 };
+
+// The same record for an engine that is not llama.cpp.
+const sparseTts = { ...sparse, runtime: { family: 'kokoro' }, tune: {}, model: undefined };
+const TITLE_SUFFIX_OTHER = ' · hal0 profile | hal0';
 
 const BAD_TOKENS = /undefined|null|NaN|\[object/;
 
@@ -47,7 +51,17 @@ test('profileDescription: record without summary, author and history yields a cl
   assert.ok(text.length <= 155, `generated sentence fits 155 chars, got ${text.length}`);
   assert.doesNotMatch(text, BAD_TOKENS, 'no undefined/null leaks into the sentence');
   assert.match(text, /qwen3-8b-q4/, 'names the model');
-  assert.match(text, /rocm/, 'names the lane');
+  assert.match(text, /llama\.cpp profile/, 'a llama-server profile is called a llama.cpp profile');
+});
+
+test('profileDescription and profileTitle: another engine is a hal0 profile, never a llama.cpp one', async () => {
+  const { profileDescription, profileTitle } = await helpers();
+  const text = profileDescription(sparseTts);
+  assert.doesNotMatch(text, /llama\.cpp/);
+  assert.match(text, /hal0 profile/);
+  assert.match(text, /kokoro/, 'names the engine');
+  assert.doesNotMatch(text, BAD_TOKENS);
+  assert.equal(profileTitle(sparseTts), `Bare bones${TITLE_SUFFIX_OTHER}`);
 });
 
 test('profileDescription: survives a record with almost nothing in it', async () => {
@@ -140,7 +154,16 @@ test('profileJsonLd: breadcrumb names are Home, Profiles, then the profile title
 
 test('profileJsonLd: a third-party author is a Person; the latest history entry is carried', async () => {
   const { profileJsonLd } = await helpers();
-  const full = records.find((r) => r.profile.author && !r.profile.first_party && r.history?.length);
+  // Every record in the registry is first-party today, so the third-party
+  // case is exercised with a record built here.
+  const full = {
+    ...sparse,
+    profile: { ...sparse.profile, slug: 'third-party', author: 'lemond' },
+    history: [
+      { v: 2, date: '2026-11-20', note: 'wider batch' },
+      { v: 1, date: '2026-11-02', note: 'initial' },
+    ],
+  };
   const nodes = profileJsonLd(full, `https://hal0.dev/profiles/${full.profile.slug}/`);
   const code = nodes[1];
   assert.equal(code.author['@type'], 'Person');
@@ -198,7 +221,7 @@ test('sitemapFilter: leaves out only the exact /profiles/submitted/ page', async
   assert.equal(sitemapFilter('https://hal0.dev/profiles/submitted-runs/'), true, 'a longer slug is not swept up by a prefix match');
   assert.equal(sitemapFilter('https://hal0.dev/profiles/submit/'), true);
   assert.equal(sitemapFilter('https://hal0.dev/profiles/'), true);
-  assert.equal(sitemapFilter('https://hal0.dev/profiles/agent-27b-tools/'), true);
+  assert.equal(sitemapFilter('https://hal0.dev/profiles/chat-long-context/'), true);
 });
 
 // ── build: dist/client/profiles/<slug>/index.html ──────────────────────
@@ -247,12 +270,15 @@ test('a page is built for every profile slug', { skip }, async () => {
 });
 
 test('every profile page has a title of 60 characters or fewer', { skip }, async () => {
-  for (const slug of slugs) {
+  for (const record of records) {
+    const slug = record.profile.slug;
     const html = await loadPage(slug);
     const title = decode(html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '');
     assert.ok(title.length > 0, `${slug}: has a <title>`);
     assert.ok(title.length <= 60, `${slug}: title is ${title.length} chars: ${title}`);
-    assert.ok(title.endsWith(TITLE_SUFFIX), `${slug}: title ends with the suffix: ${title}`);
+    // Only a llama-server profile is called a llama.cpp profile.
+    const suffix = record.runtime.family === 'llama-server' ? TITLE_SUFFIX : TITLE_SUFFIX_OTHER;
+    assert.ok(title.endsWith(suffix), `${slug}: title ends with the suffix: ${title}`);
   }
 });
 
@@ -318,9 +344,9 @@ test('every profile page emits a parseable BreadcrumbList + SoftwareSourceCode g
   }
 });
 
-test('every profile page shows the title, model, runner, raw args, history and author', { skip }, async () => {
+test('every profile page shows the title, runtime, flags, settings, history and author', { skip }, async () => {
   for (const record of records) {
-    const { profile, runner, model, args } = record;
+    const { profile, runtime, tune = {}, model } = record;
     // <main> only: the head carries the title and summary too, and those must
     // not be what satisfies a check on the visible content.
     const main = mainOf(await loadPage(profile.slug));
@@ -328,12 +354,15 @@ test('every profile page shows the title, model, runner, raw args, history and a
     const text = decode(main);
     assert.ok(text.includes(profile.title), `${profile.slug}: shows the title`);
     assert.ok(text.includes(profile.intent), `${profile.slug}: shows the intent`);
-    assert.ok(text.includes(model.id), `${profile.slug}: shows the model id`);
-    for (const m of model.compatible ?? []) assert.ok(text.includes(m), `${profile.slug}: lists compatible ${m}`);
-    assert.ok(text.includes(runner.lane), `${profile.slug}: shows the lane`);
-    if (runner.min_build) assert.ok(text.includes(runner.min_build), `${profile.slug}: shows the min build`);
-    assert.ok(text.includes(args.raw), `${profile.slug}: shows the raw args`);
-    assert.match(main, /<pre[^>]*>[\s\S]*?<code/, `${profile.slug}: args sit in a code block`);
+    if (model?.id) assert.ok(text.includes(model.id), `${profile.slug}: shows the model id`);
+    for (const m of model?.compatible ?? []) assert.ok(text.includes(m), `${profile.slug}: lists compatible ${m}`);
+    assert.ok(text.includes(runtime.family), `${profile.slug}: shows the runtime family`);
+    if (runtime.min_hal0) assert.ok(text.includes(runtime.min_hal0), `${profile.slug}: shows the minimum hal0`);
+    if (tune.flags) assert.ok(text.includes(tune.flags), `${profile.slug}: shows the flags`);
+    if (tune.ctx_size) assert.ok(text.includes(`ctx_size = ${tune.ctx_size}`), `${profile.slug}: shows ctx_size`);
+    assert.ok(text.includes(`[profile.${profile.slug}]`), `${profile.slug}: shows the hal0 profile table`);
+    assert.match(main, /<pre[^>]*>[\s\S]*?<code/, `${profile.slug}: settings sit in a code block`);
+    assert.doesNotMatch(text, /-ngl|--mmproj|min build|\blane\b/, `${profile.slug}: nothing from the old shape`);
     for (const h of record.history ?? []) assert.ok(text.includes(h.note), `${profile.slug}: history note v${h.v}`);
     if (profile.author && !profile.first_party) {
       assert.ok(text.includes(profile.author), `${profile.slug}: shows the author`);
@@ -415,7 +444,7 @@ test('the gallery has the new h2 and links every card title to its page', { skip
   const html = await readFile(new URL('profiles/index.html', dist), 'utf8');
   assert.match(
     html,
-    /<h2[^>]*>\s*Community profiles for Strix Halo and local LLMs\s*<\/h2>/,
+    /<h2[^>]*>\s*Built-in and importable profiles for hal0\s*<\/h2>/,
     'gallery has the h2',
   );
   for (const slug of slugs) {
@@ -470,4 +499,49 @@ test('the drawer script: title link and button keep their own behaviour; whole-c
   assert.equal(guards.length, 1, 'the card click listener ignores clicks that start on a link or a button');
   assert.doesNotMatch(drawer, /["'`]Enter["'`]/, 'no card keydown handler for Enter/Space: the button handles its own keys');
   assert.match(drawer, /data-profile-card/, 'cards are wired for whole-card mouse clicks');
+});
+
+// ── built output: the .hal0profile.json envelopes ─────────────────────
+
+test('every importable profile ships an envelope hal0 can import; a built-in ships none', { skip }, async () => {
+  const { bodyChecksum } = await import('../../src/lib/profile-envelope.mjs');
+  const importable = records.filter((r) => !r.profile.seed);
+  assert.ok(importable.length > 0, 'the registry has something to import');
+  for (const record of records) {
+    const slug = record.profile.slug;
+    const file = new URL(`profiles/${slug}.hal0profile.json`, dist);
+    if (record.profile.seed) {
+      await access(file).then(
+        () => assert.fail(`${slug}: a built-in profile must not ship an envelope`),
+        () => {},
+      );
+      continue;
+    }
+    const envelope = JSON.parse(await readFile(file, 'utf8'));
+    assert.equal(envelope.kind, 'hal0.profile', `${slug}: kind`);
+    assert.equal(envelope.schema_version, 2, `${slug}: schema_version`);
+    assert.equal(envelope.name, slug, `${slug}: name`);
+    assert.deepEqual(envelope.profile, record.tune, `${slug}: the body is the registry tune, key for key`);
+    assert.equal(envelope.checksum, bodyChecksum(envelope.profile), `${slug}: checksum covers the body`);
+    const main = mainOf(await loadPage(slug));
+    assert.match(
+      main,
+      new RegExp(`href="/profiles/${slug}\\.hal0profile\\.json"[^>]*download`),
+      `${slug}: the page links its envelope as a download`,
+    );
+  }
+});
+
+test('a built-in profile page says to clone it; an importable one says to import it', { skip }, async () => {
+  for (const record of records) {
+    const slug = record.profile.slug;
+    const text = decode(mainOf(await loadPage(slug)));
+    if (record.profile.seed) {
+      assert.ok(text.includes(`profile create my-${slug} --from ${slug}`), `${slug}: clone command`);
+      assert.doesNotMatch(text, /hal0profile\.json/, `${slug}: no import file offered`);
+    } else {
+      assert.match(text, /Profiles → Import/, `${slug}: names the dashboard import`);
+      assert.ok(text.includes(`slot edit <slot> --profile ${slug}`), `${slug}: how to point a slot at it`);
+    }
+  }
 });

@@ -6,16 +6,22 @@
 // docs/design/2026-08-09-community-comps/09 Profile Submission.html and its
 // README §9 for the four validation states this implements:
 //
-//   pass             — parsed summary (slug, intent, model + "in roster"
-//                       chip, lane, flag count, linked-runs count)
+//   pass             — parsed summary (slug, intent, runtime, flag count,
+//                       model + "in roster" chip when the profile names one)
 //   schema-error      — line-numbered, cause-then-recovery, blocking
-//   missing-fields    — the three keys that matter (intent, model.id,
-//                       args.raw), each with why it matters, blocking
+//   missing-fields    — the three keys that matter (intent, runtime.family,
+//                       a non-empty [tune]), each with why it matters, blocking
 //   warning           — unknown model id, NOT blocking, "unverified" chip
 //
 // Plus the duplicate-slug edge state (offer "submit as vN+1" before
 // "rename mine") and the GitHub "new file" URL builder used by the
 // "continue on GitHub" door.
+//
+// The registry is on schema 2: a profile file is hal0's own profile body
+// ([tune]: flags, ctx_size, enable_thinking, reasoning_effort,
+// reasoning_budget, vision, speculation, runner, cloned_from, intent) plus the
+// metadata the gallery needs. Schema 1 was the pre-1.0 shape ([runner]
+// lane/image, [args] raw with -ngl and -c in it), which hal0 no longer reads.
 //
 // No fs/path/ajv here — this has to bundle for the client via Vite. The
 // shape checks below are a hand-rolled mirror of
@@ -23,23 +29,106 @@
 import { parse as parseToml } from 'smol-toml';
 import { benchFor } from './profiles-join.mjs';
 
+export const SCHEMA_VERSION = 2;
 export const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{2,63}$/;
-export const INTENTS = ['chat', 'coding', 'agent', 'vision', 'draft', 'moe', 'embedding'];
-export const RUNNER_KINDS = ['llama-server', 'flm', 'onnx', 'vllm'];
-export const LANES = ['rocm', 'vulkan_radv', 'default', 'npu'];
+export const INTENTS = [
+  'chat',
+  'coding',
+  'agent',
+  'utility',
+  'memory',
+  'vision',
+  'embedding',
+  'reranking',
+  'tts',
+  'stt',
+  'image',
+];
+export const RUNTIME_FAMILIES = ['llama-server', 'flm', 'kokoro', 'moonshine', 'qwen3tts', 'comfyui', 'halogen'];
+export const REASONING_EFFORTS = ['default', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+export const VISION_MODES = ['auto', 'off'];
+export const SPECULATION_MODES = ['auto', 'off', 'ngram'];
+export const CTX_SIZE_MIN = 128;
+export const CTX_SIZE_MAX = 16777216;
+const MIN_HAL0_PATTERN = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+const RUNNER_KEY_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+// Flags hal0 refuses in a profile's `flags`, with the reason it gives. This
+// is a first screen for a llama-server profile, matched on the exact flag
+// name; hal0's own import (POST /api/profiles/import) is the authority and
+// screens more (host-owned flags, llama.cpp preset switches, positionals).
+const PLACEMENT = 'placement belongs to the slot, not the profile';
+const MANAGED = 'hal0 sets this itself';
+const MODEL_FACT = 'this is a fact about the model file';
+export const DENIED_FLAGS = {
+  '-ngl': PLACEMENT,
+  '--gpu-layers': PLACEMENT,
+  '--n-gpu-layers': PLACEMENT,
+  '-dev': PLACEMENT,
+  '--device': PLACEMENT,
+  '-t': PLACEMENT,
+  '--threads': PLACEMENT,
+  '-m': MANAGED,
+  '--model': MANAGED,
+  '-c': `${MANAGED}; use tune.ctx_size`,
+  '--ctx-size': `${MANAGED}; use tune.ctx_size`,
+  '--host': MANAGED,
+  '--port': MANAGED,
+  '-a': MANAGED,
+  '--alias': MANAGED,
+  '--jinja': MODEL_FACT,
+  '--no-jinja': MODEL_FACT,
+  '--chat-template': MODEL_FACT,
+  '--chat-template-file': MODEL_FACT,
+  '--mmproj': `${MODEL_FACT}; use tune.vision`,
+  '--mmproj-url': `${MODEL_FACT}; use tune.vision`,
+  '--mmproj-auto': `${MODEL_FACT}; use tune.vision`,
+  '--no-mmproj': `${MODEL_FACT}; use tune.vision`,
+  '--no-mmproj-auto': `${MODEL_FACT}; use tune.vision`,
+  '--spec-type': 'use tune.speculation',
+};
+
+/**
+ * Splits a flag string on whitespace the way a shell would, keeping a
+ * single- or double-quoted value in one token. A token that opens with a
+ * quote is a value, so text inside it is never read as a flag.
+ *
+ * @param {string} raw
+ * @returns {string[]}
+ */
+export function flagTokens(raw) {
+  return typeof raw === 'string' ? (raw.match(/'[^']*'|"[^"]*"|\S+/g) ?? []) : [];
+}
+
+/**
+ * The flags in a llama-server flag string that hal0 refuses in a profile.
+ * A token is a flag when it starts with `-` and is not a negative number;
+ * `--flag=value` and `_` for `-` are read the way llama.cpp reads them.
+ *
+ * @param {string} raw
+ * @returns {Array<{ flag: string, reason: string }>}
+ */
+export function deniedFlags(raw) {
+  if (typeof raw !== 'string') return [];
+  const found = [];
+  for (const tok of flagTokens(raw)) {
+    if (!tok.startsWith('-') || /^-\d/.test(tok)) continue;
+    const name = tok.split('=')[0].replace(/_/g, '-');
+    if (Object.hasOwn(DENIED_FLAGS, name)) found.push({ flag: tok, reason: DENIED_FLAGS[name] });
+  }
+  return found;
+}
 
 // The three keys the "missing fields" state is scoped to — per README §9,
 // "the three keys that matter". Any other missing/invalid field is treated
 // as a (blocking) schema error instead, with a line rail where one can be
 // located.
-const CORE_KEYS = ['profile.intent', 'model.id', 'args.raw'];
+const CORE_KEYS = ['profile.intent', 'runtime.family', 'tune'];
 
 const CORE_KEY_WHY = {
-  'profile.intent':
-    'what this profile is for: chat · coding · agent · vision · draft · moe · embedding',
-  'model.id':
-    'the roster id this config was tuned against. Without it nothing can join to a benchmark run.',
-  'args.raw': 'the flag string itself. A profile without flags is just a name.',
+  'profile.intent': `what this profile is for: ${INTENTS.join(' · ')}`,
+  'runtime.family': `the engine these settings are for: ${RUNTIME_FAMILIES.join(' · ')}`,
+  tune: 'the settings themselves: flags, ctx_size, enable_thinking, vision, speculation. A profile without a tune is just a name.',
 };
 
 const GITHUB_REPO = 'Hal0ai/hal0-profiles';
@@ -47,19 +136,18 @@ const GITHUB_NEW_FILE_BASE = `https://github.com/${GITHUB_REPO}/new/main`;
 export const GITHUB_URL_WARN_LENGTH = 8000;
 
 /**
- * Count "flags" in an args.raw string — tokens that start with `-` (but
- * are not bare `-`). Values that follow a flag (e.g. the `16384` in
- * `-c 16384`) are not counted.
+ * Count "flags" in a tune.flags string — tokens that start with `-` (but
+ * are not bare `-` or a negative number). Values that follow a flag (e.g.
+ * the `2048` in `-b 2048`, the `-1` in `--reasoning-budget -1`) are not
+ * counted.
  *
  * @param {string} raw
  * @returns {number}
  */
 export function countFlags(raw) {
   if (typeof raw !== 'string' || raw.trim() === '') return 0;
-  return raw
-    .trim()
-    .split(/\s+/)
-    .filter((tok) => tok.startsWith('-') && tok !== '-').length;
+  return flagTokens(raw)
+    .filter((tok) => tok.startsWith('-') && tok !== '-' && !/^-\d/.test(tok)).length;
 }
 
 /**
@@ -69,7 +157,7 @@ export function countFlags(raw) {
  * degrades gracefully to `null` (no rail, field name still shown).
  *
  * @param {string} text - raw TOML source
- * @param {string} path - dotted path, e.g. "runner.lane" or "schema"
+ * @param {string} path - dotted path, e.g. "runtime.family" or "schema"
  * @returns {{ line: number, text: string } | null}
  */
 export function locateLine(text, path) {
@@ -95,12 +183,24 @@ export function locateLine(text, path) {
   return null;
 }
 
-const ROOT_KEYS = ['schema', 'profile', 'runner', 'model', 'args', 'requires', 'history'];
-const PROFILE_KEYS = ['slug', 'title', 'summary', 'intent', 'author', 'first_party'];
-const RUNNER_KEYS = ['kind', 'lane', 'min_build', 'image'];
-const MODEL_KEYS = ['id', 'quant', 'compatible'];
-const ARGS_KEYS = ['raw'];
-const REQUIRES_KEYS = ['gtt_gb', 'exclusive'];
+const ROOT_KEYS = ['schema', 'profile', 'runtime', 'tune', 'model', 'history'];
+const PROFILE_KEYS = ['slug', 'title', 'summary', 'intent', 'author', 'first_party', 'seed'];
+const RUNTIME_KEYS = ['family', 'min_hal0'];
+const TUNE_KEYS = [
+  'flags',
+  'ctx_size',
+  'enable_thinking',
+  'reasoning_effort',
+  'reasoning_budget',
+  'vision',
+  'speculation',
+  'runner',
+  'cloned_from',
+  'intent',
+];
+// A tune that sets only these is still "just a name".
+const TUNE_LABEL_KEYS = ['intent', 'cloned_from'];
+const MODEL_KEYS = ['id', 'compatible'];
 const HISTORY_ITEM_KEYS = ['v', 'date', 'note'];
 
 /**
@@ -122,9 +222,11 @@ const HISTORY_ITEM_KEYS = ['v', 'date', 'note'];
 export function collectSchemaIssues(parsed) {
   const issues = [];
   const add = (path, kind, message) => issues.push({ path, kind, message });
+  // A TOML date parses to a Date, which is an object but not a table.
+  const isTable = (v) => v != null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date);
 
   const addUnknownKeys = (obj, allowed, prefix) => {
-    if (obj == null || typeof obj !== 'object' || Array.isArray(obj)) return;
+    if (!isTable(obj)) return;
     for (const key of Object.keys(obj)) {
       if (!allowed.includes(key)) {
         const path = prefix ? `${prefix}.${key}` : key;
@@ -141,28 +243,60 @@ export function collectSchemaIssues(parsed) {
     }
   };
 
-  if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  const requireOneOf = (obj, key, path, allowed) => {
+    const v = obj?.[key];
+    if (v !== undefined && !allowed.includes(v)) {
+      add(path, 'invalid', `${path} must be one of ${allowed.join(' | ')} (got ${JSON.stringify(v)})`);
+    }
+  };
+
+  const requireBoolean = (obj, key, path) => {
+    const v = obj?.[key];
+    if (v !== undefined && typeof v !== 'boolean') {
+      add(path, 'invalid', `${path} must be a boolean (got ${JSON.stringify(v)})`);
+    }
+  };
+
+  const requireIntegerIn = (obj, key, path, min, max) => {
+    const v = obj?.[key];
+    if (v !== undefined && (!Number.isInteger(v) || v < min || v > max)) {
+      add(path, 'invalid', `${path} must be an integer from ${min} to ${max} (got ${JSON.stringify(v)})`);
+    }
+  };
+
+  if (!isTable(parsed)) {
     add('(root)', 'invalid', 'document must be a table');
+    return issues;
+  }
+
+  if (parsed.schema === 1) {
+    add(
+      'schema',
+      'invalid',
+      'schema 1 is the pre-1.0 profile shape ([runner] lane/image, [args] raw), which hal0 no longer reads. ' +
+        'Rewrite the file as schema 2: the settings go in [tune].'
+    );
     return issues;
   }
 
   addUnknownKeys(parsed, ROOT_KEYS, '');
 
-  if (parsed.schema !== 1) {
+  if (parsed.schema !== SCHEMA_VERSION) {
     add(
       'schema',
       parsed.schema === undefined ? 'missing' : 'invalid',
       parsed.schema === undefined
         ? 'schema: required'
-        : `schema must equal 1 (got ${JSON.stringify(parsed.schema)})`
+        : `schema must equal ${SCHEMA_VERSION} (got ${JSON.stringify(parsed.schema)})`
     );
   }
 
-  for (const key of ['profile', 'runner', 'model', 'args', 'history']) {
+  for (const key of ['profile', 'runtime', 'history']) {
     if (parsed[key] === undefined) add(key, 'missing', `${key}: required`);
+    else if (key !== 'history' && !isTable(parsed[key])) add(key, 'invalid', `${key} must be a table`);
   }
 
-  const profile = parsed.profile ?? {};
+  const profile = isTable(parsed.profile) ? parsed.profile : {};
   addUnknownKeys(profile, PROFILE_KEYS, 'profile');
   for (const key of ['slug', 'title', 'summary', 'intent', 'author']) {
     if (profile[key] === undefined) add(`profile.${key}`, 'missing', `profile.${key}: required`);
@@ -177,89 +311,109 @@ export function collectSchemaIssues(parsed) {
   requireNonEmptyString(profile, 'title', 'profile.title');
   requireNonEmptyString(profile, 'summary', 'profile.summary');
   requireNonEmptyString(profile, 'author', 'profile.author');
-  if (profile.intent !== undefined && !INTENTS.includes(profile.intent)) {
+  requireOneOf(profile, 'intent', 'profile.intent', INTENTS);
+  requireBoolean(profile, 'first_party', 'profile.first_party');
+  requireBoolean(profile, 'seed', 'profile.seed');
+  if (profile.seed === true && profile.first_party !== true) {
     add(
-      'profile.intent',
+      'profile.seed',
       'invalid',
-      `profile.intent must be one of ${INTENTS.join(' | ')} (got ${JSON.stringify(profile.intent)})`
-    );
-  }
-  if (profile.first_party !== undefined && typeof profile.first_party !== 'boolean') {
-    add(
-      'profile.first_party',
-      'invalid',
-      `profile.first_party must be a boolean (got ${JSON.stringify(profile.first_party)})`
+      'profile.seed = true marks a profile built into hal0, so it also needs profile.first_party = true'
     );
   }
 
-  const runner = parsed.runner ?? {};
-  addUnknownKeys(runner, RUNNER_KEYS, 'runner');
-  for (const key of ['kind', 'lane']) {
-    if (runner[key] === undefined) add(`runner.${key}`, 'missing', `runner.${key}: required`);
-  }
-  if (runner.kind !== undefined && !RUNNER_KINDS.includes(runner.kind)) {
+  const runtime = isTable(parsed.runtime) ? parsed.runtime : {};
+  addUnknownKeys(runtime, RUNTIME_KEYS, 'runtime');
+  if (runtime.family === undefined) add('runtime.family', 'missing', 'runtime.family: required');
+  requireOneOf(runtime, 'family', 'runtime.family', RUNTIME_FAMILIES);
+  if (
+    runtime.min_hal0 !== undefined &&
+    (typeof runtime.min_hal0 !== 'string' || !MIN_HAL0_PATTERN.test(runtime.min_hal0))
+  ) {
     add(
-      'runner.kind',
+      'runtime.min_hal0',
       'invalid',
-      `runner.kind must be one of ${RUNNER_KINDS.join(' | ')} (got ${JSON.stringify(runner.kind)})`
+      `runtime.min_hal0 must be a release number such as "1.5.0" (got ${JSON.stringify(runtime.min_hal0)})`
     );
   }
-  if (runner.lane !== undefined && !LANES.includes(runner.lane)) {
-    add(
-      'runner.lane',
-      'invalid',
-      `runner.lane must be one of ${LANES.join(' | ')} (got ${JSON.stringify(runner.lane)})`
-    );
-  }
-  requireNonEmptyString(runner, 'min_build', 'runner.min_build');
-  requireNonEmptyString(runner, 'image', 'runner.image');
 
-  const model = parsed.model ?? {};
-  addUnknownKeys(model, MODEL_KEYS, 'model');
-  if (model.id === undefined) add('model.id', 'missing', 'model.id: required');
-  else requireNonEmptyString(model, 'id', 'model.id');
-  requireNonEmptyString(model, 'quant', 'model.quant');
-  if (model.compatible !== undefined) {
-    if (!Array.isArray(model.compatible)) {
-      add('model.compatible', 'invalid', 'model.compatible must be an array of strings');
-    } else {
-      model.compatible.forEach((v, i) => {
-        if (typeof v !== 'string' || v.length < 1) {
-          add(
-            `model.compatible[${i}]`,
-            'invalid',
-            `model.compatible[${i}] must be a non-empty string (got ${JSON.stringify(v)})`
-          );
-        }
-      });
+  // [tune] is hal0's profile body, key for key.
+  if (parsed.tune === undefined) {
+    add('tune', 'missing', 'tune: required');
+  } else if (!isTable(parsed.tune)) {
+    add('tune', 'invalid', 'tune must be a table');
+  }
+  const tune = isTable(parsed.tune) ? parsed.tune : {};
+  addUnknownKeys(tune, TUNE_KEYS, 'tune');
+  if (tune.flags !== undefined && typeof tune.flags !== 'string') {
+    add('tune.flags', 'invalid', `tune.flags must be a string (got ${JSON.stringify(tune.flags)})`);
+  }
+  requireIntegerIn(tune, 'ctx_size', 'tune.ctx_size', CTX_SIZE_MIN, CTX_SIZE_MAX);
+  requireBoolean(tune, 'enable_thinking', 'tune.enable_thinking');
+  requireOneOf(tune, 'reasoning_effort', 'tune.reasoning_effort', REASONING_EFFORTS);
+  requireIntegerIn(tune, 'reasoning_budget', 'tune.reasoning_budget', -1, CTX_SIZE_MAX);
+  requireOneOf(tune, 'vision', 'tune.vision', VISION_MODES);
+  requireOneOf(tune, 'speculation', 'tune.speculation', SPECULATION_MODES);
+  if (tune.runner !== undefined && (typeof tune.runner !== 'string' || !RUNNER_KEY_PATTERN.test(tune.runner))) {
+    add(
+      'tune.runner',
+      'invalid',
+      `tune.runner must be a runner key such as "halogen", never an image reference (got ${JSON.stringify(tune.runner)})`
+    );
+  }
+  requireNonEmptyString(tune, 'cloned_from', 'tune.cloned_from');
+  if (tune.intent !== undefined && typeof tune.intent !== 'string') {
+    add('tune.intent', 'invalid', `tune.intent must be a string (got ${JSON.stringify(tune.intent)})`);
+  }
+
+  if (isTable(parsed.tune) && profile.seed !== true) {
+    // A blank flags string sets nothing, so it does not count.
+    const settings = Object.keys(tune).filter(
+      (k) =>
+        TUNE_KEYS.includes(k) &&
+        !TUNE_LABEL_KEYS.includes(k) &&
+        !(k === 'flags' && typeof tune.flags === 'string' && tune.flags.trim() === '')
+    );
+    if (settings.length === 0) {
+      add('tune', 'missing', 'tune: set at least one of flags, ctx_size, enable_thinking, vision, speculation, runner');
     }
   }
 
-  const args = parsed.args ?? {};
-  addUnknownKeys(args, ARGS_KEYS, 'args');
-  if (args.raw === undefined || args.raw === '') add('args.raw', 'missing', 'args.raw: required');
+  if (runtime.family === 'llama-server') {
+    for (const { flag, reason } of deniedFlags(tune.flags)) {
+      add('tune.flags', 'invalid', `tune.flags: hal0 refuses ${flag} in a profile (${reason})`);
+    }
+  }
+  if ((tune.runner === 'halogen') !== (runtime.family === 'halogen') && runtime.family !== undefined) {
+    add(
+      tune.runner === 'halogen' ? 'runtime.family' : 'tune.runner',
+      'invalid',
+      'tune.runner = "halogen" and runtime.family = "halogen" go together: set both or neither'
+    );
+  }
 
-  const requires = parsed.requires;
-  if (requires !== undefined) {
-    if (requires == null || typeof requires !== 'object' || Array.isArray(requires)) {
-      add('requires', 'invalid', 'requires must be a table');
+  const model = parsed.model;
+  if (model !== undefined) {
+    if (!isTable(model)) {
+      add('model', 'invalid', 'model must be a table');
     } else {
-      addUnknownKeys(requires, REQUIRES_KEYS, 'requires');
-      if (requires.gtt_gb !== undefined) {
-        if (!Number.isInteger(requires.gtt_gb) || requires.gtt_gb < 0) {
-          add(
-            'requires.gtt_gb',
-            'invalid',
-            `requires.gtt_gb must be an integer >= 0 (got ${JSON.stringify(requires.gtt_gb)})`
-          );
+      addUnknownKeys(model, MODEL_KEYS, 'model');
+      if (model.id === undefined) add('model.id', 'invalid', 'model.id: required when [model] is present');
+      else requireNonEmptyString(model, 'id', 'model.id');
+      if (model.compatible !== undefined) {
+        if (!Array.isArray(model.compatible)) {
+          add('model.compatible', 'invalid', 'model.compatible must be an array of strings');
+        } else {
+          model.compatible.forEach((v, i) => {
+            if (typeof v !== 'string' || v.length < 1) {
+              add(
+                `model.compatible[${i}]`,
+                'invalid',
+                `model.compatible[${i}] must be a non-empty string (got ${JSON.stringify(v)})`
+              );
+            }
+          });
         }
-      }
-      if (requires.exclusive !== undefined && typeof requires.exclusive !== 'boolean') {
-        add(
-          'requires.exclusive',
-          'invalid',
-          `requires.exclusive must be a boolean (got ${JSON.stringify(requires.exclusive)})`
-        );
       }
     }
   }
@@ -376,21 +530,25 @@ export function validateProfileToml(text, opts = {}) {
     };
   }
 
+  const modelId = parsed.model?.id ?? null;
+  // A profile that names no model has nothing to look up, so it is not "unknown".
   const modelKnown =
-    rosterIds.has(parsed.model.id) ||
+    modelId === null ||
+    rosterIds.has(modelId) ||
     existingProfiles.some(
-      (p) => p.model?.id === parsed.model.id || (p.model?.compatible ?? []).includes(parsed.model.id)
+      (p) => p.model?.id === modelId || (p.model?.compatible ?? []).includes(modelId)
     );
 
   const linkedRuns = rosterRows.length ? benchFor(parsed, rosterRows).runs.length : 0;
   const summary = {
     slug,
     intent: parsed.profile.intent,
-    modelId: parsed.model.id,
+    modelId,
     modelKnown,
-    lane: parsed.runner.lane,
-    minBuild: parsed.runner.min_build ?? null,
-    flagCount: countFlags(parsed.args.raw),
+    family: parsed.runtime.family,
+    minHal0: parsed.runtime.min_hal0 ?? null,
+    flagCount: countFlags(parsed.tune.flags ?? ''),
+    contextSize: parsed.tune.ctx_size ?? null,
     linkedRuns,
   };
 

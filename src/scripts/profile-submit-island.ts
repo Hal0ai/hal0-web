@@ -95,8 +95,12 @@ if (root) {
     let text = textarea?.value ?? '';
     const override = flagOverride?.value.trim();
     if (override) {
-      if (/^\s*raw\s*=/m.test(text)) {
-        text = text.replace(/^(\s*raw\s*=\s*).*$/m, (_m, p1) => `${p1}${JSON.stringify(override)}`);
+      if (/^\s*flags\s*=/m.test(text)) {
+        text = text.replace(/^(\s*flags\s*=\s*).*$/m, (_m, p1) => `${p1}${JSON.stringify(override)}`);
+      } else if (/^\s*\[tune\]\s*$/m.test(text)) {
+        // A tune with only typed settings has no flags line to replace, so
+        // the override becomes the first key of the table.
+        text = text.replace(/^(\s*\[tune\]\s*)$/m, (_m, p1) => `${p1}\nflags = ${JSON.stringify(override)}`);
       }
     }
     return text;
@@ -113,15 +117,20 @@ if (root) {
       const s = (result as any).summary;
       panel.querySelector('[data-v-slug]')!.textContent = s.slug;
       panel.querySelector('[data-v-intent]')!.textContent = s.intent;
-      panel.querySelector('[data-v-model]')!.textContent = s.modelId;
+      // Most profiles name no model (the slot picks it), so the row is hidden then.
+      const modelRow = panel.querySelector<HTMLElement>('[data-v-model-row]')!;
+      modelRow.hidden = !s.modelId;
+      panel.querySelector('[data-v-model]')!.textContent = s.modelId ?? '';
       const chip = panel.querySelector<HTMLElement>('[data-v-model-chip]')!;
       chip.textContent = s.modelKnown ? 'in roster' : 'unverified';
       chip.className = `chip ${s.modelKnown ? 'ok' : 'warn'}`;
-      panel.querySelector('[data-v-lane]')!.textContent = s.lane + (s.minBuild ? ` · ${s.minBuild}` : '');
+      panel.querySelector('[data-v-runtime]')!.textContent = s.family + (s.minHal0 ? ` · ${s.minHal0}` : '');
+      panel.querySelector('[data-v-context]')!.textContent =
+        s.contextSize === null ? "the model's own window" : `${s.contextSize} tokens`;
       panel.querySelector('[data-v-flags]')!.textContent = String(s.flagCount);
       panel.querySelector('[data-v-runs]')!.textContent = String(s.linkedRuns);
       if (liveRegion)
-        liveRegion.textContent = `Valid. ${s.slug}, ${s.intent}, ${s.modelKnown ? 'model in roster' : 'model unverified'}.`;
+        liveRegion.textContent = `Valid. ${s.slug}, ${s.intent}, ${s.family}.`;
     } else if (result.state === 'schema-error') {
       const r = result as any;
       const headline = r.parseError

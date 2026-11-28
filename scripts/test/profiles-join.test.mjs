@@ -3,7 +3,7 @@
 // Unit tests for profile bench join and family derivation.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { familyOf, benchFor, familiesOf, renderProfileToml, tintToml } from '../../src/lib/profiles-join.mjs';
+import { familyOf, benchFor, familiesOf, renderProfileToml, tintToml, modelIdsOf } from '../../src/lib/profiles-join.mjs';
 
 test('familyOf recognizes qwen3-coder prefix (before qwen3)', () => {
   assert.equal(familyOf('qwen3-coder-next-q4kxl'), 'qwen3-coder');
@@ -231,58 +231,102 @@ test('familiesOf handles mixed families', () => {
 });
 
 const SAMPLE_RECORD = {
-  schema: 1,
+  schema: 2,
   profile: {
-    slug: 'strix-mtp-max',
-    title: 'Max throughput on strix, MTP on',
-    summary: 'Speculative decode via MTP for the biggest wins on strix lanes.',
-    intent: 'coding',
+    slug: 'brain-steward',
+    title: 'Brain steward, 64K',
+    summary: 'For the small tool-routing model: one sequence, a 64K window, vision off.',
+    intent: 'utility',
     author: 'lemond'
   },
-  runner: {
-    kind: 'llama-server',
-    lane: 'rocm',
-    min_build: 'b9219'
+  runtime: {
+    family: 'llama-server',
+    min_hal0: '1.8.3'
+  },
+  tune: {
+    // deliberately out of order: the renderer writes hal0's key order
+    vision: 'off',
+    intent: 'Brain steward · 64K ctx',
+    ctx_size: 65536,
+    enable_thinking: false,
+    reasoning_budget: -1,
+    flags: '-fa auto -b 2048 -ub 512 --parallel 1'
   },
   model: {
-    id: 'chadrock3-6-35b-uncensored-mtp-strix-lean',
-    compatible: ['chadrock-35b-ace-saber']
+    id: 'lfm2.5-2.6b',
+    compatible: ['lfm2.5-1.2b']
   },
-  args: { raw: '-ngl 99 -c 8192 -fa 1 --mtp on' },
   history: [
-    { v: 2, date: '2026-06-19', note: 'bump context' },
-    { v: 1, date: '2026-05-01', note: 'initial' }
+    { v: 2, date: '2026-11-19', note: 'bump context' },
+    { v: 1, date: '2026-11-01', note: 'initial' }
   ]
 };
 
 test('renderProfileToml emits fields in hal0-profiles order', () => {
   const toml = renderProfileToml(SAMPLE_RECORD);
-  assert.equal(toml.indexOf('schema'), 0);
-  assert.ok(toml.indexOf('[profile]') < toml.indexOf('[runner]'));
-  assert.ok(toml.indexOf('[runner]') < toml.indexOf('[model]'));
-  assert.ok(toml.indexOf('[model]') < toml.indexOf('[args]'));
-  assert.ok(toml.indexOf('[args]') < toml.indexOf('[[history]]'));
-  assert.ok(toml.includes('slug = "strix-mtp-max"'));
-  assert.ok(toml.includes('compatible = ["chadrock-35b-ace-saber"]'));
+  assert.equal(toml.indexOf('schema = 2'), 0);
+  assert.ok(toml.indexOf('[profile]') < toml.indexOf('[runtime]'));
+  assert.ok(toml.indexOf('[runtime]') < toml.indexOf('[tune]'));
+  assert.ok(toml.indexOf('[tune]') < toml.indexOf('[model]'));
+  assert.ok(toml.indexOf('[model]') < toml.indexOf('[[history]]'));
+  assert.ok(toml.includes('slug = "brain-steward"'));
+  assert.ok(toml.includes('family = "llama-server"'));
+  assert.ok(toml.includes('min_hal0 = "1.8.3"'));
+  assert.ok(toml.includes('compatible = ["lfm2.5-1.2b"]'));
   assert.ok(toml.includes('v = 2'));
-  assert.ok(toml.includes('date = "2026-06-19"'));
+  assert.ok(toml.includes('date = "2026-11-19"'));
   // second history entry present too
   assert.ok(toml.includes('v = 1'));
 });
 
-test('renderProfileToml omits absent optional fields', () => {
+test('renderProfileToml writes [tune] in hal0 key order with TOML types', () => {
   const toml = renderProfileToml(SAMPLE_RECORD);
-  assert.ok(!toml.includes('quant'));
-  assert.ok(!toml.includes('image'));
-  assert.ok(!toml.includes('[requires]'));
+  const tune = toml.slice(toml.indexOf('[tune]'), toml.indexOf('[model]')).trim().split('\n');
+  assert.deepEqual(tune, [
+    '[tune]',
+    'flags = "-fa auto -b 2048 -ub 512 --parallel 1"',
+    'ctx_size = 65536',
+    'enable_thinking = false',
+    'reasoning_budget = -1',
+    'vision = "off"',
+    'intent = "Brain steward · 64K ctx"'
+  ]);
+});
+
+test('renderProfileToml omits absent optional fields', () => {
+  const { model, ...noModel } = SAMPLE_RECORD;
+  const toml = renderProfileToml({ ...noModel, runtime: { family: 'kokoro' }, tune: {} });
+  assert.ok(!toml.includes('[model]'));
+  assert.ok(!toml.includes('min_hal0'));
   assert.ok(!toml.includes('first_party'));
+  assert.ok(!toml.includes('seed'));
+  assert.ok(!toml.includes('undefined'));
+  assert.ok(toml.includes('[tune]\n\n[[history]]'), 'an empty tune is an empty table');
+});
+
+test('renderProfileToml round-trips through the validator', async () => {
+  const { validateProfileToml } = await import('../../src/lib/profile-validate.mjs');
+  const result = validateProfileToml(renderProfileToml(SAMPLE_RECORD));
+  assert.ok(['pass', 'warning'].includes(result.state), `rendered TOML is a valid profile, got ${result.state}`);
+});
+
+test('a profile that names no model has no model ids, families or bench', () => {
+  const { model, ...noModel } = SAMPLE_RECORD;
+  assert.deepEqual(modelIdsOf(noModel), []);
+  assert.deepEqual(familiesOf(noModel), []);
+  assert.deepEqual(benchFor(noModel, [{ id: 'lfm2.5-2.6b', measured: true, dec: 90, pf: 800, gb: 3 }]), {
+    headline: null,
+    runs: []
+  });
+  assert.deepEqual(modelIdsOf(SAMPLE_RECORD), ['lfm2.5-2.6b', 'lfm2.5-1.2b']);
 });
 
 test('tintToml tints headers, keys, numeric and string values', () => {
-  const tokens = tintToml('[profile]\nslug = "strix-mtp-max"\nv = 2\nfirst_party = true\n');
+  const tokens = tintToml('[profile]\nslug = "brain-steward"\nv = 2\nfirst_party = true\nreasoning_budget = -1\n');
   assert.equal(tokens[0].cls, 'h');
   assert.equal(tokens[1].cls, 'kv');
   assert.equal(tokens[1].valueCls, 's');
   assert.equal(tokens[2].valueCls, 'n');
   assert.equal(tokens[3].valueCls, 'n');
+  assert.equal(tokens[4].valueCls, 'n', 'a negative number is numeric');
 });

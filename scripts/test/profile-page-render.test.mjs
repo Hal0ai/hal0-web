@@ -2,7 +2,7 @@
 //
 // Page-level render of src/pages/profiles/[slug].astro against records the
 // registry data does not contain today: a sparse one (no summary, author,
-// history, first_party, min_build, image or compatible list) and a first-party
+// history, first_party, min_hal0 or compatible list) and a first-party
 // one with no author handle. profile-pages.test.mjs checks the built output of
 // the real records; this file checks that a record with absent fields renders
 // a clean page rather than "undefined", which no real record exercises.
@@ -62,23 +62,22 @@ const jsonLd = (html) =>
 
 const BAD = /undefined|null|NaN|\[object/;
 
-// Only the slug is present from the profile; the runner and model carry the
+// Only the slug is present from the profile; the runtime and tune carry the
 // bare minimum.
 const sparse = {
-  schema: 1,
+  schema: 2,
   profile: { slug: 'bare-bones' },
-  runner: {},
-  model: {},
-  args: {},
+  runtime: {},
+  tune: {},
 };
 
-// Sparse in the way the schema allows: no summary, author, history, min_build.
+// Sparse in the way the schema allows: no summary, author, history, min_hal0.
 const thin = {
-  schema: 1,
+  schema: 2,
   profile: { slug: 'thin-one', title: 'Thin one', intent: 'chat' },
-  runner: { kind: 'llama-server', lane: 'rocm' },
+  runtime: { family: 'llama-server' },
+  tune: { flags: '-fa auto -b 2048', ctx_size: 8192 },
   model: { id: 'qwen3-8b-q4' },
-  args: { raw: '-ngl 99 -c 8192' },
 };
 
 test('getStaticPaths yields one path per registry record', () => {
@@ -90,17 +89,18 @@ test('getStaticPaths yields one path per registry record', () => {
   for (const p of paths) assert.equal(p.props.record.profile.slug, p.params.slug);
 });
 
-test('a record without summary, author, history or min_build renders with no undefined anywhere', async () => {
+test('a record without summary, author, history or min_hal0 renders with no undefined anywhere', async () => {
   const html = await render(thin);
   assert.doesNotMatch(html, BAD, 'no undefined/null/NaN in the page, head included');
   const main = mainOf(html);
   assert.match(main, /<h1[^>]*>\s*Thin one\s*<\/h1>/);
-  assert.match(main, /-ngl 99 -c 8192/, 'the flags still render');
+  assert.match(main, /-fa auto -b 2048/, 'the flags still render');
+  assert.match(main, /ctx_size = 8192/, 'the hal0 profile table still renders');
   assert.match(main, /qwen3-8b-q4/, 'the model still renders');
   // Sections whose field is absent are left out rather than rendered blank.
   assert.doesNotMatch(main, />\s*history\s*</, 'no history section');
   assert.doesNotMatch(main, />\s*author\s*</, 'no author card');
-  assert.doesNotMatch(main, />\s*min build\s*</, 'no min build row');
+  assert.doesNotMatch(main, />\s*min hal0\s*</, 'no minimum-version row');
   assert.doesNotMatch(main, />\s*also works with\s*</, 'no compatible list');
 });
 
@@ -146,4 +146,24 @@ test('the visible breadcrumb is three items and the last one is the page', async
   const nav = main.match(/<nav[^>]*aria-label="Breadcrumb"[^>]*>([\s\S]*?)<\/nav>/)[1];
   const items = [...nav.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map((m) => m[1].replace(/<[^>]+>/g, '').trim());
   assert.deepEqual(items, ['Home', 'Profiles', 'Thin one']);
+});
+
+test('a record with an empty tune shows no hal0 profile table and no flags block', async () => {
+  const main = mainOf(await render(sparse));
+  assert.doesNotMatch(main, /\[profile\.bare-bones\]/);
+  assert.doesNotMatch(main, />\s*flags\s*</);
+});
+
+test('a built-in record is cloned, not imported', async () => {
+  const main = mainOf(await render({ ...thin, profile: { ...thin.profile, first_party: true, seed: true } }));
+  assert.match(main, /profile create my-thin-one --from thin-one/);
+  assert.doesNotMatch(main, /hal0profile\.json/);
+  assert.match(main, /built in/);
+});
+
+test('an importable record links its envelope and names the minimum hal0 when it has one', async () => {
+  const main = mainOf(await render({ ...thin, runtime: { family: 'llama-server', min_hal0: '1.5.0' } }));
+  assert.match(main, /href="\/profiles\/thin-one\.hal0profile\.json"/);
+  assert.match(main, /Needs hal0 1\.5\.0 or newer/);
+  assert.match(main, /slot edit &lt;slot&gt; --profile thin-one/);
 });

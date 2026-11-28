@@ -1,91 +1,88 @@
 ---
 /**
- * /profiles — community profile gallery.
+ * /profiles — profile gallery.
  *
  * Renders every profile ingested from Hal0ai/hal0-profiles (src/data/profiles.json,
  * refreshed by scripts/sync-profiles.mjs on prebuild) as a card, with a
- * vanilla-JS filter island (family / intent / lane pills, AND across facets,
- * OR within a facet). Bench numbers on the card come only from `benchFor`
- * (src/lib/profiles-join.mjs) joining the profile's models against the
- * first-party ROSTER — a card never shows a number none of its own models
- * produced, and the metric row is omitted entirely when the join is empty.
+ * vanilla-JS filter island (intent / runtime / kind pills, AND across facets,
+ * OR within a facet).
  *
- * Visual source of truth: docs/design/2026-08-09-community-comps/03 Profiles.html
- * (Card component + the on-page card-anatomy spec). The detail drawer from
- * that comp is Task 4 — cards render inert here (no drawer, no onclick).
+ * A registry record is hal0's own profile body ([tune]) plus the metadata the
+ * gallery needs. Two kinds of record are shown differently:
+ *   - built in: a profile hal0 ships (profile.seed). It is already on every
+ *     box, so the drawer says how to clone it rather than how to import it.
+ *   - import: everything else. The drawer links the `.hal0profile.json`
+ *     envelope built by src/pages/profiles/[slug].hal0profile.json.ts, which
+ *     the dashboard imports under Profiles → Import.
+ *
+ * Bench numbers on a card come only from `benchFor` (src/lib/profiles-join.mjs)
+ * joining the models a profile names against the first-party ROSTER — a card
+ * never shows a number none of its own models produced, and the metric row is
+ * omitted entirely when the join is empty (most profiles name no model).
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import '../styles/site-data.css';
 import profilesSnapshot from '../data/profiles.json';
-import { benchFor, familiesOf, familyOf, renderProfileToml, tintToml } from '../lib/profiles-join.mjs';
+import { benchFor, modelIdsOf, tintToml } from '../lib/profiles-join.mjs';
+import { envelopePath, hal0ProfileToml, isSeed, tuneFacts, tuneOf } from '../lib/profile-envelope.mjs';
 import { ROSTER } from '../data/model-roster.ts';
 import { breadcrumbList } from '../lib/seo.ts';
-import { isReservedSlug } from '../lib/profile-page.mjs';
+import { isReservedSlug, latestHistory, profileTomlUrl } from '../lib/profile-page.mjs';
 
 const CONTRIBUTING_URL = 'https://github.com/Hal0ai/hal0-profiles/blob/main/CONTRIBUTING.md';
-const PROFILES_REPO_RAW = 'https://github.com/Hal0ai/hal0-profiles/blob/main/profiles';
 
 const profiles = profilesSnapshot.profiles;
 
-// Strip the noise short() clips from a roster model id down to a short,
-// scannable display name (ported from the comp's `short()` helper).
-function shortName(id) {
-  return id
-    .replace(/-(rocmfp4|strix-lean|mtp|dynamic|it)(?=-|$)/g, '')
-    .replace(/-(q\d[\w-]*|f16|mxfp4)$/i, '')
-    .replace(/-+$/, '');
-}
-
-function modelIdsOf(profile) {
-  return [profile.model.id, ...(profile.model.compatible ?? [])];
-}
+const KIND_SEED = 'built in';
+const KIND_IMPORT = 'import';
 
 // Per-profile derived view data, computed once at build time.
 const cards = profiles.map((record) => {
-  const { profile, runner, history } = record;
-  const models = modelIdsOf(record);
-  const families = familiesOf(record);
-  const bench = benchFor(record, ROSTER);
-  const latest = history[0];
-  const toml = tintToml(renderProfileToml(record));
+  const { profile, runtime = {} } = record;
+  const seed = isSeed(record);
+  const tune = tuneOf(record);
   return {
     record,
     profile,
-    runner,
-    latest,
-    models,
-    families,
-    bench,
-    toml,
+    seed,
+    kind: seed ? KIND_SEED : KIND_IMPORT,
+    family: runtime.family ?? '',
+    minHal0: runtime.min_hal0 ?? '',
+    latest: latestHistory(record),
+    history: record.history ?? [],
+    models: modelIdsOf(record),
+    facts: tuneFacts(record),
+    flags: typeof tune.flags === 'string' ? tune.flags : '',
+    bench: benchFor(record, ROSTER),
+    hasTune: Object.keys(tune).length > 0,
+    toml: tintToml(hal0ProfileToml(record)),
   };
 });
 
 // Static, full-corpus facet counts + option lists (derived from the data,
-// not hardcoded — a new profile in a new family/intent/lane shows up here
+// not hardcoded — a new profile with a new intent or runtime shows up here
 // for free on the next sync).
-function countBy(getValues) {
+function countBy(getValue) {
   const counts = new Map();
   for (const c of cards) {
-    for (const v of getValues(c)) {
-      counts.set(v, (counts.get(v) ?? 0) + 1);
-    }
+    const v = getValue(c);
+    if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
   }
   return counts;
 }
 
-const familyCounts = countBy((c) => c.families);
-const intentCounts = countBy((c) => [c.profile.intent]);
-const laneCounts = countBy((c) => [c.runner.lane]);
-
-const familyOptions = [...familyCounts.keys()].sort();
-const intentOptions = [...intentCounts.keys()].sort();
-const laneOptions = [...laneCounts.keys()].sort();
+const facets = [
+  { key: 'intent', label: 'intent', counts: countBy((c) => c.profile.intent) },
+  { key: 'runtime', label: 'runtime', counts: countBy((c) => c.family) },
+  { key: 'kind', label: 'kind', counts: countBy((c) => c.kind) },
+].map((f) => ({ ...f, options: [...f.counts.keys()].sort() }));
 
 const total = cards.length;
+const seedCount = cards.filter((c) => c.seed).length;
 
-const title = 'llama.cpp Profiles for Strix Halo & Local LLMs | hal0';
+const title = 'hal0 Profiles: llama.cpp Settings for Local LLMs | hal0';
 const description =
-  "Community-tested llama.cpp flag sets for local LLMs on AMD Strix Halo. Copy a model's context, runner and flags, or submit your own profile.";
+  'The profiles hal0 ships and the ones you can import: llama.cpp flags, context window, thinking, vision and speculation for each workload, ready to copy.';
 ---
 
 <MarketingLayout
@@ -99,10 +96,10 @@ const description =
       <div>
         <span class="eyebrow">shared configs · hal0-profiles</span>
         <h1 class="site-h1" style="margin: 10px 0 10px">profiles</h1>
-        <p class="site-body" style="max-width: 60ch">
-          A profile is the flag string that produced a number, versioned and downloadable.
-          Find the one for your model, copy its flags into a profile of your own, or read the config and steal the
-          parts you want.
+        <p class="site-body" style="max-width: 62ch">
+          A profile is everything a slot launches with apart from its model and its placement: the flags, the
+          context window, and whether thinking, vision and speculation are on. {seedCount} of these ship with hal0
+          and are already on your box. The rest import from the dashboard in one step.
         </p>
       </div>
       <div style="display: flex; gap: 8px">
@@ -113,47 +110,23 @@ const description =
   </div>
 
   <div class="wrap wide">
-    <h2 class="site-h2 gallery-h2">Community profiles for Strix Halo and local LLMs</h2>
+    <h2 class="site-h2 gallery-h2">Built-in and importable profiles for hal0</h2>
     <div class="filterbar" data-profile-filters>
-      <div class="frow">
-        <span class="label">model</span>
-        <div class="fbar">
-          <button type="button" class="fpill on" data-facet="family" data-value="__all__" aria-pressed="true">
-            all<span class="n num">{total}</span>
-          </button>
-          {familyOptions.map((f) => (
-            <button type="button" class="fpill" data-facet="family" data-value={f} aria-pressed="false">
-              {f}<span class="n num">{familyCounts.get(f)}</span>
+      {facets.map((facet) => (
+        <div class="frow">
+          <span class="label">{facet.label}</span>
+          <div class="fbar">
+            <button type="button" class="fpill on" data-facet={facet.key} data-value="__all__" aria-pressed="true">
+              all<span class="n num">{total}</span>
             </button>
-          ))}
+            {facet.options.map((value) => (
+              <button type="button" class="fpill" data-facet={facet.key} data-value={value} aria-pressed="false">
+                {value}<span class="n num">{facet.counts.get(value)}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-      <div class="frow">
-        <span class="label">intent</span>
-        <div class="fbar">
-          <button type="button" class="fpill on" data-facet="intent" data-value="__all__" aria-pressed="true">
-            all<span class="n num">{total}</span>
-          </button>
-          {intentOptions.map((i) => (
-            <button type="button" class="fpill" data-facet="intent" data-value={i} aria-pressed="false">
-              {i}<span class="n num">{intentCounts.get(i)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div class="frow">
-        <span class="label">lane</span>
-        <div class="fbar">
-          <button type="button" class="fpill on" data-facet="lane" data-value="__all__" aria-pressed="true">
-            all<span class="n num">{total}</span>
-          </button>
-          {laneOptions.map((l) => (
-            <button type="button" class="fpill" data-facet="lane" data-value={l} aria-pressed="false">
-              {l}<span class="n num">{laneCounts.get(l)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      ))}
       <div style="display:flex; align-items:center; gap:12px; border-top:1px solid var(--line-soft); padding-top:11px; flex-wrap:wrap">
         <span class="mono" style="font-size:11.5px; color:var(--fg-3)" data-profile-readout>
           {total} of {total} profiles
@@ -163,16 +136,16 @@ const description =
     </div>
 
     <div class="pgrid" data-profile-grid>
-      {cards.map(({ profile, runner, latest, models, families, bench }) => (
+      {cards.map(({ profile, kind, family, latest, models, facts, flags, bench }) => (
         <article
           class="pcard"
           data-profile-card
           data-intent={profile.intent}
-          data-lane={runner.lane}
-          data-families={families.join(' ')}
+          data-runtime={family}
+          data-kind={kind}
         >
           <div class="pc-top">
-            <span class="eyebrow">profile · v{latest.v} · {runner.lane}</span>
+            <span class="eyebrow">{kind}{latest ? ` · v${latest.v}` : ''}{family ? ` · ${family}` : ''}</span>
             <span class="chip amber">{profile.intent}</span>
           </div>
           <div>
@@ -183,16 +156,29 @@ const description =
           </div>
 
           <div class="pc-models">
-            <span class="label">runs these models</span>
+            <span class="label">sets</span>
             <div class="fbar">
-              {models.slice(0, 2).map((m) => (
-                <span class="mchip" title={m}>
-                  <span class="fam">{familyOf(m)}</span>{shortName(m)}
+              {facts.slice(0, 4).map((f) => (
+                <span class="mchip" title={f.key}>
+                  <span class="fam">{f.label}</span>{f.value}
                 </span>
               ))}
-              {models.length > 2 && <span class="mchip more">+{models.length - 2}</span>}
+              {facts.length > 4 && <span class="mchip more">+{facts.length - 4}</span>}
+              {facts.length === 0 && <span class="mchip">{flags ? 'flags only' : 'engine defaults'}</span>}
             </div>
           </div>
+
+          {models.length > 0 && (
+            <div class="pc-models">
+              <span class="label">tuned for</span>
+              <div class="fbar">
+                {models.slice(0, 2).map((m) => (
+                  <span class="mchip" title={m}>{m}</span>
+                ))}
+                {models.length > 2 && <span class="mchip more">+{models.length - 2}</span>}
+              </div>
+            </div>
+          )}
 
           {bench.headline && (
             <div>
@@ -207,14 +193,14 @@ const description =
                 </div>
               </div>
               <div class="pc-src mono">
-                measured on <b>{bench.headline.modelId}</b> · {runner.lane}
+                measured on <b>{bench.headline.modelId}</b>
               </div>
             </div>
           )}
 
           <div class="pc-foot">
             {profile.first_party ? (
-              <span class="chip amber" title="First-party run on hal0 reference hardware">first-party</span>
+              <span class="chip amber" title="Published by the hal0 project">first-party</span>
             ) : (
               <span style="display:inline-flex; align-items:center; gap:6px">
                 <img
@@ -233,9 +219,9 @@ const description =
               class="pc-open"
               data-profile-open={profile.slug}
               aria-haspopup="dialog"
-              aria-label={`config & flags for ${profile.slug}`}
+              aria-label={`settings for ${profile.slug}`}
             >
-              config &amp; flags →
+              settings →
             </button>
           </div>
         </article>
@@ -247,8 +233,8 @@ const description =
         </div>
         <h3 class="pc-title mono">&lt;your-slug&gt;</h3>
         <p class="site-sm">
-          Tuned a flag string that beat the defaults? Version it, PR it, and
-          it ships here with the numbers it produced.
+          Tuned a profile that beats the defaults for a workload? Export it from your box, open a pull request,
+          and it is listed here.
         </p>
         <span class="pc-open">submit a profile →</span>
       </a>
@@ -257,11 +243,13 @@ const description =
 
   <div class="scrim" data-profile-scrim hidden></div>
 
-  {cards.map(({ record, profile, latest, bench, toml }) => (
+  {cards.map(({ profile, seed, family, minHal0, latest, history, models, facts, flags, bench, hasTune, toml }) => (
     <aside class="drawer-run" role="dialog" aria-label="profile detail" hidden data-profile={profile.slug}>
       <div class="dr-head">
         <div>
-          <span class="eyebrow">profile · v{latest.v} · {latest.date}</span>
+          <span class="eyebrow">
+            {seed ? KIND_SEED : KIND_IMPORT}{latest ? ` · v${latest.v} · ${latest.date}` : ''}
+          </span>
           <div class="mono" style="font-size:14px; margin-top:6px">{profile.slug}</div>
           <div class="site-sm" style="margin-top:4px">{profile.title}</div>
         </div>
@@ -275,87 +263,139 @@ const description =
         <p class="site-body" style="font-size:14px">{profile.summary}</p>
 
         <div class="dr-actions">
-          <button type="button" class="btn ghost" data-profile-copy-flags data-flags={record.args.raw}>copy flags</button>
-          <a class="btn ghost" href={`${PROFILES_REPO_RAW}/${profile.slug}.toml`} rel="noopener">download .toml</a>
+          {!seed && !isReservedSlug(profile.slug) && (
+            <a class="btn" href={envelopePath(profile.slug)} download={`${profile.slug}.hal0profile.json`}>
+              download .hal0profile.json
+            </a>
+          )}
+          {flags && (
+            <button type="button" class="btn ghost" data-profile-copy-flags data-flags={flags}>copy flags</button>
+          )}
+          <a class="btn ghost" href={profileTomlUrl(profile.slug)} rel="noopener">registry .toml</a>
         </div>
 
         <section>
           <h4 class="label">use it</h4>
-          <div class="well" style="padding:12px 14px; margin-top:8px">
-            <span class="amber">hal0</span> profile create my-{profile.slug} --from &lt;a-profile-you-have&gt; --flags "&lt;copied flags&gt;"
-          </div>
-          <p class="mono dim" style="font-size:11px; margin-top:8px">
-            Copy the flags below, then create a custom profile from one you already have (or
-            use the dashboard's Profiles page). hal0 does not install community .toml files directly.
-          </p>
-        </section>
-
-        <section>
-          <div class="dr-sec-head">
-            <h4 class="label">flags</h4>
-            <span class="mono dim" style="font-size:11px">{record.runner.kind}</span>
-          </div>
-          <pre class="well toml" style="white-space:pre-wrap; word-break:break-all">{record.args.raw}</pre>
-        </section>
-
-        <section>
-          <div class="dr-sec-head">
-            <h4 class="label">config</h4>
-            <span class="mono dim" style="font-size:11px">{profile.slug}.toml</span>
-          </div>
-          <pre class="well toml">
-            {toml.map((line) => {
-              if (line.cls === 'c') return <div class="c">{line.text}</div>;
-              if (line.cls === 'h') return <div class="h">{line.text}</div>;
-              if (line.cls === 'kv') return (
-                <div><span class="k">{line.key}</span><span class={line.valueCls}>{line.value}</span></div>
-              );
-              return <div>{line.text}</div>;
-            })}
-          </pre>
-        </section>
-
-        <section>
-          <div class="dr-sec-head">
-            <h4 class="label">runs produced by this config</h4>
-            <span class="mono dim" style="font-size:11px">{record.runner.lane}</span>
-          </div>
-          {bench.runs.length > 0 ? (
-            <div class="panel" style="overflow:hidden">
-              <table class="dtable">
-                <thead>
-                  <tr>
-                    <th>model</th>
-                    <th class="n">decode</th>
-                    <th class="n">prefill</th>
-                    <th class="n">gb</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bench.runs.map((r) => (
-                    <tr>
-                      <td class="lead" style="max-width:210px; overflow:hidden; text-overflow:ellipsis">{r.modelId}</td>
-                      <td class="n">{r.dec.toFixed(1)}</td>
-                      <td class="n">{r.pf.toFixed(0)}</td>
-                      <td class="n">{r.gb}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {seed ? (
+            <>
+              <p class="site-sm" style="margin-top:8px">
+                Built in. Every hal0 box already has <span class="mono">{profile.slug}</span>: pick it in a slot's
+                profile picker. A built-in profile cannot be edited, so to change it, clone it:
+              </p>
+              <div class="well" style="padding:12px 14px; margin-top:8px">
+                <span class="amber">hal0</span> profile create my-{profile.slug} --from {profile.slug}
+              </div>
+            </>
           ) : (
-            <p class="site-sm">no measured runs yet — numbers appear when a sweep covers this config</p>
+            <>
+              <p class="site-sm" style="margin-top:8px">
+                Download the file, then in the dashboard open <b>Profiles → Import</b> and upload it. Then point a
+                slot at the profile and restart the slot:
+              </p>
+              <div class="well" style="padding:12px 14px; margin-top:8px">
+                <div><span class="amber">hal0</span> slot edit &lt;slot&gt; --profile {profile.slug}</div>
+                <div><span class="amber">hal0</span> slot restart &lt;slot&gt;</div>
+              </div>
+              {minHal0 && (
+                <p class="mono dim" style="font-size:11px; margin-top:8px">Needs hal0 {minHal0} or newer.</p>
+              )}
+            </>
           )}
         </section>
 
-        <section>
-          <h4 class="label">versions</h4>
-          <div class="vhist">
-            {record.history.map((h) => (
-              <div class="vh"><span class="v">v{h.v}</span><span>{h.date}</span><span>{h.note}</span></div>
-            ))}
-          </div>
-        </section>
+        {flags && (
+          <section>
+            <div class="dr-sec-head">
+              <h4 class="label">flags</h4>
+              <span class="mono dim" style="font-size:11px">{family}</span>
+            </div>
+            <pre class="well toml" style="white-space:pre-wrap; word-break:break-all">{flags}</pre>
+          </section>
+        )}
+
+        {facts.length > 0 && (
+          <section>
+            <h4 class="label">settings</h4>
+            <dl class="kv">
+              {facts.map((f) => (
+                <>
+                  <dt>{f.label}</dt>
+                  <dd>{f.value}</dd>
+                </>
+              ))}
+            </dl>
+          </section>
+        )}
+
+        {hasTune && (
+          <section>
+            <div class="dr-sec-head">
+              <h4 class="label">as a hal0 profile</h4>
+              <span class="mono dim" style="font-size:11px">/etc/hal0/profiles.toml</span>
+            </div>
+            <pre class="well toml">
+              {toml.map((line) => {
+                if (line.cls === 'c') return <div class="c">{line.text}</div>;
+                if (line.cls === 'h') return <div class="h">{line.text}</div>;
+                if (line.cls === 'kv') return (
+                  <div><span class="k">{line.key}</span><span class={line.valueCls}>{line.value}</span></div>
+                );
+                return <div>{line.text}</div>;
+              })}
+            </pre>
+            {seed && (
+              <p class="mono dim" style="font-size:11px; margin-top:8px">
+                Shown for reference. hal0 reads its built-in profiles from code and ignores a table with this name in the file.
+              </p>
+            )}
+          </section>
+        )}
+
+        {models.length > 0 && (
+          <section>
+            <div class="dr-sec-head">
+              <h4 class="label">measured runs</h4>
+              <span class="mono dim" style="font-size:11px">{models[0]}</span>
+            </div>
+            {bench.runs.length > 0 ? (
+              <div class="panel" style="overflow:hidden">
+                <table class="dtable">
+                  <thead>
+                    <tr>
+                      <th>model</th>
+                      <th class="n">decode</th>
+                      <th class="n">prefill</th>
+                      <th class="n">gb</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bench.runs.map((r) => (
+                      <tr>
+                        <td class="lead" style="max-width:210px; overflow:hidden; text-overflow:ellipsis">{r.modelId}</td>
+                        <td class="n">{r.dec.toFixed(1)}</td>
+                        <td class="n">{r.pf.toFixed(0)}</td>
+                        <td class="n">{r.gb}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p class="site-sm">No measured runs for this model on the benchmark roster yet.</p>
+            )}
+          </section>
+        )}
+
+        {history.length > 0 && (
+          <section>
+            <h4 class="label">versions</h4>
+            <div class="vhist">
+              {history.map((h) => (
+                <div class="vh"><span class="v">v{h.v}</span><span>{h.date}</span><span>{h.note}</span></div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </aside>
   ))}
@@ -706,10 +746,10 @@ const description =
 </style>
 
 <script>
-  // Vanilla filter island — no framework. Cards carry data-intent / data-lane
-  // / data-families (space-separated); pills carry data-facet + data-value.
+  // Vanilla filter island — no framework. Cards carry data-intent /
+  // data-runtime / data-kind; pills carry data-facet + data-value.
   // Selecting several pills within one facet is OR ("chat" or "coding");
-  // selecting pills across facets is AND (family match AND intent match).
+  // selecting pills across facets is AND (intent match AND runtime match).
   // Server renders every card up front, so no-JS visitors still get the
   // full gallery — filtering here is purely a display toggle.
   const root = document.querySelector('[data-profile-filters]');
@@ -719,9 +759,9 @@ const description =
     const readout = root.querySelector('[data-profile-readout]');
     const clearBtn = root.querySelector('[data-profile-clear]');
     const pills = Array.from(root.querySelectorAll('.fpill[data-facet]'));
-    const facets = ['family', 'intent', 'lane'];
+    const facets = ['intent', 'runtime', 'kind'];
     /** @type {Record<string, Set<string>>} */
-    const active = { family: new Set(), intent: new Set(), lane: new Set() };
+    const active = { intent: new Set(), runtime: new Set(), kind: new Set() };
 
     function syncPillClasses() {
       let anyActive = false;
@@ -744,10 +784,6 @@ const description =
       for (const card of cards) {
         const matches = facets.every((facet) => {
           if (active[facet].size === 0) return true;
-          if (facet === 'family') {
-            const cardFamilies = (card.dataset.families ?? '').split(' ').filter(Boolean);
-            return cardFamilies.some((f) => active.family.has(f));
-          }
           return active[facet].has(card.dataset[facet]);
         });
         card.hidden = !matches;

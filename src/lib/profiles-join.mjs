@@ -24,17 +24,29 @@ export function familyOf(modelId) {
 }
 
 /**
- * Join a profile's models against roster rows to produce bench metrics.
+ * The model ids a profile names: its primary model, then the ones it is also
+ * known to run. A profile that is not tied to a model (most are not: a tune
+ * is a workload, and the slot picks the model) names none.
  *
- * @param {Object} profile - ProfileRecord shape: { model: { id: string, compatible?: string[] }, ... }
+ * @param {Object} profile - ProfileRecord; `model` is optional
+ * @returns {string[]}
+ */
+export function modelIdsOf(profile) {
+  const model = profile?.model;
+  if (!model || typeof model.id !== 'string' || model.id === '') return [];
+  return [model.id, ...(Array.isArray(model.compatible) ? model.compatible : [])];
+}
+
+/**
+ * Join a profile's models against roster rows to produce bench metrics. A
+ * profile that names no model joins to nothing.
+ *
+ * @param {Object} profile - ProfileRecord shape: { model?: { id: string, compatible?: string[] }, ... }
  * @param {Array<Object>} rosterRows - roster rows with { id, dec, pf, gb, measured }
  * @returns {{ headline: ({ modelId: string, dec: number, pf: number, gb: number } | null), runs: Array<{ modelId: string, dec: number, pf: number, gb: number }> }}
  */
 export function benchFor(profile, rosterRows) {
-  const modelIds = [profile.model.id];
-  if (profile.model.compatible) {
-    modelIds.push(...profile.model.compatible);
-  }
+  const modelIds = modelIdsOf(profile);
 
   // Filter measured rows, match against our model ids, and sort by dec descending
   const runs = rosterRows
@@ -62,19 +74,14 @@ export function benchFor(profile, rosterRows) {
 /**
  * Extract unique families from a profile's model IDs, in insertion order.
  *
- * @param {Object} profile - ProfileRecord with model.id and model.compatible
+ * @param {Object} profile - ProfileRecord with an optional model.id and model.compatible
  * @returns {Array<string>} unique family names in insertion order
  */
 export function familiesOf(profile) {
-  const modelIds = [profile.model.id];
-  if (profile.model.compatible) {
-    modelIds.push(...profile.model.compatible);
-  }
-
   const seen = new Set();
   const result = [];
 
-  for (const modelId of modelIds) {
+  for (const modelId of modelIdsOf(profile)) {
     const family = familyOf(modelId);
     if (!seen.has(family)) {
       seen.add(family);
@@ -85,24 +92,39 @@ export function familiesOf(profile) {
   return result;
 }
 
+// [tune] keys in the order the registry writes them (hal0's ProfileConfig).
+const TUNE_KEY_ORDER = [
+  'flags',
+  'ctx_size',
+  'enable_thinking',
+  'reasoning_effort',
+  'reasoning_budget',
+  'vision',
+  'speculation',
+  'runner',
+  'cloned_from',
+  'intent',
+];
+
 /**
  * Reconstruct the hal0-profiles TOML source for a profile record,
  * deterministically, in the same field order the upstream repo uses:
- * schema, [profile], [runner], [model], [args], [requires]?, [[history]]…
+ * schema, [profile], [runtime], [tune], [model]?, [[history]]…
  * (newest first, matching the order already present on the record).
  *
  * Pure/string-only — no TOML library needed since the record was already
  * parsed once by the sync script; this is the inverse direction, purely
  * for display in the drawer.
  *
- * @param {Object} record - ProfileRecord (schema, profile, runner, model, args, requires?, history)
+ * @param {Object} record - ProfileRecord (schema, profile, runtime, tune, model?, history)
  * @returns {string} TOML source text
  */
 export function renderProfileToml(record) {
-  const { schema, profile, runner, model, args, requires, history } = record;
+  const { schema, profile, runtime, tune, model, history } = record;
   const lines = [];
   const push = (line = '') => lines.push(line);
   const quote = (value) => JSON.stringify(String(value));
+  const scalar = (value) => (typeof value === 'string' ? quote(value) : String(value));
 
   push(`schema = ${schema}`);
 
@@ -114,31 +136,25 @@ export function renderProfileToml(record) {
   push(`intent = ${quote(profile.intent)}`);
   push(`author = ${quote(profile.author)}`);
   if (profile.first_party) push(`first_party = true`);
+  if (profile.seed) push(`seed = true`);
 
   push('');
-  push('[runner]');
-  push(`kind = ${quote(runner.kind)}`);
-  push(`lane = ${quote(runner.lane)}`);
-  if (runner.min_build) push(`min_build = ${quote(runner.min_build)}`);
-  if (runner.image) push(`image = ${quote(runner.image)}`);
+  push('[runtime]');
+  push(`family = ${quote(runtime?.family ?? '')}`);
+  if (runtime?.min_hal0) push(`min_hal0 = ${quote(runtime.min_hal0)}`);
 
   push('');
-  push('[model]');
-  push(`id = ${quote(model.id)}`);
-  if (model.quant) push(`quant = ${quote(model.quant)}`);
-  if (model.compatible && model.compatible.length) {
-    push(`compatible = [${model.compatible.map(quote).join(', ')}]`);
+  push('[tune]');
+  for (const key of TUNE_KEY_ORDER) {
+    if (tune?.[key] !== undefined) push(`${key} = ${scalar(tune[key])}`);
   }
 
-  push('');
-  push('[args]');
-  push(`raw = ${quote(args.raw)}`);
-
-  if (requires && Object.keys(requires).length) {
+  if (model?.id) {
     push('');
-    push('[requires]');
-    for (const [key, value] of Object.entries(requires)) {
-      push(`${key} = ${typeof value === 'string' ? quote(value) : value}`);
+    push('[model]');
+    push(`id = ${quote(model.id)}`);
+    if (model.compatible && model.compatible.length) {
+      push(`compatible = [${model.compatible.map(quote).join(', ')}]`);
     }
   }
 
@@ -170,7 +186,7 @@ export function tintToml(text) {
     const m = line.match(/^(\s*[\w_]+\s*=\s*)(.*)$/);
     if (!m) return { cls: null, text: line || ' ' };
     const value = m[2];
-    const valueCls = /^[\d.]+$/.test(value) || value === 'true' || value === 'false' ? 'n' : 's';
+    const valueCls = /^-?[\d.]+$/.test(value) || value === 'true' || value === 'false' ? 'n' : 's';
     return { cls: 'kv', key: m[1], value, valueCls };
   });
 }
