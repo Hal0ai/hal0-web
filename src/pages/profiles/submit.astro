@@ -391,6 +391,13 @@ const description =
     padding: 9px 12px;
     box-sizing: border-box;
   }
+  @media (pointer: coarse) {
+    /* iOS Safari zooms the whole page when a field under 16px takes focus. */
+    .tin,
+    .input {
+      font-size: 16px;
+    }
+  }
   .input.mono {
     font-family: var(--jbm);
   }
