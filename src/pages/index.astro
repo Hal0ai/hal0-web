@@ -5,7 +5,7 @@
  * Written for someone setting up a first local AI server. It reads top to
  * bottom as one story in plain words: what hal0 is, why slots matter, what
  * arrives connected, the agent, the memory, privacy, models, a tour of the
- * dashboard, what you need, and how to start. Product vocabulary is kept out of
+ * dashboard, the dashboard on a phone, what you need, and how to start. Product vocabulary is kept out of
  * the first three sections, and the technical layer sits behind the "Want the
  * details?" links, the named comparison's disclosure and the docs.
  *
@@ -42,6 +42,8 @@ import {
   MEMORY_NOTE,
   MEMORY_POINTS,
   MODEL_KINDS,
+  PHONE_POINTS,
+  PHONE_SHOTS,
   PLAIN_COMPARE,
   PRIVACY_FACTS,
   PRIVACY_NOTE,
@@ -339,7 +341,31 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 10. HARDWARE -->
+    <!-- 10. PHONE. Continues the tour on the same background, so it has no top padding. -->
+    <section class="sec phone-sec" id="phone">
+      <div class="lp-wrap split">
+        <div>
+          <p class="tag">On your phone</p>
+          <h2>Check on it from the couch.</h2>
+          <p class="sub">
+            The dashboard fits a phone and a tablet, so you do not have to sit at a desk to see how the box is doing.
+            Open it in the browser on a device on your home network. There is no app to install.
+          </p>
+          <ul class="ticks">
+            {PHONE_POINTS.map((point) => (
+              <li><Icon name="lucide:check" /><span><b>{point.term}</b> {point.text}</span></li>
+            ))}
+          </ul>
+        </div>
+        <ul class="phones">
+          {PHONE_SHOTS.map((shot) => (
+            <li><Shot name={shot.name} alt={shot.alt} /></li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- 11. HARDWARE -->
     <section class="sec alt" id="hardware">
       <div class="lp-wrap">
         <header class="head">
@@ -366,7 +392,7 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 11. START. Old links to /#install and /#get land here. -->
+    <!-- 12. START. Old links to /#install and /#get land here. -->
     <section class="sec" id="start">
       <span id="get"></span>
       <div class="lp-wrap">
@@ -401,7 +427,7 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 12. DETAILS: where the technical layer starts -->
+    <!-- 13. DETAILS: where the technical layer starts -->
     <section class="sec alt" id="details">
       <div class="lp-wrap">
         <header class="head">
@@ -424,7 +450,7 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 13. COMPARE: plain first, the named table behind a disclosure -->
+    <!-- 14. COMPARE: plain first, the named table behind a disclosure -->
     <section class="sec" id="compare">
       <div class="lp-wrap">
         <header class="head center">
@@ -463,7 +489,7 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 14. RELEASES. Benchmarks are hidden site-wide while that system is reworked;
+    <!-- 15. RELEASES. Benchmarks are hidden site-wide while that system is reworked;
          old links to /#benchmarks, /#whats-new and /#roadmap land here. -->
     <section class="sec" id="releases">
       <span id="benchmarks"></span>
@@ -474,7 +500,7 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 15. FAQ -->
+    <!-- 16. FAQ -->
     <section class="sec alt" id="faq">
       <div class="lp-wrap">
         <header class="head center">
@@ -485,7 +511,7 @@ const faqPage = {
       </div>
     </section>
 
-    <!-- 16. COMMUNITY: social proof for someone already sold, so it sits low. The
+    <!-- 17. COMMUNITY: social proof for someone already sold, so it sits low. The
          forum block renders nothing at all when its fetch fails at build time. -->
     <div class="lp-wrap community">
       <ForumTopics />
@@ -493,7 +519,7 @@ const faqPage = {
       <LatestWriting />
     </div>
 
-    <!-- 17. FINAL CTA -->
+    <!-- 18. FINAL CTA -->
     <section class="final">
       <div class="lp-wrap narrow">
         <h2>Your own AI server is one command away.</h2>
@@ -966,7 +992,29 @@ const faqPage = {
     color: var(--hal0-fg-dim);
   }
 
-  /* 10. Hardware */
+  /* 10. Phone */
+  .phone-sec {
+    padding-top: 0;
+  }
+  .phones {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+  .phones :global(.shot) {
+    width: 100%;
+    margin: 0;
+    border-radius: 22px;
+    box-shadow: 0 30px 80px -50px #000;
+  }
+  .phones :global(img) {
+    width: 100%;
+    height: auto;
+  }
+
+  /* 11. Hardware */
   .hw {
     display: grid;
     grid-template-columns: 1.25fr 1fr 1fr;
@@ -1005,7 +1053,7 @@ const faqPage = {
     color: var(--hal0-fg-muted);
   }
 
-  /* 11. Start */
+  /* 12. Start */
   .steps {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1070,7 +1118,7 @@ const faqPage = {
     margin-top: 30px;
   }
 
-  /* 12. Details */
+  /* 13. Details */
   .details {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1111,7 +1159,7 @@ const faqPage = {
     color: var(--hal0-accent);
   }
 
-  /* 13. Compare */
+  /* 14. Compare */
   .cmp-wrap {
     max-width: 860px;
     margin-inline: auto;
@@ -1186,12 +1234,12 @@ const faqPage = {
     color: var(--hal0-fg-dim);
   }
 
-  /* 16. Community. The sections only pad their tops. */
+  /* 17. Community. The sections only pad their tops. */
   .community {
     padding-bottom: 96px;
   }
 
-  /* 17. Final */
+  /* 18. Final */
   .final {
     padding-block: 104px 110px;
     border-top: 1px solid var(--hal0-border);
@@ -1259,6 +1307,11 @@ const faqPage = {
     }
     .install {
       padding: 14px;
+    }
+    /* Side by side each capture would be 170px wide and unreadable: one under the other. */
+    .phones {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 300px;
     }
     .lede,
     .sub {

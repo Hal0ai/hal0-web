@@ -127,7 +127,7 @@ test('the technical layer is still on the page, lower down', skipUnbuilt, () => 
 });
 
 test('sections run in story order, and old anchors still land somewhere', skipUnbuilt, () => {
-  const order = ['uses', 'slots', 'connected', 'agent', 'memory', 'privacy', 'models', 'tour', 'hardware', 'start', 'details', 'compare', 'releases', 'faq'];
+  const order = ['uses', 'slots', 'connected', 'agent', 'memory', 'privacy', 'models', 'tour', 'phone', 'hardware', 'start', 'details', 'compare', 'releases', 'faq'];
   const at = order.map((id) => {
     const i = html.search(new RegExp(`<section[^>]*\\sid="${id}"`));
     assert.ok(i >= 0, `section #${id} is present`);
@@ -151,6 +151,7 @@ test('the key headings are on the page', skipUnbuilt, () => {
     'What happens on your box stays on your box.',
     'Run the models people are talking about.',
     'See it before you install it.',
+    'Check on it from the couch.',
     'What you need.',
     'Up and running in three steps.',
     'Want the details?',
@@ -327,7 +328,9 @@ test('the comparisons say what the research could and could not confirm', () => 
 
 /** Every capture the page can show: each placed shot and its tablet and phone variants. */
 function allShots() {
-  const { SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS, TOUR: stops } = data;
+  const { SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS, PHONE_SHOTS, TOUR: stops } = data;
+  // The phone section shows its phone captures on every screen, so they are listed as such.
+  const onEveryScreen = PHONE_SHOTS.map((s) => ({ ...s, where: 'beside the copy', device: 'phone' }));
   const placed = [
     ...[SHOT_CONNECTED, SHOT_MEMORY, SHOT_MODELS].map((s) => ({ ...s, where: 'beside the copy' })),
     ...stops.map((s) => ({ name: s.shot, alt: s.alt, tablet: s.tablet, phone: s.phone, where: 'tour' })),
@@ -336,7 +339,7 @@ function allShots() {
     { name: s.name, alt: s.alt, where: s.where, device: 'desktop' },
     ...(s.tablet ? [{ ...s.tablet, where: s.where, device: 'tablet' }] : []),
     ...(s.phone ? [{ ...s.phone, where: s.where, device: 'phone' }] : []),
-  ]);
+  ]).concat(onEveryScreen);
 }
 
 test('every capture on the page is on disk and described', async () => {
@@ -383,6 +386,19 @@ test('captures with invented readings stay out of the hero and away from the cla
   // The structured data's lead image carries no figures either.
   assert.match(page, /image: shotUrl\(SHOT_CONNECTED\.name\)/);
   assert.equal(figuresOf(SHOT_CONNECTED.name), 'none');
+});
+
+test('the phone section shows phone captures to everyone and claims no more than the release notes', skipUnbuilt, () => {
+  const phone = section('phone');
+  assert.equal((phone.match(/<picture\b/g) ?? []).length, data.PHONE_SHOTS.length, 'one picture per capture, on every screen');
+  assert.ok(!phone.includes('data-shot-variant'), 'none of them is swapped out by screen width');
+  for (const shot of data.PHONE_SHOTS) assert.ok(phone.includes(`/screenshots/${shot.name}.png`), `${shot.name} is shown`);
+  const text = visibleWords(phone).join(' ');
+  for (const point of data.PHONE_POINTS) assert.ok(text.includes(visibleWords(point.term).join(' ')), point.term);
+  assert.match(text, /home network/, 'it says where the dashboard is reached from');
+  // Nothing about reaching the box from elsewhere, and no app.
+  assert.doesNotMatch(text, /\b(anywhere|internet|remote(ly)?|away from home|on the go|VPN|native app|app store)\b/i);
+  assert.match(text, /no app to install/);
 });
 
 test('one device variant shows at a time, and the lightbox leaves the others out', async () => {
