@@ -26,13 +26,14 @@ const API_PATH = /(\/v1\/[a-z/]+)/;
     align-items: start;
   }
   details {
-    padding: 14px 0;
     border-top: 1px solid var(--hal0-border);
   }
+  /* The padding is on the summary, not on the details, so the whole row is the tap target. */
   summary {
     display: flex;
     justify-content: space-between;
     gap: 12px;
+    padding: 14px 0;
     font-family: var(--hal0-font-mono);
     font-size: 14px;
     font-weight: 500;
@@ -52,7 +53,7 @@ const API_PATH = /(\/v1\/[a-z/]+)/;
     content: '−';
   }
   p {
-    margin: 10px 0 0;
+    margin: -4px 0 14px;
     max-width: 60ch;
     font-size: 14px;
     line-height: 1.55;

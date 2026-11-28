@@ -123,7 +123,7 @@ const faqPage = {
     <section class="hero">
       <div class="lp-wrap hero-grid">
         <div>
-          <p class="eyebrow">Own your inference · free and open source</p>
+          <p class="hero-eyebrow">Own your inference · free and open source</p>
           <h1>Private AI for your home.</h1>
           <p class="hero-sub">A whole team of models, always ready, on a box you own.</p>
           <p class="lede">
@@ -458,6 +458,7 @@ const faqPage = {
             hal0 is not a new engine. It is the layer around the engines you may already know, so this table compares
             that layer, and it describes each tool’s defaults.
           </p>
+          <p class="swipe-hint">Swipe the table sideways to see the other tools.</p>
           <CompareTable />
         </details>
       </div>
@@ -606,11 +607,13 @@ const faqPage = {
     gap: 64px;
     align-items: center;
   }
-  .eyebrow {
+  /* Not `.eyebrow`: the site-wide rule of that name wins and sets 10px, too small on a phone. */
+  .hero-eyebrow {
     margin-bottom: 22px;
     font-family: var(--hal0-font-mono);
     font-size: 12px;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--hal0-accent);
   }
   h1 {
@@ -1182,6 +1185,16 @@ const faqPage = {
     color: var(--hal0-fg-muted);
   }
 
+  /* The named table is wider than a phone or a small tablet and scrolls inside its box. */
+  .swipe-hint {
+    display: none;
+    margin: -8px 0 12px;
+    text-align: center;
+    font-family: var(--hal0-font-mono);
+    font-size: 12px;
+    color: var(--hal0-fg-dim);
+  }
+
   /* 14. Benchmarks and releases. BenchHighlights brings 52px of its own top
    * padding, so the wrapper gives less and the release column matches it. */
   .two-up-wrap {
@@ -1257,6 +1270,9 @@ const faqPage = {
     .steps,
     .two-up {
       grid-template-columns: minmax(0, 1fr);
+    }
+    .swipe-hint {
+      display: block;
     }
     .two-up-wrap {
       padding-block: 12px 64px;

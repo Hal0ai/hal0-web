@@ -208,4 +208,18 @@ import { TOUR, TOUR_NOTE } from '../../data/landing';
       padding-top: 28px;
     }
   }
+  /* On a phone six tabs do not fit in one row, and a strip that scrolls hides the last
+   * ones with no sign that they exist. Two rows of three keep every tab on screen. */
+  @media (max-width: 560px) {
+    .is-tabbed .tabs {
+      flex-wrap: wrap;
+      overflow-x: visible;
+      gap: 0;
+    }
+    .tabs button {
+      flex: 1 0 33.33%;
+      padding-inline: 6px;
+      text-align: center;
+    }
+  }
 </style>
