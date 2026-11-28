@@ -231,6 +231,38 @@ export const SHOT_MODELS: LandingShot = {
   },
 };
 
+/**
+ * The dashboard on a phone, shown to every visitor (section 10). Both captures
+ * were taken at phone width and carry no performance figures, because they sit
+ * beside the copy. The points restate the 1.8.2 release notes; nothing here
+ * says where the dashboard can be reached from beyond the home network.
+ */
+export const PHONE_SHOTS: ShotVariant[] = [
+  {
+    name: 'phone-more-drawer',
+    alt: 'The hal0 dashboard on a phone with its More menu open: Overview, Slots, Models, Benchmarks, Agents, Memory, Services, Logs and Settings listed one under another',
+  },
+  {
+    name: 'phone-memory-agents',
+    alt: 'The Memory page of the hal0 dashboard on a phone, on its Agents tab: each agent is a card saying what it reads and writes, with the tab bar along the bottom',
+  },
+];
+
+export const PHONE_POINTS: { term: string; text: string }[] = [
+  {
+    term: 'The main pages are one tap away.',
+    text: 'Overview, Slots, Models and Agents sit in a bar along the bottom of the screen, and More opens the rest.',
+  },
+  {
+    term: 'Tables turn into cards.',
+    text: 'A wide table shows each row as a card, so you read down the screen and not across it.',
+  },
+  {
+    term: 'Buttons are sized for a thumb.',
+    text: 'On a touch screen the small controls get a larger area to tap.',
+  },
+];
+
 export type TourStop = {
   key: string;
   label: string;
