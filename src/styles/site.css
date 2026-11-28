@@ -560,6 +560,13 @@
 	.drawer {
 		position: absolute;
 		inset: 56px 0 auto 0;
+		/* The page is scroll-locked while the drawer is open, so on a short screen
+		 * (a phone held sideways) the drawer has to scroll itself or its last rows
+		 * cannot be reached. */
+		max-height: calc(100vh - 56px);
+		max-height: calc(100dvh - 56px);
+		overflow-y: auto;
+		overscroll-behavior: contain;
 		background: var(--bg);
 		border-bottom: 1px solid var(--line);
 		box-shadow: var(--shadow-menu);
